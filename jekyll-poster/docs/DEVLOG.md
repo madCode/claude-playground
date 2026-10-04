@@ -25,6 +25,10 @@ Times are when each cycle landed, Pacific.
   post, out of sight), and the sheet's Done dropped what was typed.
 - **Shipped:** the sheet shows the post's own tags at the top; Done adds what's typed; typing one
   the post has says so instead of offering to add it again.
+- **Its review found** (fixed): a typed "#Rain" beside the blog's "rain" made a second tag;
+  swiping the sheet away still dropped what was typed (it now adds it, however the sheet closes:
+  the sheet keeps the first dismiss callback it's given, so the callback reads the field when
+  called); many tags could push the field off a short screen.
 
 ## Night 1 · Sun 4 Oct
 

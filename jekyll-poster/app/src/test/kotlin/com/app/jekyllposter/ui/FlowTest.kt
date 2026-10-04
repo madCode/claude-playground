@@ -9,6 +9,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
@@ -174,14 +176,19 @@ class FlowTest {
         // The keyboard's Done (a checkmark on many keyboards) adds it, and the sheet shows it landed.
         compose.onNodeWithTag("termQuery").performTextInput("rain")
         compose.onNodeWithTag("termQuery").performImeAction()
-        compose.waitFor("On this post")
-        compose.onAllNodes(hasContentDescription("Remove rain")).fetchSemanticsNodes().let { assertTrue(it.isNotEmpty()) }
+        // In the sheet itself, not only on the editor behind it.
+        val inSheet = { name: String -> hasContentDescription("Remove $name") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("picked")) }
+        compose.waitUntil(5_000) { compose.onAllNodes(inSheet("rain")).fetchSemanticsNodes().isNotEmpty() }
+        // A # is habit, not part of the tag; and the blog's own spelling wins over the typed case.
+        compose.onNodeWithTag("termQuery").performTextInput("#Walking")
+        compose.onNodeWithTag("termQuery").performImeAction()
+        compose.waitUntil(5_000) { compose.onAllNodes(inSheet("walking")).fetchSemanticsNodes().isNotEmpty() }
         // Typing one the post already has says so, instead of offering to add it again.
         compose.onNodeWithTag("termQuery").performTextInput("Rain")
         compose.waitFor("“Rain” is already on this post.")
         compose.onNodeWithTag("termQuery").performTextReplacement("puddles")
-        // The sheet's Done adds what's typed before closing.
-        compose.onNodeWithText("Done").performClick()
+        // Closing the sheet, here by swiping it down, adds what's typed rather than dropping it.
+        compose.onNodeWithTag("picked").performTouchInput { swipeDown(startY = top, endY = top + 2000f) }
         compose.waitUntil(5_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("termQuery")).fetchSemanticsNodes().isEmpty() }
         compose.waitUntil(5_000) { compose.onAllNodes(hasContentDescription("Remove puddles")).fetchSemanticsNodes().isNotEmpty() }
     }
