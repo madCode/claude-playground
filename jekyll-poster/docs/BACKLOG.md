@@ -14,7 +14,7 @@ and moves it to Done.
 ## Later
 
 - [ ] Per-blog templates: front matter a new post starts with
-- [ ] Delete a post; unpublish (`published: false`)
+- [ ] Unpublish (`published: false`), keeping the file
 - [ ] Collections other than posts; `collections_dir`
 - [ ] Keys like `c#:` read right, but other exotic YAML keys may still not; a full YAML
   round-trip editor would close the gap
@@ -22,6 +22,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 10: delete a post from the blog
 - [x] Cycle 9: a documentation pass
 - [x] Cycle 8: more front matter (YAML), filter by category
 - [x] Cycle 7: the zine look, over four design rounds

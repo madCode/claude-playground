@@ -3,6 +3,7 @@ package com.app.jekyllposter.ui.editor
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.data.Account
+import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.testutil.TestApp
@@ -65,6 +66,55 @@ class EditorViewModelTest {
         editor.setBody("From the laptop. And the phone.")
         editor.publish()
         idleUntil { app.github.text(path)!!.contains("And the phone.") }
+    }
+
+    @Test fun deletingAPostFromTheBlog() {
+        val home = HomeViewModel(c)
+        var id: Long? = null
+        val post = runBlocking { c.database.posts().snapshot() }.first { it.path == "_posts/2025-04-20-reading-list.md" }
+        home.edit(post) { id = it }
+        idleUntil { id != null }
+        val editor = EditorViewModel(c, id!!)
+        idleUntil { editor.text != null && editor.state.value.draft != null }
+        editor.deleteFromBlog()
+        idleUntil { app.github.text(post.path) == null }
+        idleUntil { runBlocking { c.drafts.get(id!!) } == null }
+        assertTrue(editor.state.value.closed)
+    }
+
+    @Test fun aDeleteSentAgainKeepsItsMarkerAndAnUpdateDropsIt() {
+        val path = "_posts/2025-04-20-reading-list.md"
+        // A delete whose commit may have landed, then failed on sign-in before it could tell.
+        val id = runBlocking {
+            c.drafts.insert(Draft(title = "Reading", editingPath = path, baseSha = "x", destination = Destination.Delete, targetPath = path, state = PostState.Failed))
+        }
+        val editor = EditorViewModel(c, id)
+        idleUntil { editor.text != null && editor.state.value.draft != null }
+        app.github.push("Deleted by the lost commit", mapOf(path to null))
+        editor.deleteFromBlog()
+        // Recognised as this phone's delete, not "moved elsewhere".
+        idleUntil { runBlocking { c.drafts.get(id) } == null }
+
+        // A failed delete, sent as an update instead.
+        val again = runBlocking {
+            c.drafts.insert(Draft(title = "Coastal", body = "x", editingPath = "travel/_posts/2025-06-08-coastal-walk.md", baseSha = "x", destination = Destination.Delete, targetPath = "travel/_posts/2025-06-08-coastal-walk.md", state = PostState.Failed))
+        }
+        val second = EditorViewModel(c, again)
+        idleUntil { second.text != null && second.state.value.draft != null }
+        // Sent as an update instead: the delete's marker isn't carried into it. (The stale base
+        // sha makes the update fail, which leaves the row to inspect.)
+        second.publish(Destination.Posts)
+        idleUntil { runBlocking { c.drafts.get(again) }!!.let { it.state == PostState.Failed && it.destination == Destination.Posts } }
+        assertEquals(null, runBlocking { c.drafts.get(again) }!!.targetPath)
+    }
+
+    @Test fun aNewPostCantBeDeletedFromTheBlog() {
+        val id = runBlocking { c.drafts.insert(Draft(title = "Only here", body = "Not on the blog.")) }
+        val editor = EditorViewModel(c, id)
+        idleUntil { editor.text != null && editor.state.value.draft != null }
+        editor.deleteFromBlog()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertEquals(PostState.Draft, runBlocking { c.drafts.get(id) }!!.state)
     }
 
     @Test fun suggestionsLeaveOutWhatThePostHasAndMatchLoosely() {

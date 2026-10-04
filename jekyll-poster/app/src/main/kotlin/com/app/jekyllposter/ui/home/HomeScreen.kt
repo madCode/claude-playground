@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.CachedPost
+import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -140,8 +141,8 @@ private fun DraftRow(draft: Draft, onClick: () -> Unit) {
 /** A draft's state in a few words, and whether it needs the writer. */
 fun Draft.status(live: String = "live on the site"): Pair<String, Boolean> = when (state) {
     PostState.Draft -> (if (editingPath != null) "Editing · not published yet" else "Draft") to false
-    PostState.Queued -> "Waiting to publish…" to false
-    PostState.Failed -> "Didn't publish: ${error.orEmpty()}" to true
+    PostState.Queued -> (if (destination == Destination.Delete) "Waiting to delete from the blog…" else "Waiting to publish…") to false
+    PostState.Failed -> (if (destination == Destination.Delete) "Didn't delete: " else "Didn't publish: ") + error.orEmpty() to true
     PostState.Published -> if (targetPath?.startsWith("_drafts/") == true) "Saved to the blog's _drafts" to false else when (buildState) {
         BuildState.Building -> "Published · the site is rebuilding…" to false
         BuildState.Live -> "Published · $live" to false

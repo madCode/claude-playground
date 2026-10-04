@@ -270,10 +270,42 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                     blog = draft.blog ?: container.accounts.current()?.blogKey,
                     // A failed post sent again later gets a fresh name and date: the old ones may
                     // be days stale, or taken by now.
-                    targetPath = if (again) null else draft.targetPath,
+                    // A delete's path marker isn't a name to publish under.
+                    targetPath = if (again || draft.destination == Destination.Delete) null else draft.targetPath,
                     publishDate = if (again) null else draft.publishDate,
                 ),
             )
+            container.schedulePublish(id)
+            flags.update { it.copy(closed = true) }
+        }
+    }
+
+    /**
+     * Queues the blog's copy of the post being edited for deletion. The writer's unsent changes
+     * go with it; the confirmation says so.
+     */
+    fun deleteFromBlog() {
+        viewModelScope.launch {
+            photoJob?.join()
+            saveJob?.cancel()
+            // Under the save lock: an autosave already writing would otherwise put the row back
+            // to Draft after it was queued, and the delete would silently never happen.
+            val queued = saving.withLock {
+                withContext(NonCancellable) {
+                    val draft = container.drafts.get(id) ?: return@withContext false
+                    if (draft.editingPath == null || (draft.state != PostState.Draft && draft.state != PostState.Failed)) return@withContext false
+                    container.drafts.update(
+                        draft.copy(
+                            state = PostState.Queued, error = null, destination = Destination.Delete,
+                            // A delete sent before keeps its marker: its commit may have landed.
+                            targetPath = if (draft.destination == Destination.Delete) draft.targetPath else null,
+                            updatedAt = System.currentTimeMillis(), blog = draft.blog ?: container.accounts.current()?.blogKey,
+                        ),
+                    )
+                    true
+                }
+            }
+            if (!queued) return@launch
             container.schedulePublish(id)
             flags.update { it.copy(closed = true) }
         }

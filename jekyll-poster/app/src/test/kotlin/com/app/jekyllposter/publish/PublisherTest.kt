@@ -151,6 +151,75 @@ class PublisherTest {
         assertEquals(PostState.Published, c.drafts.get(id)!!.state)
     }
 
+    private fun queueDelete(path: String): Long = runBlocking {
+        c.blogs.refresh()
+        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        queue(Draft(title = "To go", body = "Edited, then deleted.", editingPath = path, baseSha = sha, destination = Destination.Delete))
+    }
+
+    @Test fun deletingAPostRemovesItInOneCommitAndForgetsIt() = runBlocking {
+        val path = "_posts/2025-01-12-welcome.md"
+        val photo = java.io.File.createTempFile("waiting", ".jpg").apply { writeBytes(byteArrayOf(1)) }
+        val id = queueDelete(path)
+        c.drafts.update(c.drafts.get(id)!!.copy(images = listOf(DraftImage("/assets/images/2026/x.jpg", photo.path))))
+        val before = github.head
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertNull(github.text(path))
+        assertEquals(before, github.commits.getValue(github.head).parent)
+        assertEquals("Delete post: To go", github.commits.getValue(github.head).message)
+        // Nothing is left to show on the phone: the row, the photo it never sent, the cached post.
+        assertNull(c.drafts.get(id))
+        assertTrue(!photo.exists())
+        assertTrue(c.database.posts().snapshot().none { it.path == path })
+    }
+
+    @Test fun aDeleteThatLandedUnheardIsDone() = runBlocking {
+        val path = "_drafts/garden-plans.md"
+        val id = queueDelete(path)
+        // The commit lands, but its answer is lost on the way back.
+        github.loseNextRefAnswer = true
+        assertEquals(Publisher.Outcome.Retry, publisher.publish(id))
+        assertNull(github.text(path))
+        val before = github.head
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertEquals(before, github.head)
+        assertNull(c.drafts.get(id))
+    }
+
+    @Test fun aPostMovedElsewhereIsNotTakenAsDeleted() = runBlocking {
+        val path = "_drafts/garden-plans.md"
+        val id = queueDelete(path)
+        // Published from the laptop meanwhile: the draft is gone from _drafts but live on the site.
+        github.push("Laptop publish", mapOf(path to null, "_posts/2026-10-04-garden-plans.md" to "---\ntitle: Garden plans\n---\n"))
+        assertTrue(publisher.publish(id) is Publisher.Outcome.Failed)
+        assertEquals(PostState.Failed, c.drafts.get(id)!!.state)
+    }
+
+    @Test fun deletingAPostForgetsItsEarlierPublishedUpdates() = runBlocking {
+        val path = "_posts/2025-01-12-welcome.md"
+        val blog = c.accounts.current()!!.blogKey
+        // An update of it, and the phone's record of first publishing it, both still watching the build.
+        val updated = c.drafts.insert(Draft(title = "Welcome", editingPath = path, targetPath = path, blog = blog, state = PostState.Published, buildState = BuildState.Building))
+        val written = c.drafts.insert(Draft(title = "Welcome", targetPath = path, blog = blog, state = PostState.Published, buildState = BuildState.Building))
+        // A Jekyll draft of the same name, published from the phone, now lives elsewhere.
+        val other = c.drafts.insert(Draft(title = "Elsewhere", editingPath = path, targetPath = "_posts/2026-10-04-welcome.md", blog = blog, state = PostState.Published))
+        val id = queueDelete(path)
+        c.drafts.update(c.drafts.get(id)!!.copy(blog = blog))
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertNull(c.drafts.get(updated))
+        assertNull(c.drafts.get(written))
+        assertTrue(c.drafts.get(other) != null)
+    }
+
+    @Test fun aPostChangedOnGitHubIsNotDeleted() = runBlocking {
+        val path = "_drafts/garden-plans.md"
+        val id = queueDelete(path)
+        github.push("Laptop", mapOf(path to "---\ntitle: Garden plans\n---\nRewritten on the laptop.\n"))
+        assertTrue(publisher.publish(id) is Publisher.Outcome.Failed)
+        assertTrue(github.text(path)!!.contains("Rewritten on the laptop."))
+        assertEquals(PostState.Failed, c.drafts.get(id)!!.state)
+    }
+
     @Test fun updatingAJekyllDraftKeepsItADraft() = runBlocking {
         c.blogs.refresh()
         val path = "_drafts/garden-plans.md"

@@ -42,6 +42,9 @@ class FakeGitHub(
     /** Runs before a ref update, e.g. to push a competing commit and force a conflict. */
     var beforeRefUpdate: (() -> Unit)? = null
 
+    /** When set, the next commit lands but its answer is a 502, as if lost on the way back. */
+    var loseNextRefAnswer = false
+
     /** Status of the Pages workflow run for each commit; commits without one have no run yet. */
     val runs = mutableMapOf<String, Pair<String, String?>>()
 
@@ -185,6 +188,7 @@ class FakeGitHub(
                 val sha = obj.getValue("sha").jsonPrimitive.content
                 if (commits.getValue(sha).parent != head) return error(422, "Update is not a fast forward")
                 refs[branch] = sha
+                if (loseNextRefAnswer) { loseNextRefAnswer = false; return error(502, "Bad gateway") }
                 ok(buildJsonObject { put("object", buildJsonObject { put("sha", sha) }) })
             }
             path == "$base/actions/runs" -> {
