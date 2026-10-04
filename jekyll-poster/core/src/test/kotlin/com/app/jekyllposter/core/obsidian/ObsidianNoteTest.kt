@@ -63,14 +63,22 @@ class ObsidianNoteTest {
     @Test fun linksToPostsBecomePostUrlLinks() {
         val note = convert("See [[Reading list]], [[welcome|my first]], [[2025-01-12-welcome]] and [[Spring#Flowers]].")
         assertEquals(
-            "See [Reading list]({% post_url 2025-04-20-reading-list %}), [my first]({% post_url 2025-01-12-welcome %}), " +
-                "[2025-01-12-welcome]({% post_url 2025-01-12-welcome %}) and [Spring]({% post_url 2025/2025-03-03-spring %}).",
+            "See [Reading list]({{ site.baseurl }}{% post_url 2025-04-20-reading-list %}), [my first]({{ site.baseurl }}{% post_url 2025-01-12-welcome %}), " +
+                "[2025-01-12-welcome]({{ site.baseurl }}{% post_url 2025-01-12-welcome %}) and [Spring]({{ site.baseurl }}{% post_url 2025/2025-03-03-spring %}).",
             note.body,
         )
     }
 
-    @Test fun aLinkFindsAPostByItsSlugToo() {
-        assertEquals("[lighthouse]({% post_url 2025-06-01-lighthouse %})", convert("[[lighthouse]]").body)
+    @Test fun aPostInACategoryFolderIsNamedAsJekyllFindsIt() {
+        assertEquals(
+            "[A walk to the lighthouse]({{ site.baseurl }}{% post_url travel/2025-06-01-lighthouse %})",
+            convert("[[A walk to the lighthouse]]").body,
+        )
+        // A slug alone isn't a title: this may be a note that shares a word with a post.
+        assertEquals("[[lighthouse]]", convert("[[lighthouse]]").body)
+        // Folders on both sides of _posts: no name finds it, so no link that would break the build.
+        val nested = ObsidianNote.convert("[[Odd]]", null, listOf(LinkTarget("travel/_posts/2025/2025-01-01-odd.md", "Odd"))) as Result.Converted
+        assertEquals("[[Odd]]", nested.body)
     }
 
     @Test fun linksToNotesNotYetPostedStayAsWritten() {
@@ -80,7 +88,7 @@ class ObsidianNoteTest {
     @Test fun codeIsLeftAlone() {
         val text = "Write `[[Reading list]]` for a link:\n\n```\n[[Reading list]]\n```\n\nLike [[Reading list]]."
         assertEquals(
-            "Write `[[Reading list]]` for a link:\n\n```\n[[Reading list]]\n```\n\nLike [Reading list]({% post_url 2025-04-20-reading-list %}).",
+            "Write `[[Reading list]]` for a link:\n\n```\n[[Reading list]]\n```\n\nLike [Reading list]({{ site.baseurl }}{% post_url 2025-04-20-reading-list %}).",
             convert(text).body,
         )
     }
@@ -111,7 +119,7 @@ class ObsidianNoteTest {
     }
 
     @Test fun rulesCanUseGroupsAsPythonWritesThem() {
-        val note = convert("---\nfind: ['(?P<first>\\w+) Smith']\nreplace: ['\\g<first> S.']\n---\nAda Smith and Bo Smith\n")
+        val note = convert("---\nfind: ['(?P<first_name>\\w+) Smith']\nreplace: ['\\g<first_name> S.']\n---\nAda Smith and Bo Smith\n")
         assertEquals("Ada S. and Bo S.\n", note.body)
         val numbered = convert("---\nfind: ['(\\w+)@example\\.com']\nreplace: ['\\1 (email)']\n---\nWrite to ada@example.com.\n")
         assertEquals("Write to ada (email).\n", numbered.body)
@@ -123,7 +131,11 @@ class ObsidianNoteTest {
 
     @Test fun rulesThatCantBeAppliedStopTheNoteRatherThanLeakIt() {
         assertTrue(problem("---\nfind: [Priya, Elm]\nreplace: [a friend]\n---\nx\n").contains("pairs"))
-        assertTrue(problem("---\nfind: ['(unclosed']\nreplace: [x]\n---\nx\n").contains("(unclosed"))
+        // Named by number: the pattern is the word being hidden.
+        assertEquals("Find/replace rule 1 isn't a pattern the app can read, so the note wasn't added.", problem("---\nfind: ['(unclosed']\nreplace: [x]\n---\nx\n"))
+        assertTrue(problem("---\nfind: [Priya]\nreplace: ['\\1 x']\n---\nPriya\n").contains("group"))
+        assertTrue(problem("---\nfind: [Priya]\nreplace: [x]\nfind: [Elm]\n---\nPriya\n").contains("twice"))
+        assertTrue(problem("---\nfind: [Priya]\nreplace: [a friend]\n\nPriya, with no closing line.\n").contains("closing"))
         assertTrue(problem("---\nfind: {a: b}\nreplace: [x]\n---\nx\n").contains("lists"))
         assertTrue(problem("---\nfind: [Priya\nreplace: x\n---\nPriya\n").contains("isn't YAML"))
     }
@@ -146,7 +158,16 @@ class ObsidianNoteTest {
         assertNull(ObsidianNote.resolve("bird.jpg", files))
     }
 
-    @Test fun anEmbedIsReplacedWhereItWas() {
-        assertEquals("a\n\n![x](y)\n\nb ![[cat.jpg]]", ObsidianNote.replaceEmbed("a\n\n![[cat.jpg]]\n\nb ![[cat.jpg]]", "![[cat.jpg]]", "![x](y)"))
+    @Test fun anEmbedIsReplacedWhereItWasNotInCode() {
+        assertEquals(
+            "Write `![[cat.jpg]]` to embed:\n\n![x](y)\n\nb ![[cat.jpg]]",
+            ObsidianNote.replaceEmbed("Write `![[cat.jpg]]` to embed:\n\n![[cat.jpg]]\n\nb ![[cat.jpg]]", "![[cat.jpg]]", "![x](y)"),
+        )
+    }
+
+    @Test fun anEmbedKeepsItsFileNameWhenTheRulesChangeTheText() {
+        val note = convert("---\nfind: [Priya]\nreplace: [a friend]\n---\n![[Priya lunch.jpg]]\n")
+        assertEquals("![[a friend lunch.jpg]]\n", note.body)
+        assertEquals(listOf(Embed("![[a friend lunch.jpg]]", "Priya lunch.jpg", "")), note.embeds)
     }
 }

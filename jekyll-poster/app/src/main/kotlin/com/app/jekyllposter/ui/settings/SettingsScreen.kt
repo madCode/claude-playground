@@ -76,10 +76,7 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: ()
             val vault by container.settings.obsidianVault.collectAsStateWithLifecycle(null)
             val context = androidx.compose.ui.platform.LocalContext.current
             val chooseVault = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { tree ->
-                if (tree != null) scope.launch {
-                    runCatching { context.contentResolver.takePersistableUriPermission(tree, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-                    container.settings.setObsidianVault(tree.toString())
-                }
+                if (tree != null) scope.launch { com.app.jekyllposter.data.chooseVault(context, container.settings, tree) }
             }
             Row(
                 vault?.let(::vaultName) ?: "Vault folder",
@@ -88,10 +85,7 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: ()
             )
             if (vault != null) {
                 Row("Forget the vault folder", "The app stops reading it", onClick = {
-                    scope.launch {
-                        vault?.let { v -> runCatching { context.contentResolver.releasePersistableUriPermission(android.net.Uri.parse(v), android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } }
-                        container.settings.setObsidianVault(null)
-                    }
+                    scope.launch { com.app.jekyllposter.data.chooseVault(context, container.settings, null) }
                 })
             }
             Heading("About")

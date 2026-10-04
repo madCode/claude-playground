@@ -17,7 +17,7 @@ class PreviewTest {
     }
 
     @Test fun aPostUrlLinkStillReadsAsALink() {
-        val html = preview.body("See [the list]({% post_url 2025-04-20-reading-list %}).")
+        val html = preview.body("See [the list]({{ site.baseurl }}{% post_url 2025-04-20-reading-list %}).")
         assertTrue(html, html.contains("<a href=\"#\">the list</a>"))
     }
 

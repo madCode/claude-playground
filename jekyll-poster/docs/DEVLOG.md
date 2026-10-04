@@ -20,6 +20,28 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Cycle 17: posts from Obsidian
+- **Shipped:** share a note from Obsidian (text or its `.md` file) and it becomes a post, as
+  obyde does it: front matter to the editor's fields, `[[links]]` to the blog's posts as
+  `post_url`, links to unposted notes left as `[[written]]`, obyde's `find:`/`replace:` rules
+  applied and then removed, and `![[photos]]` found in a vault folder chosen once.
+- **Not obyde's code:** a Python command-line tool can't run on Android, and its core is a few
+  hundred lines; about half of it the app already did. Unlike obyde, the rules never publish.
+- **Its review found** (fixed, with tests): `post_url` leaves out a project site's baseurl on
+  Pages' Jekyll 3; links to future-dated or since-deleted posts, or to posts under a category
+  folder by the wrong name, would fail the site's build (refreshed first, those skipped, named
+  `travel/…`; slug-only matches dropped); a replace group that isn't there crashed the app;
+  Python group names with `_` were refused; a share was lost on rotation mid-way; photos waiting
+  for the vault folder were lost if the picker pushed the app out of memory; a photo could land
+  in a code example; choosing another folder kept the old one readable; conversion ran on the
+  main thread; errors repeated the private word. Also: a second `find:` or a front matter
+  without its closing line could have let words through; both now stop the note.
+- **Left:** a phrase broken across lines isn't matched (as in obyde; DESIGN says so); deleting a
+  post others link to fails the next build (Pages keeps the last good one); indented code blocks
+  aren't told apart from nested lists.
+- **Tests:** a test that called the share code inside `runBlocking` hung on Room, as in cycles 1
+  and 11; it waits on the main looper instead.
+
 ### Cycle 16: a privacy audit
 - **Asked:** what goes to GitHub besides what's in the post?
 - **Found and fixed:** `_drafts` read as private but a public repository shows it to anyone (the

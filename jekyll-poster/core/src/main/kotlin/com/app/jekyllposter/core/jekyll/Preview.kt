@@ -50,6 +50,8 @@ class Preview(private val config: SiteConfig, private val resolveUrl: (String) -
 
     /** Resolves the Liquid that makes links, so they point where the built site's would. */
     internal fun liquid(markdown: String): String = markdown
+        // Left as written, its spaces would stop Markdown reading the link at all.
+        .replace(postUrlTag, "#")
         .replace(filtered) { m ->
             val path = m.groupValues[2]
             when (m.groupValues[3]) {
@@ -59,8 +61,6 @@ class Preview(private val config: SiteConfig, private val resolveUrl: (String) -
         }
         .replace(baseurlTag, config.baseurl)
         .replace(urlTag, config.url.orEmpty())
-        // Left as written, its spaces would stop Markdown reading the link at all.
-        .replace(postUrlTag, "#")
 
     /** Site paths (they start with `/`) go through [resolveUrl], after taking the baseurl off. */
     private fun url(raw: String): String {
@@ -73,7 +73,7 @@ class Preview(private val config: SiteConfig, private val resolveUrl: (String) -
         val filtered = Regex("""\{\{\s*(['"])(.*?)\1\s*\|\s*(relative_url|absolute_url)\s*}}""")
         val baseurlTag = Regex("""\{\{\s*site\.baseurl\s*}}""")
         val urlTag = Regex("""\{\{\s*site\.url\s*}}""")
-        val postUrlTag = Regex("""\{%-?\s*post_url\s+\S+\s*-?%}""")
+        val postUrlTag = Regex("""(\{\{\s*site\.baseurl\s*}})?\{%-?\s*post_url\s+\S+\s*-?%}""")
 
         fun escape(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 

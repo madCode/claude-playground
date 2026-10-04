@@ -96,14 +96,19 @@ doesn't want to open a laptop and make a commit for every post.
 - `tags:` and `categories:` fill the post's own, in the blog's spelling. `date:` and `layout:`
   go (the app sets those when publishing), and so do Obsidian's `aliases:` and `cssclasses:`.
   Other keys are the post's "more front matter", to see before publishing.
-- `[[Post title]]` and `[[Post title|shown text]]` become `{% post_url … %}` links when a
-  published post on the blog has that title or file name. A link to a note that isn't a post yet
-  stays as written, `[[Like this]]`: it reads as a title. Code is left alone.
+- `[[Post title]]` and `[[Post title|shown text]]` become `{{ site.baseurl }}{% post_url … %}`
+  links when a post the site builds has that title or file name (`[[2025-04-20-reading-list]]`):
+  published, not a draft, not dated in the future. A link to a note that isn't a post yet stays
+  as written, `[[Like this]]`: it reads as a title. Code is left alone.
+- The blog's post list is refreshed first: a `post_url` to a post that's gone fails the site's
+  build. So does deleting or renaming a post that others link to, later: Pages then keeps the
+  last good build and the app says the build failed.
 - obyde's `find:` and `replace:` lists (Python regular expressions, in pairs) are taken out of
   the note first, then applied to everything else: title, text, tags, other front matter, and
-  the file name the title may come from. So the words they hide never reach the phone's draft or
-  the blog. A note whose rules can't be applied (unpaired, unreadable) isn't added, and the app
-  says why.
+  the file name the title may come from. So the words they hide don't reach the phone's draft
+  or the blog, as long as a rule matches them as written: a name broken across two lines isn't
+  matched. A note whose rules can't be applied (unpaired, written twice, unreadable, a group
+  that isn't there) isn't added, and the app says why without repeating the rule.
 - `![[photo.jpg]]` is found in the vault folder, chosen once (in the editor when a note first
   needs it, or in Settings), and added like any photo, location stripped. Its `|alt text` is the
   alt text; a size (`|300`) isn't. One not in the vault stays as written, and the app says so.

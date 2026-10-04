@@ -37,7 +37,6 @@ class ObsidianShareTest {
 
     private fun signIn() = runBlocking {
         app.container.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
-        app.container.blogs.refresh()
     }
 
     private fun photo(file: File): File {
@@ -59,11 +58,15 @@ class ObsidianShareTest {
             "---\ntags: [food, Priya]\naliases: [lunch]\nfind: [Priya]\nreplace: [a friend]\n---\n" +
                 "Priya liked [[What I read in April]]. Next: [[Soup recipes]].\n",
         )
-        val id = runBlocking { HomeViewModel(app.container).startShared(Shared("", emptyList(), Uri.fromFile(file))) }!!
+        val home = HomeViewModel(app.container)
+        home.startShared(Shared("", emptyList(), Uri.fromFile(file)))
+        // Not runBlocking: the database finishes on the main looper, which that would block.
+        idleUntil(10_000) { home.opened.value != null }
+        val id = home.opened.value!!
         val draft = runBlocking { app.container.drafts.get(id) }!!
         assertEquals("Lunch with a friend", draft.title)
         assertEquals(listOf("food", "a friend"), draft.tags)
-        assertEquals("a friend liked [What I read in April]({% post_url 2025-04-20-reading-list %}). Next: [[Soup recipes]].\n", draft.body)
+        assertEquals("a friend liked [What I read in April]({{ site.baseurl }}{% post_url 2025-04-20-reading-list %}). Next: [[Soup recipes]].\n", draft.body)
         assertNull(draft.extraFrontMatter)
         assertFalse(draft.toString(), draft.toString().contains("Priya"))
     }

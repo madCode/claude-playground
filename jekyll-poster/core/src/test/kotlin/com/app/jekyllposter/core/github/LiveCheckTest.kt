@@ -9,6 +9,7 @@ import com.app.jekyllposter.core.jekyll.Slug
 import com.app.jekyllposter.core.obsidian.ObsidianNote
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.junit.Assert.assertEquals
@@ -48,11 +49,16 @@ class LiveCheckTest {
         val title = "Live check ${now.toEpochSecond()}"
         // Written as an Obsidian note, so the build checks the converter's output too: a
         // `post_url` to a post that isn't there would fail the whole site's build.
-        val linkable = github.files(owner, name, branch).map { PostPath(it.path) }.filter { it.isPost && !it.isDraft }
-        val linked = linkable.maxByOrNull { it.path }
+        // A post the site builds, so its post_url resolves: dated today or before, not unpublished.
+        val today = now.withZoneSameInstant(config.timezone ?: java.time.ZoneOffset.UTC).toLocalDate()
+        val linked = github.files(owner, name, branch).map { PostPath(it.path) }
+            .filter { it.isPost && !it.isDraft && (it.date?.let { d -> d <= today } ?: false) && ObsidianNote.postUrlName(it.path) != null }
+            .sortedByDescending { it.date }
+            .firstOrNull { github.text(owner, name, branch, it.path)?.contains(Regex("(?m)^published:\\s*false")) == false }
         val note = "---\nfind: [Hidden Name]\nreplace: [a friend]\n---\n" +
-            "Posted and deleted by Jekyll Poster's live check, for Hidden Name." + (linked?.let { " See [[${it.slug}]]." } ?: "") + "\n"
-        val converted = ObsidianNote.convert(note, "$title.md", linkable.map { ObsidianNote.LinkTarget(it.path, "") }) as ObsidianNote.Result.Converted
+            "Posted and deleted by Jekyll Poster's live check, for Hidden Name." +
+            (linked?.let { " See [[${it.fileName.substringBeforeLast('.')}|the linked post]]." } ?: "") + "\n"
+        val converted = ObsidianNote.convert(note, "$title.md", listOfNotNull(linked).map { ObsidianNote.LinkTarget(it.path, "") }) as ObsidianNote.Result.Converted
         val slug = Slug.of(title)
         val path = PostPath.newPost(now.toLocalDate(), slug).path
         val text = PostWriter.newPost(PostContent(converted.title, converted.body), now, config).render()
@@ -73,7 +79,14 @@ class LiveCheckTest {
             val page = waitFor("$url to show the post", minutes = 5) { fetch(url)?.takeIf { title in it } }
             println("Live at $url")
             assertTrue("The find/replace rule wasn't applied", "Hidden Name" !in page && "a friend" in page)
-            if (linked != null) assertTrue("The [[link]] didn't become a link to ${linked.slug}", Regex("""href="[^"]*${linked.slug}[^"]*"""").containsMatchIn(page))
+            if (linked != null) {
+                // The link must open the post: a missing baseurl or a wrong post_url name would 404.
+                val href = Regex("""<a href="([^"]+)">the linked post</a>""").find(page)?.groupValues?.get(1)
+                    ?: throw AssertionError("The [[link]] didn't become a link")
+                val target = url.toHttpUrl().resolve(href)!!.toString()
+                assertTrue("The link to ${linked.path} doesn't open: $target", fetch(target) != null)
+                println("Its link opens $target")
+            }
         } finally {
             val sent = github.file(owner, name, branch, path)
             if (sent != null) {

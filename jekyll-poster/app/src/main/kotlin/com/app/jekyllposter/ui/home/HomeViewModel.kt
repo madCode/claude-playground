@@ -19,6 +19,7 @@ import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -98,21 +99,39 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     fun stopSearch() = status.update { it.copy(query = null) }
 
+    /** A post started from a share, for the screen to open; null once opened. */
+    val opened = MutableStateFlow<Long?>(null)
+
     /**
-     * Starts a post from what another app shared, and returns it; null, with [State.error] saying
-     * why, when it can't be taken. Text and notes go through [ObsidianNote], which leaves plain
-     * text as it is: a note's `[[links]]`, find/replace rules and front matter are what change.
+     * Starts a post from what another app shared, in this ViewModel's scope: it outlives a
+     * rotation, which would cancel the screen's own coroutine and lose the share.
      */
-    suspend fun startShared(shared: Shared): Long? {
+    fun startShared(shared: Shared) {
+        viewModelScope.launch { createShared(shared)?.let { opened.value = it } }
+    }
+
+    /**
+     * The post a share starts; null, with [State.error] saying why, when it can't be taken. Text
+     * and notes go through [ObsidianNote], which leaves plain text as it is: a note's `[[links]]`,
+     * find/replace rules and front matter are what change.
+     */
+    suspend fun createShared(shared: Shared): Long? {
         val fromFile = shared.note?.let { uri -> readNote(uri) ?: run {
             status.update { it.copy(error = "Couldn't read the shared note.") }
             return null
         } }
         val text = fromFile?.second ?: shared.text
+        // Fresh, if GitHub can be reached: a link to a post deleted since the last look would fail
+        // the site's build. Best effort; the cached list does otherwise.
+        withTimeoutOrNull(10_000) { runCatching { container.blogs.refresh() } }
+        val today = java.time.LocalDate.now(container.blogs.config.value.timezone ?: java.time.ZoneOffset.UTC)
         val posts = container.blogs.cachedPosts.first()
-            .filter { it.published && !PostPath(it.path).isDraft }
+            // Only posts the site builds: GitHub Pages skips future-dated ones, and post_url fails on them.
+            .filter { it.published && !PostPath(it.path).isDraft && (PostPath(it.path).date?.let { d -> d <= today } ?: false) }
             .map { ObsidianNote.LinkTarget(it.path, it.title) }
-        val note = when (val result = ObsidianNote.convert(text, fromFile?.first, posts)) {
+        // Off the main thread: a big note or a slow pattern mustn't freeze the screen.
+        val converted = withContext(Dispatchers.Default) { ObsidianNote.convert(text, fromFile?.first, posts) }
+        val note = when (val result = converted) {
             is ObsidianNote.Result.Problem -> {
                 status.update { it.copy(error = result.message) }
                 return null
