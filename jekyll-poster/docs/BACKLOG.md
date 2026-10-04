@@ -23,6 +23,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 14: search your posts
 - [x] Cycle 13: a documentation pass
 - [x] Cycle 12: take a photo with the camera
 - [x] Cycle 11: New post from the app icon; a share no longer starts a post again on Back

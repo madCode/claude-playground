@@ -43,6 +43,10 @@ doesn't want to open a laptop and make a commit for every post.
 - With more than one category, a row of pills filters the blog's posts. Tapping the chosen one,
   or All, shows them all again; so does the chosen category disappearing.
 
+- **Search** (the top bar) matches the blog's posts by title, category or tag, as you type,
+  within the chosen category. Posts on the phone stay listed, so a failed one is never hidden.
+  Back or ✕ closes it.
+
 ## Writing
 
 - A post has a title, categories, tags and a Markdown body. It saves as you type.

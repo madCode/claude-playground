@@ -12,6 +12,7 @@ import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.data.Account
@@ -206,5 +207,15 @@ class ScreenshotTest {
     @Test fun photoMenu() {
         val vm = editorWithDraft()
         shoot("11-photo-menu", act = { compose.onNode(hasContentDescription("Add a photo")).performClick() }) { EditorScreen(vm) {} }
+    }
+
+    @Test fun search() {
+        signIn()
+        val vm = HomeViewModel(c)
+        shoot("12-search", ready = { vm.state.value.onBlog.isNotEmpty() && !vm.state.value.refreshing }, act = {
+            compose.onNode(hasContentDescription("Search your posts")).performClick()
+            compose.waitForIdle()
+            compose.onNode(androidx.compose.ui.test.hasTestTag("search")).performTextInput("writ")
+        }) { HomeScreen(vm, onOpenDraft = {}, onSettings = {}) }
     }
 }

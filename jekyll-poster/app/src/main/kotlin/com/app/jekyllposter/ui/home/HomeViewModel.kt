@@ -32,8 +32,13 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         val category: String? = null,
         /** The blog's categories, most used first, to filter by. */
         val categories: List<String> = emptyList(),
+        /** What the writer is searching for; null when not searching. */
+        val query: String? = null,
+        val blogHasPosts: Boolean = false,
         val error: String? = null,
-    )
+    ) {
+        val searching: Boolean get() = !query.isNullOrBlank()
+    }
 
     private val status = MutableStateFlow(State())
 
@@ -47,8 +52,12 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         ).categories.map { it.name }
         // A category gone since it was chosen (renamed, another blog) filters nothing: show all.
         val category = s.category?.takeIf { c -> categories.any { it.equals(c, ignoreCase = true) } }
-        val shown = category?.let { c -> posts.filter { post -> post.categories.any { it.equals(c, ignoreCase = true) } } } ?: posts
-        s.copy(account = account, onPhone = mine.filter { (it.state != PostState.Published || recent(it)) && !it.untouched }, onBlog = shown, categories = categories, category = category)
+        val q = s.query?.trim().orEmpty()
+        val inCategory = category?.let { c -> posts.filter { post -> post.categories.any { it.equals(c, ignoreCase = true) } } } ?: posts
+        val shown = if (q.isEmpty()) inCategory else inCategory.filter { it.matches(q) }
+        val listed = mine.filter { (it.state != PostState.Published || recent(it)) && !it.untouched }
+        // Search narrows the blog's posts only: the phone's are few, and a failed one must stay in sight.
+        s.copy(account = account, onPhone = listed, blogHasPosts = posts.isNotEmpty(), onBlog = shown, categories = categories, category = category)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), State())
 
     init {
@@ -74,6 +83,12 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     fun filter(category: String?) = status.update { it.copy(category = if (it.category.equals(category, ignoreCase = true)) null else category) }
 
     fun dismissError() = status.update { it.copy(error = null) }
+
+    fun startSearch() = status.update { it.copy(query = it.query ?: "") }
+
+    fun search(query: String) = status.update { it.copy(query = query) }
+
+    fun stopSearch() = status.update { it.copy(query = null) }
 
     /** Opening a post goes through here so [open] runs on the main thread, where navigation must. */
     fun newDraft(open: (Long) -> Unit) {
@@ -130,3 +145,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
 /** A new post nothing was written in yet: not shown on the list. */
 private val Draft.untouched: Boolean get() = isEmpty && state == PostState.Draft && editingPath == null
+
+/** A post matches a search by its title, or by one of its categories or tags. */
+private fun CachedPost.matches(query: String): Boolean =
+    title.contains(query, ignoreCase = true) || (categories + tags).any { it.contains(query, ignoreCase = true) }
