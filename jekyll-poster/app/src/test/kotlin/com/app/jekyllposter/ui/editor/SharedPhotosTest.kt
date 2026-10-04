@@ -44,5 +44,11 @@ class SharedPhotosTest {
         val second = body.indexOf(editor.text!!.images[1].sitePath)
         assertTrue(first in 0 until second)
         assertEquals(2, Regex("""!\[]""").findAll(body).count())
+        // Each asks for alt text, first first.
+        val first2 = editor.text!!.images[0].sitePath
+        assertEquals(listOf(first2, editor.text!!.images[1].sitePath), editor.state.value.describing)
+        editor.describe(first2, "A red square")
+        assertTrue(editor.text!!.body.contains("![A red square]({{ '$first2' | relative_url }})"))
+        idleUntil { editor.state.value.describing.size == 1 }
     }
 }

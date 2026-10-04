@@ -92,10 +92,15 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
         _state.update { it.copy(login = user.login, repos = repos, busy = false, token = token) }
     }
 
+    /** Switching blogs: Back leaves to where it came from, not to a sign-in screen. */
+    var switching = false
+        private set
+
     fun back() = _state.update { it.copy(repos = null, error = null) }
 
     /** Lists the blogs the current sign-in can write to, to switch to another. */
     fun switchBlog() {
+        switching = true
         _state.update { it.copy(busy = true, error = null, repos = emptyList()) }
         viewModelScope.launch {
             val account = container.accounts.current() ?: return@launch _state.update { it.copy(busy = false, repos = null) }
@@ -106,7 +111,8 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
             try {
                 listRepos(account.token)
             } catch (e: Exception) {
-                _state.update { it.copy(busy = false, repos = null, token = account.token, error = e.forWriter()) }
+                // Stays on the blog list with the error; no token is put in a field to resubmit.
+                _state.update { it.copy(busy = false, error = e.forWriter()) }
             }
         }
     }
@@ -119,9 +125,16 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
             val client = container.client(s.token.trim())
             val siteUrl = runCatching { client.pages(repo.owner.login, repo.name)?.htmlUrl }.getOrNull()
             container.blogs.clear()
-            val account = Account(login, s.token.trim(), repo.owner.login, repo.name, repo.defaultBranch, siteUrl)
-            // Expiry counts from when the token arrived, not from when a blog was picked.
-            container.accounts.save(deviceTokens?.let { account.withTokens(it, tokensAt) } ?: account)
+            val stored = if (switching) container.accounts.current() else null
+            val account = if (stored != null) {
+                // The sign-in as stored now: it may have been renewed while the list was open.
+                stored.copy(owner = repo.owner.login, repo = repo.name, branch = repo.defaultBranch, siteUrl = siteUrl)
+            } else {
+                val fresh = Account(login, s.token.trim(), repo.owner.login, repo.name, repo.defaultBranch, siteUrl)
+                // Expiry counts from when the token arrived, not from when a blog was picked.
+                deviceTokens?.let { fresh.withTokens(it, tokensAt) } ?: fresh
+            }
+            container.accounts.save(account)
             // A first read fills the category picker; if it fails, Home tries again.
             runCatching { container.blogs.refresh() }
             _state.update { it.copy(busy = false, done = true) }

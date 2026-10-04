@@ -47,7 +47,7 @@ import com.app.jekyllposter.core.github.DeviceFlow
 import com.app.jekyllposter.core.github.GitHubRepo
 
 @Composable
-fun ConnectScreen(viewModel: ConnectViewModel, onConnected: () -> Unit) {
+fun ConnectScreen(viewModel: ConnectViewModel, onCancel: () -> Unit = {}, onConnected: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.done) { if (state.done) onConnected() }
     Scaffold { padding ->
@@ -59,8 +59,9 @@ fun ConnectScreen(viewModel: ConnectViewModel, onConnected: () -> Unit) {
         } else if (repos == null) {
             TokenStep(state, viewModel, Modifier.padding(padding))
         } else {
-            BackHandler(onBack = viewModel::back)
-            RepoStep(state.login.orEmpty(), repos, state.busy, state.error, viewModel.installUrl, viewModel::choose, viewModel::back, Modifier.padding(padding))
+            val back = if (viewModel.switching) onCancel else viewModel::back
+            BackHandler(onBack = back)
+            RepoStep(state.login.orEmpty(), repos, state.busy, state.error, viewModel.installUrl, viewModel::choose, back, Modifier.padding(padding))
         }
     }
 }

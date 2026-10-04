@@ -39,11 +39,13 @@ doesn't want to open a laptop and make a commit for every post.
 - Sharing text, a link or photos to the app starts a post with them; several photos go in in
   the order they were shared.
 - A **toolbar** above the keyboard: bold, italic, link (a selected URL becomes the address),
-  heading, list, quote and code. Pressing a button again undoes it.
+  heading, list, quote and code, while the body has the focus. Pressing bold, italic, code or a
+  line style again undoes it.
 - **Preview** shows the post as a page: Markdown (with tables and strikethrough), the
   `relative_url` and `site.baseurl` links resolved, site images loaded from the live site, and
   photos not yet uploaded shown from the phone. Other Liquid shows as written. No scripts run.
-- **Photos** come from the photo picker and go in at the cursor, on a paragraph of their own. Each is turned upright, scaled to at most 2000 px and
+- **Photos** come from the photo picker and go in at the cursor (after a selection, never over
+  it), on a paragraph of their own. Each asks for alt text, which can be skipped. Each is turned upright, scaled to at most 2000 px and
   re-encoded, which drops its EXIF: no location, camera or time goes to a public blog. PNGs stay
   PNG, GIFs are copied as they are. It's named by when it was added
   (`/assets/images/2026/20261004-221500.jpg`, beside the blog's own images) and linked with

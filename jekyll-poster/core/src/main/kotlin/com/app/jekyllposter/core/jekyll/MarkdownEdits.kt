@@ -9,7 +9,7 @@ data class Edit(val text: String, val start: Int, val end: Int) {
     val selected: String get() = text.substring(start, end)
 }
 
-/** The toolbar's Markdown, one function per button, each undone by pressing it again. */
+/** The toolbar's Markdown, one function per button; bold, italic, code and the line prefixes are undone by pressing them again. */
 object MarkdownEdits {
     /**
      * Wraps the selection in [marker] (`**` bold, `_` italic, `` ` `` code), or unwraps it if
@@ -30,7 +30,9 @@ object MarkdownEdits {
      */
     fun linePrefix(e: Edit, prefix: String): Edit {
         val lineStart = e.text.lastIndexOf('\n', (e.start - 1).coerceAtLeast(0)).let { if (e.start == 0 || it < 0) 0 else it + 1 }
-        val lineEnd = e.text.indexOf('\n', e.end).let { if (it < 0) e.text.length else it }
+        // A selection ending just after a line break stops at that line, not the next one.
+        val last = if (e.end > e.start && e.text[e.end - 1] == '\n') e.end - 1 else e.end
+        val lineEnd = e.text.indexOf('\n', last).let { if (it < 0) e.text.length else it }
         val lines = e.text.substring(lineStart, lineEnd).split('\n')
         val removing = lines.all { it.startsWith(prefix) }
         val changed = lines.map { if (removing) it.removePrefix(prefix) else prefix + it }
@@ -62,11 +64,11 @@ object MarkdownEdits {
     }
 
     /**
-     * Puts [block] (a photo's Markdown) on a paragraph of its own at the cursor, replacing any
-     * selection, with the cursor after it.
+     * Puts [block] (a photo's Markdown) on a paragraph of its own at the cursor, or after the
+     * selection (never over it: the writer's words aren't lost to a photo), with the cursor after it.
      */
     fun insertBlock(e: Edit, block: String): Edit {
-        val before = e.text.substring(0, e.start).trimEnd(' ')
+        val before = e.text.substring(0, e.end).trimEnd(' ')
         val after = e.text.substring(e.end).trimStart(' ')
         val lead = when {
             before.isEmpty() || before.endsWith("\n\n") -> ""

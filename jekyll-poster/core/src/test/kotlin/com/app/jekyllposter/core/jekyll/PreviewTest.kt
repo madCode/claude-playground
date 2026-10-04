@@ -89,3 +89,12 @@ class PermalinkTest {
         assertEquals("https://example.com/b", Permalink.siteUrl(SiteConfig(url = "https://example.com", baseurl = "/b"), "me", "blog", null))
     }
 }
+
+class AltTextTest {
+    @Test fun altTextGoesOnTheRightPhoto() {
+        val a = Images.markdown("/i/a.jpg", "")
+        val b = Images.markdown("/i/b.jpg", "old")
+        val body = "$a\n\n$b"
+        assertEquals("${Images.markdown("/i/a.jpg", "")}\n\n${Images.markdown("/i/b.jpg", "A [cat] asleep")}", Images.withAlt(body, "/i/b.jpg", "A [cat] asleep "))
+    }
+}

@@ -40,7 +40,7 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
         }
         composable("switch") {
             // Straight to the blog list, with the sign-in already in hand.
-            ConnectScreen(viewModel { ConnectViewModel(container).also { it.switchBlog() } }) {
+            ConnectScreen(viewModel { ConnectViewModel(container).also { it.switchBlog() } }, onCancel = { nav.popBackStack() }) {
                 nav.navigate("home") { popUpTo(0) { inclusive = true } }
             }
         }

@@ -7,6 +7,17 @@ Times are Pacific.
 
 ## Night 1 · Sun 4 Oct
 
+### Cycle 6: photos shared from the gallery, alt text (05:00–05:40)
+- **Shipped:** share one photo or several from the gallery to start a post with them, in
+  order; every added photo asks for its alt text (skippable).
+- **Cycle 5's second look found** (all fixed): a cancelled or failed Switch blog could save the
+  sign-in without its refresh token, and Back from it landed on a sign-in screen; the editor
+  rebuilt the body without the keyboard's word in progress, which breaks predictive keyboards;
+  the toolbar formatted the body while the title had the focus; a photo replaced selected text;
+  a selection ending at a line break prefixed the next line too; switching blogs could write
+  back a token renewed meanwhile. Found while testing: the editor reached its cursor before it
+  was set up when a draft loaded fast.
+
 ### Cycle 5: a Markdown toolbar, photos at the cursor, settings (04:15–05:00)
 - **Shipped:** a toolbar above the keyboard for bold, italic, link, heading, list, quote and
   code, each undone by pressing it again; photos go in at the cursor on a paragraph of their

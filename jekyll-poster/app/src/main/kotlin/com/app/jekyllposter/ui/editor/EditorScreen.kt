@@ -89,6 +89,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -109,6 +110,8 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val text = viewModel.text
     var picker by remember { mutableStateOf<TermKind?>(null) }
+    // The toolbar formats the body, so it only works while the body has the focus.
+    var bodyFocused by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     LaunchedEffect(state.closed) { if (state.closed) onClose() }
@@ -202,6 +205,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
         bottomBar = {
             if (editable && !state.previewing && text != null) {
                 FormatBar(
+                    formatting = bodyFocused,
                     addingPhoto = state.addingPhoto,
                     onFormat = viewModel::format,
                     onPhoto = { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
@@ -249,11 +253,14 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                 readOnly = !editable,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 colors = plainField(),
-                modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp).testTag("body"),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp).testTag("body").onFocusChanged { bodyFocused = it.isFocused },
             )
         }
     }
 
+    state.describing.firstOrNull()?.let { sitePath ->
+        DescribePhoto(sitePath, onDone = { viewModel.describe(sitePath, it) })
+    }
     picker?.let { kind ->
         TermPicker(kind, viewModel, onDismiss = { picker = null })
     }
@@ -277,18 +284,44 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     }
 }
 
-/** Markdown at the cursor, above the keyboard. Each button undoes itself when pressed again. */
+/** Asks for a just-added photo's alt text: what a screen reader says, and what shows if it won't load. */
 @Composable
-private fun FormatBar(addingPhoto: Boolean, onFormat: ((Edit) -> Edit) -> Unit, onPhoto: () -> Unit) {
+private fun DescribePhoto(sitePath: String, onDone: (String) -> Unit) {
+    var alt by remember(sitePath) { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = { onDone("") },
+        title = { Text("Describe the photo") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("For people using screen readers, and for when it doesn't load.", style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(
+                    value = alt, onValueChange = { alt = it }, placeholder = { Text("A loaf of sourdough on a board") },
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { onDone(alt) }),
+                    modifier = Modifier.fillMaxWidth().testTag("altText"),
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { onDone(alt) }) { Text("Done") } },
+        dismissButton = { TextButton(onClick = { onDone("") }) { Text("Skip") } },
+    )
+}
+
+/**
+ * Markdown at the cursor, above the keyboard; bold, italic, code and the line prefixes undo
+ * themselves when pressed again. Formatting needs the body focused; a photo can go in any time.
+ */
+@Composable
+private fun FormatBar(formatting: Boolean, addingPhoto: Boolean, onFormat: ((Edit) -> Edit) -> Unit, onPhoto: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding()) {
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
-            IconButton(onClick = { onFormat { MarkdownEdits.wrap(it, "**") } }) { Icon(Icons.Default.FormatBold, "Bold") }
-            IconButton(onClick = { onFormat { MarkdownEdits.wrap(it, "_") } }) { Icon(Icons.Default.FormatItalic, "Italic") }
-            IconButton(onClick = { onFormat(MarkdownEdits::link) }) { Icon(Icons.Default.Link, "Link") }
-            IconButton(onClick = { onFormat { MarkdownEdits.linePrefix(it, "## ") } }) { Icon(Icons.Default.Title, "Heading") }
-            IconButton(onClick = { onFormat { MarkdownEdits.linePrefix(it, "- ") } }) { Icon(Icons.AutoMirrored.Filled.FormatListBulleted, "List") }
-            IconButton(onClick = { onFormat { MarkdownEdits.linePrefix(it, "> ") } }) { Icon(Icons.Default.FormatQuote, "Quote") }
-            IconButton(onClick = { onFormat { MarkdownEdits.wrap(it, "`") } }) { Icon(Icons.Default.Code, "Code") }
+            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "**") } }) { Icon(Icons.Default.FormatBold, "Bold") }
+            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "_") } }) { Icon(Icons.Default.FormatItalic, "Italic") }
+            IconButton(enabled = formatting, onClick = { onFormat(MarkdownEdits::link) }) { Icon(Icons.Default.Link, "Link") }
+            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "## ") } }) { Icon(Icons.Default.Title, "Heading") }
+            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "- ") } }) { Icon(Icons.AutoMirrored.Filled.FormatListBulleted, "List") }
+            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "> ") } }) { Icon(Icons.Default.FormatQuote, "Quote") }
+            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "`") } }) { Icon(Icons.Default.Code, "Code") }
             if (addingPhoto) {
                 CircularProgressIndicator(Modifier.padding(12.dp).size(24.dp).semantics { contentDescription = "Adding the photo" }, strokeWidth = 2.dp)
             } else {

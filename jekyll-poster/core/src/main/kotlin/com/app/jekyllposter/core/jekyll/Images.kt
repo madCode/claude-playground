@@ -27,6 +27,12 @@ object Images {
     fun markdown(sitePath: String, alt: String): String =
         "![${alt.replace("[", "\\[").replace("]", "\\]").replace("\n", " ")}]({{ '$sitePath' | relative_url }})"
 
+    /** [body] with the alt text of the image at [sitePath] set to [alt]. */
+    fun withAlt(body: String, sitePath: String, alt: String): String {
+        val link = Regex("""!\[((?:\\.|[^\]])*)]\(\{\{ '${Regex.escape(sitePath)}' \| relative_url }}\)""")
+        return link.replace(body) { markdown(sitePath, alt.trim()) }
+    }
+
     /** Whether [body] still links to [sitePath]; an image the writer deleted from the text isn't uploaded. */
     fun isUsed(body: String, sitePath: String): Boolean = body.contains(sitePath)
 }

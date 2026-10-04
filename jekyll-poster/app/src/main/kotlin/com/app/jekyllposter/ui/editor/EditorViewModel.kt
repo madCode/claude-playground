@@ -46,6 +46,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val taxonomy: Taxonomy = Taxonomy.EMPTY,
         val titleMissing: Boolean = false,
         val previewing: Boolean = false,
+        /** Photos just added, waiting for the writer to describe them (alt text), first first. */
+        val describing: List<String> = emptyList(),
         val addingPhoto: Boolean = false,
         val photoError: String? = null,
         val closed: Boolean = false,
@@ -61,6 +63,17 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     var text by mutableStateOf<Draft?>(null)
         private set
     private val local = snapshotFlow { text }
+
+    /** Where the cursor is in the body, for the toolbar and for placing photos. */
+    var bodySelection by mutableStateOf(TextRange(0))
+        private set
+
+    /**
+     * The keyboard's word in progress. Kept with the selection: a field rebuilt without it makes
+     * predictive keyboards lose or repeat what's being typed.
+     */
+    var bodyComposition by mutableStateOf<TextRange?>(null)
+        private set
     private val flags = MutableStateFlow(State())
     private var saveJob: Job? = null
 
@@ -135,6 +148,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 // links to a photo the draft doesn't know.
                 edit { it.copy(images = it.images + DraftImage(sitePath, prepared.file.path)) }
                 format { MarkdownEdits.insertBlock(it, link) }
+                flags.update { it.copy(describing = it.describing + sitePath) }
             } catch (e: Exception) {
                 flags.update { it.copy(photoError = "Couldn't add that photo: ${e.message ?: "it couldn't be read"}") }
             } finally {
@@ -146,20 +160,15 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     /** A photo still being prepared; Publish and Back wait for it, so it isn't lost. */
     private var photoJob: Job? = null
 
+    /** Sets the alt text of the photo being described; blank leaves it empty. */
+    fun describe(sitePath: String, alt: String) {
+        if (alt.isNotBlank()) edit { it.copy(body = Images.withAlt(it.body, sitePath, alt)) }
+        flags.update { it.copy(describing = it.describing - sitePath) }
+    }
+
     fun dismissPhotoError() = flags.update { it.copy(photoError = null) }
 
     fun setTitle(title: String) = edit { it.copy(title = title) }
-    /** Where the cursor is in the body, for the toolbar and for placing photos. */
-    var bodySelection by mutableStateOf(TextRange(0))
-        private set
-
-    /**
-     * The keyboard's word in progress. Kept with the selection: a field rebuilt without it makes
-     * predictive keyboards lose or repeat what's being typed.
-     */
-    var bodyComposition by mutableStateOf<TextRange?>(null)
-        private set
-
     fun setBody(value: TextFieldValue) {
         bodySelection = value.selection
         bodyComposition = value.composition

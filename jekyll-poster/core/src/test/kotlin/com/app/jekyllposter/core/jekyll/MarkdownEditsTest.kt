@@ -31,6 +31,14 @@ class MarkdownEditsTest {
         assertEquals("> |", show(MarkdownEdits.linePrefix(edit("|"), "> ")))
     }
 
+    @Test fun aSelectionEndingAtALineBreakLeavesTheNextLineAlone() {
+        assertEquals("## a\nb", MarkdownEdits.linePrefix(edit("[a\n]b"), "## ").text)
+    }
+
+    @Test fun aPhotoGoesAfterTheSelectionNotOverIt() {
+        assertEquals("keep these words\n\n![](x)\n\n|", show(MarkdownEdits.insertBlock(edit("keep [these words]"), "![](x)")))
+    }
+
     @Test fun theCursorStaysOnItsWordWhenALineGetsAPrefix() {
         assertEquals("## ti|tle", show(MarkdownEdits.linePrefix(edit("ti|tle"), "## ")))
     }
