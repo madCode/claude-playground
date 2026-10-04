@@ -28,7 +28,11 @@ jobs:
           distribution: temurin
           cache: gradle
       - name: Build, unit tests and coverage
-        run: ./gradlew build koverXmlReport koverHtmlReport koverVerify
+        # The GitHub App for "Sign in with GitHub" (docs/GITHUB_APP.md); without it, token sign-in only.
+        env:
+          CLIENT_ID: ${{ vars.JEKYLL_POSTER_CLIENT_ID }}
+          APP_SLUG: ${{ vars.JEKYLL_POSTER_APP_SLUG }}
+        run: ./gradlew build koverXmlReport koverHtmlReport koverVerify "-PgithubClientId=$CLIENT_ID" "-PgithubAppSlug=$APP_SLUG"
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:

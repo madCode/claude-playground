@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
+import com.app.jekyllposter.core.github.DeviceFlow
 import com.app.jekyllposter.core.github.GitHubClient
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.AccountStore
@@ -24,6 +25,11 @@ import java.util.concurrent.TimeUnit
 class AppContainer(
     context: Context,
     val apiBase: HttpUrl = "https://api.github.com/".toHttpUrl(),
+    /** github.com itself, where the device flow's sign-in pages live. */
+    githubWeb: HttpUrl = "https://github.com/".toHttpUrl(),
+    githubClientId: String = BuildConfig.GITHUB_CLIENT_ID,
+    /** For the link that installs the GitHub App on the blog's repository. */
+    val githubAppSlug: String = BuildConfig.GITHUB_APP_SLUG,
     cipher: SecretCipher = AesGcmCipher.androidKeystore(),
     accountData: DataStore<Preferences> = context.accountDataStore,
     val database: PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db").build(),
@@ -39,7 +45,10 @@ class AppContainer(
 
     fun client(token: String) = GitHubClient(http, token, apiBase)
 
-    val accounts = AccountStore(accountData, cipher)
+    /** "Sign in with GitHub", when the build names a GitHub App. */
+    val deviceFlow: DeviceFlow? = githubClientId.takeIf { it.isNotBlank() }?.let { DeviceFlow(http, it, githubWeb) }
+
+    val accounts = AccountStore(accountData, cipher, deviceFlow?.let { flow -> { refreshToken: String -> flow.refresh(refreshToken) } })
     val drafts = database.drafts()
     val blogs = BlogRepository(accounts, database.posts()) { account: Account -> client(account.token) }
     val publisher = Publisher(drafts, accounts, blogs)

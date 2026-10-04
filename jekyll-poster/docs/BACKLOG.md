@@ -6,7 +6,7 @@ and moves it to Done.
 ## Next
 
 - [ ] Photos: alt text (prompted when added), and placing them at the cursor rather than the end
-- [ ] Sign in with GitHub (device flow, GitHub App client ID at build time), beside the token
+- [ ] Register the GitHub App and set the repository variables (yours: docs/GITHUB_APP.md)
 - [ ] Save to the blog's `_drafts` (unpublished, but on GitHub and on the laptop)
 - [ ] Settings: switch blog, signed-in account, app version
 - [ ] Find the Compose-test Room hang (DEVLOG, cycle 1)

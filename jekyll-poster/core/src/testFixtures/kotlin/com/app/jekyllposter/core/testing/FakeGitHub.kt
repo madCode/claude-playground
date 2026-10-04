@@ -48,6 +48,9 @@ class FakeGitHub(
     /** Other workflow runs per commit, as (name, status, conclusion): CI, linters. */
     val otherRuns = mutableMapOf<String, List<Triple<String, String, String?>>>()
 
+    /** Whether the writer has entered the device-flow code on "github.com". */
+    var deviceApproved = false
+
     /** Set to make the tree listing say it was cut short, as GitHub does for huge repositories. */
     var truncated = false
 
@@ -94,6 +97,22 @@ class FakeGitHub(
         val path = url.encodedPath.removePrefix("/")
         log += "${request.method} $path"
         failures.entries.firstOrNull { path.startsWith(it.key) }?.let { return error(it.value, "Simulated failure") }
+        if (path == "login/device/code") {
+            return ok(buildJsonObject {
+                put("device_code", "device-1"); put("user_code", "WDJB-MJHT"); put("verification_uri", "https://github.com/login/device")
+                put("expires_in", 900); put("interval", 1)
+            })
+        }
+        if (path == "login/oauth/access_token") {
+            val form = request.body?.utf8().orEmpty()
+            return when {
+                form.contains("grant_type=refresh_token") -> ok(buildJsonObject {
+                    put("access_token", token); put("expires_in", 28800); put("refresh_token", "refresh-2")
+                })
+                !deviceApproved -> ok(buildJsonObject { put("error", "authorization_pending") })
+                else -> ok(buildJsonObject { put("access_token", token); put("expires_in", 28800); put("refresh_token", "refresh-1") })
+            }
+        }
         if (request.headers["Authorization"] != "Bearer $token") return error(401, "Bad credentials")
         val body = request.body?.utf8()
         val base = "repos/$owner/$repo"

@@ -29,6 +29,26 @@ class AccountStoreTest {
         assertNull(store.current())
     }
 
+    @Test fun anExpiringTokenIsRenewedBeforeUse() = runBlocking {
+        val file = tmp.newFile("account.preferences_pb").also { it.delete() }
+        var now = 1_000_000L
+        val renewals = mutableListOf<String>()
+        val store = AccountStore(PreferenceDataStoreFactory.create { file }, testCipher(), { refresh ->
+            renewals += refresh
+            com.app.jekyllposter.core.github.DeviceFlow.Tokens("ghu_new", 28_800, "ghr_new")
+        }) { now }
+        store.save(account.copy(token = "ghu_old", refreshToken = "ghr_old", expiresAt = now + 60 * 60_000))
+        assertEquals("ghu_old", store.current()!!.token)
+        now += 58 * 60_000
+        val renewed = store.current()!!
+        assertEquals("ghu_new", renewed.token)
+        assertEquals(listOf("ghr_old"), renewals)
+        assertEquals(now + 28_800_000, renewed.expiresAt)
+        // Kept, sealed like the token.
+        assertEquals("ghr_new", store.current()!!.refreshToken)
+        assertFalse(String(file.readBytes(), Charsets.ISO_8859_1).contains("ghr_new"))
+    }
+
     @Test fun aTokenThatCannotBeUnsealedReadsAsSignedOut() = runBlocking {
         val file = tmp.newFile("account.preferences_pb").also { it.delete() }
         val data = PreferenceDataStoreFactory.create { file }

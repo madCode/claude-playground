@@ -5,7 +5,11 @@ doesn't want to open a laptop and make a commit for every post.
 
 ## Signing in
 
-- A fine-grained personal access token, pasted once. The app's link opens GitHub's new-token
+- **Sign in with GitHub**, when the build names a GitHub App ([setup](GITHUB_APP.md)): the app
+  shows a code, copies it and opens github.com, and waits while the writer enters it. Then the
+  blogs it lists are the repositories the app is installed on; with none, it links to installing
+  it. Tokens that expire are renewed five minutes before they do.
+- Or a fine-grained personal access token, pasted once. The app's link opens GitHub's new-token
   form with the name and permissions filled in: Contents read and write (to commit posts) and
   Actions read (to see the site build). The writer picks the repository on GitHub.
 - The token is checked, then the app lists the repositories it can write to, Pages sites first.
