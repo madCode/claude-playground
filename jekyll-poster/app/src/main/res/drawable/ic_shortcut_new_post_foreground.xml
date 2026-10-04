@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A plus printed like the launcher icon's nib: teal a little out of register under the pink. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#00898C" android:pathData="M53,35 h6 v16 h16 v6 h-16 v16 h-6 v-16 h-16 v-6 h16 Z" />
+    <path android:fillColor="#FF4F8B" android:pathData="M51,33 h6 v16 h16 v6 h-16 v16 h-6 v-16 h-16 v-6 h16 Z" />
+</vector>

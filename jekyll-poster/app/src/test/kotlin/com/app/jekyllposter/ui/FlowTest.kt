@@ -122,6 +122,32 @@ class FlowTest {
         compose.waitUntil(3_000) { runBlocking { app.container.database.drafts().snapshotCount() } == 0 }
     }
 
+    @Test fun aSharedLinkMakesOnePostEvenAfterGoingBack() {
+        signIn()
+        compose.setContent { PosterTheme { PosterNavHost(app.container, com.app.jekyllposter.Shared("[A good read](https://example.com/read)\n", emptyList())) } }
+        compose.waitForTag("title")
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.waitFor("On this phone")
+        compose.waitForIdle()
+        assertEquals(1, runBlocking { app.container.database.drafts().snapshotCount() })
+        compose.onNodeWithTag("title").assertDoesNotExist()
+    }
+
+    @Test fun postsLeftEmptyWhenTheAppClosedAreHiddenThenDropped() {
+        signIn()
+        // Left by editors closed under them, without Back: one a day ago, one a moment ago (maybe
+        // still open in another window).
+        val old = System.currentTimeMillis() - 25 * 60 * 60 * 1000L
+        val stale = runBlocking { app.container.drafts.insert(com.app.jekyllposter.data.Draft(createdAt = old, updatedAt = old)) }
+        val recent = runBlocking { app.container.drafts.insert(com.app.jekyllposter.data.Draft()) }
+        runBlocking { app.container.drafts.insert(com.app.jekyllposter.data.Draft(title = "Half an idea")) }
+        start()
+        compose.waitFor("Half an idea")
+        compose.onNodeWithText("Untitled").assertDoesNotExist()
+        compose.waitUntil(5_000) { runBlocking { app.container.drafts.get(stale) } == null }
+        assertTrue(runBlocking { app.container.drafts.get(recent) } != null)
+    }
+
     @Test fun aDraftIsKeptOnTheList() {
         signIn()
         start()

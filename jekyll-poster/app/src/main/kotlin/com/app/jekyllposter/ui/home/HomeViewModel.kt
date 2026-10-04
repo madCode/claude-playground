@@ -48,11 +48,18 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         // A category gone since it was chosen (renamed, another blog) filters nothing: show all.
         val category = s.category?.takeIf { c -> categories.any { it.equals(c, ignoreCase = true) } }
         val shown = category?.let { c -> posts.filter { post -> post.categories.any { it.equals(c, ignoreCase = true) } } } ?: posts
-        s.copy(account = account, onPhone = mine.filter { it.state != PostState.Published || recent(it) }, onBlog = shown, categories = categories, category = category)
+        s.copy(account = account, onPhone = mine.filter { (it.state != PostState.Published || recent(it)) && !it.untouched }, onBlog = shown, categories = categories, category = category)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), State())
 
     init {
         refresh()
+        // Posts started and never written in, left when the app closed under the editor (no Back
+        // to drop them). Only stale ones: a recent one may be open in another window, or about to
+        // receive the last keystrokes of an editor that's closing.
+        viewModelScope.launch {
+            val day = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
+            container.drafts.list().filter { it.untouched && it.updatedAt < day }.forEach { container.drafts.delete(it.id) }
+        }
     }
 
     fun refresh() {
@@ -120,3 +127,6 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     /** Published posts stay on the phone's list for a day, so the writer sees them go live. */
     private fun recent(draft: Draft) = System.currentTimeMillis() - draft.updatedAt < 24 * 60 * 60 * 1000L
 }
+
+/** A new post nothing was written in yet: not shown on the list. */
+private val Draft.untouched: Boolean get() = isEmpty && state == PostState.Draft && editingPath == null

@@ -55,7 +55,10 @@ doesn't want to open a laptop and make a commit for every post.
   and `site.baseurl` resolved, site images from the live site, new photos from the phone. Other
   Liquid shows as written. No scripts run.
 - Sharing text, a link or photos to the app starts a post with them.
-- A new post with nothing in it is dropped when you leave it.
+- Long-pressing the app's icon offers **New post**, straight into the editor.
+- A share starts one post: going back from it returns to the list.
+- A new post with nothing in it is dropped when you leave it. One left when the app closed under
+  it isn't listed, and is dropped a day later (it may still be open in another window).
 - A draft belongs to the blog it was written for. Signed in to another blog, it waits, hidden.
 
 ## Photos
