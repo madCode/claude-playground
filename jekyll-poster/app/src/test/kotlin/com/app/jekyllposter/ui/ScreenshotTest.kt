@@ -151,7 +151,7 @@ class ScreenshotTest {
 
     @Test fun settings() {
         signIn()
-        shoot("07-settings", ready = { c.blogs.siteUrl.value != null }) { com.app.jekyllposter.ui.settings.SettingsScreen(c, {}, {}, {}) }
+        shoot("07-settings", ready = { c.blogs.siteUrl.value != null }) { com.app.jekyllposter.ui.settings.SettingsScreen(c, {}, {}, {}, {}) }
     }
 
     @Test fun frontMatter() {
@@ -235,6 +235,14 @@ class ScreenshotTest {
         shoot("14-new-post-menu", act = { compose.onNode(hasContentDescription("More")).performClick() }) { EditorScreen(vm) {} }
     }
 
+    @Test fun blogPrivacy() {
+        signIn()
+        val vm = com.app.jekyllposter.ui.settings.BlogPrivacyViewModel(c) { java.time.ZoneId.of("Europe/Lisbon") }
+        shoot("15-blog-privacy", ready = { vm.state.value.noReplyEmail != null && vm.state.value.visibility != com.app.jekyllposter.ui.settings.Visibility.Loading }) {
+            com.app.jekyllposter.ui.settings.BlogPrivacyScreen(vm) {}
+        }
+    }
+
     @Test fun noteFromObsidian() {
         signIn()
         val note = com.app.jekyllposter.core.obsidian.ObsidianNote.convert(
@@ -245,6 +253,6 @@ class ScreenshotTest {
         val id = runBlocking { c.drafts.insert(Draft(title = note.title, body = note.body, tags = note.tags)) }
         c.sharedEmbeds[id] = note.embeds
         val vm = EditorViewModel(c, id)
-        shoot("15-note-from-obsidian", ready = { vm.text != null && vm.state.value.vaultPhotos == 1 }) { EditorScreen(vm) {} }
+        shoot("16-note-from-obsidian", ready = { vm.text != null && vm.state.value.vaultPhotos == 1 }) { EditorScreen(vm) {} }
     }
 }

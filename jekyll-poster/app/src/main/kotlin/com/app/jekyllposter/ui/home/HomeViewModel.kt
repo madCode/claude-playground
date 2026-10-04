@@ -146,8 +146,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
             }
             is ObsidianNote.Result.Converted -> result
         }
-        // Links shared in lose their tracking codes, unless the writer chose to keep them.
-        val body = if (container.settings.keepTrackingCodes()) note.body else Tracking.strip(note.body)
+        // Before the editor opens, so the writer sees the links as they'll be published.
+        val body = if (container.settings.removeTrackingCodes()) Tracking.strip(note.body) else note.body
         val taxonomy = container.blogs.taxonomy.first()
         // The blog's spelling wins, as when a term is picked in the editor.
         fun spelled(terms: List<String>, known: List<com.app.jekyllposter.core.jekyll.Term>) =

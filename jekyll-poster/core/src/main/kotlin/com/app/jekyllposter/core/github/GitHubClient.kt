@@ -14,6 +14,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -118,6 +119,7 @@ class GitHubClient(
          * on every attempt, so rebuilding on a newer head never overwrites a change made there.
          */
         expect: Map<String, String?> = emptyMap(),
+        author: CommitAuthor? = null,
         attempts: Int = 3,
     ): String {
         val blobs = changes.associate { change ->
@@ -154,6 +156,8 @@ class GitHubClient(
             val commit: Sha = post("repos/$owner/$name/git/commits", buildJsonObject {
                 put("message", message)
                 put("tree", tree.sha)
+                // The committer follows the author when only the author is given.
+                author?.let { putJsonObject("author") { put("name", it.name); put("email", it.email) } }
                 put("parents", buildJsonArray { add(kotlinx.serialization.json.JsonPrimitive(head.obj.sha)) })
             })
             try {
@@ -169,6 +173,9 @@ class GitHubClient(
         }
         throw lastConflict!!
     }
+
+    /** A commit as GitHub shows it, with the account it's attributed to. */
+    suspend fun commitView(owner: String, name: String, sha: String): CommitView = get("repos/$owner/$name/commits/$sha")
 
     suspend fun pages(owner: String, name: String): PagesSite? = try {
         get("repos/$owner/$name/pages")

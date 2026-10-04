@@ -55,6 +55,7 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
                 container,
                 onBack = { nav.popBackStack() },
                 onSwitchBlog = { nav.navigate("switch") },
+                onBlogPrivacy = { nav.navigate("privacy") },
                 onSignOut = {
                     // Navigation first, here on the main thread; the sign-out finishes behind it, in
                     // a scope that outlives this screen.
@@ -65,6 +66,9 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
                     }
                 },
             )
+        }
+        composable("privacy") {
+            com.app.jekyllposter.ui.settings.BlogPrivacyScreen(viewModel { com.app.jekyllposter.ui.settings.BlogPrivacyViewModel(container) }) { nav.popBackStack() }
         }
         composable("home") {
             val vm = viewModel { HomeViewModel(container) }

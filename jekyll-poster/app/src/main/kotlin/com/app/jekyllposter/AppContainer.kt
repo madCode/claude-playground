@@ -76,7 +76,7 @@ class AppContainer(
     val accounts = AccountStore(accountData, cipher, deviceFlow?.let { flow -> { refreshToken: String -> flow.refresh(refreshToken) } })
     val drafts = database.drafts()
     val blogs = BlogRepository(accounts, database.posts()) { account: Account -> client(account.token) }
-    val publisher = Publisher(drafts, accounts, blogs)
+    val publisher = Publisher(drafts, accounts, blogs, settings)
     val images = ImageImporter(context.contentResolver, java.io.File(context.filesDir, "images"))
     val buildWatcher = BuildWatcher(drafts, accounts, { client(it.token) }, onBuildFinished)
 }

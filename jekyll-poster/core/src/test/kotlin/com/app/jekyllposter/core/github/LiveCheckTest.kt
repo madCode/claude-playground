@@ -97,6 +97,40 @@ class LiveCheckTest {
         assertNull(github.file(owner, name, branch, path))
     }
 
+    /**
+     * Commits as the account's no-reply address, as "Commit with your no-reply email" does, and
+     * checks GitHub still attributes the commit to the account. Prints whether it's Verified,
+     * which the address may cost; then deletes the file. No Pages wait: the build isn't the point.
+     */
+    @Test
+    fun commitsAsTheNoReplyAddressAndStaysTheAccounts() = runBlocking {
+        assumeTrue("Run with -PliveRepo=owner/name", repo.contains('/'))
+        assumeTrue("Set SAMPLE_BLOG_TOKEN", token.isNotBlank())
+        val (owner, name) = repo.split('/', limit = 2)
+        val github = GitHubClient(http, token)
+        val branch = github.repo(owner, name).defaultBranch
+        val user = github.user()
+        val author = user.noReplyAuthor
+        assertTrue("GitHub gave no account id for ${user.login}", author != null)
+
+        val path = "_drafts/live-check-author-${ZonedDateTime.now().toEpochSecond()}.md"
+        val sha = github.commit(
+            owner, name, branch, "Add draft: live check of the commit author",
+            listOf(FileChange.text(path, "---\ntitle: Live check\n---\n")), expect = mapOf(path to null), author = author,
+        )
+        try {
+            val view = github.commitView(owner, name, sha)
+            println("Committed as ${view.commit.author.email}; GitHub attributes it to ${view.login}; verified: ${view.commit.verification?.verified} (${view.commit.verification?.reason})")
+            assertEquals(author!!.email, view.commit.author.email)
+            assertEquals("GitHub doesn't link ${author.email} to ${user.login}", user.login, view.login)
+        } finally {
+            github.file(owner, name, branch, path)?.let { sent ->
+                github.commit(owner, name, branch, "Delete draft: live check of the commit author", listOf(FileChange.delete(path)), expect = mapOf(path to sent.sha), author = author)
+            }
+        }
+        assertNull(github.file(owner, name, branch, path))
+    }
+
     private fun fetch(url: String): String? =
         http.newCall(Request.Builder().url(url).header("Cache-Control", "no-cache").build()).execute().use { if (it.isSuccessful) it.body.string() else null }
 
