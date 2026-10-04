@@ -69,6 +69,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
+import com.app.jekyllposter.ui.theme.termColor
+import com.app.jekyllposter.ui.theme.termInk
+import com.app.jekyllposter.ui.theme.InkButton
+import com.app.jekyllposter.ui.theme.TermPill
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.unit.sp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -162,15 +169,13 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                         else Icon(Icons.Default.Visibility, "Preview")
                     }
                     if (editable) {
-                        TextButton(onClick = { send(if (jekyllDraft) Destination.Drafts else Destination.Posts) }) {
-                            Text(
-                                when {
-                                    jekyllDraft -> "Update draft"
-                                    text?.editingPath != null -> "Update"
-                                    else -> "Publish"
-                                },
-                            )
-                        }
+                        InkButton(
+                            when {
+                                jekyllDraft -> "Update draft"
+                                text?.editingPath != null -> "Update"
+                                else -> "Publish"
+                            },
+                        ) { send(if (jekyllDraft) Destination.Drafts else Destination.Posts) }
                     }
                     // A queued post may be mid-commit; deleting it then would lose the phone's record
                     // of a post that still goes out.
@@ -250,6 +255,8 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                 value = TextFieldValue(text.body, viewModel.bodySelection, viewModel.bodyComposition),
                 onValueChange = { viewModel.setBody(it) },
                 placeholder = { Text("Write in Markdown…") },
+                // A little more air between lines than Material's default: this is where the writing happens.
+                textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp),
                 readOnly = !editable,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 colors = plainField(),
@@ -313,7 +320,7 @@ private fun DescribePhoto(sitePath: String, onDone: (String) -> Unit) {
  */
 @Composable
 private fun FormatBar(formatting: Boolean, addingPhoto: Boolean, onFormat: ((Edit) -> Edit) -> Unit, onPhoto: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding()) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding()) {
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "**") } }) { Icon(Icons.Default.FormatBold, "Bold") }
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "_") } }) { Icon(Icons.Default.FormatItalic, "Italic") }
@@ -383,6 +390,10 @@ private fun TermRow(label: String, terms: List<String>, editable: Boolean, onAdd
                 InputChip(
                     selected = false,
                     enabled = editable,
+                    colors = InputChipDefaults.inputChipColors(
+                        containerColor = termColor(term), disabledContainerColor = termColor(term),
+                        labelColor = termInk(), disabledLabelColor = termInk(), trailingIconColor = termInk(),
+                    ),
                     onClick = { onRemove(term) },
                     label = { Text(term) },
                     trailingIcon = if (editable) ({ Icon(Icons.Default.Close, "Remove $term") }) else null,
@@ -411,7 +422,7 @@ private fun TermPicker(kind: TermKind, viewModel: EditorViewModel, onDismiss: ()
     val suggestions = remember(query, state) { viewModel.suggestions(kind, query) }
     val exact = suggestions.any { it.name.equals(query.trim(), ignoreCase = true) }
     val add = { name: String -> viewModel.add(kind, name); query = "" }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             OutlinedTextField(
                 value = query,
@@ -445,7 +456,7 @@ private fun TermPicker(kind: TermKind, viewModel: EditorViewModel, onDismiss: ()
             }
             items(suggestions, key = { it.name }) { term ->
                 Row(Modifier.fillMaxWidth().clickable { add(term.name) }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(term.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                    Box(Modifier.weight(1f)) { TermPill(term.name) }
                     Text(if (term.count == 1) "1 post" else "${term.count} posts", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

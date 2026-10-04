@@ -3,6 +3,18 @@
 Who it's for: someone with a Jekyll blog on GitHub Pages who can code, wants to blog more, and
 doesn't want to open a laptop and make a commit for every post.
 
+## The look
+
+- A risograph zine, chosen over three design rounds: cream paper, fluoro pink and teal inks,
+  Bricolage Grotesque for headings, a ✶ and a squiggle under section headings, dotted rules
+  between posts, and New post as a tilted stamp printed a little out of register.
+- Each category and tag has its own colour, the same everywhere (rows, chips, the picker), so a
+  category can be spotted at a glance. Pills keep dark ink on light colours and light ink on dark,
+  4.5:1 or better.
+- Pink text is a deeper pink than the stamp's fluoro, for contrast on the cream.
+- The header shows the blog's own title from `_config.yml`.
+- Dark mode is the same zine printed on brown-black paper.
+
 ## Signing in
 
 - **Sign in with GitHub**, when the build names a GitHub App ([setup](GITHUB_APP.md)): the app

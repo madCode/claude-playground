@@ -89,7 +89,10 @@ private fun TokenStep(state: ConnectViewModel.State, viewModel: ConnectViewModel
                 "Contents (read and write) to commit posts, and Actions (read) to tell you when the site has rebuilt.",
             style = MaterialTheme.typography.bodyMedium,
         )
-        OutlinedButton(onClick = { uri.openUri(ConnectViewModel.NEW_TOKEN_URL) }) { Text("Make a token on GitHub") }
+        OutlinedButton(
+            onClick = { uri.openUri(ConnectViewModel.NEW_TOKEN_URL) },
+            border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline),
+        ) { Text("Make a token on GitHub") }
         OutlinedTextField(
             value = state.token,
             onValueChange = viewModel::setToken,

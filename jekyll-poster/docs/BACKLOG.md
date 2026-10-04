@@ -19,6 +19,8 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 7: the zine look, over four design rounds
+
 - [x] Cycle 6: photos shared from the gallery, alt text; cycle 5's second look
 
 - [x] Cycle 5: Markdown toolbar, photos at the cursor, settings; cycles 3–4's review
