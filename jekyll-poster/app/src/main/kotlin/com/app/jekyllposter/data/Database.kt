@@ -60,6 +60,11 @@ data class Draft(
      * opened; null for a new post with none.
      */
     val extraFrontMatter: String? = null,
+    /**
+     * [extraFrontMatter] as the post had it when opened. Unchanged, it's written back byte for
+     * byte, so it isn't checked: a post's own odd but working YAML mustn't block an edit.
+     */
+    val extraFrontMatterOpened: String? = null,
     /** Photos added on the phone, uploaded with the post if its text still links to them. */
     @ColumnInfo(defaultValue = "[]") val images: List<DraftImage> = emptyList(),
     /** For an edit of a post already on the blog: its path, and its blob sha when it was opened. */
@@ -87,6 +92,10 @@ data class Draft(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 ) {
+    /** Why the "more front matter" can't be published, or null; only checked once it's changed. */
+    val frontMatterProblem: String?
+        get() = extraFrontMatter?.takeIf { it != extraFrontMatterOpened }?.let { com.app.jekyllposter.core.jekyll.extraFrontMatterProblem(it) }
+
     val isEmpty: Boolean get() = title.isBlank() && body.isBlank() && extraFrontMatter.isNullOrBlank() && images.isEmpty()
 }
 
@@ -199,9 +208,10 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
-/** Drafts gain their "more front matter". */
+/** Drafts gain their "more front matter", and what it was when the post was opened. */
 val MIGRATION_2_3 = object : Migration(2, 3) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE drafts ADD COLUMN extraFrontMatter TEXT")
+        db.execSQL("ALTER TABLE drafts ADD COLUMN extraFrontMatterOpened TEXT")
     }
 }

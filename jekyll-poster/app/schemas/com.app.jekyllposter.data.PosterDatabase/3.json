@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "c130c5ba3209693c0223d077a1a0fe63",
+    "identityHash": "0a08c267e4d52751ff6850cb664adad2",
     "entities": [
       {
         "tableName": "drafts",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `blog` TEXT, `title` TEXT NOT NULL, `body` TEXT NOT NULL, `categories` TEXT NOT NULL, `tags` TEXT NOT NULL, `extraFrontMatter` TEXT, `images` TEXT NOT NULL DEFAULT '[]', `editingPath` TEXT, `baseSha` TEXT, `state` TEXT NOT NULL, `destination` TEXT NOT NULL DEFAULT 'Posts', `targetPath` TEXT, `publishDate` TEXT, `commitSha` TEXT, `sentShas` TEXT NOT NULL DEFAULT '[]', `postUrl` TEXT, `buildState` TEXT, `error` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `blog` TEXT, `title` TEXT NOT NULL, `body` TEXT NOT NULL, `categories` TEXT NOT NULL, `tags` TEXT NOT NULL, `extraFrontMatter` TEXT, `extraFrontMatterOpened` TEXT, `images` TEXT NOT NULL DEFAULT '[]', `editingPath` TEXT, `baseSha` TEXT, `state` TEXT NOT NULL, `destination` TEXT NOT NULL DEFAULT 'Posts', `targetPath` TEXT, `publishDate` TEXT, `commitSha` TEXT, `sentShas` TEXT NOT NULL DEFAULT '[]', `postUrl` TEXT, `buildState` TEXT, `error` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -46,6 +46,11 @@
           {
             "fieldPath": "extraFrontMatter",
             "columnName": "extraFrontMatter",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "extraFrontMatterOpened",
+            "columnName": "extraFrontMatterOpened",
             "affinity": "TEXT"
           },
           {
@@ -191,7 +196,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c130c5ba3209693c0223d077a1a0fe63')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0a08c267e4d52751ff6850cb664adad2')"
     ]
   }
 }

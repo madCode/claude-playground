@@ -142,7 +142,9 @@ class FrontMatterDocument private constructor(
     companion object {
         // A key is plain text up to the first colon followed by a space (so `og:image` is one key),
         // or a quoted string.
-        private val keyLine = Regex("""^("[^"]*"|'[^']*'|[^\s#\-"'][^#]*?)\s*:(\s.*|)$""")
+        // A `#` starts a comment only after a space, so `c#:` is a key; quoted keys may hold
+        // doubled single quotes or escaped double quotes.
+        private val keyLine = Regex("""^("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^\s#\-"'](?:[^#]|(?<!\s)#)*?)\s*:(\s.*|)$""")
 
         fun empty(body: String = ""): FrontMatterDocument =
             FrontMatterDocument(mutableListOf(), emptyList(), body, hasFrontMatter = true)
@@ -165,7 +167,13 @@ class FrontMatterDocument private constructor(
                 val match = keyLine.matchEntire(line)
                 when {
                     match != null -> {
-                        val key = match.groupValues[1].trim().trim('"', '\'')
+                        val key = match.groupValues[1].trim().let { k ->
+                            when {
+                                k.startsWith("'") -> k.removeSurrounding("'").replace("''", "'")
+                                k.startsWith("\"") -> k.removeSurrounding("\"").replace("\\\"", "\"")
+                                else -> k
+                            }
+                        }
                         if (entries.isEmpty()) {
                             preamble += pending
                             entries += Entry(key, listOf(line))
@@ -187,7 +195,10 @@ class FrontMatterDocument private constructor(
         internal fun parseYaml(yaml: String): Map<String, Any?> = try {
             @Suppress("UNCHECKED_CAST")
             // Duplicate keys are allowed, last one winning, as Ruby's YAML (and so Jekyll) reads them.
-            (Load(LoadSettings.builder().setAllowDuplicateKeys(true).build()).loadFromString(yaml) as? Map<String, Any?>) ?: emptyMap()
+            // Keys come back as YAML typed them (`2024:` is a number, `null:` null): named here as
+            // text, so nothing downstream casts a number to a String.
+            (Load(LoadSettings.builder().setAllowDuplicateKeys(true).build()).loadFromString(yaml) as? Map<*, *>)
+                ?.entries?.associate { (k, v) -> (k?.toString() ?: "null") to v } ?: emptyMap()
         } catch (e: Exception) {
             emptyMap()
         }

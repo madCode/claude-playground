@@ -84,6 +84,13 @@ class FrontMatterTest {
         assertEquals("---\ntitle: Bar\nog:image: /a.png\n\"a:b\": x\nlink: https://example.com/x\n---\n", doc.render())
     }
 
+    @Test fun keysWithHashesAndEscapedQuotesAreTheirOwnKeys() {
+        val doc = FrontMatterDocument.parse("---\ntitle: T\nc#: x\n'it''s': y\n\"say \\\"hi\\\"\": z\nimage: w # a comment\n---\n")
+        assertEquals(listOf("title", "c#", "it's", "say \"hi\"", "image"), doc.keys)
+        doc.set("title", "New")
+        assertTrue(doc.render().contains("c#: x\n'it''s': y"))
+    }
+
     @Test fun theSingularKeyWinsAndIsTakenWhole() {
         val doc = FrontMatterDocument.parse("---\ncategory: Web Development\ncategories: a b\n---\n")
         assertEquals(listOf("Web Development"), doc.terms("category", "categories"))

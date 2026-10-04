@@ -10,7 +10,6 @@ import com.app.jekyllposter.core.jekyll.Edit
 import com.app.jekyllposter.core.jekyll.Images
 import com.app.jekyllposter.core.jekyll.MarkdownEdits
 import com.app.jekyllposter.core.jekyll.Preview
-import com.app.jekyllposter.core.jekyll.extraFrontMatterProblem
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.DraftImage
 import java.io.File
@@ -183,7 +182,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     fun frontMatterShown() = flags.update { it.copy(frontMatterBlocked = null) }
 
     /** Why the "more front matter" can't be published as it is, or null. */
-    val extraProblem: String? get() = text?.extraFrontMatter?.let(::extraFrontMatterProblem)
+    val extraProblem: String? get() = text?.frontMatterProblem
     fun setBody(value: TextFieldValue) {
         bodySelection = value.selection
         bodyComposition = value.composition
@@ -256,7 +255,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 return@launch
             }
             // Publishing would write YAML the blog can't read: say why instead.
-            draft.extraFrontMatter?.let(::extraFrontMatterProblem)?.let { problem ->
+            draft.frontMatterProblem?.let { problem ->
                 flags.update { it.copy(frontMatterBlocked = problem) }
                 return@launch
             }

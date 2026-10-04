@@ -128,6 +128,19 @@ class MoreFrontMatterTest {
         assertEquals(null, extraFrontMatterProblem("excerpt: |\n  Two\n  lines\nlinks:\n  - a\n  - b"))
     }
 
+    @Test fun keysYamlReadsAsNumbersOrNullDontCrashTheCheck() {
+        assertEquals(null, extraFrontMatterProblem("2024: a good year"))
+        assertEquals(null, extraFrontMatterProblem("true: x"))
+        extraFrontMatterProblem("null: x")
+        extraFrontMatterProblem("1.10: x")
+    }
+
+    @Test fun documentMarkersWithCommentsAndMergeKeysAreRefused() {
+        assertTrue(extraFrontMatterProblem("image: x\n... # end")!!.contains("`---`"))
+        assertTrue(extraFrontMatterProblem("d: &d\n  title: Sneaky\n<<: *d")!!.contains("Merge"))
+        assertEquals(null, extraFrontMatterProblem("# image: x"))
+    }
+
     @Test fun commentsInTheExtraKeysAreKept() {
         val original = FrontMatterDocument.parse("---\ntitle: T\n# card\nimage: /a.png\n---\n\nB\n")
         val edited = PostWriter.edit(original, PostContent("T", "B", extra = "# card\nimage: /b.png\n# keep me"))

@@ -43,10 +43,11 @@ class MigrationTest {
             db.execSQL("INSERT INTO drafts (id, title, body, categories, tags, state, createdAt, updatedAt) VALUES (4, 'Kept', 'b', '[]', '[]', 'Draft', 0, 0)")
         }
         helper.runMigrationsAndValidate(DB, 3, true, MIGRATION_2_3).use { db ->
-            db.query("SELECT title, extraFrontMatter FROM drafts WHERE id = 4").use { c ->
+            db.query("SELECT title, extraFrontMatter, extraFrontMatterOpened FROM drafts WHERE id = 4").use { c ->
                 assertTrue(c.moveToFirst())
                 assertEquals("Kept", c.getString(0))
                 assertTrue(c.isNull(1))
+                assertTrue(c.isNull(2))
             }
         }
     }

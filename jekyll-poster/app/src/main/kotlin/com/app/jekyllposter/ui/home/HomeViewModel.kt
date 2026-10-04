@@ -108,6 +108,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 categories = doc.terms("category", "categories"),
                 tags = doc.terms("tag", "tags"),
                 extraFrontMatter = doc.others(com.app.jekyllposter.core.jekyll.PostWriter.MANAGED),
+                extraFrontMatterOpened = doc.others(com.app.jekyllposter.core.jekyll.PostWriter.MANAGED),
                 editingPath = post.path,
                 baseSha = file.sha,
                 // Updating a Jekyll draft keeps it one; publishing it is a separate choice.

@@ -136,6 +136,16 @@ class EditorViewModelTest {
         assertEquals(null, editor.text!!.extraFrontMatter)
     }
 
+    @Test fun aPostsOwnOddFrontMatterDoesntBlockAnEditThatLeavesItAlone() {
+        val odd = "og_title: *t"
+        val id = runBlocking { c.drafts.insert(Draft(title = "T", body = "b", editingPath = "_posts/x.md", baseSha = "x", extraFrontMatter = odd, extraFrontMatterOpened = odd)) }
+        val editor = EditorViewModel(c, id)
+        idleUntil { editor.text != null && editor.state.value.draft != null }
+        assertEquals(null, editor.extraProblem)
+        editor.setExtraFrontMatter("og_title: *t\nimage: x")
+        assertTrue(editor.extraProblem != null)
+    }
+
     @Test fun aDraftWithOnlyFrontMatterIsKeptOnClose() {
         val id = runBlocking { c.drafts.insert(Draft(extraFrontMatter = "image: /cover.jpg")) }
         val editor = EditorViewModel(c, id)

@@ -18,6 +18,10 @@ Times are Pacific.
   left the filter stuck on an empty list; pills were under 48dp to tap, and a category called
   "All" was taken for the All pill; a blocked Publish said nothing; front matter alone didn't
   keep a draft.
+- **The second look found** (fixed): keys YAML reads as numbers or null (`2024:`) crashed the
+  check as you typed; `... # comment` slipped past it; a `<<` merge key could override the title
+  in Ruby's YAML; a post's own odd-but-working front matter blocked any edit (only changed text
+  is checked now); keys like `c#:` or `'it''s':` were swallowed by the key above.
 - **Cycle 7's review found** (fixed before merging): a category hashing to `Int.MIN_VALUE`
   crashed the colour lookup; switching blogs kept the old blog's title; TalkBack read the
   decorative ✶; small text used the font's 96pt optical size; disabled toolbar buttons were
