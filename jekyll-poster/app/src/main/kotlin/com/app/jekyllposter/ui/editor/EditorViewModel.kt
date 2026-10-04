@@ -147,8 +147,16 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     var bodySelection by mutableStateOf(TextRange(0))
         private set
 
+    /**
+     * The keyboard's word in progress. Kept with the selection: a field rebuilt without it makes
+     * predictive keyboards lose or repeat what's being typed.
+     */
+    var bodyComposition by mutableStateOf<TextRange?>(null)
+        private set
+
     fun setBody(value: TextFieldValue) {
         bodySelection = value.selection
+        bodyComposition = value.composition
         if (value.text != text?.body) edit { it.copy(body = value.text) }
     }
 
@@ -160,6 +168,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val sel = bodySelection
         val result = change(Edit(body, sel.min.coerceIn(0, body.length), sel.max.coerceIn(0, body.length)))
         bodySelection = TextRange(result.start, result.end)
+        bodyComposition = null
         edit { it.copy(body = result.text) }
     }
 

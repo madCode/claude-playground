@@ -243,7 +243,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
             TermRow("Tags", text.tags, editable, onAdd = { picker = TermKind.Tag }, onRemove = { viewModel.remove(TermKind.Tag, it) })
             HorizontalDivider(Modifier.padding(horizontal = 16.dp))
             TextField(
-                value = TextFieldValue(text.body, viewModel.bodySelection),
+                value = TextFieldValue(text.body, viewModel.bodySelection, viewModel.bodyComposition),
                 onValueChange = { viewModel.setBody(it) },
                 placeholder = { Text("Write in Markdown…") },
                 readOnly = !editable,
