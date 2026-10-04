@@ -12,8 +12,10 @@ and moves it to Done.
   - Plain Markdown stays as it is.
   - `[[Note]]` and `[[Note|shown text]]`: a link when a post on the blog has that title (or
     file name), else left as `[[Note]]`, as obyde does: it reads as a title, not as prose.
-  - obyde's `find:`/`replace:` lists in the front matter are applied to the post, then removed:
-    they hold the very words meant to stay private, so they must never be published.
+  - obyde's `find:`/`replace:` lists in the front matter: taken out first, then applied to the
+    rest (text, title, other front matter). They hold the very words meant to stay private, so
+    they're never published; obyde keeps them, so its users add rules to hide the rules, and
+    those then match nothing.
   - `![[photo.jpg]]`: found in the vault folder, picked once, and added like any photo
     (location stripped).
   - A live-check case publishes a converted note.
