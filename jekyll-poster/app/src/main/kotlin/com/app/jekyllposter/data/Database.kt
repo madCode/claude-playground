@@ -143,6 +143,13 @@ interface DraftDao {
     @Query("SELECT * FROM drafts WHERE editingPath = :path AND blog = :blog AND state != 'Published' LIMIT 1")
     suspend fun openEditOf(path: String, blog: String): Draft?
 
+    /**
+     * The phone's published records of the post now at [path] (where publishing put it, whether
+     * written here or edited), e.g. once the post is deleted from the blog.
+     */
+    @Query("DELETE FROM drafts WHERE targetPath = :path AND blog = :blog AND state = 'Published'")
+    suspend fun deletePublishedEditsOf(path: String, blog: String)
+
     @Insert
     suspend fun insert(draft: Draft): Long
 
