@@ -145,16 +145,17 @@ class EditorViewModelTest {
         assertTrue(runBlocking { c.drafts.get(id) } != null)
     }
 
-    @Test fun aChosenCategoryThatDisappearsShowsAllPostsAgain() = runBlocking {
+    @Test fun aChosenCategoryThatDisappearsShowsAllPostsAgain() {
         val home = HomeViewModel(c)
-        val job = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch { home.state.collect {} }
-        idleUntil { home.state.value.onBlog.size == 6 }
+        // The list only computes while something watches it, as the screen does.
+        val watching = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch { home.state.collect {} }
+        idleUntil(15_000) { home.state.value.onBlog.size == 6 && !home.state.value.refreshing }
         home.filter("travel")
-        idleUntil { home.state.value.onBlog.size == 1 }
+        idleUntil(15_000) { home.state.value.onBlog.size == 1 }
         app.github.push("Rename", mapOf("travel/_posts/2025-06-08-coastal-walk.md" to null, "_posts/2025-06-08-coastal-walk.md" to "---\ntitle: A coastal walk\ncategories: [walks]\n---\n"))
         home.refresh()
-        idleUntil { home.state.value.onBlog.size == 6 && home.state.value.category == null }
-        job.cancel()
+        idleUntil(15_000) { home.state.value.onBlog.size == 6 && home.state.value.category == null }
+        watching.cancel()
     }
 
     @Test fun anEmptyDraftIsDroppedOnClose() {
