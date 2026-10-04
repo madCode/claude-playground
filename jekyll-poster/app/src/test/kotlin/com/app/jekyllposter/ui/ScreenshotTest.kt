@@ -12,6 +12,7 @@ import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -217,5 +218,15 @@ class ScreenshotTest {
             compose.waitForIdle()
             compose.onNode(androidx.compose.ui.test.hasTestTag("search")).performTextInput("writ")
         }) { HomeScreen(vm, onOpenDraft = {}, onSettings = {}) }
+    }
+
+    @Test fun tagJustAdded() {
+        val vm = editorWithDraft()
+        shoot("13-tag-just-added", act = {
+            compose.onNode(hasContentDescription("Add tag")).performClick()
+            compose.waitForIdle()
+            compose.onNode(androidx.compose.ui.test.hasTestTag("termQuery")).performTextInput("rain")
+            compose.onNode(androidx.compose.ui.test.hasTestTag("termQuery")).performImeAction()
+        }) { EditorScreen(vm) {} }
     }
 }

@@ -508,7 +508,7 @@ private fun plainField() = TextFieldDefaults.colors(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TermRow(label: String, terms: List<String>, editable: Boolean, onAdd: () -> Unit, onRemove: (String) -> Unit) {
+private fun TermRow(label: String, terms: List<String>, editable: Boolean, onAdd: (() -> Unit)?, onRemove: (String) -> Unit) {
     if (!editable && terms.isEmpty()) return
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 12.dp))
@@ -526,7 +526,7 @@ private fun TermRow(label: String, terms: List<String>, editable: Boolean, onAdd
                     trailingIcon = if (editable) ({ Icon(Icons.Default.Close, "Remove $term") }) else null,
                 )
             }
-            if (editable) {
+            if (editable && onAdd != null) {
                 AssistChip(
                     onClick = onAdd,
                     label = { Text(if (terms.isEmpty()) "Add" else "More") },
@@ -546,10 +546,29 @@ private fun TermPicker(kind: TermKind, viewModel: EditorViewModel, onDismiss: ()
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     // Recomputed on each keystroke and each change to the post's picks.
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val suggestions = remember(query, state) { viewModel.suggestions(kind, query) }
-    val exact = suggestions.any { it.name.equals(query.trim(), ignoreCase = true) }
+    // What was typed, as it would be added: a leading # (habit from elsewhere) isn't part of a tag.
+    val term = query.trim().trimStart('#').trim()
+    val suggestions = remember(term, state) { viewModel.suggestions(kind, term) }
+    val exact = suggestions.any { it.name.equals(term, ignoreCase = true) }
+    val picked = viewModel.text?.let { if (kind == TermKind.Category) it.categories else it.tags }.orEmpty()
+    val already = picked.any { it.equals(term, ignoreCase = true) }
     val add = { name: String -> viewModel.add(kind, name); query = "" }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = MaterialTheme.colorScheme.background) {
+    // The blog's spelling when it has the term already, so "Rain" doesn't sit beside "rain". Reads
+    // the field when called, not when composed: the sheet keeps the first dismiss callback it's given.
+    val addTyped = {
+        val typed = query.trim().trimStart('#').trim()
+        if (typed.isNotEmpty()) add(viewModel.suggestions(kind, typed).firstOrNull { it.name.equals(typed, ignoreCase = true) }?.name ?: typed)
+    }
+    // However the sheet is closed, what's typed and not yet added goes in rather than being dropped.
+    val done = { addTyped(); onDismiss() }
+    ModalBottomSheet(onDismissRequest = done, sheetState = sheet, containerColor = MaterialTheme.colorScheme.background) {
+        // The post's own picks, so one just added is seen landing here rather than vanishing
+        // from the suggestions below. Capped, so many of them can't push the field off a short screen.
+        if (picked.isNotEmpty()) {
+            Box(Modifier.heightIn(max = 112.dp).verticalScroll(rememberScrollState()).testTag("picked")) {
+                TermRow("On this post", picked, editable = true, onAdd = null, onRemove = { viewModel.remove(kind, it) })
+            }
+        }
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             OutlinedTextField(
                 value = query,
@@ -557,23 +576,27 @@ private fun TermPicker(kind: TermKind, viewModel: EditorViewModel, onDismiss: ()
                 label = { Text(if (kind == TermKind.Category) "Find or add a category" else "Find or add a tag") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = {
-                    val match = suggestions.firstOrNull { it.name.equals(query.trim(), ignoreCase = true) }
-                    add(match?.name ?: query)
-                }),
+                keyboardActions = KeyboardActions(onDone = { addTyped() }),
                 modifier = Modifier.fillMaxWidth().testTag("termQuery"),
             )
         }
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
-            if (query.isNotBlank() && !exact) {
+            if (already) {
                 item {
-                    Row(Modifier.fillMaxWidth().clickable { add(query) }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "“$term” is already on this post.",
+                        Modifier.padding(horizontal = 16.dp, vertical = 14.dp), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else if (term.isNotEmpty() && !exact) {
+                item {
+                    Row(Modifier.fillMaxWidth().clickable { add(term) }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Add, null, Modifier.padding(end = 12.dp))
-                        Text("Add “${query.trim().trimStart('#')}” as a new $noun")
+                        Text("Add “$term” as a new $noun")
                     }
                 }
             }
-            if (suggestions.isEmpty() && query.isBlank()) {
+            if (suggestions.isEmpty() && term.isEmpty()) {
                 item {
                     Text(
                         "Your blog has no ${noun}s yet that this post doesn't already have. Type one to add it.",
@@ -588,6 +611,6 @@ private fun TermPicker(kind: TermKind, viewModel: EditorViewModel, onDismiss: ()
                 }
             }
         }
-        TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End).padding(8.dp)) { Text("Done") }
+        TextButton(onClick = done, modifier = Modifier.align(Alignment.End).padding(8.dp)) { Text("Done") }
     }
 }

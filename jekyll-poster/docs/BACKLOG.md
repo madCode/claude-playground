@@ -23,6 +23,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 15: the tag picker, from first use
 - [x] Cycle 14: search your posts
 - [x] Cycle 13: a documentation pass
 - [x] Cycle 12: take a photo with the camera
