@@ -204,7 +204,16 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             if (editable && text?.editingPath == null) {
                                 DropdownMenuItem(
-                                    text = { Text("Save to the blog's _drafts") },
+                                    text = {
+                                        // _drafts sounds private, but a public repository is readable by anyone.
+                                        Column {
+                                            Text("Save to the blog's _drafts")
+                                            Text(
+                                                "Not on the site, but readable on GitHub if the repository is public",
+                                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    },
                                     leadingIcon = { Icon(Icons.Default.Drafts, null) },
                                     onClick = { menu = false; send(Destination.Drafts) },
                                 )
@@ -478,6 +487,10 @@ private fun PostPreview(viewModel: EditorViewModel, modifier: Modifier) {
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 // A tapped link opens in the browser, not in place of the preview.
                 webViewClient = object : WebViewClient() {
+                    // Runs off the main thread, as the WebView calls it.
+                    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest) =
+                        viewModel.previewFetcher.fetch(request.url.toString())
+
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                         runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
                         return true

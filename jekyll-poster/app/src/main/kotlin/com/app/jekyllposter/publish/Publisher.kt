@@ -116,7 +116,9 @@ class Publisher(
             return Plan.Finished(published(draft, path, null, null))
         }
         if (current.sha != draft.baseSha) return Plan.Finished(fail(draft, CHANGED))
-        val (ready, photos) = photos(draft, index, ours = emptySet()) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
+        // The same clock as a new post's date, so a photo lands in the year folder its post would.
+        val year = (index.config.timezone?.let { now().withZoneSameInstant(it) } ?: now()).year
+        val (ready, photos) = photos(draft, index, ours = emptySet(), PostPath(path).slug, year) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
         val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content())
         val date = doc.string("date")?.let { parseJekyllDate(it, siteZone(index)) }
             ?: PostPath(path).date?.atStartOfDay(siteZone(index))
@@ -174,17 +176,18 @@ class Publisher(
             return Plan.Finished(fail(draft, "This draft isn't in _drafts any more: it was published or removed elsewhere. Copy your text to keep it."))
         }
         if (current.sha != draft.baseSha) return Plan.Finished(fail(draft, CHANGED))
-        val (ready, photos) = photos(draft, index, ours = emptySet()) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
         // A name picked on an earlier attempt and taken since is picked again.
-        val stale = ready.targetPath?.let { it in index.paths } == true
-        val fixed = fixTarget(if (stale) ready.copy(targetPath = null, publishDate = null) else ready, index)
+        val stale = draft.targetPath?.let { it in index.paths } == true
+        val fixed = fixTarget(if (stale) draft.copy(targetPath = null, publishDate = null) else draft, index)
         val date = ZonedDateTime.parse(fixed.publishDate)
+        val target = fixed.targetPath!!
+        // Named once the post's own name is known.
+        val (ready, photos) = photos(fixed, index, ours = emptySet(), PostPath(target).slug, date.year) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
         val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content())
         doc.setRaw("date", PostWriter.timestamp(date))
-        val target = fixed.targetPath!!
-        drafts.update(fixed.copy(sentShas = (fixed.sentShas + gitBlobSha(doc.render())).distinct()))
+        drafts.update(ready.copy(sentShas = (ready.sentShas + gitBlobSha(doc.render())).distinct()))
         return Plan.Commit(
-            fixed, target, "Publish draft: ${ready.title}",
+            ready, target, "Publish draft: ${ready.title}",
             listOf(FileChange.text(target, doc.render()), FileChange.delete(path)) + photos.changes,
             mapOf(path to current.sha, target to null) + photos.expect, date,
         )
@@ -209,7 +212,7 @@ class Publisher(
         }
         // Photos already on the branch from that landed attempt are this post's own.
         val sent = if (ours) fixed.images.map { it.sitePath.removePrefix("/") }.filter { it in index.paths }.toSet() else emptySet()
-        val (ready, photos) = photos(fixed, index, sent) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
+        val (ready, photos) = photos(fixed, index, sent, PostPath(fixed.targetPath!!).slug, date.year) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
         val target = ready.targetPath!!
         val text = render(ready, date)
         // Added before the commit, never replaced: any of them may be the one that landed.
@@ -229,20 +232,22 @@ class Publisher(
     private class Photos(val changes: List<FileChange>, val expect: Map<String, String?>)
 
     /**
-     * The photos the text still links to, as file changes, each expected not to exist yet. A
-     * photo whose name is taken on the blog meanwhile is renamed, in the text too, so it can't
-     * replace a picture in an older post; [ours] are already there from this post's own earlier
-     * attempt. Null when a photo's file is gone from the phone.
+     * The photos the text still links to, as file changes, each expected not to exist yet. Each is
+     * named for the post, [name] in [year]'s folder, in the text too: added under a placeholder,
+     * or taken on the blog meanwhile (where it would replace a picture in an older post). [ours]
+     * are already there from this post's own earlier attempt. Null when a photo's file is gone
+     * from the phone.
      */
-    private suspend fun photos(draft: Draft, index: SiteIndex, ours: Set<String>): Pair<Draft, Photos>? {
+    private suspend fun photos(draft: Draft, index: SiteIndex, ours: Set<String>, name: String, year: Int): Pair<Draft, Photos>? {
         var body = draft.body
-        // Names given out in this pass count as taken, so two renamed photos never share one.
+        // Names given out in this pass count as taken, so two photos never share one.
         val taken = (index.paths + draft.images.map { it.sitePath }).toMutableSet()
         val images = draft.images.map { image ->
             val path = image.sitePath.removePrefix("/")
-            if (!Images.isUsed(body, image.sitePath) || path !in index.paths || path in ours) return@map image
+            val settled = Images.isNamedFor(image.sitePath, index.imageFolder, name) && path !in index.paths
+            if (!Images.isUsed(body, image.sitePath) || path in ours || settled) return@map image
             val ext = image.sitePath.substringAfterLast('.')
-            val renamed = Images.sitePath(index.imageFolder, java.time.LocalDateTime.now(), ext, taken)
+            val renamed = Images.sitePath(index.imageFolder, year, name, ext, taken)
             taken += renamed
             body = body.replace(image.sitePath, renamed)
             image.copy(sitePath = renamed)
@@ -295,7 +300,9 @@ class Publisher(
         // Kept across attempts, unless the writer has since chosen the other destination.
         val kept = draft.targetPath?.let { PostPath(it).isDraft == toDrafts } == true
         if (kept && draft.publishDate != null) return draft
-        val date = now()
+        // In the site's time zone when it names one: the phone's offset says where the writer is
+        // (a trip abroad shows as +0900), and the site's gives the same day and URL Jekyll will.
+        val date = index.config.timezone?.let { now().withZoneSameInstant(it) } ?: now()
         val slug = Slug.of(draft.title).ifEmpty { "post" }
         fun at(s: String) = if (toDrafts) PostPath.newDraft(s).path else PostPath.newPost(date.toLocalDate(), s).path
         val urls = if (toDrafts) emptySet() else index.posts.filterNot { it.path.isDraft }.mapNotNull { post ->

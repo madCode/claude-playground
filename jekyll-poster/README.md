@@ -15,8 +15,9 @@ tells you when GitHub Pages has rebuilt the site.
   or delete it.
 - **Front matter when you want it.** `image:`, `excerpt:` and the rest as YAML, checked before
   it's published.
-- **Photos without your location.** Picked, shared or taken with the camera, photos are scaled
-  down and stripped of EXIF before they go in the post's commit.
+- **Private by design.** Photos (picked, shared or taken) are stripped of EXIF and named for
+  the post, dates use the site's time zone, and shared links lose tracking codes. No analytics:
+  the app talks to GitHub, and the preview to the sites a post's images come from.
 - **A bit of fun.** It looks like a risograph zine: cream paper, fluoro inks, a stamp of a
   New post button, and every category in its own colour.
 - **Preview, and a nudge when it's live.** See the post as a page before publishing; get a

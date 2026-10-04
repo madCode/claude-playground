@@ -1,6 +1,13 @@
 package com.app.jekyllposter.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row as LayoutRow
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Switch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,10 +63,37 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: ()
                 )
                 Row("Sign out", "Drafts stay on this phone, for when you sign in to this blog again", onClick = onSignOut)
             }
+            Heading("Privacy")
+            val keepTracking by container.settings.keepTrackingCodes.collectAsStateWithLifecycle(false)
+            val scope = rememberCoroutineScope()
+            Toggle(
+                "Keep tracking codes in shared links",
+                "Off: links shared to the app lose utm_ tags, fbclid and the like, which tell sites who shared them. " +
+                    "Turn on if a link needs them, an affiliate link say.",
+                keepTracking,
+            ) { scope.launch { container.settings.setKeepTrackingCodes(it) } }
             Heading("About")
             Row("Jekyll Poster ${BuildConfig.VERSION_NAME}", "Posts to a Jekyll blog on GitHub Pages")
         }
     }
+}
+
+@Composable
+private fun Toggle(title: String, detail: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    LayoutRow(
+        Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        // The whole row toggles; the switch only shows the state.
+        Switch(checked = checked, onCheckedChange = null)
+    }
+    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
 }
 
 @Composable

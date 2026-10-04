@@ -229,4 +229,9 @@ class ScreenshotTest {
             compose.onNode(androidx.compose.ui.test.hasTestTag("termQuery")).performImeAction()
         }) { EditorScreen(vm) {} }
     }
+
+    @Test fun newPostMenu() {
+        val vm = editorWithDraft()
+        shoot("14-new-post-menu", act = { compose.onNode(hasContentDescription("More")).performClick() }) { EditorScreen(vm) {} }
+    }
 }

@@ -14,6 +14,7 @@ import com.app.jekyllposter.data.ImageImporter
 import com.app.jekyllposter.data.PosterDatabase
 import com.app.jekyllposter.data.SecretCipher
 import com.app.jekyllposter.data.accountDataStore
+import com.app.jekyllposter.data.settingsDataStore
 import com.app.jekyllposter.publish.BuildWatcher
 import com.app.jekyllposter.publish.Publisher
 import okhttp3.HttpUrl
@@ -32,6 +33,7 @@ class AppContainer(
     val githubAppSlug: String = BuildConfig.GITHUB_APP_SLUG,
     cipher: SecretCipher = AesGcmCipher.androidKeystore(),
     accountData: DataStore<Preferences> = context.accountDataStore,
+    settingsData: DataStore<Preferences> = context.settingsDataStore,
     val database: PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db")
         .addMigrations(com.app.jekyllposter.data.MIGRATION_1_2, com.app.jekyllposter.data.MIGRATION_2_3).build(),
     /** Starts publishing a queued post; WorkManager in the app, direct calls in tests. */
@@ -54,6 +56,17 @@ class AppContainer(
 
     /** "Sign in with GitHub", when the build names a GitHub App. */
     val deviceFlow: DeviceFlow? = githubClientId.takeIf { it.isNotBlank() }?.let { DeviceFlow(http, it, githubWeb) }
+
+    val settings = com.app.jekyllposter.data.Settings(settingsData)
+
+    /**
+     * For the preview's images: a client of its own, with no GitHub token on it, and a cache, so
+     * switching back to the preview doesn't download them all again.
+     */
+    val previewFetcher by lazy {
+        val cache = okhttp3.Cache(java.io.File(context.cacheDir, "preview"), 20L * 1024 * 1024)
+        com.app.jekyllposter.ui.editor.PreviewFetcher(okhttp3.OkHttpClient.Builder().cache(cache).build())
+    }
 
     val accounts = AccountStore(accountData, cipher, deviceFlow?.let { flow -> { refreshToken: String -> flow.refresh(refreshToken) } })
     val drafts = database.drafts()
