@@ -11,15 +11,18 @@ tells you when GitHub Pages has rebuilt the site.
   dated tomorrow. Editing a post keeps every key, comment and quote the app doesn't touch.
 - **Writing is on the phone; publishing waits for a connection.** Drafts stay on the phone.
   A post queued offline goes out when you're back online, exactly once.
-- **Edits are safe.** If a post changed on GitHub since you opened it, the app won't overwrite it.
+- **Edits are safe.** If a post changed on GitHub since you opened it, the app won't overwrite
+  or delete it.
 - **Front matter when you want it.** `image:`, `excerpt:` and the rest as YAML, checked before
   it's published.
-- **Photos without your location.** Picked photos are scaled down and stripped of EXIF before
-  they go in the post's commit.
+- **Photos without your location.** Picked, shared or taken with the camera, photos are scaled
+  down and stripped of EXIF before they go in the post's commit.
 - **A bit of fun.** It looks like a risograph zine: cream paper, fluoro inks, a stamp of a
   New post button, and every category in its own colour.
 - **Preview, and a nudge when it's live.** See the post as a page before publishing; get a
   notification with its address once GitHub Pages has rebuilt.
+- **Quick to start.** Long-press the app's icon for New post, or share text, a link or photos
+  to it.
 
 **Install:** the newest build from main is
 [jekyll-poster-debug.apk](https://github.com/madCode/claude-playground/releases/download/jekyll-poster-debug/jekyll-poster-debug.apk).

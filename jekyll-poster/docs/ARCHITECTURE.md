@@ -23,9 +23,11 @@
   - `data/`: `AccountStore` (DataStore, token sealed by `SecretCipher`), Room
     (`Draft` for posts written on the phone, `CachedPost` for the blog's posts as last read),
     `BlogRepository` (refreshing that cache, the taxonomy flow).
-  - `data/ImageImporter`: picked photo → upright, scaled, re-encoded file in app storage.
+  - `data/ImageImporter`: a picked, shared or camera photo → upright, scaled, re-encoded file in
+    app storage. Camera photos arrive in `cache/camera/` through a FileProvider and are deleted
+    once imported.
   - `publish/`: `Publisher` (the rules for sending a queued post, one at a time: it plans a new
-    post, an edit or a move out of `_drafts`, then commits the plan), `PublishWorker`
+    post, an edit, a move out of `_drafts` or a delete, then commits the plan), `PublishWorker`
     (WorkManager, needs a network, exponential backoff, unique per post), `BuildWatcher` and
     `BuildWatchWorker` (polls the Pages run for the post's commit), `Notifier`.
   - `ui/`: Compose screens with a ViewModel each: `connect`, `home`, `editor`, `settings`.
@@ -33,7 +35,10 @@
     squiggles, row style, category colours, the stamp), read by small shared composables
     (`SectionHeading`, `TermPill`, `PosterFab`, `InkButton`). `DesignRoundTest` renders styles
     side by side with `-Pdesign`.
-    `PosterNavHost` picks the first screen once the stored account has loaded.
+    `PosterNavHost` picks the first screen once the stored account has loaded, and starts a
+    shared or New post once (a saved flag: Home's effects run again each time it returns).
+  - `MainActivity`: `postToStart` turns its intent (a share, the launcher's New post shortcut)
+    into the post to start; the shortcut is a dynamic one it adds.
   - `AppContainer`: manual DI. Tests swap the GitHub address, cipher, database, DataStore and
     the publish scheduler (`TestApp`).
 
@@ -46,3 +51,5 @@
 4. `BuildWatchWorker` turns `Building` into `Live`, `Failed` or `Unknown`.
 5. A failure the writer must fix (sign-in, access, an edit conflict) is state `Failed` with an
    `error`; they edit and publish again.
+6. Delete from the blog is the same queue with `Destination.Delete`: the path is recorded in
+   `targetPath` before the commit, and the row is deleted once the file is gone.
