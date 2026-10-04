@@ -58,6 +58,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -125,6 +126,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     var bodyFocused by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var confirmDeleteFromBlog by remember { mutableStateOf(false) }
     LaunchedEffect(state.closed) { if (state.closed) onClose() }
     BackHandler(onBack = viewModel::close)
     val editable = state.editable
@@ -163,6 +165,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                     Text(
                         when {
                             state.draft?.state == PostState.Published -> "Published"
+                            state.draft?.state == PostState.Queued && state.draft?.destination == Destination.Delete -> "Deleting"
                             state.draft?.state == PostState.Queued -> "Publishing"
                             text?.editingPath != null -> "Edit post"
                             else -> "New post"
@@ -201,6 +204,13 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                                     text = { Text("Publish to the site") },
                                     leadingIcon = { Icon(Icons.Default.Public, null) },
                                     onClick = { menu = false; send(Destination.Posts) },
+                                )
+                            }
+                            if (editable && text?.editingPath != null) {
+                                DropdownMenuItem(
+                                    text = { Text("Delete from the blog") },
+                                    leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
+                                    onClick = { menu = false; confirmDeleteFromBlog = true },
                                 )
                             }
                             DropdownMenuItem(
@@ -301,6 +311,21 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
             },
             confirmButton = { TextButton(onClick = { confirmDelete = false; viewModel.delete() }) { Text(if (published) "Remove" else if (text?.editingPath != null) "Discard" else "Delete") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Keep") } },
+        )
+    }
+    if (confirmDeleteFromBlog) {
+        val title = text?.title?.trim().orEmpty().ifEmpty { "this post" }
+        AlertDialog(
+            onDismissRequest = { confirmDeleteFromBlog = false },
+            title = { Text("Delete “$title” from the blog?") },
+            text = {
+                Text(
+                    "One commit removes it from ${if (jekyllDraft) "_drafts" else "the site"}. " +
+                        "Its photos stay, and the repository's history keeps the text. Changes you made here are lost.",
+                )
+            },
+            confirmButton = { TextButton(onClick = { confirmDeleteFromBlog = false; viewModel.deleteFromBlog() }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { confirmDeleteFromBlog = false }) { Text("Keep") } },
         )
     }
 }

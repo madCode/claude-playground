@@ -67,6 +67,29 @@ class EditorViewModelTest {
         idleUntil { app.github.text(path)!!.contains("And the phone.") }
     }
 
+    @Test fun deletingAPostFromTheBlog() {
+        val home = HomeViewModel(c)
+        var id: Long? = null
+        val post = runBlocking { c.database.posts().snapshot() }.first { it.path == "_posts/2025-04-20-reading-list.md" }
+        home.edit(post) { id = it }
+        idleUntil { id != null }
+        val editor = EditorViewModel(c, id!!)
+        idleUntil { editor.text != null && editor.state.value.draft != null }
+        editor.deleteFromBlog()
+        idleUntil { app.github.text(post.path) == null }
+        idleUntil { runBlocking { c.drafts.get(id!!) } == null }
+        assertTrue(editor.state.value.closed)
+    }
+
+    @Test fun aNewPostCantBeDeletedFromTheBlog() {
+        val id = runBlocking { c.drafts.insert(Draft(title = "Only here", body = "Not on the blog.")) }
+        val editor = EditorViewModel(c, id)
+        idleUntil { editor.text != null && editor.state.value.draft != null }
+        editor.deleteFromBlog()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertEquals(PostState.Draft, runBlocking { c.drafts.get(id) }!!.state)
+    }
+
     @Test fun suggestionsLeaveOutWhatThePostHasAndMatchLoosely() {
         val id = runBlocking { c.drafts.insert(Draft(categories = listOf("Writing"))) }
         val editor = EditorViewModel(c, id)

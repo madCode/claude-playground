@@ -151,6 +151,47 @@ class PublisherTest {
         assertEquals(PostState.Published, c.drafts.get(id)!!.state)
     }
 
+    private fun queueDelete(path: String): Long = runBlocking {
+        c.blogs.refresh()
+        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        queue(Draft(title = "To go", body = "Edited, then deleted.", editingPath = path, baseSha = sha, destination = Destination.Delete))
+    }
+
+    @Test fun deletingAPostRemovesItInOneCommitAndForgetsIt() = runBlocking {
+        val path = "_posts/2025-01-12-welcome.md"
+        val photo = java.io.File.createTempFile("waiting", ".jpg").apply { writeBytes(byteArrayOf(1)) }
+        val id = queueDelete(path)
+        c.drafts.update(c.drafts.get(id)!!.copy(images = listOf(DraftImage("/assets/images/2026/x.jpg", photo.path))))
+        val before = github.head
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertNull(github.text(path))
+        assertEquals(before, github.commits.getValue(github.head).parent)
+        assertEquals("Delete post: To go", github.commits.getValue(github.head).message)
+        // Nothing is left to show on the phone: the row, the photo it never sent, the cached post.
+        assertNull(c.drafts.get(id))
+        assertTrue(!photo.exists())
+        assertTrue(c.database.posts().snapshot().none { it.path == path })
+    }
+
+    @Test fun aDeleteThatLandedUnheardIsDone() = runBlocking {
+        val path = "_drafts/garden-plans.md"
+        val id = queueDelete(path)
+        github.push("Deleted elsewhere, or by this phone's lost commit", mapOf(path to null))
+        val before = github.head
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertEquals(before, github.head)
+        assertNull(c.drafts.get(id))
+    }
+
+    @Test fun aPostChangedOnGitHubIsNotDeleted() = runBlocking {
+        val path = "_drafts/garden-plans.md"
+        val id = queueDelete(path)
+        github.push("Laptop", mapOf(path to "---\ntitle: Garden plans\n---\nRewritten on the laptop.\n"))
+        assertTrue(publisher.publish(id) is Publisher.Outcome.Failed)
+        assertTrue(github.text(path)!!.contains("Rewritten on the laptop."))
+        assertEquals(PostState.Failed, c.drafts.get(id)!!.state)
+    }
+
     @Test fun updatingAJekyllDraftKeepsItADraft() = runBlocking {
         c.blogs.refresh()
         val path = "_drafts/garden-plans.md"

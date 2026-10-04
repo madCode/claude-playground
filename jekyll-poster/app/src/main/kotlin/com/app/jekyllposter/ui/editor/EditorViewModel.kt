@@ -279,6 +279,27 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         }
     }
 
+    /**
+     * Queues the blog's copy of the post being edited for deletion. The writer's unsent changes
+     * go with it; the confirmation says so.
+     */
+    fun deleteFromBlog() {
+        viewModelScope.launch {
+            photoJob?.join()
+            saveJob?.cancel()
+            val draft = container.drafts.get(id) ?: return@launch
+            if (draft.editingPath == null || (draft.state != PostState.Draft && draft.state != PostState.Failed)) return@launch
+            container.drafts.update(
+                draft.copy(
+                    state = PostState.Queued, error = null, destination = Destination.Delete, updatedAt = System.currentTimeMillis(),
+                    blog = draft.blog ?: container.accounts.current()?.blogKey,
+                ),
+            )
+            container.schedulePublish(id)
+            flags.update { it.copy(closed = true) }
+        }
+    }
+
     /** Leaving the editor: saves, and drops a draft that was never written in. */
     fun close() {
         viewModelScope.launch {

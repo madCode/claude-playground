@@ -70,6 +70,7 @@ class Publisher(
             val editing = draft.editingPath
             val moving = editing != null && PostPath(editing).isDraft && draft.destination == Destination.Posts
             val plan = when {
+                draft.destination == Destination.Delete -> planDelete(draft, editing ?: return fail(draft, "Only a post on the blog can be deleted."), blog)
                 editing != null && !moving -> planEdit(draft, editing, index, blog) ?: return null
                 moving -> planMove(draft, editing!!, index, blog) ?: return null
                 else -> planNew(draft, index, blog) ?: return null
@@ -77,6 +78,7 @@ class Publisher(
             if (plan is Plan.Finished) return plan.outcome
             plan as Plan.Commit
             val sha = blog.commit(plan.message, plan.changes, plan.expect)
+            if (draft.destination == Destination.Delete) return deleted(draft)
             published(drafts.get(id) ?: draft, plan.path, sha, plan.date?.let { postUrl(index, plan.path, it, plan.draft) })
         } catch (e: GitHubException) {
             when {
@@ -123,6 +125,29 @@ class Publisher(
             listOf(FileChange.text(path, doc.render())) + photos.changes,
             mapOf(path to current.sha) + photos.expect, date,
         )
+    }
+
+    /**
+     * A post or Jekyll draft deleted from the blog, only if it's still the version the writer
+     * opened: they decided on what they saw. Already gone counts as done, which is also how a
+     * commit that landed unheard looks on the next attempt.
+     */
+    private suspend fun planDelete(draft: Draft, path: String, blog: Blog): Plan {
+        val current = blog.file(path) ?: return Plan.Finished(deleted(draft))
+        if (current.sha != draft.baseSha) {
+            return Plan.Finished(fail(draft, "This post changed on GitHub since you opened it, so it wasn't deleted. Discard this and open the post again to see the new version."))
+        }
+        val kind = if (PostPath(path).isDraft) "draft" else "post"
+        // The photos stay: another post may show them too, and the history keeps the text anyway.
+        return Plan.Commit(draft, path, "Delete $kind: ${draft.title}", listOf(FileChange.delete(path)), mapOf(path to current.sha), null)
+    }
+
+    /** The post is off the blog; so is the phone's record of it, and any photo it was waiting to send. */
+    private suspend fun deleted(draft: Draft): Outcome {
+        (drafts.get(draft.id) ?: draft).images.forEach { File(it.file).delete() }
+        drafts.delete(draft.id)
+        runCatching { blogs.refresh() }
+        return Outcome.Done
     }
 
     /** A Jekyll draft published from the phone: dated, written to _posts, out of _drafts, in one commit. */

@@ -119,6 +119,14 @@ doesn't want to open a laptop and make a commit for every post.
 - If the post changed on GitHub since it was opened, even in the moment of committing, Update
   refuses and says to discard and start from the new version.
 
+## Deleting a post from the blog
+
+- **Delete from the blog** (the menu, while editing a post or Jekyll draft) asks first, then
+  removes the file in one commit ("Delete post: Title"). The changes made on the phone go with it.
+- Only the version that was opened is deleted: if it changed on GitHub since, nothing is deleted
+  and the app says so. Already gone counts as done.
+- Its photos stay: another post may use them. The repository's history keeps the text.
+
 ## The blog's _drafts
 
 - **Save to the blog's _drafts** (the editor's menu) commits a new post to `_drafts/<slug>.md`,

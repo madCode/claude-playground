@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
@@ -171,5 +172,34 @@ class ScreenshotTest {
     @Test fun categoryPicker() {
         val vm = editorWithDraft()
         shoot("05-category-picker", act = { compose.onNode(hasContentDescription("Add category")).performClick() }) { EditorScreen(vm) {} }
+    }
+
+    private fun editingAPost(): EditorViewModel {
+        signIn()
+        val id = runBlocking {
+            c.drafts.insert(
+                Draft(
+                    title = "What I read in April", body = "A few books, a few essays.", categories = listOf("Writing"),
+                    editingPath = "_posts/2025-04-20-reading-list.md", baseSha = "x", extraFrontMatter = "",
+                ),
+            )
+        }
+        return EditorViewModel(c, id)
+    }
+
+    @Test fun editMenu() {
+        val vm = editingAPost()
+        shoot("09-edit-menu", ready = { vm.text != null && vm.state.value.draft != null }, act = {
+            compose.onNode(hasContentDescription("More")).performClick()
+        }) { EditorScreen(vm) {} }
+    }
+
+    @Test fun deleteFromBlog() {
+        val vm = editingAPost()
+        shoot("10-delete-from-blog", ready = { vm.text != null && vm.state.value.draft != null }, act = {
+            compose.onNode(hasContentDescription("More")).performClick()
+            compose.waitForIdle()
+            compose.onNode(hasText("Delete from the blog")).performClick()
+        }) { EditorScreen(vm) {} }
     }
 }
