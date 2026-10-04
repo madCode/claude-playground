@@ -100,6 +100,13 @@ class EditorViewModelTest {
         assertEquals("make this **bold**", runBlocking { c.drafts.get(id) }!!.body)
     }
 
+    @Test fun forgettingABlogForgetsItsTitleAndAddressToo() = runBlocking {
+        assertEquals("A Sample Notebook", c.blogs.config.value.title)
+        c.blogs.clear()
+        assertEquals(null, c.blogs.config.value.title)
+        assertEquals(null, c.blogs.siteUrl.value)
+    }
+
     @Test fun anEmptyDraftIsDroppedOnClose() {
         val id = runBlocking { c.drafts.insert(Draft()) }
         val editor = EditorViewModel(c, id)

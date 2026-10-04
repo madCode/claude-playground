@@ -19,7 +19,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -32,7 +32,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.sin
 
 /** How lists of posts are drawn. */
@@ -50,19 +49,21 @@ fun SectionHeading(text: String, modifier: Modifier = Modifier) {
         // The mark is decoration; TalkBack hears just the heading.
         modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 6.dp)
             .semantics { heading(); contentDescription = text }
-            .drawBehind {
-                if (!whimsy.squiggle) return@drawBehind
+            .drawWithCache {
+                // Built once per size, not on every draw.
                 val y = size.height + 3.dp.toPx()
                 val wave = 3.dp.toPx()
+                val period = 6.dp.toPx()
                 val path = Path().apply {
                     moveTo(0f, y)
                     var x = 0f
                     while (x <= size.width) {
-                        lineTo(x, y + wave * sin(x / (6.dp.toPx()) * PI.toFloat() / 2f))
+                        lineTo(x, y + wave * sin(x / period * PI.toFloat() / 2f))
                         x += 2f
                     }
                 }
-                drawPath(path, color.copy(alpha = 0.55f), style = Stroke(width = 1.5.dp.toPx()))
+                val stroke = Stroke(width = 1.5.dp.toPx())
+                onDrawBehind { if (whimsy.squiggle) drawPath(path, color.copy(alpha = 0.55f), style = stroke) }
             },
     )
 }
@@ -75,8 +76,10 @@ fun RowDivider() {
         Rows.Dots -> {
             val color = MaterialTheme.colorScheme.outlineVariant
             Box(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(vertical = 1.dp).drawBehind {
-                    drawLine(color, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx())))
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(vertical = 1.dp).drawWithCache {
+                    val dots = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx()))
+                    val width = 2.dp.toPx()
+                    onDrawBehind { drawLine(color, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = width, pathEffect = dots) }
                 },
             )
         }
@@ -98,13 +101,16 @@ fun RowFrame(modifier: Modifier = Modifier, content: @Composable ColumnScope.() 
     }
 }
 
+/** Which of [size] colours a term gets. floorMod, not abs(): abs(Int.MIN_VALUE) is negative, and real names hash to it. */
+internal fun termSlot(term: String, size: Int): Int = Math.floorMod(term.lowercase().hashCode(), size)
+
 /** A category or tag's own colour, the same everywhere it appears. */
 @Composable
 fun termColor(term: String): Color {
     val whimsy = LocalWhimsy.current
     val palette = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) whimsy.paletteDark else whimsy.palette
     if (palette.isEmpty()) return MaterialTheme.colorScheme.surfaceContainerHigh
-    return palette[abs(term.lowercase().hashCode()) % palette.size]
+    return palette[termSlot(term, palette.size)]
 }
 
 /** Text on a term's colour: near-black ink on the light pills, near-white on the dark ones. */
@@ -169,5 +175,5 @@ fun InkButton(text: String, onClick: () -> Unit) {
         border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onBackground),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 4.dp),
         modifier = Modifier.padding(end = 4.dp),
-    ) { Text(text, style = MaterialTheme.typography.labelLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)) }
+    ) { Text(text, maxLines = 1, style = MaterialTheme.typography.labelLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)) }
 }

@@ -122,24 +122,26 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
 private fun DraftRow(draft: Draft, onClick: () -> Unit) {
     RowFrame(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(draft.title.ifBlank { "Untitled" }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        val (label, isError) = draft.status()
-        val live = LocalWhimsy.current.live
+        val whimsy = LocalWhimsy.current
+        val (label, isError) = draft.status(whimsy.live)
+        val shown = if (draft.state == PostState.Published && draft.buildState == BuildState.Live) label + whimsy.liveMark else label
         Text(
-            label.replace("live on the site", live), style = MaterialTheme.typography.bodySmall,
+            shown, style = MaterialTheme.typography.bodySmall,
             color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2,
+            modifier = Modifier.semantics { contentDescription = label },
         )
     }
     RowDivider()
 }
 
 /** A draft's state in a few words, and whether it needs the writer. */
-fun Draft.status(): Pair<String, Boolean> = when (state) {
+fun Draft.status(live: String = "live on the site"): Pair<String, Boolean> = when (state) {
     PostState.Draft -> (if (editingPath != null) "Editing · not published yet" else "Draft") to false
     PostState.Queued -> "Waiting to publish…" to false
     PostState.Failed -> "Didn't publish: ${error.orEmpty()}" to true
     PostState.Published -> if (targetPath?.startsWith("_drafts/") == true) "Saved to the blog's _drafts" to false else when (buildState) {
         BuildState.Building -> "Published · the site is rebuilding…" to false
-        BuildState.Live -> "Published · live on the site" to false
+        BuildState.Live -> "Published · $live" to false
         BuildState.Failed -> "Published, but the site build failed. Check Actions on GitHub." to true
         BuildState.Unknown, null -> "Published to GitHub" to false
     }

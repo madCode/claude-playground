@@ -39,6 +39,8 @@ data class Whimsy(
     val stampText: Color = Color(0xFF2B1B17),
     val emptyBlog: String = "No posts yet. Your first one is a tap away.",
     val live: String = "live on the site",
+    /** Decoration after [live]; TalkBack doesn't read it. */
+    val liveMark: String = "",
 )
 
 val LocalWhimsy = staticCompositionLocalOf { Whimsy() }
@@ -67,10 +69,16 @@ private fun typography(headings: FontFamily, body: FontFamily): Typography {
     )
 }
 
-/** A variable font at [weight]; without the setting, Android takes the file's default, often its thinnest. */
+/**
+ * A variable font at [weight] and optical size [opsz]. Without the settings Android takes the
+ * file's defaults, which for Bricolage are its heaviest weight at headline size: small text then
+ * gets shapes drawn for 96pt and reads poorly.
+ */
 @OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
-private fun variable(res: Int, weight: Int) =
-    Font(res, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight)))
+private fun variable(res: Int, weight: Int, opsz: Float) = Font(
+    res, FontWeight(weight),
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight), FontVariation.Setting("opsz", opsz)),
+)
 
 object PosterStyles {
     val Classic = PosterStyle(
@@ -109,8 +117,8 @@ object PosterStyles {
             outline = Color(0xFFF6E8DC),
             surfaceContainer = Color(0xFF2A211C), surfaceContainerHigh = Color(0xFF352B25), surfaceContainerLow = Color(0xFF1E1714),
         ),
-        headings = FontFamily(variable(R.font.bricolage, 700)),
-        body = FontFamily(variable(R.font.bricolage, 400), variable(R.font.bricolage, 600)),
+        headings = FontFamily(variable(R.font.bricolage, 700, 36f)),
+        body = FontFamily(variable(R.font.bricolage, 400, 14f), variable(R.font.bricolage, 600, 14f), variable(R.font.bricolage, 700, 14f)),
         corner = 18,
         whimsy = Whimsy(
             mark = "✶ ", squiggle = true, rows = Rows.Dots, stamp = true, tilt = -3f,
@@ -118,7 +126,7 @@ object PosterStyles {
             palette = listOf(Color(0xFFFFC2D6), Color(0xFFB9ECEA), Color(0xFFFFE08F), Color(0xFFC9D5FF), Color(0xFFFFCFA8)),
             // Deep riso inks, each at least 4.5:1 under the light text.
             paletteDark = listOf(Color(0xFF9E1F52), Color(0xFF006A6C), Color(0xFF6E5300), Color(0xFF3F4AA8), Color(0xFF8C3B00)),
-            emptyBlog = "Nothing printed yet. Fresh paper, fresh ink.", live = "out in the world ✶",
+            emptyBlog = "Nothing printed yet. Fresh paper, fresh ink.", live = "out in the world", liveMark = " ✶",
         ),
     )
 

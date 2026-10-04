@@ -63,7 +63,14 @@ class BlogRepository(
         return index
     }
 
-    suspend fun clear() = posts.clear()
+    /** Forgets the blog: a new one starts with no posts, title, address or image folder from the last. */
+    suspend fun clear() {
+        posts.clear()
+        _config.value = SiteConfig()
+        _siteUrl.value = null
+        _imageFolder.value = "assets/images"
+        paths = emptySet()
+    }
 
     private fun CachedPost.toSummary() = PostSummary(PostPath(path), sha, title, categories, tags, published)
 

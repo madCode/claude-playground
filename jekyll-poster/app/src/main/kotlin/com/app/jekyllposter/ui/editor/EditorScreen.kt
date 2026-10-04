@@ -320,7 +320,7 @@ private fun DescribePhoto(sitePath: String, onDone: (String) -> Unit) {
  */
 @Composable
 private fun FormatBar(formatting: Boolean, addingPhoto: Boolean, onFormat: ((Edit) -> Edit) -> Unit, onPhoto: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding()) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding()) {
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "**") } }) { Icon(Icons.Default.FormatBold, "Bold") }
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "_") } }) { Icon(Icons.Default.FormatItalic, "Italic") }
