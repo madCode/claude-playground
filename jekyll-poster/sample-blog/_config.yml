@@ -1,0 +1,15 @@
+title: A Sample Notebook
+description: Notes from a made-up writer, for testing Jekyll Poster.
+baseurl: "" # e.g. /sample-blog for a project site
+url: ""
+timezone: America/Los_Angeles
+theme: minima
+permalink: /:categories/:year/:month/:day/:title/
+plugins:
+  - jekyll-feed
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: post

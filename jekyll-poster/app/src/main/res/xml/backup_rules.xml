@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and older; data_extraction_rules.xml says why this is left out. -->
+<full-backup-content>
+    <exclude domain="file" path="datastore/account.preferences_pb" />
+</full-backup-content>
