@@ -11,7 +11,7 @@ and moves it to Done.
   from Obsidian and it arrives as a post the blog can read, as obyde does it:
   - Plain Markdown stays as it is.
   - `[[Note]]` and `[[Note|shown text]]`: a link when a post on the blog has that title (or
-    file name), else the text alone, so a link to a note not yet posted doesn't break.
+    file name), else left as `[[Note]]`, as obyde does: it reads as a title, not as prose.
   - obyde's `find:`/`replace:` lists in the front matter are applied to the post, then removed:
     they hold the very words meant to stay private, so they must never be published.
   - `![[photo.jpg]]`: found in the vault folder, picked once, and added like any photo
