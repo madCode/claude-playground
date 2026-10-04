@@ -130,8 +130,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         } }
         val text = fromFile?.second ?: shared.text
         // Fresh, if GitHub can be reached: a link to a post deleted since the last look would fail
-        // the site's build. Best effort; the cached list does otherwise.
-        withTimeoutOrNull(10_000) { runCatching { container.blogs.refresh() } }
+        // the site's build. Best effort; the cached list does otherwise. Only for a note with links.
+        if (text.contains("[[")) withTimeoutOrNull(10_000) { runCatching { container.blogs.refresh() } }
         val today = java.time.LocalDate.now(container.blogs.config.value.timezone ?: java.time.ZoneOffset.UTC)
         val posts = container.blogs.cachedPosts.first()
             // Only posts the site builds: GitHub Pages skips future-dated ones, and post_url fails on them.
