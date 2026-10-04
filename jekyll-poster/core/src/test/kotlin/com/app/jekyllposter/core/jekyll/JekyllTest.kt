@@ -97,3 +97,32 @@ class JekyllTest {
         assertFalse(two.keys.contains("category"))
     }
 }
+
+class MoreFrontMatterTest {
+    private val at = ZonedDateTime.of(2026, 10, 4, 9, 0, 0, 0, ZoneId.of("UTC"))
+
+    @Test fun aNewPostCarriesTheWritersExtraKeysAfterItsOwn() {
+        val doc = PostWriter.newPost(PostContent("T", "b", extra = "image: /assets/cover.jpg\n# shown on the card\nexcerpt: \"Short: sweet\""), at, SiteConfig(defaultPostLayout = "post"))
+        assertEquals(
+            "---\ntitle: T\ndate: 2026-10-04 09:00:00 +0000\nimage: /assets/cover.jpg\n# shown on the card\nexcerpt: \"Short: sweet\"\n---\n\nb\n",
+            doc.render(),
+        )
+    }
+
+    @Test fun anEditShowsAndReplacesTheOtherKeysOnlyWhenChanged() {
+        val original = FrontMatterDocument.parse("---\nlayout: post\ntitle: Old\n# card\nimage: /a.png\ncomments: false\n---\n\nBody\n")
+        assertEquals("# card\nimage: /a.png\ncomments: false", original.others(PostWriter.MANAGED))
+        val same = PostWriter.edit(original, PostContent("Old", "Body", extra = "# card\nimage: /a.png\ncomments: false"))
+        assertEquals(original.render(), same.render())
+        val changed = PostWriter.edit(FrontMatterDocument.parse(original.render()), PostContent("Old", "Body", extra = "image: /b.png"))
+        assertEquals("---\nlayout: post\ntitle: Old\nimage: /b.png\n---\n\nBody\n", changed.render())
+    }
+
+    @Test fun extraFrontMatterIsCheckedBeforeItsWritten() {
+        assertEquals(null, extraFrontMatterProblem(""))
+        assertEquals(null, extraFrontMatterProblem("image: /a.png"))
+        assertTrue(extraFrontMatterProblem("image: [unclosed")!!.contains("isn't YAML"))
+        assertTrue(extraFrontMatterProblem("just words")!!.contains("isn't YAML"))
+        assertTrue(extraFrontMatterProblem("title: Sneaky")!!.contains("`title`"))
+    }
+}

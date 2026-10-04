@@ -7,6 +7,16 @@ Times are Pacific.
 
 ## Night 1 · Sun 4 Oct
 
+### Cycle 8: front matter, and filtering by category (07:00–07:40)
+- **Shipped:** "more front matter" for posts, as YAML in a folding section, checked before
+  publishing, untouched keys kept byte for byte (database version 3); the blog's posts filter by
+  category from a row of pills.
+- **Cycle 7's review found** (fixed before merging): a category hashing to `Int.MIN_VALUE`
+  crashed the colour lookup; switching blogs kept the old blog's title; TalkBack read the
+  decorative ✶; small text used the font's 96pt optical size; disabled toolbar buttons were
+  too faint; Publish could wrap at large text; the icon's shadow left the round mask's safe
+  circle; the squiggle allocated on every draw.
+
 ### Cycle 7: a whimsical look, in four design rounds (05:40–06:50)
 - **From you:** "a few design rounds to pick a theme that's fun and maybe even whimsical".
 - **Round 1:** five directions rendered on the real screens, light and dark (DesignRoundTest):

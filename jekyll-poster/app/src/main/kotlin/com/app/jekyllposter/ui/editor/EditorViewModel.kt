@@ -10,6 +10,7 @@ import com.app.jekyllposter.core.jekyll.Edit
 import com.app.jekyllposter.core.jekyll.Images
 import com.app.jekyllposter.core.jekyll.MarkdownEdits
 import com.app.jekyllposter.core.jekyll.Preview
+import com.app.jekyllposter.core.jekyll.extraFrontMatterProblem
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.DraftImage
 import java.io.File
@@ -82,7 +83,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val draft = when {
             stored == null -> null
             mine == null -> stored
-            else -> stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images)
+            else -> stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, extraFrontMatter = mine.extraFrontMatter)
         }
         f.copy(draft = draft, taxonomy = taxonomy)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, State())
@@ -169,6 +170,11 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     fun dismissPhotoError() = flags.update { it.copy(photoError = null) }
 
     fun setTitle(title: String) = edit { it.copy(title = title) }
+
+    fun setExtraFrontMatter(yaml: String) = edit { it.copy(extraFrontMatter = yaml) }
+
+    /** Why the "more front matter" can't be published as it is, or null. */
+    val extraProblem: String? get() = text?.extraFrontMatter?.let(::extraFrontMatterProblem)
     fun setBody(value: TextFieldValue) {
         bodySelection = value.selection
         bodyComposition = value.composition
@@ -226,7 +232,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val mine = text ?: return
         val stored = container.drafts.get(id) ?: return
         if (stored.state != PostState.Draft && stored.state != PostState.Failed) return
-        container.drafts.update(stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, updatedAt = System.currentTimeMillis()))
+        container.drafts.update(stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, extraFrontMatter = mine.extraFrontMatter, updatedAt = System.currentTimeMillis()))
     }
 
     /** Sends the post to [destination]: the site's `_posts`, or the blog's `_drafts`. */
@@ -240,6 +246,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 flags.update { it.copy(titleMissing = true) }
                 return@launch
             }
+            // The field shows why; publishing would write YAML the blog can't read.
+            if (draft.extraFrontMatter?.let(::extraFrontMatterProblem) != null) return@launch
             // A failed post that never attempted a commit gets a fresh name and date: the old ones
             // may be days stale. One that did keeps them, so a commit that landed unheard is
             // recognised rather than published twice.

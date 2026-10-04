@@ -55,6 +55,11 @@ data class Draft(
     val body: String = "",
     val categories: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
+    /**
+     * Front matter beyond the editor's fields, as YAML. For an edit, the post's other keys as
+     * opened; null for a new post with none.
+     */
+    val extraFrontMatter: String? = null,
     /** Photos added on the phone, uploaded with the post if its text still links to them. */
     @ColumnInfo(defaultValue = "[]") val images: List<DraftImage> = emptyList(),
     /** For an edit of a post already on the blog: its path, and its blob sha when it was opened. */
@@ -167,7 +172,7 @@ class Converters {
     @TypeConverter fun toImages(json: String): List<DraftImage> = Json.decodeFromString(json)
 }
 
-@Database(entities = [Draft::class, CachedPost::class], version = 2)
+@Database(entities = [Draft::class, CachedPost::class], version = 3)
 @TypeConverters(Converters::class)
 abstract class PosterDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
@@ -191,5 +196,12 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
             "CREATE TABLE IF NOT EXISTS `posts` (`path` TEXT NOT NULL, `sha` TEXT NOT NULL, `title` TEXT NOT NULL, " +
                 "`categories` TEXT NOT NULL, `tags` TEXT NOT NULL, `published` INTEGER NOT NULL, `date` TEXT, PRIMARY KEY(`path`))",
         )
+    }
+}
+
+/** Drafts gain their "more front matter". */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE drafts ADD COLUMN extraFrontMatter TEXT")
     }
 }

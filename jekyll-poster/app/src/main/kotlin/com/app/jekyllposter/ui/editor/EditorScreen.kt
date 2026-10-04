@@ -106,6 +106,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.jekyllposter.ui.editor.EditorViewModel.TermKind
 import androidx.compose.material.icons.filled.Drafts
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Public
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.PostState
@@ -250,6 +254,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
             )
             TermRow("Categories", text.categories, editable, onAdd = { picker = TermKind.Category }, onRemove = { viewModel.remove(TermKind.Category, it) })
             TermRow("Tags", text.tags, editable, onAdd = { picker = TermKind.Tag }, onRemove = { viewModel.remove(TermKind.Tag, it) })
+            MoreFrontMatter(text.extraFrontMatter.orEmpty(), viewModel.extraProblem, editable, viewModel::setExtraFrontMatter)
             HorizontalDivider(Modifier.padding(horizontal = 16.dp))
             TextField(
                 value = TextFieldValue(text.body, viewModel.bodySelection, viewModel.bodyComposition),
@@ -287,6 +292,46 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
             },
             confirmButton = { TextButton(onClick = { confirmDelete = false; viewModel.delete() }) { Text(if (published) "Remove" else if (text?.editingPath != null) "Discard" else "Delete") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Keep") } },
+        )
+    }
+}
+
+/**
+ * The post's other front matter as YAML, folded to a line naming its keys. For the writer who
+ * wants `image:` or `excerpt:` without leaving the phone.
+ */
+@Composable
+private fun MoreFrontMatter(yaml: String, problem: String?, editable: Boolean, onChange: (String) -> Unit) {
+    if (!editable && yaml.isBlank()) return
+    var open by remember { mutableStateOf(false) }
+    val keys = remember(yaml) {
+        yaml.lines().mapNotNull { Regex("""^([^\s#\-][^:]*):""").find(it)?.groupValues?.get(1) }
+    }
+    Row(
+        Modifier.fillMaxWidth().clickable { open = !open }.padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Front matter", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 12.dp))
+        Text(
+            if (keys.isEmpty()) "Add image, excerpt…" else keys.joinToString(", "),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (problem != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+        )
+        Icon(if (open) Icons.Default.ExpandLess else Icons.Default.ExpandMore, if (open) "Fold front matter" else "Show front matter")
+    }
+    if (open) {
+        OutlinedTextField(
+            value = yaml,
+            onValueChange = onChange,
+            readOnly = !editable,
+            placeholder = { Text("image: /assets/images/cover.jpg\nexcerpt: A line for the home page", fontFamily = FontFamily.Monospace) },
+            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+            isError = problem != null,
+            supportingText = { Text(problem ?: "YAML, as at the top of the post. Title, date, categories and tags have their own places.") },
+            minLines = 3,
+            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("frontMatter"),
         )
     }
 }

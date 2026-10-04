@@ -28,7 +28,10 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
@@ -120,12 +123,21 @@ fun termInk(): Color =
 
 /** A small coloured label for a category, as on a post row. */
 @Composable
-fun TermPill(term: String) {
+fun TermPill(term: String, selected: Boolean = false, onClick: (() -> Unit)? = null) {
+    val shape = RoundedCornerShape(50)
+    val base = Modifier.background(if (term == "All") MaterialTheme.colorScheme.surfaceContainerHigh else termColor(term), shape)
+        .let { if (selected) it.border(BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface), shape) else it }
+        .let {
+            if (onClick == null) it else it
+                // A comfortable target without making the pill itself bigger.
+                .clip(shape).clickable(onClickLabel = if (term == "All") "Show all posts" else "Show posts in $term", onClick = onClick)
+                .semantics { this.selected = selected }
+        }
     Text(
         term,
         style = MaterialTheme.typography.labelMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
         color = termInk(),
-        modifier = Modifier.background(termColor(term), RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 2.dp),
+        modifier = base.padding(horizontal = if (onClick != null) 12.dp else 8.dp, vertical = if (onClick != null) 6.dp else 2.dp),
     )
 }
 

@@ -12,12 +12,14 @@ and moves it to Done.
 
 ## Later
 
-- [ ] Front matter beyond the basics: an escape hatch for raw YAML, per-blog templates
+- [ ] Per-blog templates: front matter a new post starts with
 - [ ] Delete a post; unpublish (`published: false`)
 - [ ] Collections other than posts; `collections_dir`
 - [ ] Hugo, or other static site generators on GitHub
 
 ## Done
+
+- [x] Cycle 8: more front matter (YAML), filter by category
 
 - [x] Cycle 7: the zine look, over four design rounds
 

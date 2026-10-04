@@ -151,6 +151,23 @@ class ScreenshotTest {
         shoot("07-settings", ready = { c.blogs.siteUrl.value != null }) { com.app.jekyllposter.ui.settings.SettingsScreen(c, {}, {}, {}) }
     }
 
+    @Test fun frontMatter() {
+        signIn()
+        val id = runBlocking {
+            c.drafts.insert(
+                Draft(
+                    title = "What I read in April", body = "A few books, a few essays.", categories = listOf("Writing"),
+                    extraFrontMatter = "# Kept by hand: the theme reads this for the post card.\nimage: /assets/img/books.png\nexcerpt: Four books and an essay",
+                    editingPath = "_posts/2025-04-20-reading-list.md", baseSha = "x",
+                ),
+            )
+        }
+        val vm = EditorViewModel(c, id)
+        shoot("08-front-matter", ready = { vm.text != null && vm.state.value.draft != null }, act = {
+            compose.onNode(hasContentDescription("Show front matter")).performClick()
+        }) { EditorScreen(vm) {} }
+    }
+
     @Test fun categoryPicker() {
         val vm = editorWithDraft()
         shoot("05-category-picker", act = { compose.onNode(hasContentDescription("Add category")).performClick() }) { EditorScreen(vm) {} }

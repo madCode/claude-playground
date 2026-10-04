@@ -38,6 +38,19 @@ class MigrationTest {
         }
     }
 
+    @Test fun version2DraftsGainMoreFrontMatter() {
+        helper.createDatabase(DB, 2).use { db ->
+            db.execSQL("INSERT INTO drafts (id, title, body, categories, tags, state, createdAt, updatedAt) VALUES (4, 'Kept', 'b', '[]', '[]', 'Draft', 0, 0)")
+        }
+        helper.runMigrationsAndValidate(DB, 3, true, MIGRATION_2_3).use { db ->
+            db.query("SELECT title, extraFrontMatter FROM drafts WHERE id = 4").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("Kept", c.getString(0))
+                assertTrue(c.isNull(1))
+            }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
     }

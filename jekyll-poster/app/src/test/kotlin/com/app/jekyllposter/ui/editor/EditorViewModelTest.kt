@@ -107,6 +107,23 @@ class EditorViewModelTest {
         assertEquals(null, c.blogs.siteUrl.value)
     }
 
+    @Test fun anEditShowsThePostsOtherKeysAndBadYamlStopsPublishing() {
+        val home = HomeViewModel(c)
+        var id: Long? = null
+        val post = runBlocking { c.database.posts().snapshot() }.first { it.path == "_posts/2025-04-20-reading-list.md" }
+        home.edit(post) { id = it }
+        idleUntil { id != null }
+        val editor = EditorViewModel(c, id!!)
+        idleUntil { editor.text != null && editor.state.value.draft != null }
+        assertEquals("# Kept by hand: the theme reads this for the post card.\nimage: /assets/img/books.png", editor.text!!.extraFrontMatter)
+        editor.setExtraFrontMatter("image: [broken")
+        assertTrue(editor.extraProblem!!.contains("isn't YAML"))
+        editor.publish()
+        idleUntil { runBlocking { c.drafts.get(id!!) }!!.extraFrontMatter == "image: [broken" }
+        assertEquals(PostState.Draft, runBlocking { c.drafts.get(id!!) }!!.state)
+        assertTrue(app.published.isEmpty())
+    }
+
     @Test fun anEmptyDraftIsDroppedOnClose() {
         val id = runBlocking { c.drafts.insert(Draft()) }
         val editor = EditorViewModel(c, id)

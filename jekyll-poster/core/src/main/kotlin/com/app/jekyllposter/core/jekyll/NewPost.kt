@@ -10,9 +10,27 @@ data class PostContent(
     val body: String,
     val categories: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
+    /**
+     * Front matter beyond what the editor has fields for (`image:`, `excerpt:`, …), as YAML.
+     * Null leaves an existing post's other keys exactly as they are.
+     */
+    val extra: String? = null,
 )
 
+/** Why [yaml] can't be the "more front matter" of a post, or null if it can. */
+fun extraFrontMatterProblem(yaml: String): String? {
+    if (yaml.isBlank()) return null
+    val doc = FrontMatterDocument.parse("---\n$yaml\n---\n")
+    if (!doc.readable || doc.values().isEmpty()) return "This isn't YAML the blog can read, like `image: /assets/cover.jpg`."
+    val clash = doc.keys.firstOrNull { it in PostWriter.MANAGED }
+    if (clash != null) return "`$clash` has its own place in the editor; take it out of here."
+    return null
+}
+
 object PostWriter {
+    /** Keys the editor writes itself; the rest is the writer's "more front matter". */
+    val MANAGED = setOf("layout", "title", "date", "categories", "category", "tags", "tag")
+
     /** Jekyll's own timestamp shape, e.g. `2026-10-04 08:15:00 -0700`. */
     private val timestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")
 
@@ -48,6 +66,8 @@ object PostWriter {
             doc.set("tag", null)
             doc.set("tags", content.tags)
         }
+        // Only when the writer changed it: untouched, the other keys stay byte for byte.
+        if (content.extra != null && content.extra.trim() != doc.others(MANAGED).trim()) doc.replaceOthers(content.extra, MANAGED)
         return doc
     }
 
@@ -59,6 +79,7 @@ object PostWriter {
         if (date != null) doc.setRaw("date", date)
         doc.set("categories", content.categories)
         doc.set("tags", content.tags)
+        content.extra?.takeIf { it.isNotBlank() }?.let { doc.replaceOthers(it, MANAGED) }
         return doc
     }
 }

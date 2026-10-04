@@ -88,6 +88,17 @@ class FlowTest {
         assertTrue(account.expiresAt!! > System.currentTimeMillis())
     }
 
+    @Test fun theBlogsPostsFilterByCategory() {
+        signIn()
+        start()
+        compose.waitFor("A coastal walk")
+        compose.onNode(clickLabel("Show posts in travel")).performClick()
+        compose.waitUntil(3_000) { compose.onAllNodes(hasText("What I read in April"), useUnmergedTree = true).fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithText("A coastal walk", useUnmergedTree = true).assertExists()
+        compose.onNode(clickLabel("Show all posts")).performClick()
+        compose.waitFor("What I read in April")
+    }
+
     @Test fun aPostNeedsATitle() {
         signIn()
         start()
@@ -162,3 +173,8 @@ fun ComposeContentTestRule.waitFor(text: String, timeoutMs: Long = 15_000) =
 
 fun ComposeContentTestRule.waitForTag(tag: String, timeoutMs: Long = 5_000) =
     waitUntil(timeoutMs) { onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty() }
+
+/** A node whose click action is labelled [label], as TalkBack announces it. */
+fun clickLabel(label: String) = androidx.compose.ui.test.SemanticsMatcher("click label $label") {
+    it.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsActions.OnClick) { null }?.label == label
+}

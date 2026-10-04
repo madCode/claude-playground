@@ -89,6 +89,23 @@ class FrontMatterDocument private constructor(
         for (i in last - 1 downTo 0) if (entries[i].key == key) entries.removeAt(i)
     }
 
+    /**
+     * The keys other than [managed], as they're written (comments above them included): what the
+     * editor shows as "more front matter".
+     */
+    fun others(managed: Set<String>): String =
+        entries.filter { it.key !in managed }.flatMap { it.leading + it.lines }.joinToString("\n").trim('\n')
+
+    /**
+     * Replaces every key other than [managed] with those in [yaml], written as given. Keys the app
+     * manages stay where they are.
+     */
+    fun replaceOthers(yaml: String, managed: Set<String>) {
+        entries.removeAll { it.key !in managed }
+        val parsed = parse("---\n$yaml\n---\n")
+        entries += parsed.entries.filter { it.key !in managed }
+    }
+
     /** A copy with [newBody], separated from the front matter by one blank line. */
     fun withBody(newBody: String): FrontMatterDocument = FrontMatterDocument(
         entries.map { Entry(it.key, it.lines, it.leading) }.toMutableList(), preamble,
