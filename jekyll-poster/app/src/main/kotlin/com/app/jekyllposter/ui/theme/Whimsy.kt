@@ -15,6 +15,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -123,14 +124,15 @@ fun termInk(): Color =
 
 /** A small coloured label for a category, as on a post row. */
 @Composable
-fun TermPill(term: String, selected: Boolean = false, onClick: (() -> Unit)? = null) {
+fun TermPill(term: String, selected: Boolean = false, all: Boolean = false, onClick: (() -> Unit)? = null) {
     val shape = RoundedCornerShape(50)
-    val base = Modifier.background(if (term == "All") MaterialTheme.colorScheme.surfaceContainerHigh else termColor(term), shape)
+    // A clickable pill gets a full 48dp touch target around it, so the pill can stay small.
+    val target = if (onClick != null) Modifier.minimumInteractiveComponentSize() else Modifier
+    val base = target.background(if (all) MaterialTheme.colorScheme.surfaceContainerHigh else termColor(term), shape)
         .let { if (selected) it.border(BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface), shape) else it }
         .let {
             if (onClick == null) it else it
-                // A comfortable target without making the pill itself bigger.
-                .clip(shape).clickable(onClickLabel = if (term == "All") "Show all posts" else "Show posts in $term", onClick = onClick)
+                .clip(shape).clickable(onClickLabel = if (all) "Show all posts" else "Show posts in $term", onClick = onClick)
                 .semantics { this.selected = selected }
         }
     Text(

@@ -50,6 +50,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         /** Photos just added, waiting for the writer to describe them (alt text), first first. */
         val describing: List<String> = emptyList(),
         val addingPhoto: Boolean = false,
+        /** Publish was stopped by the front matter; the screen opens it and says why. */
+        val frontMatterBlocked: String? = null,
         val photoError: String? = null,
         val closed: Boolean = false,
     ) {
@@ -171,7 +173,14 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
 
     fun setTitle(title: String) = edit { it.copy(title = title) }
 
-    fun setExtraFrontMatter(yaml: String) = edit { it.copy(extraFrontMatter = yaml) }
+    fun setExtraFrontMatter(yaml: String) {
+        // An edit opened before the app kept front matter doesn't know the post's other keys, so
+        // writing here would replace keys the writer never saw.
+        if (text?.editingPath != null && text?.extraFrontMatter == null) return
+        edit { it.copy(extraFrontMatter = yaml) }
+    }
+
+    fun frontMatterShown() = flags.update { it.copy(frontMatterBlocked = null) }
 
     /** Why the "more front matter" can't be published as it is, or null. */
     val extraProblem: String? get() = text?.extraFrontMatter?.let(::extraFrontMatterProblem)
@@ -246,8 +255,11 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 flags.update { it.copy(titleMissing = true) }
                 return@launch
             }
-            // The field shows why; publishing would write YAML the blog can't read.
-            if (draft.extraFrontMatter?.let(::extraFrontMatterProblem) != null) return@launch
+            // Publishing would write YAML the blog can't read: say why instead.
+            draft.extraFrontMatter?.let(::extraFrontMatterProblem)?.let { problem ->
+                flags.update { it.copy(frontMatterBlocked = problem) }
+                return@launch
+            }
             // A failed post that never attempted a commit gets a fresh name and date: the old ones
             // may be days stale. One that did keeps them, so a commit that landed unheard is
             // recognised rather than published twice.

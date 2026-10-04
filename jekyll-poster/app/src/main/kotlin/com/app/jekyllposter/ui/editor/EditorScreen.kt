@@ -152,6 +152,9 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     LaunchedEffect(state.photoError) {
         state.photoError?.let { snackbar.showSnackbar(it); viewModel.dismissPhotoError() }
     }
+    LaunchedEffect(state.frontMatterBlocked) {
+        state.frontMatterBlocked?.let { snackbar.showSnackbar("Not published: the front matter needs fixing. $it") }
+    }
 
     Scaffold(
         topBar = {
@@ -254,7 +257,13 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
             )
             TermRow("Categories", text.categories, editable, onAdd = { picker = TermKind.Category }, onRemove = { viewModel.remove(TermKind.Category, it) })
             TermRow("Tags", text.tags, editable, onAdd = { picker = TermKind.Tag }, onRemove = { viewModel.remove(TermKind.Tag, it) })
-            MoreFrontMatter(text.extraFrontMatter.orEmpty(), viewModel.extraProblem, editable, viewModel::setExtraFrontMatter)
+            // An edit from before the app kept front matter can't safely change it: shown read-only.
+            val unknown = text.editingPath != null && text.extraFrontMatter == null
+            MoreFrontMatter(
+                text.extraFrontMatter.orEmpty(), viewModel.extraProblem, editable && !unknown, viewModel::setExtraFrontMatter,
+                forceOpen = state.frontMatterBlocked != null, onOpened = viewModel::frontMatterShown,
+                note = if (unknown) "Discard and open the post again to change its front matter." else null,
+            )
             HorizontalDivider(Modifier.padding(horizontal = 16.dp))
             TextField(
                 value = TextFieldValue(text.body, viewModel.bodySelection, viewModel.bodyComposition),
@@ -301,9 +310,18 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
  * wants `image:` or `excerpt:` without leaving the phone.
  */
 @Composable
-private fun MoreFrontMatter(yaml: String, problem: String?, editable: Boolean, onChange: (String) -> Unit) {
-    if (!editable && yaml.isBlank()) return
+private fun MoreFrontMatter(
+    yaml: String,
+    problem: String?,
+    editable: Boolean,
+    onChange: (String) -> Unit,
+    forceOpen: Boolean = false,
+    onOpened: () -> Unit = {},
+    note: String? = null,
+) {
+    if (!editable && yaml.isBlank() && note == null) return
     var open by remember { mutableStateOf(false) }
+    LaunchedEffect(forceOpen) { if (forceOpen) { open = true; onOpened() } }
     val keys = remember(yaml) {
         yaml.lines().mapNotNull { Regex("""^([^\s#\-][^:]*):""").find(it)?.groupValues?.get(1) }
     }
@@ -328,7 +346,7 @@ private fun MoreFrontMatter(yaml: String, problem: String?, editable: Boolean, o
             placeholder = { Text("image: /assets/images/cover.jpg\nexcerpt: A line for the home page", fontFamily = FontFamily.Monospace) },
             textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
             isError = problem != null,
-            supportingText = { Text(problem ?: "YAML, as at the top of the post. Title, date, categories and tags have their own places.") },
+            supportingText = { Text(note ?: problem ?: "YAML, as at the top of the post. Title, date, categories and tags have their own places.") },
             minLines = 3,
             keyboardOptions = KeyboardOptions(autoCorrectEnabled = false),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("frontMatter"),

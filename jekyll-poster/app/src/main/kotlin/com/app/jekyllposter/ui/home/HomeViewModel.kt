@@ -42,11 +42,13 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     val state: StateFlow<State> = combine(container.accounts.account, container.drafts.all(), container.blogs.cachedPosts, withTitle) { account, drafts, posts, s ->
         // Drafts for another blog wait, hidden, until that blog is signed in again.
         val mine = drafts.filter { it.blog == null || it.blog == account?.blogKey }
-        val shown = s.category?.let { c -> posts.filter { post -> post.categories.any { it.equals(c, ignoreCase = true) } } } ?: posts
         val categories = com.app.jekyllposter.core.jekyll.Taxonomy.of(
             posts.map { com.app.jekyllposter.core.jekyll.PostSummary(com.app.jekyllposter.core.jekyll.PostPath(it.path), it.sha, it.title, it.categories, it.tags, it.published) },
         ).categories.map { it.name }
-        s.copy(account = account, onPhone = mine.filter { it.state != PostState.Published || recent(it) }, onBlog = shown, categories = categories)
+        // A category gone since it was chosen (renamed, another blog) filters nothing: show all.
+        val category = s.category?.takeIf { c -> categories.any { it.equals(c, ignoreCase = true) } }
+        val shown = category?.let { c -> posts.filter { post -> post.categories.any { it.equals(c, ignoreCase = true) } } } ?: posts
+        s.copy(account = account, onPhone = mine.filter { it.state != PostState.Published || recent(it) }, onBlog = shown, categories = categories, category = category)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), State())
 
     init {

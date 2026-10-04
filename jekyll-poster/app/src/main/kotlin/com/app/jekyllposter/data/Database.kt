@@ -87,7 +87,7 @@ data class Draft(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 ) {
-    val isEmpty: Boolean get() = title.isBlank() && body.isBlank()
+    val isEmpty: Boolean get() = title.isBlank() && body.isBlank() && extraFrontMatter.isNullOrBlank() && images.isEmpty()
 }
 
 /** A photo added to a post: prepared on the phone, uploaded in the post's commit. */

@@ -33,7 +33,8 @@ doesn't want to open a laptop and make a commit for every post.
 
 - Posts on the phone first (drafts, waiting, failed, just published), then the blog's own.
 - With more than one category, a row of category pills filters the blog's posts; tapping the
-  chosen one, or All, shows them all again.
+  chosen one, or All, shows them all again. A chosen category that disappears (renamed, another
+  blog) shows all posts again.
 
 ## Reading the blog
 
@@ -58,9 +59,12 @@ doesn't want to open a laptop and make a commit for every post.
   the order they were shared.
 - **Front matter** beyond the editor's fields (`image:`, `excerpt:`, `comments: false`, …) is
   YAML in a folding section; folded, it names its keys. An edit shows the post's other keys as
-  written, comments included, and leaves them byte for byte unless they're changed. YAML the
-  blog couldn't read, or a key with its own field (`title`, `date`, `categories`, `tags`,
-  `layout`), stops Publish and says why.
+  written, comments included, and leaves them byte for byte unless they're changed; comments
+  stay when they are. One `key: value` per line from the left edge: YAML the blog couldn't read,
+  indented or `{…}`/`?` keys, a `---` line, or a key the app sets (`title`, `date`,
+  `categories`, `tags`, `layout`) stops Publish, opens the section and says why.
+- An edit opened before the app kept front matter shows it read-only: it can't know the post's
+  other keys.
 - A **toolbar** above the keyboard: bold, italic, link (a selected URL becomes the address),
   heading, list, quote and code, while the body has the focus. Pressing bold, italic, code or a
   line style again undoes it.

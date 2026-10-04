@@ -175,7 +175,7 @@ private fun CategoryFilter(categories: List<String>, chosen: String?, onChoose: 
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 6.dp),
     ) {
-        item { TermPill("All", selected = chosen == null, onClick = { onChoose(null) }) }
+        item { TermPill("All", selected = chosen == null, all = true, onClick = { onChoose(null) }) }
         items(categories) { c -> TermPill(c, selected = c.equals(chosen, ignoreCase = true), onClick = { onChoose(c) }) }
     }
 }

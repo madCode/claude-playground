@@ -11,6 +11,13 @@ Times are Pacific.
 - **Shipped:** "more front matter" for posts, as YAML in a folding section, checked before
   publishing, untouched keys kept byte for byte (database version 3); the blog's posts filter by
   category from a row of pills.
+- **Its review found** (all fixed, with tests): indented YAML passed the check but was read as
+  nothing, so every other key on the post was deleted; `{…}` and `?` keys slipped past the
+  check; comments in the field were dropped when written; a `---` line cut off what followed;
+  an edit draft from before the upgrade could replace keys it never showed; a vanished category
+  left the filter stuck on an empty list; pills were under 48dp to tap, and a category called
+  "All" was taken for the All pill; a blocked Publish said nothing; front matter alone didn't
+  keep a draft.
 - **Cycle 7's review found** (fixed before merging): a category hashing to `Int.MIN_VALUE`
   crashed the colour lookup; switching blogs kept the old blog's title; TalkBack read the
   decorative ✶; small text used the font's 96pt optical size; disabled toolbar buttons were

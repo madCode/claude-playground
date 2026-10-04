@@ -13,12 +13,12 @@ import org.snakeyaml.engine.v2.api.LoadSettings
 class FrontMatterDocument private constructor(
     private val entries: MutableList<Entry>,
     /** Lines before the first key (comments, blank lines): kept as they are. */
-    private val preamble: List<String>,
+    internal val preamble: List<String>,
     val body: String,
     /** False for a file without front matter, which Jekyll copies as-is instead of rendering. */
     val hasFrontMatter: Boolean,
     /** Comments and blank lines after the last key. */
-    private val trailing: List<String> = emptyList(),
+    internal val trailing: List<String> = emptyList(),
 ) {
     /** One top-level key: the comments and blank lines just above it, then its own lines. */
     private class Entry(val key: String, var lines: List<String>, val leading: List<String> = emptyList())
@@ -103,8 +103,20 @@ class FrontMatterDocument private constructor(
     fun replaceOthers(yaml: String, managed: Set<String>) {
         entries.removeAll { it.key !in managed }
         val parsed = parse("---\n$yaml\n---\n")
-        entries += parsed.entries.filter { it.key !in managed }
+        val added = parsed.entries.filter { it.key !in managed }
+        if (added.isEmpty()) return
+        // Comments above the first key and after the last are the writer's too: kept with them.
+        val first = added.first()
+        val withComments = listOf(Entry(first.key, first.lines, parsed.preamble + first.leading)) + added.drop(1)
+        withComments.last().lines = withComments.last().lines + parsed.trailing
+        entries += withComments
     }
+
+    /**
+     * The top-level keys as the line reader sees them and as YAML reads them, for checking that
+     * text is plain `key: value` lines: indented, flow-style or `?` keys make the two disagree.
+     */
+    internal fun keysAgree(): Boolean = keys.toSet() == values().keys.map { it.toString() }.toSet() && preamble.none { it.isNotBlank() && !it.trimStart().startsWith("#") }
 
     /** A copy with [newBody], separated from the front matter by one blank line. */
     fun withBody(newBody: String): FrontMatterDocument = FrontMatterDocument(

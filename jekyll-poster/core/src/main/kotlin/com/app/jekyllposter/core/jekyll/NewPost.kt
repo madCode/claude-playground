@@ -20,11 +20,20 @@ data class PostContent(
 /** Why [yaml] can't be the "more front matter" of a post, or null if it can. */
 fun extraFrontMatterProblem(yaml: String): String? {
     if (yaml.isBlank()) return null
+    // A line of its own `---` or `...` would end the front matter there and lose what follows.
+    if (yaml.lines().any { it.trimEnd() == "---" || it.trimEnd() == "..." }) return "Take out the `---` line: the app writes those itself."
     val doc = FrontMatterDocument.parse("---\n$yaml\n---\n")
     if (!doc.readable || doc.values().isEmpty()) return "This isn't YAML the blog can read, like `image: /assets/cover.jpg`."
-    val clash = doc.keys.firstOrNull { it in PostWriter.MANAGED }
-    if (clash != null) return "`$clash` has its own place in the editor; take it out of here."
-    return null
+    // Every key on a line of its own at the start, as front matter is written; indented, `{…}` or
+    // `?` keys read differently to YAML than to the line editor that keeps the rest of the post.
+    if (!doc.keysAgree()) return "Write one `key: value` per line, starting at the left edge."
+    val clash = doc.values().keys.map { it.toString() }.firstOrNull { it in PostWriter.MANAGED }
+    return when (clash) {
+        null -> null
+        "date" -> "`date` is set when the post is published; take it out of here."
+        "layout" -> "`layout` comes from your _config.yml; take it out of here."
+        else -> "`$clash` has its own place in the editor; take it out of here."
+    }
 }
 
 object PostWriter {

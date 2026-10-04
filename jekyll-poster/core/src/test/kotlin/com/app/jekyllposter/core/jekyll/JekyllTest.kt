@@ -118,6 +118,24 @@ class MoreFrontMatterTest {
         assertEquals("---\nlayout: post\ntitle: Old\nimage: /b.png\n---\n\nBody\n", changed.render())
     }
 
+    @Test fun yamlThatReadsDifferentlyToTheLineEditorIsRefused() {
+        assertTrue(extraFrontMatterProblem("  image: x\n  comments: true")!!.contains("one `key: value` per line"))
+        assertTrue(extraFrontMatterProblem("{title: X, image: y}")!!.contains("one `key: value` per line"))
+        assertTrue(extraFrontMatterProblem("image: x\n? title\n: Sneaky")!!.isNotEmpty())
+        assertTrue(extraFrontMatterProblem("image: a\n---\nexcerpt: b")!!.contains("`---`"))
+        assertTrue(extraFrontMatterProblem("date: 2020-01-01")!!.contains("published"))
+        // Block scalars and lists under a key are still fine.
+        assertEquals(null, extraFrontMatterProblem("excerpt: |\n  Two\n  lines\nlinks:\n  - a\n  - b"))
+    }
+
+    @Test fun commentsInTheExtraKeysAreKept() {
+        val original = FrontMatterDocument.parse("---\ntitle: T\n# card\nimage: /a.png\n---\n\nB\n")
+        val edited = PostWriter.edit(original, PostContent("T", "B", extra = "# card\nimage: /b.png\n# keep me"))
+        assertEquals("---\ntitle: T\n# card\nimage: /b.png\n# keep me\n---\n\nB\n", edited.render())
+        val fresh = PostWriter.newPost(PostContent("T", "B", extra = "# hand\nimage: x"), at, SiteConfig(defaultPostLayout = "post"))
+        assertTrue(fresh.render().contains("# hand\nimage: x\n"))
+    }
+
     @Test fun extraFrontMatterIsCheckedBeforeItsWritten() {
         assertEquals(null, extraFrontMatterProblem(""))
         assertEquals(null, extraFrontMatterProblem("image: /a.png"))
