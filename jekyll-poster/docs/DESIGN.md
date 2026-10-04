@@ -52,6 +52,8 @@ doesn't want to open a laptop and make a commit for every post.
 - A post has a title, categories, tags and a Markdown body. It saves as you type.
 - Categories and tags come from the blog's own, most used first with their counts, or are typed
   in as new ones.
+- The picker shows the post's own at the top, so one just added is seen landing there. The
+  keyboard's Done adds what's typed and stays open for more; the sheet's Done adds it and closes.
 - A **toolbar** above the keyboard, while the body has the focus: bold, italic, link (a
   selected URL becomes the address), heading, list, quote, code. Bold, italic, code and the line
   styles undo themselves when pressed again.

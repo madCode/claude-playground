@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ApplicationProvider
@@ -160,6 +161,29 @@ class FlowTest {
         androidx.test.espresso.Espresso.pressBack()
         compose.waitFor("Welcome to the notebook")
         compose.onNodeWithTag("search").assertDoesNotExist()
+    }
+
+    @Test fun aTagAddedInThePickerShowsThereAndDoneKeepsWhatWasTyped() {
+        signIn()
+        start()
+        compose.waitFor("New post")
+        compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
+        compose.waitForTag("title")
+        compose.onNode(hasContentDescription("Add tag")).performClick()
+        compose.waitForTag("termQuery")
+        // The keyboard's Done (a checkmark on many keyboards) adds it, and the sheet shows it landed.
+        compose.onNodeWithTag("termQuery").performTextInput("rain")
+        compose.onNodeWithTag("termQuery").performImeAction()
+        compose.waitFor("On this post")
+        compose.onAllNodes(hasContentDescription("Remove rain")).fetchSemanticsNodes().let { assertTrue(it.isNotEmpty()) }
+        // Typing one the post already has says so, instead of offering to add it again.
+        compose.onNodeWithTag("termQuery").performTextInput("Rain")
+        compose.waitFor("“Rain” is already on this post.")
+        compose.onNodeWithTag("termQuery").performTextReplacement("puddles")
+        // The sheet's Done adds what's typed before closing.
+        compose.onNodeWithText("Done").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("termQuery")).fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasContentDescription("Remove puddles")).fetchSemanticsNodes().isNotEmpty() }
     }
 
     @Test fun aDraftIsKeptOnTheList() {

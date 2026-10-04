@@ -18,6 +18,14 @@ Times are when each cycle landed, Pacific.
 - **Waiting on you:** a token to try it; the GitHub App for Sign in with GitHub
   ([how](GITHUB_APP.md)); the Android SDK in the environment's setup script.
 
+## Day 1 · Sun 4 Oct
+
+### Cycle 15: the tag picker, from first use
+- **Reported:** a tag added with the keyboard's checkmark vanished from the sheet (it was on the
+  post, out of sight), and the sheet's Done dropped what was typed.
+- **Shipped:** the sheet shows the post's own tags at the top; Done adds what's typed; typing one
+  the post has says so instead of offering to add it again.
+
 ## Night 1 · Sun 4 Oct
 
 ### Cycle 14: search your posts

@@ -508,7 +508,7 @@ private fun plainField() = TextFieldDefaults.colors(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TermRow(label: String, terms: List<String>, editable: Boolean, onAdd: () -> Unit, onRemove: (String) -> Unit) {
+private fun TermRow(label: String, terms: List<String>, editable: Boolean, onAdd: (() -> Unit)?, onRemove: (String) -> Unit) {
     if (!editable && terms.isEmpty()) return
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 12.dp))
@@ -526,7 +526,7 @@ private fun TermRow(label: String, terms: List<String>, editable: Boolean, onAdd
                     trailingIcon = if (editable) ({ Icon(Icons.Default.Close, "Remove $term") }) else null,
                 )
             }
-            if (editable) {
+            if (editable && onAdd != null) {
                 AssistChip(
                     onClick = onAdd,
                     label = { Text(if (terms.isEmpty()) "Add" else "More") },
@@ -548,8 +548,20 @@ private fun TermPicker(kind: TermKind, viewModel: EditorViewModel, onDismiss: ()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val suggestions = remember(query, state) { viewModel.suggestions(kind, query) }
     val exact = suggestions.any { it.name.equals(query.trim(), ignoreCase = true) }
+    val picked = viewModel.text?.let { if (kind == TermKind.Category) it.categories else it.tags }.orEmpty()
+    val already = picked.any { it.equals(query.trim().trimStart('#'), ignoreCase = true) }
     val add = { name: String -> viewModel.add(kind, name); query = "" }
+    // What's typed and not yet added goes in on Done too, rather than being dropped.
+    val done = {
+        if (query.isNotBlank()) add(suggestions.firstOrNull { it.name.equals(query.trim(), ignoreCase = true) }?.name ?: query)
+        onDismiss()
+    }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = MaterialTheme.colorScheme.background) {
+        // The post's own picks, so one just added is seen landing here rather than vanishing
+        // from the suggestions below.
+        if (picked.isNotEmpty()) {
+            TermRow("On this post", picked, editable = true, onAdd = null, onRemove = { viewModel.remove(kind, it) })
+        }
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             OutlinedTextField(
                 value = query,
@@ -565,7 +577,14 @@ private fun TermPicker(kind: TermKind, viewModel: EditorViewModel, onDismiss: ()
             )
         }
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
-            if (query.isNotBlank() && !exact) {
+            if (already) {
+                item {
+                    Text(
+                        "“${query.trim().trimStart('#')}” is already on this post.",
+                        Modifier.padding(horizontal = 16.dp, vertical = 14.dp), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else if (query.isNotBlank() && !exact) {
                 item {
                     Row(Modifier.fillMaxWidth().clickable { add(query) }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Add, null, Modifier.padding(end = 12.dp))
@@ -588,6 +607,6 @@ private fun TermPicker(kind: TermKind, viewModel: EditorViewModel, onDismiss: ()
                 }
             }
         }
-        TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End).padding(8.dp)) { Text("Done") }
+        TextButton(onClick = done, modifier = Modifier.align(Alignment.End).padding(8.dp)) { Text("Done") }
     }
 }
