@@ -89,8 +89,11 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         f.copy(draft = draft, taxonomy = taxonomy)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, State())
 
+    /** The draft read from the database; a camera photo arriving first waits for it. */
+    private val loading: Job
+
     init {
-        viewModelScope.launch {
+        loading = viewModelScope.launch {
             val loaded = container.drafts.get(id)
             // Applied at once, so the screen sees it even if no frame is pending to pick it up.
             Snapshot.withMutableSnapshot { text = loaded }
@@ -157,6 +160,54 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 flags.update { it.copy(addingPhoto = false) }
             }
         }
+    }
+
+    /**
+     * Where the camera app should write a photo for this post: a new file in the cache, offered
+     * to it through the FileProvider. The screen keeps [CameraTarget.path] in its saved state,
+     * because the camera app may push this app out of memory and its answer then reaches a new
+     * ViewModel. Null if it can't be made.
+     */
+    fun cameraTarget(): CameraTarget? = runCatching {
+        val dir = cameraDir(container.context).apply { mkdirs() }
+        val file = File.createTempFile("photo-", ".jpg", dir)
+        CameraTarget(file.path, androidx.core.content.FileProvider.getUriForFile(container.context, "${container.context.packageName}.camera", file))
+    }.getOrNull()
+
+    /** The camera app came back: adds the photo at [path] if one was taken, then deletes the original. */
+    fun photoTaken(path: String, taken: Boolean) {
+        val file = File(path)
+        if (!taken || !file.exists() || file.length() == 0L) {
+            file.delete()
+            return
+        }
+        viewModelScope.launch {
+            // After the app was pushed out of memory, the answer reaches a new editor before
+            // its draft has loaded.
+            try {
+                loading.join()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                file.delete()
+                throw e
+            }
+            if (text == null || (state.value.draft != null && !state.value.editable)) {
+                file.delete()
+                flags.update { it.copy(photoError = "The photo wasn't added: this post can't be changed now.") }
+                return@launch
+            }
+            addPhoto(Uri.fromFile(file))
+            // The original keeps its EXIF, location included; only the prepared copy stays. In the
+            // app's scope, so the delete still happens if the editor closes mid-import.
+            val importing = photoJob
+            container.appScope.launch { importing?.join(); file.delete() }
+        }
+    }
+
+    fun cameraNotReady() = flags.update { it.copy(photoError = "Couldn't get a file ready for the camera. Is the phone's storage full?") }
+
+    fun cameraUnavailable(path: String?) {
+        path?.let { File(it).delete() }
+        flags.update { it.copy(photoError = "No camera app to take a photo with.") }
     }
 
     /** A photo still being prepared; Publish and Back wait for it, so it isn't lost. */
@@ -348,3 +399,9 @@ private fun dataUri(file: File): String {
     val type = when (file.extension) { "png" -> "image/png"; "gif" -> "image/gif"; else -> "image/jpeg" }
     return "data:$type;base64," + android.util.Base64.encodeToString(file.readBytes(), android.util.Base64.NO_WRAP)
 }
+
+/** A file for the camera app to write to: its [path] here, and the [uri] it's offered as. */
+data class CameraTarget(val path: String, val uri: Uri)
+
+/** Where camera photos wait to be prepared: the cache, never backed up. */
+fun cameraDir(context: android.content.Context) = File(context.cacheDir, "camera")
