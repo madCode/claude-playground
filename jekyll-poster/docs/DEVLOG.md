@@ -20,6 +20,25 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Cycle 17: Blog & privacy
+- **Asked:** one page for the audit's settings, with defaults for the average blogger and easy
+  switches for the privacy-minded; and don't change what was written unless asked.
+- **Shipped:** the page (commit email, the site's time zone, tracking codes, visibility and
+  history). Removing tracking codes is now opt-in: the post is never changed unless asked.
+- **Its review found** (fixed, with tests): a time zone that landed was reported as failed if
+  reading the blog again failed, inviting a second commit; publishing asked GitHub for the account
+  on every post, and a failure there blamed the token's write access (the address is now looked
+  up once, when the switch is turned on, and kept); an account without an id would have got an
+  address that links to no one; visibility said "couldn't read it" while still loading; the zone
+  change could race a publish (it waits for one now); Windows line endings and a quoted
+  `"timezone":` key were mishandled; rows didn't say they're buttons.
+- **The second look found** (fixed): an "on" still looking up the address could land after an
+  "off", and a publish's lookup could turn the switch back on; an expired sign-in during the
+  lookup said "no address" instead of "sign in again"; a storage hiccup failed the post instead
+  of retrying.
+- **The live check** now also commits as the no-reply address and asks GitHub whose commit it
+  is, and whether it's Verified: the two things the fake GitHub can't answer.
+
 ### Cycle 16: a privacy audit
 - **Asked:** what goes to GitHub besides what's in the post?
 - **Found and fixed:** `_drafts` read as private but a public repository shows it to anyone (the

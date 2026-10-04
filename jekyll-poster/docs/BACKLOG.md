@@ -24,7 +24,6 @@ and moves it to Done.
 
 ## Later
 
-- [ ] Commit as the account's no-reply email whatever its GitHub setting (privacy audit, item 3)
 - [ ] Per-blog templates: front matter a new post starts with
 - [ ] Unpublish (`published: false`), keeping the file
 - [ ] Collections other than posts; `collections_dir`
@@ -34,6 +33,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 17: Blog & privacy, one page for what the blog shows beyond its posts
 - [x] A live check: publishes to and deletes from the sample blog from Actions
 - [x] Cycle 16: a privacy audit, and its fixes
 - [x] Cycle 15: the tag picker, from first use

@@ -1,13 +1,14 @@
 package com.app.jekyllposter.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.foundation.layout.Row as LayoutRow
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Switch
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.Role
-import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,7 +39,7 @@ import com.app.jekyllposter.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: () -> Unit, onSignOut: () -> Unit) {
+fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: () -> Unit, onSignOut: () -> Unit, onBlogPrivacy: () -> Unit = {}) {
     val account by container.accounts.account.collectAsStateWithLifecycle(null)
     val siteUrl by container.blogs.siteUrl.collectAsStateWithLifecycle()
     val uri = LocalUriHandler.current
@@ -56,6 +57,7 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: ()
                 Row(a.repoName, "Branch ${a.branch}")
                 siteUrl?.let { url -> Row(url, "The site", onClick = { uri.openUri(url) }) }
                 Row("Switch blog", "Pick another repository this sign-in can write to", onClick = onSwitchBlog)
+                Row("Blog & privacy", "Your commit email, the site's time zone, shared links, and what GitHub shows", onClick = onBlogPrivacy)
                 Heading("Account")
                 Row(
                     a.login,
@@ -63,15 +65,6 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: ()
                 )
                 Row("Sign out", "Drafts stay on this phone, for when you sign in to this blog again", onClick = onSignOut)
             }
-            Heading("Privacy")
-            val keepTracking by container.settings.keepTrackingCodes.collectAsStateWithLifecycle(false)
-            val scope = rememberCoroutineScope()
-            Toggle(
-                "Keep tracking codes in shared links",
-                "Off: links shared to the app lose utm_ tags, fbclid and the like, which tell sites who shared them. " +
-                    "Turn on if a link needs them, an affiliate link say.",
-                keepTracking,
-            ) { scope.launch { container.settings.setKeepTrackingCodes(it) } }
             Heading("About")
             Row("Jekyll Poster ${BuildConfig.VERSION_NAME}", "Posts to a Jekyll blog on GitHub Pages")
         }
@@ -79,7 +72,7 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: ()
 }
 
 @Composable
-private fun Toggle(title: String, detail: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun Toggle(title: String, detail: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     LayoutRow(
         Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -97,7 +90,7 @@ private fun Toggle(title: String, detail: String, checked: Boolean, onChange: (B
 }
 
 @Composable
-private fun Heading(text: String) {
+internal fun Heading(text: String) {
     Text(
         text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 4.dp).semantics { heading() },
@@ -105,13 +98,23 @@ private fun Heading(text: String) {
 }
 
 @Composable
-private fun Row(title: String, detail: String, onClick: (() -> Unit)? = null) {
+internal fun Row(title: String, detail: String, onClick: (() -> Unit)? = null, link: String? = null) {
     Column(
-        Modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it }.padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().let { if (onClick != null) it.clickable(role = Role.Button, onClickLabel = link, onClick = onClick) else it }.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(title, style = MaterialTheme.typography.bodyLarge, color = if (onClick != null && title == "Sign out") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
         Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // A row that leaves the app says so, looking like the link it is.
+        if (link != null && onClick != null) {
+            LayoutRow(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    link, style = MaterialTheme.typography.labelLarge.copy(textDecoration = TextDecoration.Underline),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            }
+        }
     }
     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
 }

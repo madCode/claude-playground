@@ -57,6 +57,7 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
                 container,
                 onBack = { nav.popBackStack() },
                 onSwitchBlog = { nav.navigate("switch") },
+                onBlogPrivacy = { nav.navigate("privacy") },
                 onSignOut = {
                     // Navigation first, here on the main thread; the sign-out finishes behind it, in
                     // a scope that outlives this screen.
@@ -68,13 +69,16 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
                 },
             )
         }
+        composable("privacy") {
+            com.app.jekyllposter.ui.settings.BlogPrivacyScreen(viewModel { com.app.jekyllposter.ui.settings.BlogPrivacyViewModel(container) }) { nav.popBackStack() }
+        }
         composable("home") {
             val vm = viewModel { HomeViewModel(container) }
             LaunchedEffect(Unit) {
                 if (shared != null && pending) {
                     pending = false
-                    // Links shared in lose their tracking codes, unless the writer chose to keep them.
-                    val text = if (container.settings.keepTrackingCodes()) shared.text else com.app.jekyllposter.core.text.Tracking.strip(shared.text)
+                    // Before the editor opens, so the writer sees the links as they'll be published.
+                    val text = if (container.settings.removeTrackingCodes()) com.app.jekyllposter.core.text.Tracking.strip(shared.text) else shared.text
                     val id = container.drafts.insert(Draft(blog = container.accounts.current()?.blogKey, body = text))
                     container.sharedPhotos[id] = shared.images
                     // Room may resume this off the main thread, where navigation isn't allowed.

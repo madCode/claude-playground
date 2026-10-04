@@ -18,6 +18,7 @@ import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.DraftDao
 import com.app.jekyllposter.data.PostState
+import com.app.jekyllposter.data.Settings
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
@@ -37,6 +38,7 @@ class Publisher(
     private val drafts: DraftDao,
     private val accounts: AccountStore,
     private val blogs: BlogRepository,
+    private val settings: Settings,
     private val now: () -> ZonedDateTime = { ZonedDateTime.now() },
 ) {
     sealed interface Outcome {
@@ -50,6 +52,9 @@ class Publisher(
      * name free and the second would replace the first.
      */
     private val lock = Mutex()
+
+    /** Runs [block] between publishes, for another commit that a publish's plan relies on. */
+    suspend fun <T> betweenPublishes(block: suspend () -> T): T = lock.withLock { block() }
 
     suspend fun publish(id: Long): Outcome = lock.withLock {
         repeat(3) { attempt(id)?.let { return it } }
@@ -78,7 +83,13 @@ class Publisher(
             }
             if (plan is Plan.Finished) return plan.outcome
             plan as Plan.Commit
-            val sha = blog.commit(plan.message, plan.changes, plan.expect)
+            // GitHub's errors and storage's fall to the handlers below, as for any other call.
+            val author = try {
+                settings.commitAuthor(account.login) { blog.user().noReplyAuthor }
+            } catch (e: Settings.NoAddress) {
+                return fail(draft, "GitHub didn't give your account's no-reply address. Turn it off in Blog & privacy to publish.")
+            }
+            val sha = blog.commit(plan.message, plan.changes, plan.expect, author)
             if (draft.destination == Destination.Delete) return deleted(draft, plan.path)
             published(drafts.get(id) ?: draft, plan.path, sha, plan.date?.let { postUrl(index, plan.path, it, plan.draft) })
         } catch (e: GitHubException) {

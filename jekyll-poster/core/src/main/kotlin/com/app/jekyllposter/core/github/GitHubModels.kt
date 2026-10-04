@@ -4,7 +4,18 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class GitHubUser(val login: String, val name: String? = null)
+data class GitHubUser(val login: String, val name: String? = null, val id: Long = 0) {
+    /**
+     * Who a commit is by when the writer keeps their email out of it: the no-reply address GitHub
+     * gives every account, `<id>+<login>@users.noreply.github.com`, which still links the commit
+     * to the account. Null without the account's id, rather than an address that links to no one.
+     */
+    val noReplyAuthor: CommitAuthor?
+        get() = if (id <= 0) null else CommitAuthor(name?.takeIf { it.isNotBlank() } ?: login, "$id+$login@users.noreply.github.com")
+}
+
+/** A commit's author; without one, GitHub uses the token's account and its email settings. */
+data class CommitAuthor(val name: String, val email: String)
 
 @Serializable
 data class GitHubRepo(
@@ -75,4 +86,25 @@ class FileChange(val path: String, val content: ByteArray?) {
         fun text(path: String, text: String) = FileChange(path, text.toByteArray(Charsets.UTF_8))
         fun delete(path: String) = FileChange(path, null)
     }
+}
+
+/**
+ * A commit as GitHub shows it: [login] is the account it's attributed to (null when GitHub links
+ * the email to no account), and whether GitHub marks it Verified.
+ */
+@Serializable
+data class CommitView(val author: Account? = null, val commit: Details) {
+    @Serializable
+    data class Account(val login: String)
+
+    @Serializable
+    data class Details(val author: Person, val verification: Verification? = null)
+
+    @Serializable
+    data class Person(val name: String, val email: String)
+
+    @Serializable
+    data class Verification(val verified: Boolean = false, val reason: String? = null)
+
+    val login: String? get() = author?.login
 }
