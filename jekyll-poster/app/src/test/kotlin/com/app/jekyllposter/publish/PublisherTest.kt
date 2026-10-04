@@ -254,6 +254,15 @@ class PublisherTest {
         assertEquals("https://sample.github.io/sample-blog/writing/2025/04/20/reading-list/", c.drafts.get(id)!!.postUrl)
     }
 
+    @Test fun aNewPostsExtraFrontMatterGoesAfterItsOwnKeys() = runBlocking {
+        val id = queue(Draft(title = "With a cover", body = "x", extraFrontMatter = "image: /assets/cover.jpg\nexcerpt: Short"))
+        publisher.publish(id)
+        assertEquals(
+            "---\ntitle: With a cover\ndate: 2026-10-04 22:15:00 -0700\nimage: /assets/cover.jpg\nexcerpt: Short\n---\n\nx\n",
+            github.text("_posts/2026-10-04-with-a-cover.md"),
+        )
+    }
+
     @Test fun aRetryAfterTheCommitLandedDoesNotPostTwice() = runBlocking {
         val id = queue(Draft(title = "Once", body = "Only once."))
         publisher.publish(id)

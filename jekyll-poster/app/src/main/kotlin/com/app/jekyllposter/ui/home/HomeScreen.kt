@@ -99,6 +99,9 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
                     }
                 }
                 item { SectionHeading("On your blog") }
+                if (state.categories.size > 1) {
+                    item { CategoryFilter(state.categories, state.category, viewModel::filter) }
+                }
                 if (state.onBlog.isEmpty()) {
                     item {
                         Text(
@@ -163,4 +166,16 @@ private fun PostRow(post: CachedPost, onClick: () -> Unit) {
         }
     }
     RowDivider()
+}
+
+/** The blog's categories as pills to filter the list by; the chosen one is outlined. */
+@Composable
+private fun CategoryFilter(categories: List<String>, chosen: String?, onChoose: (String?) -> Unit) {
+    androidx.compose.foundation.lazy.LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+    ) {
+        item { TermPill("All", selected = chosen == null, all = true, onClick = { onChoose(null) }) }
+        items(categories) { c -> TermPill(c, selected = c.equals(chosen, ignoreCase = true), onClick = { onChoose(c) }) }
+    }
 }

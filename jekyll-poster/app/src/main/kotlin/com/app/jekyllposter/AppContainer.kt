@@ -33,7 +33,7 @@ class AppContainer(
     cipher: SecretCipher = AesGcmCipher.androidKeystore(),
     accountData: DataStore<Preferences> = context.accountDataStore,
     val database: PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db")
-        .addMigrations(com.app.jekyllposter.data.MIGRATION_1_2).build(),
+        .addMigrations(com.app.jekyllposter.data.MIGRATION_1_2, com.app.jekyllposter.data.MIGRATION_2_3).build(),
     /** Starts publishing a queued post; WorkManager in the app, direct calls in tests. */
     val schedulePublish: (Long) -> Unit = { com.app.jekyllposter.publish.PublishWorker.enqueue(context, it) },
     /** When the site has (or hasn't) built a published post; a notification in the app. */

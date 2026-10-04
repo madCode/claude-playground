@@ -13,12 +13,12 @@ import org.snakeyaml.engine.v2.api.LoadSettings
 class FrontMatterDocument private constructor(
     private val entries: MutableList<Entry>,
     /** Lines before the first key (comments, blank lines): kept as they are. */
-    private val preamble: List<String>,
+    internal val preamble: List<String>,
     val body: String,
     /** False for a file without front matter, which Jekyll copies as-is instead of rendering. */
     val hasFrontMatter: Boolean,
     /** Comments and blank lines after the last key. */
-    private val trailing: List<String> = emptyList(),
+    internal val trailing: List<String> = emptyList(),
 ) {
     /** One top-level key: the comments and blank lines just above it, then its own lines. */
     private class Entry(val key: String, var lines: List<String>, val leading: List<String> = emptyList())
@@ -89,6 +89,35 @@ class FrontMatterDocument private constructor(
         for (i in last - 1 downTo 0) if (entries[i].key == key) entries.removeAt(i)
     }
 
+    /**
+     * The keys other than [managed], as they're written (comments above them included): what the
+     * editor shows as "more front matter".
+     */
+    fun others(managed: Set<String>): String =
+        entries.filter { it.key !in managed }.flatMap { it.leading + it.lines }.joinToString("\n").trim('\n')
+
+    /**
+     * Replaces every key other than [managed] with those in [yaml], written as given. Keys the app
+     * manages stay where they are.
+     */
+    fun replaceOthers(yaml: String, managed: Set<String>) {
+        entries.removeAll { it.key !in managed }
+        val parsed = parse("---\n$yaml\n---\n")
+        val added = parsed.entries.filter { it.key !in managed }
+        if (added.isEmpty()) return
+        // Comments above the first key and after the last are the writer's too: kept with them.
+        val first = added.first()
+        val withComments = listOf(Entry(first.key, first.lines, parsed.preamble + first.leading)) + added.drop(1)
+        withComments.last().lines = withComments.last().lines + parsed.trailing
+        entries += withComments
+    }
+
+    /**
+     * The top-level keys as the line reader sees them and as YAML reads them, for checking that
+     * text is plain `key: value` lines: indented, flow-style or `?` keys make the two disagree.
+     */
+    internal fun keysAgree(): Boolean = keys.toSet() == values().keys.map { it.toString() }.toSet() && preamble.none { it.isNotBlank() && !it.trimStart().startsWith("#") }
+
     /** A copy with [newBody], separated from the front matter by one blank line. */
     fun withBody(newBody: String): FrontMatterDocument = FrontMatterDocument(
         entries.map { Entry(it.key, it.lines, it.leading) }.toMutableList(), preamble,
@@ -113,7 +142,9 @@ class FrontMatterDocument private constructor(
     companion object {
         // A key is plain text up to the first colon followed by a space (so `og:image` is one key),
         // or a quoted string.
-        private val keyLine = Regex("""^("[^"]*"|'[^']*'|[^\s#\-"'][^#]*?)\s*:(\s.*|)$""")
+        // A `#` starts a comment only after a space, so `c#:` is a key; quoted keys may hold
+        // doubled single quotes or escaped double quotes.
+        private val keyLine = Regex("""^("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^\s#\-"'](?:[^#]|(?<!\s)#)*?)\s*:(\s.*|)$""")
 
         fun empty(body: String = ""): FrontMatterDocument =
             FrontMatterDocument(mutableListOf(), emptyList(), body, hasFrontMatter = true)
@@ -136,7 +167,13 @@ class FrontMatterDocument private constructor(
                 val match = keyLine.matchEntire(line)
                 when {
                     match != null -> {
-                        val key = match.groupValues[1].trim().trim('"', '\'')
+                        val key = match.groupValues[1].trim().let { k ->
+                            when {
+                                k.startsWith("'") -> k.removeSurrounding("'").replace("''", "'")
+                                k.startsWith("\"") -> k.removeSurrounding("\"").replace("\\\"", "\"")
+                                else -> k
+                            }
+                        }
                         if (entries.isEmpty()) {
                             preamble += pending
                             entries += Entry(key, listOf(line))
@@ -158,7 +195,10 @@ class FrontMatterDocument private constructor(
         internal fun parseYaml(yaml: String): Map<String, Any?> = try {
             @Suppress("UNCHECKED_CAST")
             // Duplicate keys are allowed, last one winning, as Ruby's YAML (and so Jekyll) reads them.
-            (Load(LoadSettings.builder().setAllowDuplicateKeys(true).build()).loadFromString(yaml) as? Map<String, Any?>) ?: emptyMap()
+            // Keys come back as YAML typed them (`2024:` is a number, `null:` null): named here as
+            // text, so nothing downstream casts a number to a String.
+            (Load(LoadSettings.builder().setAllowDuplicateKeys(true).build()).loadFromString(yaml) as? Map<*, *>)
+                ?.entries?.associate { (k, v) -> (k?.toString() ?: "null") to v } ?: emptyMap()
         } catch (e: Exception) {
             emptyMap()
         }

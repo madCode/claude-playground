@@ -49,6 +49,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         /** Photos just added, waiting for the writer to describe them (alt text), first first. */
         val describing: List<String> = emptyList(),
         val addingPhoto: Boolean = false,
+        /** Publish was stopped by the front matter; the screen opens it and says why. */
+        val frontMatterBlocked: String? = null,
         val photoError: String? = null,
         val closed: Boolean = false,
     ) {
@@ -82,7 +84,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val draft = when {
             stored == null -> null
             mine == null -> stored
-            else -> stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images)
+            else -> stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, extraFrontMatter = mine.extraFrontMatter)
         }
         f.copy(draft = draft, taxonomy = taxonomy)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, State())
@@ -169,6 +171,18 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     fun dismissPhotoError() = flags.update { it.copy(photoError = null) }
 
     fun setTitle(title: String) = edit { it.copy(title = title) }
+
+    fun setExtraFrontMatter(yaml: String) {
+        // An edit opened before the app kept front matter doesn't know the post's other keys, so
+        // writing here would replace keys the writer never saw.
+        if (text?.editingPath != null && text?.extraFrontMatter == null) return
+        edit { it.copy(extraFrontMatter = yaml) }
+    }
+
+    fun frontMatterShown() = flags.update { it.copy(frontMatterBlocked = null) }
+
+    /** Why the "more front matter" can't be published as it is, or null. */
+    val extraProblem: String? get() = text?.frontMatterProblem
     fun setBody(value: TextFieldValue) {
         bodySelection = value.selection
         bodyComposition = value.composition
@@ -226,7 +240,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val mine = text ?: return
         val stored = container.drafts.get(id) ?: return
         if (stored.state != PostState.Draft && stored.state != PostState.Failed) return
-        container.drafts.update(stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, updatedAt = System.currentTimeMillis()))
+        container.drafts.update(stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, extraFrontMatter = mine.extraFrontMatter, updatedAt = System.currentTimeMillis()))
     }
 
     /** Sends the post to [destination]: the site's `_posts`, or the blog's `_drafts`. */
@@ -238,6 +252,11 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             val draft = container.drafts.get(id) ?: return@launch
             if (draft.title.isBlank()) {
                 flags.update { it.copy(titleMissing = true) }
+                return@launch
+            }
+            // Publishing would write YAML the blog can't read: say why instead.
+            draft.frontMatterProblem?.let { problem ->
+                flags.update { it.copy(frontMatterBlocked = problem) }
                 return@launch
             }
             // A failed post that never attempted a commit gets a fresh name and date: the old ones

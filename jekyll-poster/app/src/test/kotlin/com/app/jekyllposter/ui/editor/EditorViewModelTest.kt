@@ -9,6 +9,7 @@ import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
 import com.app.jekyllposter.ui.editor.EditorViewModel.TermKind
 import com.app.jekyllposter.ui.home.HomeViewModel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -105,6 +106,66 @@ class EditorViewModelTest {
         c.blogs.clear()
         assertEquals(null, c.blogs.config.value.title)
         assertEquals(null, c.blogs.siteUrl.value)
+    }
+
+    @Test fun anEditShowsThePostsOtherKeysAndBadYamlStopsPublishing() {
+        val home = HomeViewModel(c)
+        var id: Long? = null
+        val post = runBlocking { c.database.posts().snapshot() }.first { it.path == "_posts/2025-04-20-reading-list.md" }
+        home.edit(post) { id = it }
+        idleUntil { id != null }
+        val editor = EditorViewModel(c, id!!)
+        idleUntil { editor.text != null && editor.state.value.draft != null }
+        assertEquals("# Kept by hand: the theme reads this for the post card.\nimage: /assets/img/books.png", editor.text!!.extraFrontMatter)
+        editor.setExtraFrontMatter("image: [broken")
+        assertTrue(editor.extraProblem!!.contains("isn't YAML"))
+        editor.publish()
+        // Publishing says why it stopped, rather than doing nothing.
+        idleUntil { editor.state.value.frontMatterBlocked != null }
+        assertTrue(editor.state.value.frontMatterBlocked!!.contains("isn't YAML"))
+        assertEquals(PostState.Draft, runBlocking { c.drafts.get(id!!) }!!.state)
+        assertTrue(app.published.isEmpty())
+    }
+
+    @Test fun anEditOpenedBeforeFrontMatterWasKeptCantOverwriteIt() {
+        // As a draft from before the upgrade: editing a post, its other keys never loaded.
+        val id = runBlocking { c.drafts.insert(Draft(title = "T", body = "b", editingPath = "_posts/2025-04-20-reading-list.md", baseSha = "x")) }
+        val editor = EditorViewModel(c, id)
+        idleUntil { editor.text != null && editor.state.value.draft != null }
+        editor.setExtraFrontMatter("image: /new.png")
+        assertEquals(null, editor.text!!.extraFrontMatter)
+    }
+
+    @Test fun aPostsOwnOddFrontMatterDoesntBlockAnEditThatLeavesItAlone() {
+        val odd = "og_title: *t"
+        val id = runBlocking { c.drafts.insert(Draft(title = "T", body = "b", editingPath = "_posts/x.md", baseSha = "x", extraFrontMatter = odd, extraFrontMatterOpened = odd)) }
+        val editor = EditorViewModel(c, id)
+        idleUntil { editor.text != null && editor.state.value.draft != null }
+        assertEquals(null, editor.extraProblem)
+        editor.setExtraFrontMatter("og_title: *t\nimage: x")
+        assertTrue(editor.extraProblem != null)
+    }
+
+    @Test fun aDraftWithOnlyFrontMatterIsKeptOnClose() {
+        val id = runBlocking { c.drafts.insert(Draft(extraFrontMatter = "image: /cover.jpg")) }
+        val editor = EditorViewModel(c, id)
+        idleUntil { editor.text != null }
+        editor.close()
+        idleUntil { editor.state.value.closed }
+        assertTrue(runBlocking { c.drafts.get(id) } != null)
+    }
+
+    @Test fun aChosenCategoryThatDisappearsShowsAllPostsAgain() {
+        val home = HomeViewModel(c)
+        // The list only computes while something watches it, as the screen does.
+        val watching = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch { home.state.collect {} }
+        idleUntil(15_000) { home.state.value.onBlog.size == 6 && !home.state.value.refreshing }
+        home.filter("travel")
+        idleUntil(15_000) { home.state.value.onBlog.size == 1 }
+        app.github.push("Rename", mapOf("travel/_posts/2025-06-08-coastal-walk.md" to null, "_posts/2025-06-08-coastal-walk.md" to "---\ntitle: A coastal walk\ncategories: [walks]\n---\n"))
+        home.refresh()
+        idleUntil(15_000) { home.state.value.onBlog.size == 6 && home.state.value.category == null }
+        watching.cancel()
     }
 
     @Test fun anEmptyDraftIsDroppedOnClose() {

@@ -55,6 +55,16 @@ data class Draft(
     val body: String = "",
     val categories: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
+    /**
+     * Front matter beyond the editor's fields, as YAML. For an edit, the post's other keys as
+     * opened; null for a new post with none.
+     */
+    val extraFrontMatter: String? = null,
+    /**
+     * [extraFrontMatter] as the post had it when opened. Unchanged, it's written back byte for
+     * byte, so it isn't checked: a post's own odd but working YAML mustn't block an edit.
+     */
+    val extraFrontMatterOpened: String? = null,
     /** Photos added on the phone, uploaded with the post if its text still links to them. */
     @ColumnInfo(defaultValue = "[]") val images: List<DraftImage> = emptyList(),
     /** For an edit of a post already on the blog: its path, and its blob sha when it was opened. */
@@ -82,7 +92,11 @@ data class Draft(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 ) {
-    val isEmpty: Boolean get() = title.isBlank() && body.isBlank()
+    /** Why the "more front matter" can't be published, or null; only checked once it's changed. */
+    val frontMatterProblem: String?
+        get() = extraFrontMatter?.takeIf { it != extraFrontMatterOpened }?.let { com.app.jekyllposter.core.jekyll.extraFrontMatterProblem(it) }
+
+    val isEmpty: Boolean get() = title.isBlank() && body.isBlank() && extraFrontMatter.isNullOrBlank() && images.isEmpty()
 }
 
 /** A photo added to a post: prepared on the phone, uploaded in the post's commit. */
@@ -167,7 +181,7 @@ class Converters {
     @TypeConverter fun toImages(json: String): List<DraftImage> = Json.decodeFromString(json)
 }
 
-@Database(entities = [Draft::class, CachedPost::class], version = 2)
+@Database(entities = [Draft::class, CachedPost::class], version = 3)
 @TypeConverters(Converters::class)
 abstract class PosterDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
@@ -191,5 +205,13 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
             "CREATE TABLE IF NOT EXISTS `posts` (`path` TEXT NOT NULL, `sha` TEXT NOT NULL, `title` TEXT NOT NULL, " +
                 "`categories` TEXT NOT NULL, `tags` TEXT NOT NULL, `published` INTEGER NOT NULL, `date` TEXT, PRIMARY KEY(`path`))",
         )
+    }
+}
+
+/** Drafts gain their "more front matter", and what it was when the post was opened. */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE drafts ADD COLUMN extraFrontMatter TEXT")
+        db.execSQL("ALTER TABLE drafts ADD COLUMN extraFrontMatterOpened TEXT")
     }
 }

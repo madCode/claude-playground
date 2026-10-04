@@ -28,6 +28,10 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         val onPhone: List<Draft> = emptyList(),
         val onBlog: List<CachedPost> = emptyList(),
         val refreshing: Boolean = false,
+        /** Shows only the blog's posts in this category; null shows all. */
+        val category: String? = null,
+        /** The blog's categories, most used first, to filter by. */
+        val categories: List<String> = emptyList(),
         val error: String? = null,
     )
 
@@ -38,7 +42,13 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     val state: StateFlow<State> = combine(container.accounts.account, container.drafts.all(), container.blogs.cachedPosts, withTitle) { account, drafts, posts, s ->
         // Drafts for another blog wait, hidden, until that blog is signed in again.
         val mine = drafts.filter { it.blog == null || it.blog == account?.blogKey }
-        s.copy(account = account, onPhone = mine.filter { it.state != PostState.Published || recent(it) }, onBlog = posts)
+        val categories = com.app.jekyllposter.core.jekyll.Taxonomy.of(
+            posts.map { com.app.jekyllposter.core.jekyll.PostSummary(com.app.jekyllposter.core.jekyll.PostPath(it.path), it.sha, it.title, it.categories, it.tags, it.published) },
+        ).categories.map { it.name }
+        // A category gone since it was chosen (renamed, another blog) filters nothing: show all.
+        val category = s.category?.takeIf { c -> categories.any { it.equals(c, ignoreCase = true) } }
+        val shown = category?.let { c -> posts.filter { post -> post.categories.any { it.equals(c, ignoreCase = true) } } } ?: posts
+        s.copy(account = account, onPhone = mine.filter { it.state != PostState.Published || recent(it) }, onBlog = shown, categories = categories, category = category)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), State())
 
     init {
@@ -52,6 +62,9 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
             status.update { it.copy(refreshing = false, error = error?.forWriter()) }
         }
     }
+
+    /** Filters the blog's posts to [category], or shows them all again when it's already the filter. */
+    fun filter(category: String?) = status.update { it.copy(category = if (it.category.equals(category, ignoreCase = true)) null else category) }
 
     fun dismissError() = status.update { it.copy(error = null) }
 
@@ -94,6 +107,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 body = doc.text,
                 categories = doc.terms("category", "categories"),
                 tags = doc.terms("tag", "tags"),
+                extraFrontMatter = doc.others(com.app.jekyllposter.core.jekyll.PostWriter.MANAGED),
+                extraFrontMatterOpened = doc.others(com.app.jekyllposter.core.jekyll.PostWriter.MANAGED),
                 editingPath = post.path,
                 baseSha = file.sha,
                 // Updating a Jekyll draft keeps it one; publishing it is a separate choice.

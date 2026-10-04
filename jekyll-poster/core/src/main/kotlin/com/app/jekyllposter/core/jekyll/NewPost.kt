@@ -10,9 +10,40 @@ data class PostContent(
     val body: String,
     val categories: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
+    /**
+     * Front matter beyond what the editor has fields for (`image:`, `excerpt:`, …), as YAML.
+     * Null leaves an existing post's other keys exactly as they are.
+     */
+    val extra: String? = null,
 )
 
+/** Why [yaml] can't be the "more front matter" of a post, or null if it can. */
+fun extraFrontMatterProblem(yaml: String): String? {
+    if (yaml.isBlank()) return null
+    // A line of its own `---` or `...` would end the front matter there and lose what follows.
+    if (yaml.lines().any { Regex("""^(---|\.\.\.)(\s|$)""").containsMatchIn(it) }) return "Take out the `---` line: the app writes those itself."
+    // Only comments: nothing to write, nothing to break.
+    if (yaml.lines().all { it.isBlank() || it.trimStart().startsWith("#") }) return null
+    val doc = FrontMatterDocument.parse("---\n$yaml\n---\n")
+    if (!doc.readable || doc.values().isEmpty()) return "This isn't YAML the blog can read, like `image: /assets/cover.jpg`."
+    // Every key on a line of its own at the start, as front matter is written; indented, `{…}` or
+    // `?` keys read differently to YAML than to the line editor that keeps the rest of the post.
+    if (!doc.keysAgree()) return "Write one `key: value` per line, starting at the left edge."
+    // `<<` merges another map's keys in, as Ruby's YAML reads it: a way round the check below.
+    if ("<<" in doc.values().keys) return "Merge keys (`<<`) aren't allowed here."
+    val clash = doc.values().keys.firstOrNull { it in PostWriter.MANAGED }
+    return when (clash) {
+        null -> null
+        "date" -> "`date` is set when the post is published; take it out of here."
+        "layout" -> "`layout` comes from your _config.yml; take it out of here."
+        else -> "`$clash` has its own place in the editor; take it out of here."
+    }
+}
+
 object PostWriter {
+    /** Keys the editor writes itself; the rest is the writer's "more front matter". */
+    val MANAGED = setOf("layout", "title", "date", "categories", "category", "tags", "tag")
+
     /** Jekyll's own timestamp shape, e.g. `2026-10-04 08:15:00 -0700`. */
     private val timestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")
 
@@ -48,6 +79,8 @@ object PostWriter {
             doc.set("tag", null)
             doc.set("tags", content.tags)
         }
+        // Only when the writer changed it: untouched, the other keys stay byte for byte.
+        if (content.extra != null && content.extra.trim() != doc.others(MANAGED).trim()) doc.replaceOthers(content.extra, MANAGED)
         return doc
     }
 
@@ -59,6 +92,7 @@ object PostWriter {
         if (date != null) doc.setRaw("date", date)
         doc.set("categories", content.categories)
         doc.set("tags", content.tags)
+        content.extra?.takeIf { it.isNotBlank() }?.let { doc.replaceOthers(it, MANAGED) }
         return doc
     }
 }

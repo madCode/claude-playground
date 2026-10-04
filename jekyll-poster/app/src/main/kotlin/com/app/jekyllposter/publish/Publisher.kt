@@ -306,4 +306,4 @@ internal fun gitBlobSha(text: String): String {
     return digest.digest().joinToString("") { "%02x".format(it) }
 }
 
-fun Draft.content() = PostContent(title.trim(), body, categories, tags)
+fun Draft.content() = PostContent(title.trim(), body, categories, tags, extraFrontMatter)
