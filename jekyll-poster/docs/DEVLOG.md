@@ -1,7 +1,7 @@
 # Devlog
 
 What each cycle shipped, what its review caught, and what got in the way. Newest first.
-Times are Pacific.
+Times are when each cycle landed, Pacific.
 
 **Latest debug build:** [jekyll-poster-debug.apk](https://github.com/madCode/claude-playground/releases/download/jekyll-poster-debug/jekyll-poster-debug.apk)
 
@@ -19,12 +19,12 @@ Times are Pacific.
 
 ## Night 1 · Sun 4 Oct
 
-### Cycle 9: a documentation pass (07:50–08:05)
+### Cycle 9: a documentation pass (landed 03:20)
 - Design rewritten as the app is now (four design rounds, photos and front matter in their own
   sections, the never-twice rules in one place); backlog cut to what's actually next; this
   status block added.
 
-### Cycle 8: front matter, and filtering by category (07:00–07:40)
+### Cycle 8: front matter, and filtering by category (landed 03:19)
 - **Shipped:** "more front matter" for posts, as YAML in a folding section, checked before
   publishing, untouched keys kept byte for byte (database version 3); the blog's posts filter by
   category from a row of pills.
@@ -45,7 +45,7 @@ Times are Pacific.
   too faint; Publish could wrap at large text; the icon's shadow left the round mask's safe
   circle; the squiggle allocated on every draw.
 
-### Cycle 7: a whimsical look, in four design rounds (05:40–06:50)
+### Cycle 7: a whimsical look, in four design rounds (landed 03:00)
 - **From you:** "a few design rounds to pick a theme that's fun and maybe even whimsical".
 - **Round 1:** five directions rendered on the real screens, light and dark (DesignRoundTest):
   classic, zine, garden, night sky, sticker. All too timid: a tint and a heading font each.
@@ -61,7 +61,7 @@ Times are Pacific.
   zine as the app's look; the other styles' code and fonts taken out (they're in history).
   The rounds' contact sheets are on the `claude/screenshots` branch under `design/`.
 
-### Cycle 6: photos shared from the gallery, alt text (05:00–05:40)
+### Cycle 6: photos shared from the gallery, alt text (landed 02:31)
 - **Shipped:** share one photo or several from the gallery to start a post with them, in
   order; every added photo asks for its alt text (skippable).
 - **Cycle 5's second look found** (all fixed): a cancelled or failed Switch blog could save the
@@ -72,7 +72,7 @@ Times are Pacific.
   back a token renewed meanwhile. Found while testing: the editor reached its cursor before it
   was set up when a draft loaded fast.
 
-### Cycle 5: a Markdown toolbar, photos at the cursor, settings (04:15–05:00)
+### Cycle 5: a Markdown toolbar, photos at the cursor, settings (landed 02:20)
 - **Shipped:** a toolbar above the keyboard for bold, italic, link, heading, list, quote and
   code, each undone by pressing it again; photos go in at the cursor on a paragraph of their
   own; Settings (the blog and its address, switch blog, sign out, version).
@@ -87,7 +87,7 @@ Times are Pacific.
   "cancelled on GitHub" read as a bad token; expiry counted from picking the blog, not from the
   token; damaged or huge GIFs gave raw errors or could run out of memory.
 
-### Cycle 4: the blog's _drafts (03:45–04:15)
+### Cycle 4: the blog's _drafts (landed 02:06)
 - **Shipped:** save a new post to the blog's `_drafts` to finish on a laptop; update a Jekyll
   draft in place; publish one from the phone, dated and moved to `_posts` in one commit.
 - **Cycle 2's review found** (all fixed, with tests): cycle 1's debug build shipped a database
@@ -103,14 +103,14 @@ Times are Pacific.
 - **Left:** a post with both `category:` and `categories:` shows only `category:` (as Jekyll's
   documented rule says; the review thought Jekyll combines them, unverified).
 
-### Cycle 3: Sign in with GitHub (03:15–03:45)
+### Cycle 3: Sign in with GitHub (landed 02:03)
 - **From you:** let people sign in either way, token first.
 - **Shipped:** GitHub's device flow for a GitHub App: a code to copy, github.com opened, the
   app waits; expiring tokens renewed before they expire, refresh tokens sealed like the token.
   The button appears once a build names the app: [setup](GITHUB_APP.md), yours to do since only
   you can register an app. CI picks it up from repository variables.
 
-### Cycle 2: preview, photos, live (02:40–)
+### Cycle 2: preview, photos, live (landed 01:59)
 - **Shipped:** a preview of the post as a page; photos from the picker, turned upright, scaled
   and stripped of EXIF (location), uploaded in the post's own commit and linked with
   `relative_url`; each published post's address, worked out as Jekyll would (checked against
@@ -129,7 +129,7 @@ Times are Pacific.
 - **Seen live:** the sample blog's Pages build runs as "pages build and deployment" on the
   commit's sha, which is what the build watcher follows; its post URLs match the app's.
 
-### Cycle 1: post from the phone (00:35–02:40)
+### Cycle 1: post from the phone (landed 01:48)
 - **From you:** a phone app for a Jekyll blog on GitHub Pages; token sign-in to start, device
   flow later; pick categories from what the blog already uses, or add one.
 - **Research:** [existing solutions](research/existing-solutions.md). Nothing on Android
