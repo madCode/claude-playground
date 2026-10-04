@@ -30,13 +30,15 @@ class MainActivity : ComponentActivity() {
     /**
      * Long-pressing the app's icon offers New post, straight into the editor. Added here rather
      * than in a shortcuts.xml, whose intent has to name the package literally, and the debug
-     * build's differs; and only once, as each push counts as a use for the launcher's ranking.
+     * build's differs. Pushed again only when its label changed (another language): each push
+     * counts as a use for the launcher's ranking.
      */
     private fun addNewPostShortcut() {
         runCatching {
-            if (ShortcutManagerCompat.getDynamicShortcuts(this).any { it.id == NEW_POST_SHORTCUT }) return
+            val label = getString(R.string.shortcut_new_post)
+            if (ShortcutManagerCompat.getDynamicShortcuts(this).any { it.id == NEW_POST_SHORTCUT && it.shortLabel == label }) return
             val shortcut = ShortcutInfoCompat.Builder(this, NEW_POST_SHORTCUT)
-                .setShortLabel(getString(R.string.shortcut_new_post))
+                .setShortLabel(label)
                 .setIcon(IconCompat.createWithResource(this, R.drawable.ic_shortcut_new_post))
                 .setIntent(Intent(this, MainActivity::class.java).setAction(ACTION_NEW_POST))
                 .build()

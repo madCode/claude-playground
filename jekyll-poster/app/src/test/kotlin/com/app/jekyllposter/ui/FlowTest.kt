@@ -133,16 +133,19 @@ class FlowTest {
         compose.onNodeWithTag("title").assertDoesNotExist()
     }
 
-    @Test fun aNewPostDropsOneLeftEmptyWhenTheAppClosed() {
+    @Test fun postsLeftEmptyWhenTheAppClosedAreHiddenThenDropped() {
         signIn()
-        // Left by the editor when the app was closed under it, without Back.
-        val stranded = runBlocking { app.container.drafts.insert(com.app.jekyllposter.data.Draft(blog = "sample/sample-blog@main")) }
-        val kept = runBlocking { app.container.drafts.insert(com.app.jekyllposter.data.Draft(title = "Half an idea")) }
-        compose.setContent { PosterTheme { PosterNavHost(app.container, com.app.jekyllposter.Shared("", emptyList())) } }
-        compose.waitForTag("title")
-        val ids = runBlocking { app.container.drafts.list() }.map { it.id }
-        assertEquals(2, ids.size)
-        assertTrue(kept in ids && stranded !in ids)
+        // Left by editors closed under them, without Back: one a day ago, one a moment ago (maybe
+        // still open in another window).
+        val old = System.currentTimeMillis() - 25 * 60 * 60 * 1000L
+        val stale = runBlocking { app.container.drafts.insert(com.app.jekyllposter.data.Draft(createdAt = old, updatedAt = old)) }
+        val recent = runBlocking { app.container.drafts.insert(com.app.jekyllposter.data.Draft()) }
+        runBlocking { app.container.drafts.insert(com.app.jekyllposter.data.Draft(title = "Half an idea")) }
+        start()
+        compose.waitFor("Half an idea")
+        compose.onNodeWithText("Untitled").assertDoesNotExist()
+        compose.waitUntil(5_000) { runBlocking { app.container.drafts.get(stale) } == null }
+        assertTrue(runBlocking { app.container.drafts.get(recent) } != null)
     }
 
     @Test fun aDraftIsKeptOnTheList() {

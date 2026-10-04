@@ -29,6 +29,9 @@ Times are when each cycle landed, Pacific.
   share; the shortcut restarting the app left an empty "Untitled" draft and could drop the last
   keystrokes; a rotation on the sign-in screen lost a share; the shortcut was pushed on every
   process start, background work included.
+- **The second look found** (fixed): deleting those empty drafts at once could delete one still
+  open in another window (a share opens a second one), or the row an editor closing under the
+  shortcut was about to save its last keystrokes into. They're now hidden, and dropped after a day.
 - **Tests:** an activity started with Robolectric's `buildActivity` stops composing after the
   first test in a JVM, with every thread idle: Compose's main dispatcher seems bound to the first
   test's looper. Likely the cause of the Compose-test hang (cycle 1), still open. Activity-level
