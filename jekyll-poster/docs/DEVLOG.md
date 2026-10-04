@@ -5,7 +5,24 @@ Times are Pacific.
 
 **Latest debug build:** [jekyll-poster-debug.apk](https://github.com/madCode/claude-playground/releases/download/jekyll-poster-debug/jekyll-poster-debug.apk)
 
+## Status
+
+- **Last night:** night 1 built the app from nothing: sign-in two ways, the blog's own
+  categories, writing with a toolbar, photos without their location, publishing exactly once,
+  following the Pages build, safe edits, front matter, `_drafts`, and a zine look picked over
+  four design rounds. Every PR had a fresh-eyes review; 65 findings were fixed.
+- **Not yet tried on a real blog:** everything ran against a fake GitHub. The sample blog
+  ([madCode/sample-blog](https://github.com/madCode/sample-blog), live on Pages) is ready for
+  the first real post.
+- **Waiting on you:** a token to try it; the GitHub App for Sign in with GitHub
+  ([how](GITHUB_APP.md)); the Android SDK in the environment's setup script.
+
 ## Night 1 · Sun 4 Oct
+
+### Cycle 9: a documentation pass (07:50–08:05)
+- Design rewritten as the app is now (four design rounds, photos and front matter in their own
+  sections, the never-twice rules in one place); backlog cut to what's actually next; this
+  status block added.
 
 ### Cycle 8: front matter, and filtering by category (07:00–07:40)
 - **Shipped:** "more front matter" for posts, as YAML in a folding section, checked before
