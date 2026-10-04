@@ -1,5 +1,18 @@
 package com.app.jekyllposter.ui.home
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -64,16 +77,26 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
     LaunchedEffect(state.error) {
         state.error?.let { snackbar.showSnackbar(it); viewModel.dismissError() }
     }
+    BackHandler(enabled = state.query != null, onBack = viewModel::stopSearch)
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
+                    if (state.query != null) {
+                        SearchField(state.query.orEmpty(), viewModel::search)
+                        return@TopAppBar
+                    }
                     Column {
                         Text(state.siteTitle ?: "Your blog", maxLines = 1, overflow = TextOverflow.Ellipsis)
                         state.account?.let { Text(it.repoName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
                 },
                 actions = {
+                    if (state.query != null) {
+                        IconButton(onClick = viewModel::stopSearch) { Icon(Icons.Default.Close, "Stop searching") }
+                        return@TopAppBar
+                    }
+                    IconButton(onClick = viewModel::startSearch) { Icon(Icons.Default.Search, "Search your posts") }
                     IconButton(onClick = viewModel::refresh) { Icon(Icons.Default.Refresh, "Read the blog again") }
                     IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
@@ -106,7 +129,11 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
                 if (state.onBlog.isEmpty()) {
                     item {
                         Text(
-                            if (state.refreshing) "Reading your blog…" else LocalWhimsy.current.emptyBlog,
+                            when {
+                                state.refreshing -> "Reading your blog…"
+                                state.searching -> "No posts match “${state.query!!.trim()}”."
+                                else -> LocalWhimsy.current.emptyBlog
+                            },
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -149,6 +176,28 @@ fun Draft.status(live: String = "live on the site"): Pair<String, Boolean> = whe
         BuildState.Failed -> "Published, but the site build failed. Check Actions on GitHub." to true
         BuildState.Unknown, null -> "Published to GitHub" to false
     }
+}
+
+/** The top bar's search: focused when it opens, so the keyboard comes up ready. */
+@Composable
+private fun SearchField(query: String, onChange: (String) -> Unit) {
+    val focus = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    TextField(
+        value = query,
+        onValueChange = onChange,
+        placeholder = { Text("Search your posts") },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        // The list filters as the writer types; Search just puts the keyboard away to read it.
+        keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
+            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
+        ),
+        modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("search"),
+    )
+    LaunchedEffect(Unit) { focus.requestFocus() }
 }
 
 @Composable

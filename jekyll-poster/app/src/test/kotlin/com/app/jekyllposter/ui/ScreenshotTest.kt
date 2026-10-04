@@ -207,4 +207,14 @@ class ScreenshotTest {
         val vm = editorWithDraft()
         shoot("11-photo-menu", act = { compose.onNode(hasContentDescription("Add a photo")).performClick() }) { EditorScreen(vm) {} }
     }
+
+    @Test fun search() {
+        signIn()
+        val vm = HomeViewModel(c)
+        shoot("12-search", ready = { vm.state.value.onBlog.isNotEmpty() && !vm.state.value.refreshing }, act = {
+            compose.onNode(hasContentDescription("Search your posts")).performClick()
+            compose.waitForIdle()
+            vm.search("writ")
+        }) { HomeScreen(vm, onOpenDraft = {}, onSettings = {}) }
+    }
 }

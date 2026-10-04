@@ -20,6 +20,10 @@ Times are when each cycle landed, Pacific.
 
 ## Night 1 · Sun 4 Oct
 
+### Cycle 14: search your posts
+- **Shipped:** a search in Home's top bar: the blog's posts by title, category or tag, as you
+  type, within the chosen category.
+
 ### Cycle 13: a documentation pass
 - Architecture, README and this status brought up to delete, the shortcut and the camera.
 

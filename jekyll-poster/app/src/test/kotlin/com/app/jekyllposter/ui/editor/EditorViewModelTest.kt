@@ -218,6 +218,33 @@ class EditorViewModelTest {
         watching.cancel()
     }
 
+    @Test fun searchMatchesTitlesCategoriesAndTagsWithinTheFilter() {
+        runBlocking { c.drafts.insert(Draft(title = "Sourdough notes")); c.drafts.insert(Draft(title = "Something else")) }
+        val home = HomeViewModel(c)
+        val watching = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch { home.state.collect {} }
+        idleUntil(15_000) { home.state.value.onBlog.size == 6 && !home.state.value.refreshing }
+        home.startSearch()
+        // Opening the search alone hides nothing.
+        idleUntil { home.state.value.query == "" }
+        assertEquals(6, home.state.value.onBlog.size)
+        home.search("SOURDOUGH")
+        idleUntil { home.state.value.onBlog.map { it.title } == listOf("Sourdough, again: a 72% loaf") }
+        assertEquals(listOf("Sourdough notes"), home.state.value.onPhone.map { it.title })
+        // A tag (walking) and a category (Writing) match too.
+        home.search("walk")
+        idleUntil { home.state.value.onBlog.map { it.title } == listOf("A coastal walk") }
+        home.search("writ")
+        idleUntil { home.state.value.onBlog.size == 3 }
+        // Within the chosen category.
+        home.filter("meta")
+        idleUntil { home.state.value.onBlog.map { it.title } == listOf("Welcome to the notebook") }
+        home.filter("meta")
+        idleUntil { home.state.value.onBlog.size == 3 }
+        home.stopSearch()
+        idleUntil { home.state.value.query == null && home.state.value.onBlog.size == 6 }
+        watching.cancel()
+    }
+
     @Test fun anEmptyDraftIsDroppedOnClose() {
         val id = runBlocking { c.drafts.insert(Draft()) }
         val editor = EditorViewModel(c, id)
