@@ -44,6 +44,15 @@ import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.CachedPost
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import com.app.jekyllposter.ui.theme.LocalWhimsy
+import com.app.jekyllposter.ui.theme.PosterFab
+import com.app.jekyllposter.ui.theme.RowDivider
+import com.app.jekyllposter.ui.theme.RowFrame
+import com.app.jekyllposter.ui.theme.SectionHeading
+import com.app.jekyllposter.ui.theme.TermPill
+import androidx.compose.ui.semantics.contentDescription
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,7 +68,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
             TopAppBar(
                 title = {
                     Column {
-                        Text("Your blog")
+                        Text(state.siteTitle ?: "Your blog", maxLines = 1, overflow = TextOverflow.Ellipsis)
                         state.account?.let { Text(it.repoName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
                 },
@@ -77,11 +86,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                text = { Text("New post") },
-                icon = { Icon(Icons.Default.Edit, null) },
-                onClick = { viewModel.newDraft(onOpenDraft) },
-            )
+            PosterFab("New post", icon = { Icon(Icons.Default.Edit, null) }, onClick = { viewModel.newDraft(onOpenDraft) })
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
@@ -97,7 +102,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
                 if (state.onBlog.isEmpty()) {
                     item {
                         Text(
-                            if (state.refreshing) "Reading your blog…" else "No posts yet. Your first one is a tap away.",
+                            if (state.refreshing) "Reading your blog…" else LocalWhimsy.current.emptyBlog,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -112,52 +117,50 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
     }
 }
 
-@Composable
-private fun SectionHeading(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp).semantics { heading() },
-    )
-}
 
 @Composable
 private fun DraftRow(draft: Draft, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(draft.title.ifBlank { "Untitled" }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            val (label, isError) = draft.status()
-            Text(label, style = MaterialTheme.typography.bodySmall, color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
-        }
+    RowFrame(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Text(draft.title.ifBlank { "Untitled" }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        val whimsy = LocalWhimsy.current
+        val (label, isError) = draft.status(whimsy.live)
+        val shown = if (draft.state == PostState.Published && draft.buildState == BuildState.Live) label + whimsy.liveMark else label
+        Text(
+            shown, style = MaterialTheme.typography.bodySmall,
+            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2,
+            modifier = Modifier.semantics { contentDescription = label },
+        )
     }
-    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+    RowDivider()
 }
 
 /** A draft's state in a few words, and whether it needs the writer. */
-fun Draft.status(): Pair<String, Boolean> = when (state) {
+fun Draft.status(live: String = "live on the site"): Pair<String, Boolean> = when (state) {
     PostState.Draft -> (if (editingPath != null) "Editing · not published yet" else "Draft") to false
     PostState.Queued -> "Waiting to publish…" to false
     PostState.Failed -> "Didn't publish: ${error.orEmpty()}" to true
     PostState.Published -> if (targetPath?.startsWith("_drafts/") == true) "Saved to the blog's _drafts" to false else when (buildState) {
         BuildState.Building -> "Published · the site is rebuilding…" to false
-        BuildState.Live -> "Published · live on the site" to false
+        BuildState.Live -> "Published · $live" to false
         BuildState.Failed -> "Published, but the site build failed. Check Actions on GitHub." to true
         BuildState.Unknown, null -> "Published to GitHub" to false
     }
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun PostRow(post: CachedPost, onClick: () -> Unit) {
-    Column(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    RowFrame(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(post.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         val notes = listOfNotNull(
             post.date,
             if (post.path.contains("_drafts/")) "Jekyll draft" else null,
-            if (!post.published) "Hidden (published: false)" else null,
-            post.categories.takeIf { it.isNotEmpty() }?.joinToString(", "),
+            if (!post.published) "Hidden" else null,
         )
-        Text(notes.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 4.dp)) {
+            Text(notes.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            post.categories.forEach { TermPill(it) }
+        }
     }
-    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+    RowDivider()
 }

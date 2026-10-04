@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed icons draw one colour: the nib alone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFF" android:fillType="evenOdd"
+        android:pathData="M54,28 L67,52 L58,68 L50,68 L41,52 Z M54,40 a3,3 0 1,0 0.01,0 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M38,73 h32 v4 h-32 Z" />
+</vector>

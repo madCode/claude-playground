@@ -68,7 +68,7 @@ class FlowTest {
         compose.waitUntil(3_000) { compose.onAllNodes(hasContentDescription("Remove commute")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Publish").performClick()
 
-        compose.waitFor("Your blog")
+        compose.waitFor("A Sample Notebook")
         compose.waitUntil(5_000) { github.files().keys.any { it.endsWith("-from-the-bus.md") } }
         val text = github.files().entries.first { it.key.endsWith("-from-the-bus.md") }.value.toString(Charsets.UTF_8)
         assertTrue(text, Regex("""(?s)---\ntitle: From the bus\ndate: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{4}\ncategories: \[writing, commute]\n---\n\nShort one, written on the way home.\n""").matches(text))
@@ -107,7 +107,7 @@ class FlowTest {
         compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
         compose.waitForTag("title")
         compose.onNodeWithContentDescription("Back").performClick()
-        compose.waitFor("Your blog")
+        compose.waitFor("A Sample Notebook")
         compose.waitUntil(3_000) { runBlocking { app.container.database.drafts().snapshotCount() } == 0 }
     }
 
@@ -136,7 +136,7 @@ class FlowTest {
     @Test fun switchingBlogListsTheSignInsRepositories() {
         signIn()
         start()
-        compose.waitFor("Your blog")
+        compose.waitFor("A Sample Notebook")
         compose.onNodeWithContentDescription("More").performClick()
         compose.onNodeWithText("Settings").performClick()
         compose.waitFor("Switch blog")
@@ -148,7 +148,7 @@ class FlowTest {
     @Test fun signingOutReturnsToConnect() {
         signIn()
         start()
-        compose.waitFor("Your blog")
+        compose.waitFor("A Sample Notebook")
         compose.onNodeWithContentDescription("More").performClick()
         compose.onNodeWithText("Settings").performClick()
         compose.waitFor("sample/sample-blog")

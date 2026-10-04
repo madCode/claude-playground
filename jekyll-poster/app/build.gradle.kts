@@ -68,6 +68,10 @@ android {
                 it.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
                 it.systemProperty("sampleBlog", rootProject.file("sample-blog").path)
                 it.systemProperty("screenshotDir", layout.buildDirectory.dir("screenshots").get().asFile.path)
+                // Design rounds (DesignRoundTest) only render with -Pdesign; otherwise they're skipped.
+                if (providers.gradleProperty("design").isPresent) {
+                    it.systemProperty("designDir", layout.buildDirectory.dir("design").get().asFile.path)
+                }
             }
         }
     }

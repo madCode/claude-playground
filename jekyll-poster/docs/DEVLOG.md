@@ -7,6 +7,22 @@ Times are Pacific.
 
 ## Night 1 · Sun 4 Oct
 
+### Cycle 7: a whimsical look, in four design rounds (05:40–06:50)
+- **From you:** "a few design rounds to pick a theme that's fun and maybe even whimsical".
+- **Round 1:** five directions rendered on the real screens, light and dark (DesignRoundTest):
+  classic, zine, garden, night sky, sticker. All too timid: a tint and a heading font each.
+  Garden's and Sticker's variable fonts came out at their thinnest weight.
+- **Round 2:** whimsy moved into the shapes: squiggles, dotted rules, colour per category, card
+  rows, a tilted stamp of a button; garden dropped. An independent critique ranked zine first
+  ("most personality for the least cost: the flavour is in the headers, rules and button, so the
+  list and the writing area stay calm"), then sticker, then night.
+- **Round 3:** zine refined from the critique: pill contrast (dark mode's were about 3:1), a
+  themed category picker with coloured pills, deeper pink text, more line height in the editor,
+  an inked outline on secondary buttons.
+- **Round 4:** Publish as a fluoro pill, the riso app icon (teal under pink, out of register),
+  zine as the app's look; the other styles' code and fonts taken out (they're in history).
+  The rounds' contact sheets are on the `claude/screenshots` branch under `design/`.
+
 ### Cycle 6: photos shared from the gallery, alt text (05:00–05:40)
 - **Shipped:** share one photo or several from the gallery to start a post with them, in
   order; every added photo asks for its alt text (skippable).

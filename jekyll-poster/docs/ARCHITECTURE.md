@@ -27,7 +27,11 @@
   - `publish/`: `Publisher` (the rules for sending a queued post, one at a time), `PublishWorker`
     (WorkManager, needs a network, exponential backoff, unique per post), `BuildWatcher` and
     `BuildWatchWorker` (polls the Pages run for the post's commit), `Notifier`.
-  - `ui/`: Compose screens with a ViewModel each: `connect`, `home`, `editor`.
+  - `ui/`: Compose screens with a ViewModel each: `connect`, `home`, `editor`, `settings`.
+    `ui/theme`: the look as a `PosterStyle` (colours, type, shapes) and its `Whimsy` (marks,
+    squiggles, row style, category colours, the stamp), read by small shared composables
+    (`SectionHeading`, `TermPill`, `PosterFab`, `InkButton`). `DesignRoundTest` renders styles
+    side by side with `-Pdesign`.
     `PosterNavHost` picks the first screen once the stored account has loaded.
   - `AppContainer`: manual DI. Tests swap the GitHub address, cipher, database, DataStore and
     the publish scheduler (`TestApp`).

@@ -14,6 +14,8 @@ tells you when GitHub Pages has rebuilt the site.
 - **Edits are safe.** If a post changed on GitHub since you opened it, the app won't overwrite it.
 - **Photos without your location.** Picked photos are scaled down and stripped of EXIF before
   they go in the post's commit.
+- **A bit of fun.** It looks like a risograph zine: cream paper, fluoro inks, a stamp of a
+  New post button, and every category in its own colour.
 - **Preview, and a nudge when it's live.** See the post as a page before publishing; get a
   notification with its address once GitHub Pages has rebuilt.
 

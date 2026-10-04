@@ -22,6 +22,8 @@ import kotlinx.coroutines.launch
 class HomeViewModel(private val container: AppContainer) : ViewModel() {
     data class State(
         val account: Account? = null,
+        /** The blog's own title, from `_config.yml`. */
+        val siteTitle: String? = null,
         /** Posts on the phone: being written, waiting, failed, or published and being watched. */
         val onPhone: List<Draft> = emptyList(),
         val onBlog: List<CachedPost> = emptyList(),
@@ -31,7 +33,9 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     private val status = MutableStateFlow(State())
 
-    val state: StateFlow<State> = combine(container.accounts.account, container.drafts.all(), container.blogs.cachedPosts, status) { account, drafts, posts, s ->
+    private val withTitle = combine(status, container.blogs.config) { s, config -> s.copy(siteTitle = config.title) }
+
+    val state: StateFlow<State> = combine(container.accounts.account, container.drafts.all(), container.blogs.cachedPosts, withTitle) { account, drafts, posts, s ->
         // Drafts for another blog wait, hidden, until that blog is signed in again.
         val mine = drafts.filter { it.blog == null || it.blog == account?.blogKey }
         s.copy(account = account, onPhone = mine.filter { it.state != PostState.Published || recent(it) }, onBlog = posts)
