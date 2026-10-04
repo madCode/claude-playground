@@ -62,6 +62,8 @@ class MainActivity : ComponentActivity() {
 internal fun postToStart(intent: Intent?): Shared? {
     if (intent == null || intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return null
     if (intent.action == MainActivity.ACTION_NEW_POST) return Shared("", emptyList())
+    // "Open with": the note to import is the intent's data, read like a shared file.
+    if (intent.action == Intent.ACTION_VIEW) return intent.data?.let { Shared("", emptyList(), it) }
     if (intent.action != Intent.ACTION_SEND && intent.action != Intent.ACTION_SEND_MULTIPLE) return null
     val streams = when (intent.action) {
         Intent.ACTION_SEND -> listOfNotNull(intent.parcelable<Uri>(Intent.EXTRA_STREAM))

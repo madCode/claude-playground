@@ -92,6 +92,8 @@ doesn't want to open a laptop and make a commit for every post.
 
 - Share a note from Obsidian, as text or as its `.md` file, and it becomes a post, the way obyde
   turns notes into Jekyll posts. Any shared text goes the same way; plain text comes out as it went in.
+- Or open it with the app (Obsidian's first share tray, or a file manager): that imports it too.
+  The note stays as it is, and opening it again starts another post.
 - The title is the note's `title:`, else its file name, else a first `# heading`. A first
   heading that repeats the title is dropped.
 - `tags:` and `categories:` fill the post's own, in the blog's spelling. `date:` and `layout:`
