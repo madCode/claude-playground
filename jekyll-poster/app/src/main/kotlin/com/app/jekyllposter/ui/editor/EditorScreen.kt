@@ -95,6 +95,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,6 +103,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -135,7 +137,12 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri?.let(viewModel::addPhoto)
     }
-    val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture(), viewModel::photoTaken)
+    // Saved state, not the ViewModel: the camera app may push this app out of memory meanwhile.
+    var cameraPath by rememberSaveable { mutableStateOf<String?>(null) }
+    val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { taken ->
+        cameraPath?.let { viewModel.photoTaken(it, taken) }
+        cameraPath = null
+    }
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     // Asked on the first Publish, when "tell you when it's live" makes sense; publishing goes ahead either way.
@@ -234,12 +241,16 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                     addingPhoto = state.addingPhoto,
                     onFormat = viewModel::format,
                     onPickPhoto = { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                    onTakePhoto = {
-                        val target = viewModel.cameraTarget()
+                    onTakePhoto = take@{
+                        // One at a time: a second tap before the camera opens would orphan a file.
+                        if (cameraPath != null) return@take
+                        val target = viewModel.cameraTarget() ?: return@take viewModel.cameraUnavailable(null)
+                        cameraPath = target.path
                         try {
-                            if (target != null) takePhoto.launch(target) else viewModel.cameraUnavailable()
+                            takePhoto.launch(target.uri)
                         } catch (e: android.content.ActivityNotFoundException) {
-                            viewModel.cameraUnavailable()
+                            cameraPath = null
+                            viewModel.cameraUnavailable(target.path)
                         }
                     },
                 )
@@ -433,7 +444,9 @@ private fun FormatBar(formatting: Boolean, addingPhoto: Boolean, onFormat: ((Edi
                 CircularProgressIndicator(Modifier.padding(12.dp).size(24.dp).semantics { contentDescription = "Adding the photo" }, strokeWidth = 2.dp)
             } else {
                 Box {
-                    IconButton(onClick = { photoMenu = true }) { Icon(Icons.Default.AddPhotoAlternate, "Add a photo") }
+                    IconButton(onClick = { photoMenu = true }, modifier = Modifier.semantics { onClick("Choose or take a photo") { photoMenu = true; true } }) {
+                        Icon(Icons.Default.AddPhotoAlternate, "Add a photo")
+                    }
                     DropdownMenu(expanded = photoMenu, onDismissRequest = { photoMenu = false }) {
                         DropdownMenuItem(
                             text = { Text("Choose photos") },

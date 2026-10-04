@@ -22,6 +22,12 @@ Times are when each cycle landed, Pacific.
 ### Cycle 12: take a photo
 - **Shipped:** the photo button offers Choose photos or Take a photo. The camera app writes to
   the cache through a FileProvider; the photo is prepared like any other and the original deleted.
+- **Its review found** (fixed, with tests): the camera app can push this app out of memory, and
+  the photo was then lost without a word while the original, location included, stayed in the
+  cache; an editor closed mid-import left the original too; a photo arriving for a post being
+  published vanished silently; a double tap orphaned a file; the cancel test couldn't fail. The
+  path now lives in the screen's saved state, every way out deletes the original, and stale
+  originals are swept on start (untested: it runs before a test can set one up).
 - **Tests:** FileProvider caches its paths statically, against the first Robolectric test's data
   directory; the camera tests clear it.
 

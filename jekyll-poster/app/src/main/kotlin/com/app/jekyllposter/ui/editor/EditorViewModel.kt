@@ -159,37 +159,39 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         }
     }
 
-    /** The file the camera app is writing the next photo to, until it comes back. */
-    private var cameraFile: File? = null
-
     /**
-     * Where the camera app should write a photo for this post: a file in the cache, offered to it
-     * through the FileProvider. Null if it can't be made.
+     * Where the camera app should write a photo for this post: a new file in the cache, offered
+     * to it through the FileProvider. The screen keeps [CameraTarget.path] in its saved state,
+     * because the camera app may push this app out of memory and its answer then reaches a new
+     * ViewModel. Null if it can't be made.
      */
-    fun cameraTarget(): Uri? = runCatching {
-        val context = container.context
-        val dir = File(context.cacheDir, "camera").apply { mkdirs() }
-        val file = File(dir, "${System.currentTimeMillis()}.jpg")
-        cameraFile = file
-        androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.camera", file)
+    fun cameraTarget(): CameraTarget? = runCatching {
+        val dir = cameraDir(container.context).apply { mkdirs() }
+        val file = File.createTempFile("photo-", ".jpg", dir)
+        CameraTarget(file.path, androidx.core.content.FileProvider.getUriForFile(container.context, "${container.context.packageName}.camera", file))
     }.getOrNull()
 
-    /** The camera app came back: adds the photo if one was taken, then deletes the original. */
-    fun photoTaken(taken: Boolean) {
-        val file = cameraFile ?: return
-        cameraFile = null
+    /** The camera app came back: adds the photo at [path] if one was taken, then deletes the original. */
+    fun photoTaken(path: String, taken: Boolean) {
+        val file = File(path)
         if (!taken || !file.exists() || file.length() == 0L) {
             file.delete()
             return
         }
+        if (text == null || (state.value.draft != null && !state.value.editable)) {
+            file.delete()
+            flags.update { it.copy(photoError = "The photo wasn't added: this post can't be changed now.") }
+            return
+        }
         addPhoto(Uri.fromFile(file))
-        // The original keeps its EXIF, location included; only the prepared copy stays.
-        viewModelScope.launch { photoJob?.join(); file.delete() }
+        // The original keeps its EXIF, location included; only the prepared copy stays. In the
+        // app's scope, so the delete still happens if the editor closes mid-import.
+        val importing = photoJob
+        container.appScope.launch { importing?.join(); file.delete() }
     }
 
-    fun cameraUnavailable() {
-        cameraFile?.delete()
-        cameraFile = null
+    fun cameraUnavailable(path: String?) {
+        path?.let { File(it).delete() }
         flags.update { it.copy(photoError = "No camera app to take a photo with.") }
     }
 
@@ -382,3 +384,9 @@ private fun dataUri(file: File): String {
     val type = when (file.extension) { "png" -> "image/png"; "gif" -> "image/gif"; else -> "image/jpeg" }
     return "data:$type;base64," + android.util.Base64.encodeToString(file.readBytes(), android.util.Base64.NO_WRAP)
 }
+
+/** A file for the camera app to write to: its [path] here, and the [uri] it's offered as. */
+data class CameraTarget(val path: String, val uri: Uri)
+
+/** Where camera photos wait to be prepared: the cache, never backed up. */
+fun cameraDir(context: android.content.Context) = File(context.cacheDir, "camera")
