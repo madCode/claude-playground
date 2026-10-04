@@ -23,6 +23,10 @@ claude-playground repository; run commands from this folder.
     ./gradlew build koverVerify          # everything CI runs (fails below 85% line coverage)
     ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest'   # PNGs in app/build/screenshots
 
+To try a change against a real blog, run the "Jekyll Poster live check" workflow on its branch:
+it publishes a post to the sample blog, waits for Pages, then deletes it. Run it from Actions, not
+from a cloud session: the session's GitHub proxy refuses the commit calls the app makes.
+
 JDK 21 and the Android SDK (compileSdk 37) are required; `tools/install-android-sdk.sh` installs
 the SDK for a cloud session. CI publishes main's debug APK to the `jekyll-poster-debug` release.
 

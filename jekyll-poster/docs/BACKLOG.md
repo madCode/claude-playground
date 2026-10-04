@@ -5,10 +5,10 @@ and moves it to Done.
 
 ## Next
 
-- [ ] Try it on a real blog: the sample blog first, then yours *(you: a token is all it takes)*
+- [ ] Try it on your own blog (the sample blog works from the phone)
 - [ ] Register the GitHub App and set the repository variables *(you: [how](GITHUB_APP.md))*
-- [ ] A live check: a tool that publishes to and deletes from a test repository through the real
-  API, for a session that has a token for one
+- [ ] A first green run of the live check *(you: the `SAMPLE_BLOG_TOKEN` secret; it runs from
+  main's Actions tab once merged)*
 - [ ] Find the Compose-test Room hang (DEVLOG, cycles 1 and 11: likely Compose's main
   dispatcher bound to the first test's looper)
 
