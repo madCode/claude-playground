@@ -54,8 +54,9 @@ class BlogPrivacyViewModelTest {
         app.github.failures["user"] = 500
         val vm = BlogPrivacyViewModel(c) { ZoneId.of("Asia/Tokyo") }
         vm.setCommitAsNoReply(true)
-        idleUntil { vm.state.value.message != null }
+        idleUntil { vm.state.value.message != null && vm.state.value.visibility != Visibility.Loading }
         assertEquals(false, vm.state.value.commitAsNoReply)
+        // The rest of the page still loads.
         assertEquals(Visibility.Public, vm.state.value.visibility)
     }
 
