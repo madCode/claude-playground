@@ -6,6 +6,8 @@ import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.core.frontmatter.FrontMatterDocument
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.CachedPost
+import com.app.jekyllposter.core.jekyll.PostPath
+import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.ui.forWriter
@@ -90,6 +92,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 tags = doc.terms("tag", "tags"),
                 editingPath = post.path,
                 baseSha = file.sha,
+                // Updating a Jekyll draft keeps it one; publishing it is a separate choice.
+                destination = if (PostPath(post.path).isDraft) Destination.Drafts else Destination.Posts,
             ),
         )
     }

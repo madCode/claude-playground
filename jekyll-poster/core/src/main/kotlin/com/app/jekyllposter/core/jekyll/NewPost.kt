@@ -16,6 +16,8 @@ object PostWriter {
     /** Jekyll's own timestamp shape, e.g. `2026-10-04 08:15:00 -0700`. */
     private val timestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")
 
+    fun timestamp(at: ZonedDateTime): String = at.format(timestamp)
+
     /**
      * The file for a new post. The date carries the phone's offset, so the post lands on the day
      * the writer sees whatever time zone the site builds in. Without an offset GitHub's build

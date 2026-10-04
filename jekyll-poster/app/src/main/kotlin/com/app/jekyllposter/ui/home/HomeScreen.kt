@@ -139,7 +139,7 @@ fun Draft.status(): Pair<String, Boolean> = when (state) {
     PostState.Draft -> (if (editingPath != null) "Editing · not published yet" else "Draft") to false
     PostState.Queued -> "Waiting to publish…" to false
     PostState.Failed -> "Didn't publish: ${error.orEmpty()}" to true
-    PostState.Published -> when (buildState) {
+    PostState.Published -> if (targetPath?.startsWith("_drafts/") == true) "Saved to the blog's _drafts" to false else when (buildState) {
         BuildState.Building -> "Published · the site is rebuilding…" to false
         BuildState.Live -> "Published · live on the site" to false
         BuildState.Failed -> "Published, but the site build failed. Check Actions on GitHub." to true

@@ -85,6 +85,9 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.jekyllposter.ui.editor.EditorViewModel.TermKind
+import androidx.compose.material.icons.filled.Drafts
+import androidx.compose.material.icons.filled.Public
+import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.ui.home.status
 
@@ -106,13 +109,19 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     val context = LocalContext.current
     // Asked on the first Publish, when "tell you when it's live" makes sense; publishing goes ahead either way.
     val askToNotify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-    val publish = {
+    val askForNotifications = {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
             askToNotify.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
-        viewModel.publish()
+        Unit
+    }
+    val jekyllDraft = text?.editingPath?.contains("_drafts/") == true
+    val send = { destination: Destination ->
+        // Only a post for the site gets a "live" notification.
+        if (destination == Destination.Posts) askForNotifications()
+        viewModel.publish(destination)
     }
     LaunchedEffect(state.photoError) {
         state.photoError?.let { snackbar.showSnackbar(it); viewModel.dismissPhotoError() }
@@ -147,13 +156,35 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                         else Icon(Icons.Default.Visibility, "Preview")
                     }
                     if (editable) {
-                        TextButton(onClick = publish) { Text(if (text?.editingPath != null) "Update" else "Publish") }
+                        TextButton(onClick = { send(if (jekyllDraft) Destination.Drafts else Destination.Posts) }) {
+                            Text(
+                                when {
+                                    jekyllDraft -> "Update draft"
+                                    text?.editingPath != null -> "Update"
+                                    else -> "Publish"
+                                },
+                            )
+                        }
                     }
                     // A queued post may be mid-commit; deleting it then would lose the phone's record
                     // of a post that still goes out.
                     if (state.draft?.state != PostState.Queued) {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More") }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            if (editable && text?.editingPath == null) {
+                                DropdownMenuItem(
+                                    text = { Text("Save to the blog's _drafts") },
+                                    leadingIcon = { Icon(Icons.Default.Drafts, null) },
+                                    onClick = { menu = false; send(Destination.Drafts) },
+                                )
+                            }
+                            if (editable && jekyllDraft) {
+                                DropdownMenuItem(
+                                    text = { Text("Publish to the site") },
+                                    leadingIcon = { Icon(Icons.Default.Public, null) },
+                                    onClick = { menu = false; send(Destination.Posts) },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(deleteLabel(state.draft)) },
                                 leadingIcon = { Icon(Icons.Default.Delete, null) },

@@ -13,6 +13,7 @@ import com.app.jekyllposter.core.blog.SiteIndex
 import com.app.jekyllposter.data.AccountStore
 import com.app.jekyllposter.data.BlogRepository
 import com.app.jekyllposter.data.BuildState
+import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.DraftDao
 import com.app.jekyllposter.data.PostState
@@ -67,24 +68,48 @@ class Publisher(
             val index = blogs.refresh() ?: return Outcome.Retry
             var date: ZonedDateTime?
             val expect: Map<String, String?>
-            val (path, text, message) = if (draft.editingPath != null) {
-                val current = blog.file(draft.editingPath) ?: return fail(draft, "This post isn't on the blog any more.")
+            val removed = mutableListOf<String>()
+            val editing = draft.editingPath
+            val moving = editing != null && PostPath(editing).isDraft && draft.destination == Destination.Posts
+            val (path, text, message) = if (editing != null && !moving) {
+                val current = blog.file(editing) ?: return fail(draft, "This post isn't on the blog any more.")
                 val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), draft.content())
                 val rendered = doc.render()
                 // Checked before the conflict rule: after a crash, the post on GitHub may be this
                 // very edit, which no longer has the sha the writer opened.
-                if (current.text == rendered) return published(draft, draft.editingPath, null, null)
-                if (current.sha != draft.baseSha) {
-                    return fail(draft, "This post changed on GitHub since you opened it. Discard your changes to start again from the new version (copy your text first).")
-                }
+                if (current.text == rendered) return published(draft, editing, null, null)
+                if (current.sha != draft.baseSha) return fail(draft, CHANGED)
                 date = doc.string("date")?.let { parseJekyllDate(it) }
-                    ?: PostPath(draft.editingPath).date?.atStartOfDay(index.config.timezone ?: java.time.ZoneOffset.UTC)
-                expect = mapOf(draft.editingPath to current.sha)
-                Triple(draft.editingPath, rendered, "Update post: ${draft.title}")
+                    ?: PostPath(editing).date?.atStartOfDay(index.config.timezone ?: java.time.ZoneOffset.UTC)
+                expect = mapOf(editing to current.sha)
+                Triple(editing, rendered, "Update ${if (PostPath(editing).isDraft) "draft" else "post"}: ${draft.title}")
+            } else if (moving) {
+                // A Jekyll draft published from the phone: dated, written to _posts, and taken out
+                // of _drafts in the same commit.
+                val current = blog.file(editing!!)
+                if (current == null) {
+                    // Gone from _drafts and already at its new name: an earlier attempt landed.
+                    val target = draft.targetPath
+                    if (target != null && target in index.paths) return published(draft, target, null, null)
+                    return fail(draft, "This draft isn't on the blog any more.")
+                }
+                if (current.sha != draft.baseSha) return fail(draft, CHANGED)
+                val fixed = fixTarget(draft, index.paths)
+                date = ZonedDateTime.parse(fixed.publishDate)
+                val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), draft.content())
+                doc.setRaw("date", PostWriter.timestamp(date))
+                expect = mapOf(editing to current.sha, fixed.targetPath!! to null)
+                removed += editing
+                Triple(fixed.targetPath!!, doc.render(), "Publish draft: ${draft.title}")
             } else {
                 var fixed = fixTarget(draft, index.paths)
                 date = ZonedDateTime.parse(fixed.publishDate)
-                var rendered = PostWriter.newPost(draft.content(), date, index.config).render()
+                fun render(at: ZonedDateTime) = if (draft.destination == Destination.Drafts) {
+                    PostWriter.newDraft(draft.content(), index.config).render()
+                } else {
+                    PostWriter.newPost(draft.content(), at, index.config).render()
+                }
+                var rendered = render(date)
                 val there = if (fixed.targetPath!! in index.paths) blog.read(fixed.targetPath!!) else null
                 if (there == rendered) {
                     val url = postUrl(index, fixed.targetPath!!, date, draft)
@@ -94,10 +119,11 @@ class Publisher(
                     // The name was taken by something else since it was picked: pick again.
                     fixed = fixTarget(fixed.copy(targetPath = null, publishDate = null), index.paths)
                     date = ZonedDateTime.parse(fixed.publishDate)
-                    rendered = PostWriter.newPost(draft.content(), date, index.config).render()
+                    rendered = render(date)
                 }
                 expect = mapOf(fixed.targetPath!! to null)
-                Triple(fixed.targetPath!!, rendered, "Add post: ${draft.title}")
+                val verb = if (draft.destination == Destination.Drafts) "Add draft" else "Add post"
+                Triple(fixed.targetPath!!, rendered, "$verb: ${draft.title}")
             }
             // Photos go in the same commit, so the post never goes live with missing pictures.
             val images = draft.images.filter { Images.isUsed(draft.body, it.sitePath) }.map {
@@ -105,7 +131,7 @@ class Publisher(
                 if (!file.exists()) return fail(draft, "A photo in this post is no longer on the phone. Remove it from the text and try again.")
                 FileChange(it.sitePath.removePrefix("/"), file.readBytes())
             }
-            val sha = blog.commit(message, listOf(FileChange.text(path, text)) + images, expect)
+            val sha = blog.commit(message, listOf(FileChange.text(path, text)) + images + removed.map { FileChange.delete(it) }, expect)
             published(drafts.get(id) ?: draft, path, sha, date?.let { postUrl(index, path, it, draft) })
         } catch (e: GitHubException) {
             when {
@@ -134,7 +160,12 @@ class Publisher(
             latest.copy(
                 state = PostState.Published, targetPath = path, commitSha = sha ?: latest.commitSha,
                 postUrl = url ?: latest.postUrl,
-                buildState = if (sha != null) BuildState.Building else latest.buildState ?: BuildState.Unknown,
+                // A Jekyll draft isn't built into the site, so there's nothing to watch for it.
+                buildState = when {
+                    PostPath(path).isDraft -> null
+                    sha != null -> BuildState.Building
+                    else -> latest.buildState ?: BuildState.Unknown
+                },
                 error = null, updatedAt = System.currentTimeMillis(),
             ),
         )
@@ -147,9 +178,12 @@ class Publisher(
         if (draft.targetPath != null && draft.publishDate != null) return draft
         val date = now()
         val slug = Slug.of(draft.title).ifEmpty { "post" }
-        var path = PostPath.newPost(date.toLocalDate(), slug).path
+        // A new Jekyll draft goes to _drafts, undated; a post, or a draft being published, to _posts.
+        val toDrafts = draft.destination == Destination.Drafts && draft.editingPath == null
+        fun at(s: String) = if (toDrafts) PostPath.newDraft(s).path else PostPath.newPost(date.toLocalDate(), s).path
+        var path = at(slug)
         var n = 2
-        while (path in existing) path = PostPath.newPost(date.toLocalDate(), "$slug-${n++}").path
+        while (path in existing) path = at("$slug-${n++}")
         val fixed = draft.copy(targetPath = path, publishDate = date.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
         drafts.update(fixed)
         return fixed
@@ -160,6 +194,8 @@ class Publisher(
         return Outcome.Failed(message)
     }
 }
+
+private const val CHANGED = "This post changed on GitHub since you opened it. Discard your changes to start again from the new version (copy your text first)."
 
 /** A front matter date as Jekyll writes them, `2025-03-02 18:05:00 -0800`, or a bare day. */
 internal fun parseJekyllDate(value: String): ZonedDateTime? {

@@ -4,6 +4,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.BuildState
+import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.DraftImage
 import com.app.jekyllposter.data.PostState
@@ -113,6 +114,51 @@ class PublisherTest {
         publisher.publish(id)
         // The sample blog's permalink is /:categories/:year/:month/:day/:title/ in Los Angeles time.
         assertEquals("https://sample.github.io/sample-blog/writing/2026/10/04/bus-notes/", c.drafts.get(id)!!.postUrl)
+    }
+
+    @Test fun savingToTheBlogsDraftsWritesAnUndatedJekyllDraft() = runBlocking {
+        val id = queue(Draft(title = "Half an idea", body = "To finish on the laptop.", destination = Destination.Drafts))
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertEquals("---\ntitle: Half an idea\n---\n\nTo finish on the laptop.\n", github.text("_drafts/half-an-idea.md"))
+        assertEquals("Add draft: Half an idea", github.commits.getValue(github.head).message)
+        val draft = c.drafts.get(id)!!
+        assertEquals(null, draft.buildState)
+        assertEquals(null, draft.postUrl)
+    }
+
+    @Test fun publishingAJekyllDraftMovesItToPostsInOneCommit() = runBlocking {
+        c.blogs.refresh()
+        val path = "_drafts/garden-plans.md"
+        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        val id = queue(
+            Draft(
+                title = "Garden plans", body = "Tomatoes along the fence, beans by the shed.", categories = listOf("garden"),
+                editingPath = path, baseSha = sha, destination = Destination.Posts,
+            ),
+        )
+        val before = github.head
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertEquals(null, github.text(path))
+        assertEquals(
+            "---\ntitle: Garden plans\ncategories: [garden]\ndate: 2026-10-04 22:15:00 -0700\n---\n\nTomatoes along the fence, beans by the shed.\n",
+            github.text("_posts/2026-10-04-garden-plans.md"),
+        )
+        assertEquals(before, github.commits.getValue(github.head).parent)
+        assertEquals("Publish draft: Garden plans", github.commits.getValue(github.head).message)
+        // As if the app died before recording it: the retry finds the move done.
+        c.drafts.update(c.drafts.get(id)!!.copy(state = PostState.Queued))
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertEquals(PostState.Published, c.drafts.get(id)!!.state)
+    }
+
+    @Test fun updatingAJekyllDraftKeepsItADraft() = runBlocking {
+        c.blogs.refresh()
+        val path = "_drafts/garden-plans.md"
+        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        val id = queue(Draft(title = "Garden plans", body = "More.", categories = listOf("garden"), editingPath = path, baseSha = sha, destination = Destination.Drafts))
+        publisher.publish(id)
+        assertEquals("---\ntitle: Garden plans\ncategories: [garden]\n---\n\nMore.\n", github.text(path))
+        assertEquals("Update draft: Garden plans", github.commits.getValue(github.head).message)
     }
 
     @Test fun aRetryAfterTheCommitLandedDoesNotPostTwice() = runBlocking {

@@ -30,6 +30,12 @@ enum class PostState {
     Failed,
 }
 
+/**
+ * Where publishing puts a post: `_posts`, live on the site, or the blog's `_drafts`, which
+ * Jekyll doesn't publish, for finishing on a laptop. Publishing a Jekyll draft to [Posts] moves it.
+ */
+enum class Destination { Posts, Drafts }
+
 /** Whether GitHub Pages has built the commit that carried a post. */
 enum class BuildState { Building, Live, Failed, Unknown }
 
@@ -52,6 +58,7 @@ data class Draft(
     val editingPath: String? = null,
     val baseSha: String? = null,
     val state: PostState = PostState.Draft,
+    val destination: Destination = Destination.Posts,
     /**
      * Where the post is being written, fixed when it's queued, with its date. A retry after a
      * crash then writes the same file, and finds it already there instead of posting twice.
@@ -143,6 +150,8 @@ interface PostDao {
 }
 
 class Converters {
+    @TypeConverter fun fromDestination(d: Destination): String = d.name
+    @TypeConverter fun toDestination(s: String): Destination = Destination.valueOf(s)
     @TypeConverter fun fromList(list: List<String>): String = Json.encodeToString(list)
     @TypeConverter fun toList(json: String): List<String> = Json.decodeFromString(json)
     @TypeConverter fun fromImages(list: List<DraftImage>): String = Json.encodeToString(list)

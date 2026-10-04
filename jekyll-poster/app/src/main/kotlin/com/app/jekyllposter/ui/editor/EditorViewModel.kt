@@ -6,6 +6,7 @@ import com.app.jekyllposter.AppContainer
 import android.net.Uri
 import com.app.jekyllposter.core.jekyll.Images
 import com.app.jekyllposter.core.jekyll.Preview
+import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.DraftImage
 import java.io.File
 import java.time.LocalDateTime
@@ -176,7 +177,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         container.drafts.update(stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, updatedAt = System.currentTimeMillis()))
     }
 
-    fun publish() {
+    /** Sends the post to [destination]: the site's `_posts`, or the blog's `_drafts`. */
+    fun publish(destination: Destination? = null) {
         viewModelScope.launch {
             saveJob?.cancel()
             save()
@@ -189,6 +191,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             container.drafts.update(
                 draft.copy(
                     state = PostState.Queued, error = null, updatedAt = System.currentTimeMillis(),
+                    destination = destination ?: draft.destination,
                     blog = draft.blog ?: container.accounts.current()?.blogKey,
                     // A failed post sent again later gets a fresh name and date: the old ones may
                     // be days stale, or taken by now.

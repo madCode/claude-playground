@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "b7204c29fea6fb741cb25979cec5d63d",
+    "identityHash": "7f662b2f36fc4d592781699b65d36bd6",
     "entities": [
       {
         "tableName": "drafts",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `blog` TEXT, `title` TEXT NOT NULL, `body` TEXT NOT NULL, `categories` TEXT NOT NULL, `tags` TEXT NOT NULL, `images` TEXT NOT NULL, `editingPath` TEXT, `baseSha` TEXT, `state` TEXT NOT NULL, `targetPath` TEXT, `publishDate` TEXT, `commitSha` TEXT, `postUrl` TEXT, `buildState` TEXT, `error` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `blog` TEXT, `title` TEXT NOT NULL, `body` TEXT NOT NULL, `categories` TEXT NOT NULL, `tags` TEXT NOT NULL, `images` TEXT NOT NULL, `editingPath` TEXT, `baseSha` TEXT, `state` TEXT NOT NULL, `destination` TEXT NOT NULL, `targetPath` TEXT, `publishDate` TEXT, `commitSha` TEXT, `postUrl` TEXT, `buildState` TEXT, `error` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -62,6 +62,12 @@
           {
             "fieldPath": "state",
             "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "destination",
+            "columnName": "destination",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -171,7 +177,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b7204c29fea6fb741cb25979cec5d63d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7f662b2f36fc4d592781699b65d36bd6')"
     ]
   }
 }
