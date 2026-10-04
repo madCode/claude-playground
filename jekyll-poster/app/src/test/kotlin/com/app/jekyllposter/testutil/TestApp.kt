@@ -37,6 +37,9 @@ class TestApp : PosterApp() {
             accountData = PreferenceDataStoreFactory.create {
                 java.io.File.createTempFile("account", ".preferences_pb").also { it.delete(); it.deleteOnExit() }
             },
+            settingsData = PreferenceDataStoreFactory.create {
+                java.io.File.createTempFile("settings", ".preferences_pb").also { it.delete(); it.deleteOnExit() }
+            },
             // A file, as in the app: an in-memory database has a single connection, and a write
             // can then wait behind the screens' live queries in ways the app never sees.
             database = Room.databaseBuilder(this, PosterDatabase::class.java, "test-${System.nanoTime()}.db")

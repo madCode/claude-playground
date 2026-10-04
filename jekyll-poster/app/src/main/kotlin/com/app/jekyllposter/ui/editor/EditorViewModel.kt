@@ -117,6 +117,9 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
 
     fun togglePreview() = flags.update { it.copy(previewing = !it.previewing) }
 
+    /** What the preview loads, fetched without the WebView's telling user agent. */
+    val previewFetcher get() = container.previewFetcher
+
     /** The post as a page, with site images loaded from the live site (or GitHub, before Pages has one). */
     suspend fun previewHtml(dark: Boolean): String = withContext(Dispatchers.IO) { buildPreview(dark) }
 
@@ -147,7 +150,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 val prepared = container.images.import(uri)
                 val draft = text ?: return@launch
                 val taken = draft.images.map { it.sitePath }.toSet() + container.blogs.paths
-                val sitePath = Images.sitePath(container.blogs.imageFolder.value, LocalDateTime.now(), prepared.extension, taken)
+                // A placeholder name until publishing names it after the post.
+                val sitePath = Images.sitePath(container.blogs.imageFolder.value, LocalDateTime.now().year, "photo", prepared.extension, taken)
                 val link = Images.markdown(sitePath, "")
                 // At the cursor, on a paragraph of its own; the image list first, so the text never
                 // links to a photo the draft doesn't know.

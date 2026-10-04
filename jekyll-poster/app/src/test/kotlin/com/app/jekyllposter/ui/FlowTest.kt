@@ -193,6 +193,23 @@ class FlowTest {
         compose.waitUntil(5_000) { compose.onAllNodes(hasContentDescription("Remove puddles")).fetchSemanticsNodes().isNotEmpty() }
     }
 
+    @Test fun aSharedLinkLosesItsTrackingCodesUnlessTheWriterKeepsThem() {
+        signIn()
+        val link = "[A good read](https://example.com/read?id=7&utm_source=share&fbclid=abc)\n"
+        compose.setContent { PosterTheme { PosterNavHost(app.container, com.app.jekyllposter.Shared(link, emptyList())) } }
+        compose.waitForTag("title")
+        assertEquals("[A good read](https://example.com/read?id=7)\n", runBlocking { app.container.drafts.list() }.single().body)
+    }
+
+    @Test fun aWriterWhoKeepsTrackingCodesGetsTheLinkAsShared() {
+        signIn()
+        runBlocking { app.container.settings.setKeepTrackingCodes(true) }
+        val link = "https://example.com/read?utm_source=share"
+        compose.setContent { PosterTheme { PosterNavHost(app.container, com.app.jekyllposter.Shared(link, emptyList())) } }
+        compose.waitForTag("title")
+        assertEquals(link, runBlocking { app.container.drafts.list() }.single().body)
+    }
+
     @Test fun aDraftIsKeptOnTheList() {
         signIn()
         start()

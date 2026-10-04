@@ -1,6 +1,7 @@
 package com.app.jekyllposter.core.jekyll
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -37,16 +38,14 @@ class PreviewTest {
 }
 
 class ImagesTest {
-    private val at = java.time.LocalDateTime.of(2026, 10, 4, 22, 15, 0)
 
-    @Test fun pathsSitBesideTheBlogsImagesAndAvoidTakenOnes() {
-        assertEquals("/assets/images/2026/20261004-221500.jpg", Images.sitePath("assets/images", at, "jpg", emptySet()))
-        assertEquals(
-            "/img/2026/20261004-221500-2.png",
-            Images.sitePath("/img/", at, "png", setOf("img/2026/20261004-221500.png")),
-        )
+    @Test fun pathsSitBesideTheBlogsImagesNamedForThePostAndAvoidTakenOnes() {
+        assertEquals("/assets/images/2026/a-walk.jpg", Images.sitePath("assets/images", 2026, "a-walk", "jpg", emptySet()))
+        assertEquals("/img/2026/a-walk-2.png", Images.sitePath("/img/", 2026, "a-walk", "png", setOf("img/2026/a-walk.png")))
+        assertTrue(Images.isNamedFor("/img/2026/a-walk-2.png", "/img/", "a-walk"))
+        assertFalse(Images.isNamedFor("/img/2026/a-walking-tour.png", "/img/", "a-walk"))
+        assertFalse(Images.isNamedFor("/img/2026/photo.png", "/img/", "a-walk"))
     }
-
     @Test fun markdownGoesThroughRelativeUrlAndPreviewResolvesIt() {
         val md = Images.markdown("/assets/images/2026/a.jpg", "A [loaf]")
         assertEquals("![A \\[loaf\\]]({{ '/assets/images/2026/a.jpg' | relative_url }})", md)

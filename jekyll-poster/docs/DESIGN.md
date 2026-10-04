@@ -60,8 +60,10 @@ doesn't want to open a laptop and make a commit for every post.
   styles undo themselves when pressed again.
 - **Preview** shows the post as a page: Markdown with tables and strikethrough, `relative_url`
   and `site.baseurl` resolved, site images from the live site, new photos from the phone. Other
-  Liquid shows as written. No scripts run.
-- Sharing text, a link or photos to the app starts a post with them.
+  Liquid shows as written. No scripts run. Images are fetched by the app, not the web view, so
+  sites see no phone model or Android version.
+- Sharing text, a link or photos to the app starts a post with them. Shared links lose their
+  tracking codes (`utm_…`, `fbclid`, YouTube's `si`, …) unless Settings says to keep them.
 - Long-pressing the app's icon offers **New post**, straight into the editor.
 - A share starts one post: going back from it returns to the list.
 - A new post with nothing in it is dropped when you leave it. One left when the app closed under
@@ -78,8 +80,9 @@ doesn't want to open a laptop and make a commit for every post.
   original, location included, doesn't stay on the phone either.
 - GIFs keep their frames and loop but lose comment and application blocks, where XMP (and a
   location) can hide. GIFs over 10 MB are refused.
-- Named by when they were added, beside the blog's images:
-  `/assets/images/2026/20261004-221500.jpg`. Linked with `relative_url`, so project sites work.
+- Named for the post when it's published, beside the blog's images:
+  `/assets/images/2026/a-walk-to-the-lighthouse.jpg`, then `-2`. Never a time. Linked with
+  `relative_url`, so project sites work.
 - Uploaded in the post's commit if the text still links to them; never over a file already on
   the blog (a taken name is renamed, in the text too). Deleted from the phone once uploaded, or
   with their draft.
@@ -101,8 +104,10 @@ doesn't want to open a laptop and make a commit for every post.
 - Publish queues the post. It goes when there's a connection, one post at a time, retrying if
   GitHub can't be reached or a connection drops mid-way.
 - The first Publish asks to send notifications; publishing goes ahead either way.
-- A new post becomes `_posts/<date>-<slug>.md`, its date with the phone's offset
-  (`2026-10-04 22:15:00 -0700`) so the site builds it on the day the writer meant.
+- A new post becomes `_posts/<date>-<slug>.md`, dated in the site's `timezone` when
+  `_config.yml` sets one (`2026-10-04 22:15:00 -0700`): the same day Jekyll will give it, and no
+  hint of where the writer is. Without one, the phone's offset, so the site builds it on the day
+  the writer meant.
   `layout: post` is added only when `_config.yml` doesn't default posts to a layout.
 - The name avoids files already on the branch (`-2`) and existing posts' addresses: under
   `/:title/`, two posts of the same title would overwrite each other.
@@ -142,12 +147,14 @@ doesn't want to open a laptop and make a commit for every post.
 ## The blog's _drafts
 
 - **Save to the blog's _drafts** (the editor's menu) commits a new post to `_drafts/<slug>.md`,
-  undated, to finish on a laptop. Jekyll doesn't publish drafts.
+  undated, to finish on a laptop. Jekyll doesn't publish drafts, but a public repository is
+  readable by anyone on GitHub, and the menu says so.
 - Opening a Jekyll draft: **Update draft** keeps it in `_drafts`; **Publish to the site** moves
   it to `_posts/<date>-<slug>.md` with a date, in one commit.
 
 ## Settings
 
+- **Keep tracking codes in shared links**, off by default.
 - The blog (repository and branch) and the site's address.
 - **Switch blog** lists the repositories the current sign-in can write to.
 - **Sign out** keeps drafts on the phone for when that blog is signed in again.

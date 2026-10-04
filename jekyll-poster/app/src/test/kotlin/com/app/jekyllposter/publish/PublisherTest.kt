@@ -55,6 +55,16 @@ class PublisherTest {
         assertTrue(c.database.posts().snapshot().any { it.path == "_posts/2026-10-04-late-night-notes.md" })
     }
 
+    @Test fun aPostWrittenAbroadIsDatedInTheSitesTimeZoneNotThePhones() = runBlocking {
+        // Tokyo, Monday morning: Sunday evening at the site, in Los Angeles.
+        val tokyo = evening.withZoneSameInstant(ZoneId.of("Asia/Tokyo"))
+        val abroad = Publisher(c.drafts, c.accounts, c.blogs) { tokyo }
+        val id = queue(Draft(title = "From abroad", body = "Hello."))
+        assertEquals(Publisher.Outcome.Done, abroad.publish(id))
+        val text = github.text("_posts/2026-10-04-from-abroad.md")!!
+        assertTrue(text, text.contains("date: 2026-10-04 22:15:00 -0700"))
+    }
+
     @Test fun photosTheTextStillUsesGoInThePostsCommit() = runBlocking {
         val kept = java.io.File.createTempFile("kept", ".jpg").apply { writeBytes(byteArrayOf(1, 2, 3)) }
         val dropped = java.io.File.createTempFile("dropped", ".jpg").apply { writeBytes(byteArrayOf(9)) }
@@ -66,8 +76,10 @@ class PublisherTest {
         )
         assertEquals(Publisher.Outcome.Done, publisher.publish(id))
         val files = github.files()
-        assertTrue(files.getValue("assets/images/2026/a.jpg").contentEquals(byteArrayOf(1, 2, 3)))
-        assertTrue("assets/images/2026/b.jpg" !in files)
+        // Named for the post, not for when it was added; the text links the new name.
+        assertTrue(files.getValue("assets/images/2026/lighthouse.jpg").contentEquals(byteArrayOf(1, 2, 3)))
+        assertTrue(github.text("_posts/2026-10-04-lighthouse.md")!!.contains("'/assets/images/2026/lighthouse.jpg'"))
+        assertTrue(files.keys.none { it.startsWith("assets/images/2026/") && it != "assets/images/2026/lighthouse.jpg" })
         // One commit for the post and its photo.
         assertEquals(github.commits.getValue(github.head).parent, github.commits.values.first { it.message == "Initial commit" }.sha)
     }

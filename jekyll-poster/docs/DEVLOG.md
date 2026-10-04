@@ -20,6 +20,20 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Cycle 16: a privacy audit
+- **Asked:** what goes to GitHub besides what's in the post?
+- **Found and fixed:** `_drafts` read as private but a public repository shows it to anyone (the
+  menu says so now); dates carried the phone's offset, so a trip abroad showed (the site's time
+  zone now, when it names one); photo names were the minute they were added (named for the post
+  now); shared links kept tracking codes (stripped, unless a new setting keeps them); the
+  preview's web view sent the phone's model and Android version with every image (the app
+  fetches them now).
+- **Found and left, for the writer:** commits carry the GitHub account's name and email (the
+  account's private-email setting decides which); edits and deletes stay in the repository's
+  history.
+- **Checked:** photos lose EXIF; camera originals never leave the phone; no analytics; the token
+  only goes to api.github.com.
+
 ### Cycle 15: the tag picker, from first use
 - **Reported:** a tag added with the keyboard's checkmark vanished from the sheet (it was on the
   post, out of sight), and the sheet's Done dropped what was typed.
