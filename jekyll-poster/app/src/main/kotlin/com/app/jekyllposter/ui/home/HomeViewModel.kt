@@ -98,13 +98,6 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         )
     }
 
-    fun signOut() {
-        viewModelScope.launch {
-            container.accounts.signOut()
-            container.blogs.clear()
-        }
-    }
-
     /** Published posts stay on the phone's list for a day, so the writer sees them go live. */
     private fun recent(draft: Draft) = System.currentTimeMillis() - draft.updatedAt < 24 * 60 * 60 * 1000L
 }

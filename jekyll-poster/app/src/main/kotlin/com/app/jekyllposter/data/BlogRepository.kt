@@ -33,6 +33,11 @@ class BlogRepository(
     /** The blog's `_config.yml` as last read; defaults until the first read. */
     val config: StateFlow<SiteConfig> = _config
 
+    private val _siteUrl = MutableStateFlow<String?>(null)
+
+    /** The site's address, as last worked out from the blog. */
+    val siteUrl: StateFlow<String?> = _siteUrl
+
     private val _imageFolder = MutableStateFlow("assets/images")
 
     /** Where the blog keeps its images, as last read. */
@@ -53,6 +58,7 @@ class BlogRepository(
         gone.chunked(500).forEach { posts.deletePaths(it) }
         _config.value = index.config
         _imageFolder.value = index.imageFolder
+        _siteUrl.value = index.siteUrl
         paths = index.paths
         return index
     }

@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
@@ -47,7 +47,7 @@ import com.app.jekyllposter.data.PostState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSignedOut: () -> Unit) {
+fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var menu by remember { mutableStateOf(false) }
@@ -68,9 +68,9 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSignedOu
                     IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         DropdownMenuItem(
-                            text = { Text("Sign out") },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, null) },
-                            onClick = { menu = false; viewModel.signOut(); onSignedOut() },
+                            text = { Text("Settings") },
+                            leadingIcon = { Icon(Icons.Default.Settings, null) },
+                            onClick = { menu = false; onSettings() },
                         )
                     }
                 },

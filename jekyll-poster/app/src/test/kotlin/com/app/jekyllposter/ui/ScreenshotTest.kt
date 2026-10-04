@@ -106,7 +106,7 @@ class ScreenshotTest {
         }
         val vm = HomeViewModel(c)
         shoot("03-home", ready = { vm.state.value.onBlog.isNotEmpty() && !vm.state.value.refreshing }) {
-            HomeScreen(vm, onOpenDraft = {}, onSignedOut = {})
+            HomeScreen(vm, onOpenDraft = {}, onSettings = {})
         }
     }
 
@@ -144,6 +144,11 @@ class ScreenshotTest {
         }
         val vm = EditorViewModel(c, id)
         shoot("06-published", ready = { vm.text != null && vm.state.value.draft != null }) { EditorScreen(vm) {} }
+    }
+
+    @Test fun settings() {
+        signIn()
+        shoot("07-settings", ready = { c.blogs.siteUrl.value != null }) { com.app.jekyllposter.ui.settings.SettingsScreen(c, {}, {}, {}) }
     }
 
     @Test fun categoryPicker() {

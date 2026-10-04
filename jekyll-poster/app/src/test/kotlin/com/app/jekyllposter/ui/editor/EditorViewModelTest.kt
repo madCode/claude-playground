@@ -87,6 +87,19 @@ class EditorViewModelTest {
         assertTrue(html.contains("<h1>Loaf</h1>"))
     }
 
+    @Test fun theToolbarFormatsAtTheSelectionAndTheTextIsSaved() {
+        val id = runBlocking { c.drafts.insert(Draft(title = "T", body = "make this bold")) }
+        val editor = EditorViewModel(c, id)
+        idleUntil { editor.text != null && editor.state.value.draft != null }
+        editor.setBody(androidx.compose.ui.text.input.TextFieldValue("make this bold", androidx.compose.ui.text.TextRange(10, 14)))
+        editor.format { com.app.jekyllposter.core.jekyll.MarkdownEdits.wrap(it, "**") }
+        assertEquals("make this **bold**", editor.text!!.body)
+        assertEquals(androidx.compose.ui.text.TextRange(12, 16), editor.bodySelection)
+        editor.close()
+        idleUntil { editor.state.value.closed }
+        assertEquals("make this **bold**", runBlocking { c.drafts.get(id) }!!.body)
+    }
+
     @Test fun anEmptyDraftIsDroppedOnClose() {
         val id = runBlocking { c.drafts.insert(Draft()) }
         val editor = EditorViewModel(c, id)

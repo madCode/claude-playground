@@ -2,6 +2,18 @@ package com.app.jekyllposter.ui.editor
 
 import androidx.activity.compose.BackHandler
 import android.Manifest
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Title
+import androidx.compose.ui.text.input.TextFieldValue
+import com.app.jekyllposter.core.jekyll.Edit
+import com.app.jekyllposter.core.jekyll.MarkdownEdits
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -142,15 +154,6 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                 },
                 navigationIcon = { IconButton(onClick = viewModel::close) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = {
-                    if (editable && !state.previewing) {
-                        if (state.addingPhoto) {
-                            CircularProgressIndicator(Modifier.padding(12.dp).size(24.dp), strokeWidth = 2.dp)
-                        } else {
-                            IconButton(onClick = { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
-                                Icon(Icons.Default.AddPhotoAlternate, "Add a photo")
-                            }
-                        }
-                    }
                     IconButton(onClick = viewModel::togglePreview) {
                         if (state.previewing) Icon(Icons.Default.EditNote, "Back to writing")
                         else Icon(Icons.Default.Visibility, "Preview")
@@ -196,13 +199,22 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
+        bottomBar = {
+            if (editable && !state.previewing && text != null) {
+                FormatBar(
+                    addingPhoto = state.addingPhoto,
+                    onFormat = viewModel::format,
+                    onPhoto = { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                )
+            }
+        },
     ) { padding ->
         if (text == null) return@Scaffold
         if (state.previewing) {
             PostPreview(viewModel, Modifier.padding(padding).fillMaxSize())
             return@Scaffold
         }
-        Column(Modifier.padding(padding).fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
+        Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
             state.draft?.takeIf { !editable || it.error != null }?.let { draft ->
                 val (label, isError) = draft.status()
                 val uri = LocalUriHandler.current
@@ -231,8 +243,8 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
             TermRow("Tags", text.tags, editable, onAdd = { picker = TermKind.Tag }, onRemove = { viewModel.remove(TermKind.Tag, it) })
             HorizontalDivider(Modifier.padding(horizontal = 16.dp))
             TextField(
-                value = text.body,
-                onValueChange = viewModel::setBody,
+                value = TextFieldValue(text.body, viewModel.bodySelection),
+                onValueChange = { viewModel.setBody(it) },
                 placeholder = { Text("Write in Markdown…") },
                 readOnly = !editable,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -262,6 +274,27 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
             confirmButton = { TextButton(onClick = { confirmDelete = false; viewModel.delete() }) { Text(if (published) "Remove" else if (text?.editingPath != null) "Discard" else "Delete") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Keep") } },
         )
+    }
+}
+
+/** Markdown at the cursor, above the keyboard. Each button undoes itself when pressed again. */
+@Composable
+private fun FormatBar(addingPhoto: Boolean, onFormat: ((Edit) -> Edit) -> Unit, onPhoto: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding()) {
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
+            IconButton(onClick = { onFormat { MarkdownEdits.wrap(it, "**") } }) { Icon(Icons.Default.FormatBold, "Bold") }
+            IconButton(onClick = { onFormat { MarkdownEdits.wrap(it, "_") } }) { Icon(Icons.Default.FormatItalic, "Italic") }
+            IconButton(onClick = { onFormat(MarkdownEdits::link) }) { Icon(Icons.Default.Link, "Link") }
+            IconButton(onClick = { onFormat { MarkdownEdits.linePrefix(it, "## ") } }) { Icon(Icons.Default.Title, "Heading") }
+            IconButton(onClick = { onFormat { MarkdownEdits.linePrefix(it, "- ") } }) { Icon(Icons.AutoMirrored.Filled.FormatListBulleted, "List") }
+            IconButton(onClick = { onFormat { MarkdownEdits.linePrefix(it, "> ") } }) { Icon(Icons.Default.FormatQuote, "Quote") }
+            IconButton(onClick = { onFormat { MarkdownEdits.wrap(it, "`") } }) { Icon(Icons.Default.Code, "Code") }
+            if (addingPhoto) {
+                CircularProgressIndicator(Modifier.padding(12.dp).size(24.dp).semantics { contentDescription = "Adding the photo" }, strokeWidth = 2.dp)
+            } else {
+                IconButton(onClick = onPhoto) { Icon(Icons.Default.AddPhotoAlternate, "Add a photo") }
+            }
+        }
     }
 }
 

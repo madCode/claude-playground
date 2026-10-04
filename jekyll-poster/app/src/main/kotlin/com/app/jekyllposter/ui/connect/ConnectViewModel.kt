@@ -92,6 +92,22 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
 
     fun back() = _state.update { it.copy(repos = null, error = null) }
 
+    /** Lists the blogs the current sign-in can write to, to switch to another. */
+    fun switchBlog() {
+        _state.update { it.copy(busy = true, error = null, repos = emptyList()) }
+        viewModelScope.launch {
+            val account = container.accounts.current() ?: return@launch _state.update { it.copy(busy = false, repos = null) }
+            if (account.refreshToken != null) {
+                deviceTokens = DeviceFlow.Tokens(account.token, account.expiresAt?.let { (it - System.currentTimeMillis()) / 1000 }, account.refreshToken)
+            }
+            try {
+                listRepos(account.token)
+            } catch (e: Exception) {
+                _state.update { it.copy(busy = false, repos = null, token = account.token, error = e.forWriter()) }
+            }
+        }
+    }
+
     fun choose(repo: GitHubRepo) {
         val s = _state.value
         val login = s.login ?: return

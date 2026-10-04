@@ -19,6 +19,8 @@ import com.app.jekyllposter.ui.editor.EditorScreen
 import com.app.jekyllposter.ui.editor.EditorViewModel
 import com.app.jekyllposter.ui.home.HomeScreen
 import com.app.jekyllposter.ui.home.HomeViewModel
+import com.app.jekyllposter.ui.settings.SettingsScreen
+import kotlinx.coroutines.launch
 
 private object Loading
 
@@ -32,8 +34,30 @@ fun PosterNavHost(container: AppContainer, sharedText: String? = null) {
     NavHost(nav, startDestination = if (signedIn == true) "home" else "connect") {
         composable("connect") {
             ConnectScreen(viewModel { ConnectViewModel(container) }) {
-                nav.navigate("home") { popUpTo("connect") { inclusive = true } }
+                nav.navigate("home") { popUpTo(0) { inclusive = true } }
             }
+        }
+        composable("switch") {
+            // Straight to the blog list, with the sign-in already in hand.
+            ConnectScreen(viewModel { ConnectViewModel(container).also { it.switchBlog() } }) {
+                nav.navigate("home") { popUpTo(0) { inclusive = true } }
+            }
+        }
+        composable("settings") {
+            SettingsScreen(
+                container,
+                onBack = { nav.popBackStack() },
+                onSwitchBlog = { nav.navigate("switch") },
+                onSignOut = {
+                    // Navigation first, here on the main thread; the sign-out finishes behind it, in
+                    // a scope that outlives this screen.
+                    nav.navigate("connect") { popUpTo(0) { inclusive = true } }
+                    container.appScope.launch {
+                        container.accounts.signOut()
+                        container.blogs.clear()
+                    }
+                },
+            )
         }
         composable("home") {
             val vm = viewModel { HomeViewModel(container) }
@@ -43,7 +67,7 @@ fun PosterNavHost(container: AppContainer, sharedText: String? = null) {
             HomeScreen(
                 vm,
                 onOpenDraft = { nav.navigate("editor/$it") },
-                onSignedOut = { nav.navigate("connect") { popUpTo("home") { inclusive = true } } },
+                onSettings = { nav.navigate("settings") },
             )
         }
         composable("editor/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->

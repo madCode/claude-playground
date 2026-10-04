@@ -4,7 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.jekyllposter.AppContainer
 import android.net.Uri
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import com.app.jekyllposter.core.jekyll.Edit
 import com.app.jekyllposter.core.jekyll.Images
+import com.app.jekyllposter.core.jekyll.MarkdownEdits
 import com.app.jekyllposter.core.jekyll.Preview
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.DraftImage
@@ -121,10 +125,10 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 val taken = draft.images.map { it.sitePath }.toSet() + container.blogs.paths
                 val sitePath = Images.sitePath(container.blogs.imageFolder.value, LocalDateTime.now(), prepared.extension, taken)
                 val link = Images.markdown(sitePath, "")
-                edit {
-                    val body = if (it.body.isBlank()) link else it.body.trimEnd() + "\n\n" + link
-                    it.copy(body = body + "\n", images = it.images + DraftImage(sitePath, prepared.file.path))
-                }
+                // At the cursor, on a paragraph of its own; the image list first, so the text never
+                // links to a photo the draft doesn't know.
+                edit { it.copy(images = it.images + DraftImage(sitePath, prepared.file.path)) }
+                format { MarkdownEdits.insertBlock(it, link) }
             } catch (e: Exception) {
                 flags.update { it.copy(photoError = "Couldn't add that photo: ${e.message ?: "it couldn't be read"}") }
             } finally {
@@ -139,7 +143,25 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     fun dismissPhotoError() = flags.update { it.copy(photoError = null) }
 
     fun setTitle(title: String) = edit { it.copy(title = title) }
-    fun setBody(body: String) = edit { it.copy(body = body) }
+    /** Where the cursor is in the body, for the toolbar and for placing photos. */
+    var bodySelection by mutableStateOf(TextRange(0))
+        private set
+
+    fun setBody(value: TextFieldValue) {
+        bodySelection = value.selection
+        if (value.text != text?.body) edit { it.copy(body = value.text) }
+    }
+
+    fun setBody(body: String) = setBody(TextFieldValue(body, TextRange(body.length)))
+
+    /** Applies a toolbar button to the body at the cursor or selection. */
+    fun format(change: (Edit) -> Edit) {
+        val body = text?.body ?: return
+        val sel = bodySelection
+        val result = change(Edit(body, sel.min.coerceIn(0, body.length), sel.max.coerceIn(0, body.length)))
+        bodySelection = TextRange(result.start, result.end)
+        edit { it.copy(body = result.text) }
+    }
 
     fun add(kind: TermKind, term: String) {
         val clean = term.trim().trimStart('#')

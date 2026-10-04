@@ -133,11 +133,25 @@ class FlowTest {
         compose.waitFor("GitHub didn't accept that token. Check it was copied whole and hasn't expired.")
     }
 
+    @Test fun switchingBlogListsTheSignInsRepositories() {
+        signIn()
+        start()
+        compose.waitFor("Your blog")
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Settings").performClick()
+        compose.waitFor("Switch blog")
+        compose.onNodeWithText("Switch blog").performClick()
+        compose.waitFor("Which blog?")
+        compose.waitFor("sample/sample-blog")
+    }
+
     @Test fun signingOutReturnsToConnect() {
         signIn()
         start()
         compose.waitFor("Your blog")
         compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Settings").performClick()
+        compose.waitFor("sample/sample-blog")
         compose.onNodeWithText("Sign out").performClick()
         compose.waitFor("Connect with a token")
     }
