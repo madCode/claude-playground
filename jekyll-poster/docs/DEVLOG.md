@@ -19,6 +19,16 @@ Times are when each cycle landed, Pacific.
 
 ## Night 1 · Sun 4 Oct
 
+### Cycle 10: delete a post from the blog
+- **Shipped:** Delete from the blog, in the editor's menu: asks first, one commit, only the
+  version that was opened. Photos stay; the history keeps the text.
+- **Its review found** (all fixed, with tests): an autosave mid-write could undo the queued
+  delete; a post moved elsewhere (a draft published from the laptop) was taken as deleted; an
+  earlier update's build watch could call the deleted post live; the refused-delete message sent
+  the writer back to the same stale copy.
+- **The second look found** (fixed): the cleanup matched the wrong column; sending a delete
+  again dropped the marker that recognises a commit that landed unheard.
+
 ### Cycle 9: a documentation pass (landed 03:20)
 - Design rewritten as the app is now (four design rounds, photos and front matter in their own
   sections, the never-twice rules in one place); backlog cut to what's actually next; this
