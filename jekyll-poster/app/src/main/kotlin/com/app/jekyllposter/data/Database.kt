@@ -70,10 +70,11 @@ data class Draft(
     val publishDate: String? = null,
     val commitSha: String? = null,
     /**
-     * The blob sha of the last text sent for a new post. If a commit landed without the app
-     * hearing back, the file at [targetPath] has this sha: it's this post, not someone else's.
+     * The blob shas of every text a commit was attempted with for this post. If one landed
+     * without the app hearing back, the file at [targetPath] has one of them: it's this post,
+     * not someone else's.
      */
-    val sentSha: String? = null,
+    @ColumnInfo(defaultValue = "[]") val sentShas: List<String> = emptyList(),
     /** Where the published post will be on the site. */
     val postUrl: String? = null,
     val buildState: BuildState? = null,
@@ -184,7 +185,7 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         db.execSQL("ALTER TABLE drafts ADD COLUMN images TEXT NOT NULL DEFAULT '[]'")
         db.execSQL("ALTER TABLE drafts ADD COLUMN destination TEXT NOT NULL DEFAULT 'Posts'")
         db.execSQL("ALTER TABLE drafts ADD COLUMN postUrl TEXT")
-        db.execSQL("ALTER TABLE drafts ADD COLUMN sentSha TEXT")
+        db.execSQL("ALTER TABLE drafts ADD COLUMN sentShas TEXT NOT NULL DEFAULT '[]'")
         db.execSQL("DROP TABLE posts")
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS `posts` (`path` TEXT NOT NULL, `sha` TEXT NOT NULL, `title` TEXT NOT NULL, " +

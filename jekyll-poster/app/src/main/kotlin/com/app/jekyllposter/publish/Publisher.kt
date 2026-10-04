@@ -129,18 +129,23 @@ class Publisher(
     private suspend fun planMove(draft: Draft, path: String, index: SiteIndex, blog: Blog): Plan? {
         val current = blog.file(path)
         if (current == null) {
-            // Gone from _drafts and already at its new name: an earlier attempt landed.
-            val target = draft.targetPath
-            if (target != null && target in index.paths) return Plan.Finished(published(draft, target, null, null))
-            return Plan.Finished(fail(draft, "This draft isn't on the blog any more."))
+            // Gone from _drafts. If what's at the new name is what this phone sent, an earlier
+            // attempt landed; otherwise it was published or deleted elsewhere, and the phone's
+            // changes (and photos) are kept for the writer rather than marked done.
+            val target = draft.targetPath?.takeIf { it in index.paths }?.let { blog.file(it) }
+            if (target != null && target.sha in draft.sentShas) return Plan.Finished(published(draft, draft.targetPath!!, null, null))
+            return Plan.Finished(fail(draft, "This draft isn't in _drafts any more: it was published or removed elsewhere. Copy your text to keep it."))
         }
         if (current.sha != draft.baseSha) return Plan.Finished(fail(draft, CHANGED))
         val (ready, photos) = photos(draft, index, ours = emptySet()) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
-        val fixed = fixTarget(ready, index)
+        // A name picked on an earlier attempt and taken since is picked again.
+        val stale = ready.targetPath?.let { it in index.paths } == true
+        val fixed = fixTarget(if (stale) ready.copy(targetPath = null, publishDate = null) else ready, index)
         val date = ZonedDateTime.parse(fixed.publishDate)
         val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content())
         doc.setRaw("date", PostWriter.timestamp(date))
         val target = fixed.targetPath!!
+        drafts.update(fixed.copy(sentShas = (fixed.sentShas + gitBlobSha(doc.render())).distinct()))
         return Plan.Commit(
             fixed, target, "Publish draft: ${ready.title}",
             listOf(FileChange.text(target, doc.render()), FileChange.delete(path)) + photos.changes,
@@ -160,7 +165,7 @@ class Publisher(
         // The file is there but different. If it's what this post last sent, an earlier attempt
         // landed unheard and the writer has edited since: update it. Otherwise the name was taken
         // by something else meanwhile: pick another.
-        val ours = there != null && there.sha == fixed.sentSha
+        val ours = there != null && there.sha in fixed.sentShas
         if (there != null && !ours) {
             fixed = fixTarget(fixed.copy(targetPath = null, publishDate = null), index)
             date = ZonedDateTime.parse(fixed.publishDate)
@@ -170,7 +175,8 @@ class Publisher(
         val (ready, photos) = photos(fixed, index, sent) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
         val target = ready.targetPath!!
         val text = render(ready, date)
-        drafts.update(ready.copy(sentSha = gitBlobSha(text)))
+        // Added before the commit, never replaced: any of them may be the one that landed.
+        drafts.update(ready.copy(sentShas = (ready.sentShas + gitBlobSha(text)).distinct()))
         val verb = when {
             ours -> "Update ${if (toDrafts) "draft" else "post"}"
             toDrafts -> "Add draft"
@@ -193,11 +199,14 @@ class Publisher(
      */
     private suspend fun photos(draft: Draft, index: SiteIndex, ours: Set<String>): Pair<Draft, Photos>? {
         var body = draft.body
+        // Names given out in this pass count as taken, so two renamed photos never share one.
+        val taken = (index.paths + draft.images.map { it.sitePath }).toMutableSet()
         val images = draft.images.map { image ->
             val path = image.sitePath.removePrefix("/")
             if (!Images.isUsed(body, image.sitePath) || path !in index.paths || path in ours) return@map image
             val ext = image.sitePath.substringAfterLast('.')
-            val renamed = Images.sitePath(index.imageFolder, java.time.LocalDateTime.now(), ext, index.paths + draft.images.map { it.sitePath })
+            val renamed = Images.sitePath(index.imageFolder, java.time.LocalDateTime.now(), ext, taken)
+            taken += renamed
             body = body.replace(image.sitePath, renamed)
             image.copy(sitePath = renamed)
         }
@@ -245,10 +254,12 @@ class Publisher(
      * still be another post's URL, and Jekyll would build one over the other.
      */
     private suspend fun fixTarget(draft: Draft, index: SiteIndex): Draft {
-        if (draft.targetPath != null && draft.publishDate != null) return draft
+        val toDrafts = draft.destination == Destination.Drafts && draft.editingPath == null
+        // Kept across attempts, unless the writer has since chosen the other destination.
+        val kept = draft.targetPath?.let { PostPath(it).isDraft == toDrafts } == true
+        if (kept && draft.publishDate != null) return draft
         val date = now()
         val slug = Slug.of(draft.title).ifEmpty { "post" }
-        val toDrafts = draft.destination == Destination.Drafts && draft.editingPath == null
         fun at(s: String) = if (toDrafts) PostPath.newDraft(s).path else PostPath.newPost(date.toLocalDate(), s).path
         val urls = if (toDrafts) emptySet() else index.posts.filterNot { it.path.isDraft }.mapNotNull { post ->
             post.path.date?.let { Permalink.path(index.config, it.atStartOfDay(siteZone(index)), post.path.slug, post.categories) }

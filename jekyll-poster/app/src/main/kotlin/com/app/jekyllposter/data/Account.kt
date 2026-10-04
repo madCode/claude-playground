@@ -48,24 +48,30 @@ class AccountStore(
     private val now: () -> Long = System::currentTimeMillis,
 ) {
     val account: Flow<Account?> = store.data.map { read(it) }
-    private val renewing = Mutex()
+    /**
+     * Held while renewing, saving and signing out, so a renewal that finishes after the writer
+     * signed out or picked another blog can't write the old account back.
+     */
+    private val lock = Mutex()
 
     /**
      * The account, its token renewed first if it expires within five minutes. If renewing fails
      * the old token is returned, and GitHub's answer to it says to sign in again.
      */
-    suspend fun current(): Account? = renewing.withLock {
+    suspend fun current(): Account? = lock.withLock {
         val account = account.first() ?: return null
         val expiresAt = account.expiresAt ?: return account
         val refreshToken = account.refreshToken ?: return account
         if (expiresAt - now() > 5 * 60_000) return account
         val tokens = runCatching { refresh?.invoke(refreshToken) }.getOrNull() ?: return account
         val renewed = account.withTokens(tokens, now())
-        save(renewed)
+        write(renewed)
         renewed
     }
 
-    suspend fun save(account: Account) {
+    suspend fun save(account: Account) = lock.withLock { write(account) }
+
+    private suspend fun write(account: Account) {
         val sealed = Base64.encodeToString(cipher.encrypt(account.token.toByteArray()), Base64.NO_WRAP)
         val sealedRefresh = account.refreshToken?.let { Base64.encodeToString(cipher.encrypt(it.toByteArray()), Base64.NO_WRAP) }
         store.edit {
@@ -80,8 +86,9 @@ class AccountStore(
         }
     }
 
-    suspend fun signOut() {
+    suspend fun signOut() = lock.withLock {
         store.edit { it.clear() }
+        Unit
     }
 
     private fun read(prefs: Preferences): Account? {

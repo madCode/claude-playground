@@ -174,6 +174,53 @@ class PublisherTest {
         assertEquals("Update post: Once only", github.commits.getValue(github.head).message)
     }
 
+    @Test fun aRetryThatSwitchedToDraftsDoesntUseThePostsName() = runBlocking {
+        github.failures["repos/sample/sample-blog/git/refs/heads/main"] = 403
+        val id = queue(Draft(title = "Switch", body = "x"))
+        assertTrue(publisher.publish(id) is Publisher.Outcome.Failed)
+        github.failures.clear()
+        c.drafts.update(c.drafts.get(id)!!.copy(state = PostState.Queued, destination = Destination.Drafts))
+        publisher.publish(id)
+        assertTrue(github.text("_drafts/switch.md") != null)
+        assertTrue(github.files().keys.none { it.startsWith("_posts/") && it.contains("switch") })
+    }
+
+    @Test fun anyTextSentBeforeIsRecognisedNotJustTheLast() = runBlocking {
+        val id = queue(Draft(title = "Twice sent", body = "A"))
+        publisher.publish(id)
+        // B is attempted and lost; then C is sent: the file still holds A, which is this post's.
+        val landed = c.drafts.get(id)!!
+        c.drafts.update(landed.copy(state = PostState.Queued, body = "B", sentShas = landed.sentShas + "b-sha-never-landed"))
+        c.drafts.update(c.drafts.get(id)!!.copy(body = "C"))
+        publisher.publish(id)
+        assertEquals(listOf("_posts/2026-10-04-twice-sent.md"), github.files().keys.filter { it.contains("twice-sent") })
+        assertTrue(github.text("_posts/2026-10-04-twice-sent.md")!!.contains("C"))
+    }
+
+    @Test fun twoRenamedPhotosGetTwoNames() = runBlocking {
+        val a = java.io.File.createTempFile("photo", ".jpg").apply { writeBytes(byteArrayOf(1)) }
+        val b = java.io.File.createTempFile("photo", ".jpg").apply { writeBytes(byteArrayOf(2)) }
+        val pa = "/assets/images/2025/loaf.jpg"
+        val pb = "/assets/images/2025/lighthouse.jpg"
+        val id = queue(Draft(title = "Two", body = "![]({{ '$pa' | relative_url }}) ![]({{ '$pb' | relative_url }})", images = listOf(DraftImage(pa, a.path), DraftImage(pb, b.path))))
+        publisher.publish(id)
+        val links = Regex("""'(/assets/images/2026/[^']+)'""").findAll(github.text("_posts/2026-10-04-two.md")!!).map { it.groupValues[1] }.toList()
+        assertEquals(2, links.distinct().size)
+        assertTrue(github.files().getValue(links[0].removePrefix("/")).contentEquals(byteArrayOf(1)))
+        assertTrue(github.files().getValue(links[1].removePrefix("/")).contentEquals(byteArrayOf(2)))
+    }
+
+    @Test fun aDraftPublishedElsewhereIsNotMistakenForThisPhonesMove() = runBlocking {
+        c.blogs.refresh()
+        val path = "_drafts/garden-plans.md"
+        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        val id = queue(Draft(title = "Garden plans", body = "Phone words", editingPath = path, baseSha = sha, destination = Destination.Posts, targetPath = "_posts/2026-10-04-garden-plans.md", publishDate = "2026-10-04T22:15-07:00"))
+        // Published from a laptop that day, under the same name.
+        github.push("Laptop publish", mapOf(path to null, "_posts/2026-10-04-garden-plans.md" to "---\ntitle: Garden plans\n---\nLaptop words\n"))
+        assertTrue(publisher.publish(id) is Publisher.Outcome.Failed)
+        assertTrue(github.text("_posts/2026-10-04-garden-plans.md")!!.contains("Laptop words"))
+    }
+
     @Test fun aNewPostDoesntTakeAnOlderPostsAddress() = runBlocking {
         // Under a date-free permalink, a free file name can still be another post's URL.
         github.push("Permalinks", mapOf("_config.yml" to "permalink: /:title/\n", "_posts/2020-01-01-weekly-notes.md" to "---\ntitle: Weekly notes\n---\n"))

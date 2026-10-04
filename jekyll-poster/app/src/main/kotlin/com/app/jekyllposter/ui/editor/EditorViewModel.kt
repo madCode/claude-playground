@@ -216,10 +216,10 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 flags.update { it.copy(titleMissing = true) }
                 return@launch
             }
-            // A failed post that never got as far as a commit (nothing sent) gets a fresh name and
-            // date: the old ones may be days stale. One that did send keeps them, so a commit
-            // that landed unheard is recognised rather than published twice.
-            val again = draft.state == PostState.Failed && draft.editingPath == null && draft.sentSha == null
+            // A failed post that never attempted a commit gets a fresh name and date: the old ones
+            // may be days stale. One that did keeps them, so a commit that landed unheard is
+            // recognised rather than published twice.
+            val again = draft.state == PostState.Failed && draft.editingPath == null && draft.sentShas.isEmpty()
             container.drafts.update(
                 draft.copy(
                     state = PostState.Queued, error = null, updatedAt = System.currentTimeMillis(),

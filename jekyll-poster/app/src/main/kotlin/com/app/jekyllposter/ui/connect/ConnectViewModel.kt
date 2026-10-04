@@ -29,8 +29,9 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
 
     val signInWithGitHubAvailable: Boolean get() = container.deviceFlow != null
 
-    /** Tokens from "Sign in with GitHub", kept until a blog is picked. */
+    /** Tokens from "Sign in with GitHub", kept until a blog is picked, and when they arrived. */
     private var deviceTokens: DeviceFlow.Tokens? = null
+    private var tokensAt = 0L
     private var waiting: Job? = null
 
     private val _state = MutableStateFlow(State())
@@ -47,6 +48,7 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
                 _state.update { it.copy(busy = false, deviceCode = code) }
                 val tokens = flow.await(code)
                 deviceTokens = tokens
+                tokensAt = System.currentTimeMillis()
                 _state.update { it.copy(deviceCode = null, busy = true) }
                 listRepos(tokens.accessToken)
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -99,6 +101,7 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
             val account = container.accounts.current() ?: return@launch _state.update { it.copy(busy = false, repos = null) }
             if (account.refreshToken != null) {
                 deviceTokens = DeviceFlow.Tokens(account.token, account.expiresAt?.let { (it - System.currentTimeMillis()) / 1000 }, account.refreshToken)
+                tokensAt = System.currentTimeMillis()
             }
             try {
                 listRepos(account.token)
@@ -117,7 +120,8 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
             val siteUrl = runCatching { client.pages(repo.owner.login, repo.name)?.htmlUrl }.getOrNull()
             container.blogs.clear()
             val account = Account(login, s.token.trim(), repo.owner.login, repo.name, repo.defaultBranch, siteUrl)
-            container.accounts.save(deviceTokens?.let { account.withTokens(it, System.currentTimeMillis()) } ?: account)
+            // Expiry counts from when the token arrived, not from when a blog was picked.
+            container.accounts.save(deviceTokens?.let { account.withTokens(it, tokensAt) } ?: account)
             // A first read fills the category picker; if it fails, Home tries again.
             runCatching { container.blogs.refresh() }
             _state.update { it.copy(busy = false, done = true) }

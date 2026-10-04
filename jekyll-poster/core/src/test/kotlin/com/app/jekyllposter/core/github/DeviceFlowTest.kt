@@ -39,10 +39,22 @@ class DeviceFlowTest {
         assertTrue(poll.contains("grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code"))
     }
 
+    @Test fun aDroppedPollWhileTheWriterIsOnGitHubIsRetried() = runTest {
+        val code = DeviceFlow.Code("dc", "X", "u", 900, 1)
+        server.enqueue(MockResponse.Builder().code(502).build())
+        reply("""{"access_token":"ghu_x"}""")
+        assertEquals("ghu_x", flow.await(code) {}.accessToken)
+    }
+
+    @Test fun anAppWithoutTheDeviceFlowSaysWhatToTurnOn() = runTest {
+        reply("""{"error":"device_flow_disabled"}""")
+        try { flow.start(); fail() } catch (e: GitHubException) { assertTrue(e.message!!.contains("Device Flow")) }
+    }
+
     @Test fun aDeniedOrExpiredCodeSaysSo() = runTest {
         val code = DeviceFlow.Code("dc", "X", "u", 900, 1)
         reply("""{"error":"access_denied"}""")
-        try { flow.await(code) {}; fail() } catch (e: GitHubException) { assertEquals(GitHubException.Kind.Unauthorized, e.kind) }
+        try { flow.await(code) {}; fail() } catch (e: GitHubException) { assertTrue(e.message!!.contains("cancelled")) }
         reply("""{"error":"expired_token"}""")
         try { flow.await(code) {}; fail() } catch (e: GitHubException) { assertTrue(e.message!!.contains("expired")) }
     }

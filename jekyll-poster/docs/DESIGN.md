@@ -37,10 +37,12 @@ doesn't want to open a laptop and make a commit for every post.
   typed in as new ones.
 - A new post with nothing written is dropped when you leave it.
 - Sharing text or a link to the app starts a post with it.
+- A **toolbar** above the keyboard: bold, italic, link (a selected URL becomes the address),
+  heading, list, quote and code. Pressing a button again undoes it.
 - **Preview** shows the post as a page: Markdown (with tables and strikethrough), the
   `relative_url` and `site.baseurl` links resolved, site images loaded from the live site, and
   photos not yet uploaded shown from the phone. Other Liquid shows as written. No scripts run.
-- **Photos** come from the photo picker. Each is turned upright, scaled to at most 2000 px and
+- **Photos** come from the photo picker and go in at the cursor, on a paragraph of their own. Each is turned upright, scaled to at most 2000 px and
   re-encoded, which drops its EXIF: no location, camera or time goes to a public blog. PNGs stay
   PNG, GIFs are copied as they are. It's named by when it was added
   (`/assets/images/2026/20261004-221500.jpg`, beside the blog's own images) and linked with
@@ -49,6 +51,12 @@ doesn't want to open a laptop and make a commit for every post.
   keep their frames and loop but lose comment and application blocks (where XMP, and a location,
   can hide); GIFs over 10 MB are refused. Mirrored orientations are undone too.
 - A draft belongs to the blog it was written for. Signed in to another blog, it waits, hidden.
+
+## Settings
+
+- The blog (repository and branch) and the site's address; **Switch blog** lists the
+  repositories the current sign-in can write to; **Sign out** keeps drafts on the phone for
+  when that blog is signed in again.
 
 ## The blog's _drafts
 

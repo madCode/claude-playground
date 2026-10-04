@@ -7,6 +7,21 @@ Times are Pacific.
 
 ## Night 1 · Sun 4 Oct
 
+### Cycle 5: a Markdown toolbar, photos at the cursor, settings (04:15–05:00)
+- **Shipped:** a toolbar above the keyboard for bold, italic, link, heading, list, quote and
+  code, each undone by pressing it again; photos go in at the cursor on a paragraph of their
+  own; Settings (the blog and its address, switch blog, sign out, version).
+- **Cycles 3–4's review found** (all fixed, with tests): a post that failed at the commit and
+  was then sent to the other destination used the old name, so a "draft" could go live; only
+  the last text sent was remembered, so two lost commits in a row could still publish twice
+  (every sent sha is kept now); a Jekyll draft whose new name was taken meanwhile retried
+  forever; two renamed photos could get one name and one picture replace the other; a token
+  renewal finishing after sign-out signed the writer back in; a draft published from a laptop
+  under the same name was taken for the phone's own move and the phone's edits dropped; a
+  `url` that already named the repo got it twice; one dropped poll ended Sign in with GitHub;
+  "cancelled on GitHub" read as a bad token; expiry counted from picking the blog, not from the
+  token; damaged or huge GIFs gave raw errors or could run out of memory.
+
 ### Cycle 4: the blog's _drafts (03:45–04:15)
 - **Shipped:** save a new post to the blog's `_drafts` to finish on a laptop; update a Jekyll
   draft in place; publish one from the phone, dated and moved to `_posts` in one commit.

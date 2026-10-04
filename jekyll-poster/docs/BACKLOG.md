@@ -19,6 +19,8 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 5: Markdown toolbar, photos at the cursor, settings; cycles 3–4's review
+
 - [x] Cycle 4: the blog's `_drafts` (save, update, publish by moving); cycle 2's review
 - [x] Cycle 3: Sign in with GitHub (device flow), token renewal
 

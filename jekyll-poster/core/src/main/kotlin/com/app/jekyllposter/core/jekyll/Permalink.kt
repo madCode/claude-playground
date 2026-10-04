@@ -65,7 +65,7 @@ object Permalink {
             // A project site built by Actions often leaves baseurl empty in _config.yml and gets
             // `--baseurl /repo` from the workflow, so the github.io address still needs the repo.
             !config.url.isNullOrBlank() && config.baseurl.isEmpty() && !userSite &&
-                config.url.contains(".github.io", ignoreCase = true) -> config.url + "/" + repo
+                Regex("""^https?://[^/]+\.github\.io/?$""", RegexOption.IGNORE_CASE).matches(config.url) -> config.url.trimEnd('/') + "/" + repo
             !config.url.isNullOrBlank() -> config.url + config.baseurl
             userSite -> "https://${owner.lowercase()}.github.io${config.baseurl}"
             else -> "https://${owner.lowercase()}.github.io${config.baseurl.ifEmpty { "/$repo" }}"

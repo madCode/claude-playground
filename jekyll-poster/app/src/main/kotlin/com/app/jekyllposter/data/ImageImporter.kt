@@ -29,7 +29,17 @@ class ImageImporter(private val resolver: ContentResolver, private val dir: File
         // Animated GIFs would lose their animation as a bitmap: kept, with their comment and
         // application blocks (where XMP, and with it a location, can hide) taken out.
         if (type == "image/gif") {
-            val bytes = resolver.openInputStream(uri)!!.use { it.readBytes() }
+            // Read no more than the limit plus one byte, so a huge file can't run the phone out of memory.
+            val bytes = resolver.openInputStream(uri)!!.use { input ->
+                val buffer = java.io.ByteArrayOutputStream()
+                val chunk = ByteArray(64 * 1024)
+                while (buffer.size() <= MAX_GIF) {
+                    val n = input.read(chunk)
+                    if (n < 0) break
+                    buffer.write(chunk, 0, n)
+                }
+                buffer.toByteArray()
+            }
             require(bytes.size <= MAX_GIF) { "GIFs over ${MAX_GIF / 1_000_000} MB are too big for a blog post" }
             val out = File(dir, "${UUID.randomUUID()}.gif")
             out.writeBytes(Gif.withoutMetadata(bytes))
@@ -69,7 +79,13 @@ internal object Gif {
      * The GIF without comment extensions or application extensions other than the animation loop
      * count (NETSCAPE2.0). A file that doesn't parse as expected is refused rather than passed on.
      */
-    fun withoutMetadata(gif: ByteArray): ByteArray {
+    fun withoutMetadata(gif: ByteArray): ByteArray = try {
+        strip(gif)
+    } catch (e: IndexOutOfBoundsException) {
+        throw IllegalArgumentException("This GIF is damaged", e)
+    }
+
+    private fun strip(gif: ByteArray): ByteArray {
         require(gif.size >= 13 && String(gif, 0, 3) == "GIF") { "Not a GIF" }
         val out = java.io.ByteArrayOutputStream(gif.size)
         var i = 13

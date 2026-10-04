@@ -81,6 +81,8 @@ class PermalinkTest {
     @Test fun siteAddresses() {
         // An Actions-built project site: url set, baseurl left for the workflow to pass.
         assertEquals("https://me.github.io/blog", Permalink.siteUrl(SiteConfig(url = "https://me.github.io"), "me", "blog", null))
+        // A url that already names the repo isn't given it twice.
+        assertEquals("https://me.github.io/blog", Permalink.siteUrl(SiteConfig(url = "https://me.github.io/blog"), "me", "blog", null))
         assertEquals("https://notes.example.com", Permalink.siteUrl(SiteConfig(), "me", "blog", "notes.example.com\n"))
         assertEquals("https://me.github.io", Permalink.siteUrl(SiteConfig(), "Me", "me.github.io", null))
         assertEquals("https://me.github.io/blog", Permalink.siteUrl(SiteConfig(), "me", "blog", null))
