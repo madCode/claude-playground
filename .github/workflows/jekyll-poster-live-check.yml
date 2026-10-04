@@ -1,0 +1,45 @@
+name: Jekyll Poster live check
+
+# Publishes a post to the sample blog through the real GitHub API, waits for Pages to serve it,
+# then deletes it. Run by hand, on any branch, to try a change end to end; a cloud session can't,
+# since its GitHub proxy refuses the commit calls the app makes.
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: Blog repository to post to and delete from (owner/name)
+        default: madCode/sample-blog
+
+permissions:
+  contents: read
+
+# Two runs at once would race each other's commits on the blog's branch.
+concurrency:
+  group: jekyll-poster-live-check
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: jekyll-poster
+
+jobs:
+  live-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+      - name: Publish, check and delete a post
+        env:
+          SAMPLE_BLOG_TOKEN: ${{ secrets.SAMPLE_BLOG_TOKEN }}
+          REPO: ${{ inputs.repo }}
+        run: |
+          if [ -z "$SAMPLE_BLOG_TOKEN" ]; then
+            echo "::error::Add a SAMPLE_BLOG_TOKEN secret: a token that can write the blog's contents."
+            exit 1
+          fi
+          ./gradlew :core:liveCheck "-PliveRepo=$REPO"

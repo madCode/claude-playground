@@ -12,10 +12,10 @@ Times are when each cycle landed, Pacific.
   publishing exactly once, following the Pages build, safe edits and deletes, front matter,
   `_drafts`, a New post shortcut, and a zine look picked over four design rounds. Every code PR
   had a fresh-eyes review; 90 findings, all but one fixed.
-- **Not yet tried on a real blog:** everything ran against a fake GitHub. The sample blog
-  ([madCode/sample-blog](https://github.com/madCode/sample-blog), live on Pages) is ready for
-  the first real post.
-- **Waiting on you:** a token to try it; the GitHub App for Sign in with GitHub
+- **Tried on a real blog:** a post from the phone landed on the sample blog
+  ([madCode/sample-blog](https://github.com/madCode/sample-blog), live on Pages). A live check
+  workflow publishes and deletes one there through the app's own GitHub client.
+- **Waiting on you:** a `SAMPLE_BLOG_TOKEN` Actions secret for the live check; the GitHub App for Sign in with GitHub
   ([how](GITHUB_APP.md)); the Android SDK in the environment's setup script.
 
 ## Night 1 · Sun 4 Oct
