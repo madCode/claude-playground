@@ -4,6 +4,8 @@ import android.content.ClipboardManager
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -25,11 +27,21 @@ class VersionRowTest {
 
     @After fun close() = app.github.close()
 
+    private val clipboard get() = app.getSystemService(ClipboardManager::class.java)
+
+    private fun versionRow() = compose.onNodeWithText("Jekyll Poster ${BuildConfig.VERSION_NAME}").performScrollTo()
+
     @Test fun aLongPressOnTheVersionCopiesIt() {
         compose.setContent { PosterTheme { SettingsScreen(app.container, {}, {}, {}) } }
-        compose.onNodeWithText("Jekyll Poster ${BuildConfig.VERSION_NAME}").performTouchInput { longClick() }
+        versionRow().performTouchInput { longClick() }
         compose.waitForIdle()
-        val clip = app.getSystemService(ClipboardManager::class.java).primaryClip!!
-        assertEquals("Jekyll Poster ${BuildConfig.VERSION_NAME}", clip.getItemAt(0).text.toString())
+        assertEquals("Jekyll Poster ${BuildConfig.VERSION_NAME}", clipboard.primaryClip!!.getItemAt(0).text.toString())
+    }
+
+    @Test fun aTapCopiesItTooSoNeitherGestureDoesNothing() {
+        compose.setContent { PosterTheme { SettingsScreen(app.container, {}, {}, {}) } }
+        versionRow().performClick()
+        compose.waitForIdle()
+        assertEquals("Jekyll Poster ${BuildConfig.VERSION_NAME}", clipboard.primaryClip!!.getItemAt(0).text.toString())
     }
 }

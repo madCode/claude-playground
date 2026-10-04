@@ -203,8 +203,8 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
 - **Switch blog** lists the repositories the current sign-in can write to.
 - **Sign out** keeps drafts on the phone for when that blog is signed in again.
 - **Obsidian:** the vault folder photos in shared notes come from; choose another or forget it.
-- The app's version, with the build's CI run and commit in a debug build. A long press copies
-  it, for a bug report.
+- The app's version, with the build's CI run and commit in a debug build. A tap or long press
+  copies it, for a bug report.
 
 ## Not yet
 
