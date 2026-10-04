@@ -62,8 +62,9 @@ doesn't want to open a laptop and make a commit for every post.
   and `site.baseurl` resolved, site images from the live site, new photos from the phone. Other
   Liquid shows as written. No scripts run. Images are fetched by the app, not the web view, so
   sites see no phone model or Android version.
-- Sharing text, a link or photos to the app starts a post with them. Shared links lose their
-  tracking codes (`utm_…`, `fbclid`, YouTube's `si`, …) unless Settings says to keep them.
+- Sharing text, a link or photos to the app starts a post with them, as shared. With **Remove
+  tracking codes** on (Blog & privacy), links lose `utm_…`, `fbclid`, YouTube's `si` and the
+  like before the editor opens, so the writer sees them as they'll be published.
 - Long-pressing the app's icon offers **New post**, straight into the editor.
 - A share starts one post: going back from it returns to the list.
 - A new post with nothing in it is dropped when you leave it. One left when the app closed under
@@ -152,10 +153,22 @@ doesn't want to open a laptop and make a commit for every post.
 - Opening a Jekyll draft: **Update draft** keeps it in `_drafts`; **Publish to the site** moves
   it to `_posts/<date>-<slug>.md` with a date, in one commit.
 
-## Settings
+## Blog & privacy
 
-- **Keep tracking codes in shared links**, off by default.
+Every default is what GitHub and Jekyll do on their own; each switch is one step more private.
+
+- **Commit with your no-reply email**, off: commits then name no author, and GitHub uses the
+  account's own email setting. On, they name `<id>+<login>@users.noreply.github.com`.
+- **The site's time zone**, from `_config.yml`, and **Use** the phone's: one commit changing only
+  the `timezone:` line, after a warning that posts near midnight (and dated addresses) can move a
+  day. Refused if `_config.yml` changed meanwhile.
+- **Remove tracking codes** from shared links, off.
+- Whether the repository is public (so `_drafts` and earlier versions are readable), and that
+  edits and deletes stay in its history, each linking to GitHub.
+
+## Settings
 - The blog (repository and branch) and the site's address.
+- **Blog & privacy**, above.
 - **Switch blog** lists the repositories the current sign-in can write to.
 - **Sign out** keeps drafts on the phone for when that blog is signed in again.
 

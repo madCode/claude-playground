@@ -31,7 +31,8 @@ class FakeGitHub(
     val branch: String = "main",
     var token: String = "good-token",
 ) : AutoCloseable {
-    data class CommitRecord(val sha: String, val tree: String, val parent: String?, val message: String)
+    /** [authorEmail] is null when the commit named no author, and GitHub would use the account's. */
+    data class CommitRecord(val sha: String, val tree: String, val parent: String?, val message: String, val authorEmail: String? = null)
 
     private val blobs = mutableMapOf<String, ByteArray>()
     private val trees = mutableMapOf<String, Map<String, String>>()
@@ -120,7 +121,7 @@ class FakeGitHub(
         val body = request.body?.utf8()
         val base = "repos/$owner/$repo"
         return when {
-            path == "user" -> ok(buildJsonObject { put("login", owner); put("name", "Sample Writer") })
+            path == "user" -> ok(buildJsonObject { put("login", owner); put("name", "Sample Writer"); put("id", 1001) })
             path == "user/repos" -> ok(buildJsonArray {
                 add(repoJson())
                 add(buildJsonObject {
@@ -179,7 +180,8 @@ class FakeGitHub(
                 val tree = obj.getValue("tree").jsonPrimitive.content
                 val message = obj.getValue("message").jsonPrimitive.content
                 val sha = sha("commit", "$tree $parent $message ${System.nanoTime()}")
-                commits[sha] = CommitRecord(sha, tree, parent, message)
+                val authorEmail = obj["author"]?.jsonObject?.get("email")?.jsonPrimitive?.content
+                commits[sha] = CommitRecord(sha, tree, parent, message, authorEmail)
                 ok(buildJsonObject { put("sha", sha) }, 201)
             }
             path == "$base/git/refs/heads/$branch" && request.method == "PATCH" -> {

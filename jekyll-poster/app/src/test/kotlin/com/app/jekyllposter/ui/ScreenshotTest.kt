@@ -151,7 +151,7 @@ class ScreenshotTest {
 
     @Test fun settings() {
         signIn()
-        shoot("07-settings", ready = { c.blogs.siteUrl.value != null }) { com.app.jekyllposter.ui.settings.SettingsScreen(c, {}, {}, {}) }
+        shoot("07-settings", ready = { c.blogs.siteUrl.value != null }) { com.app.jekyllposter.ui.settings.SettingsScreen(c, {}, {}, {}, {}) }
     }
 
     @Test fun frontMatter() {
@@ -233,5 +233,13 @@ class ScreenshotTest {
     @Test fun newPostMenu() {
         val vm = editorWithDraft()
         shoot("14-new-post-menu", act = { compose.onNode(hasContentDescription("More")).performClick() }) { EditorScreen(vm) {} }
+    }
+
+    @Test fun blogPrivacy() {
+        signIn()
+        val vm = com.app.jekyllposter.ui.settings.BlogPrivacyViewModel(c) { java.time.ZoneId.of("Europe/Lisbon") }
+        shoot("15-blog-privacy", ready = { vm.state.value.noReplyEmail != null && vm.state.value.public != null }) {
+            com.app.jekyllposter.ui.settings.BlogPrivacyScreen(vm) {}
+        }
     }
 }

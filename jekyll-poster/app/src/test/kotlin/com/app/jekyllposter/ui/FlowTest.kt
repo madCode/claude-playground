@@ -193,21 +193,23 @@ class FlowTest {
         compose.waitUntil(5_000) { compose.onAllNodes(hasContentDescription("Remove puddles")).fetchSemanticsNodes().isNotEmpty() }
     }
 
-    @Test fun aSharedLinkLosesItsTrackingCodesUnlessTheWriterKeepsThem() {
+    @Test fun aSharedLinkIsKeptAsSharedByDefault() {
         signIn()
         val link = "[A good read](https://example.com/read?id=7&utm_source=share&fbclid=abc)\n"
         compose.setContent { PosterTheme { PosterNavHost(app.container, com.app.jekyllposter.Shared(link, emptyList())) } }
         compose.waitForTag("title")
-        assertEquals("[A good read](https://example.com/read?id=7)\n", runBlocking { app.container.drafts.list() }.single().body)
+        assertEquals(link, runBlocking { app.container.drafts.list() }.single().body)
     }
 
-    @Test fun aWriterWhoKeepsTrackingCodesGetsTheLinkAsShared() {
+    @Test fun aWriterWhoRemovesTrackingCodesSeesTheCleanLinkInTheEditor() {
         signIn()
-        runBlocking { app.container.settings.setKeepTrackingCodes(true) }
-        val link = "https://example.com/read?utm_source=share"
+        runBlocking { app.container.settings.setRemoveTrackingCodes(true) }
+        val link = "[A good read](https://example.com/read?id=7&utm_source=share&fbclid=abc)\n"
         compose.setContent { PosterTheme { PosterNavHost(app.container, com.app.jekyllposter.Shared(link, emptyList())) } }
-        compose.waitForTag("title")
-        assertEquals(link, runBlocking { app.container.drafts.list() }.single().body)
+        compose.waitForTag("body")
+        // Already in the editor, before publishing: what you see is what goes out.
+        compose.waitFor("https://example.com/read?id=7)")
+        assertEquals("[A good read](https://example.com/read?id=7)\n", runBlocking { app.container.drafts.list() }.single().body)
     }
 
     @Test fun aDraftIsKeptOnTheList() {

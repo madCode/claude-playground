@@ -1,5 +1,6 @@
 package com.app.jekyllposter.core.blog
 
+import com.app.jekyllposter.core.github.CommitAuthor
 import com.app.jekyllposter.core.github.FileChange
 import com.app.jekyllposter.core.github.GitHubClient
 import com.app.jekyllposter.core.github.TreeEntry
@@ -59,8 +60,14 @@ class Blog(
     suspend fun read(path: String): String? = client.text(owner, name, branch, path)
 
     /** Writes the changes as one commit, returning its sha. */
-    suspend fun commit(message: String, changes: List<FileChange>, expect: Map<String, String?> = emptyMap()): String =
-        client.commit(owner, name, branch, message, changes, expect)
+    suspend fun commit(message: String, changes: List<FileChange>, expect: Map<String, String?> = emptyMap(), author: CommitAuthor? = null): String =
+        client.commit(owner, name, branch, message, changes, expect, author)
+
+    /** The signed-in account, for the commit author it would be under its no-reply address. */
+    suspend fun user() = client.user()
+
+    /** The repository, for whether it's public. */
+    suspend fun repository() = client.repo(owner, name)
 
     suspend fun file(path: String) = client.file(owner, name, branch, path)
 

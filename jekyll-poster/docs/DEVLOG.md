@@ -20,6 +20,13 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Cycle 17: Blog & privacy
+- **Asked:** one page for the audit's settings, with defaults for the average blogger and easy
+  switches for the privacy-minded; and don't change what was written unless asked.
+- **Shipped:** the page (commit email, the site's time zone, tracking codes, visibility and
+  history). Removing tracking codes is now opt-in, under a new stored name so the old "keep"
+  can't read as "remove".
+
 ### Cycle 16: a privacy audit
 - **Asked:** what goes to GitHub besides what's in the post?
 - **Found and fixed:** `_drafts` read as private but a public repository shows it to anyone (the

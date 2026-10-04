@@ -4,7 +4,17 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class GitHubUser(val login: String, val name: String? = null)
+data class GitHubUser(val login: String, val name: String? = null, val id: Long = 0) {
+    /**
+     * Who a commit is by when the writer keeps their email out of it: the no-reply address GitHub
+     * gives every account, `<id>+<login>@users.noreply.github.com`, which still links the commit
+     * to the account.
+     */
+    val noReplyAuthor: CommitAuthor get() = CommitAuthor(name?.takeIf { it.isNotBlank() } ?: login, "$id+$login@users.noreply.github.com")
+}
+
+/** A commit's author; without one, GitHub uses the token's account and its email settings. */
+data class CommitAuthor(val name: String, val email: String)
 
 @Serializable
 data class GitHubRepo(

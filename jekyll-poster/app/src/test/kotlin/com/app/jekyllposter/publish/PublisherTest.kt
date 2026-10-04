@@ -29,7 +29,7 @@ class PublisherTest {
     private val c = app.container
     private val github = app.github
     private val evening = ZonedDateTime.of(2026, 10, 4, 22, 15, 0, 0, ZoneId.of("America/Los_Angeles"))
-    private val publisher = Publisher(c.drafts, c.accounts, c.blogs) { evening }
+    private val publisher = Publisher(c.drafts, c.accounts, c.blogs, c.settings) { evening }
 
     @Before fun signIn() = runBlocking {
         c.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
@@ -58,11 +58,20 @@ class PublisherTest {
     @Test fun aPostWrittenAbroadIsDatedInTheSitesTimeZoneNotThePhones() = runBlocking {
         // Tokyo, Monday morning: Sunday evening at the site, in Los Angeles.
         val tokyo = evening.withZoneSameInstant(ZoneId.of("Asia/Tokyo"))
-        val abroad = Publisher(c.drafts, c.accounts, c.blogs) { tokyo }
+        val abroad = Publisher(c.drafts, c.accounts, c.blogs, c.settings) { tokyo }
         val id = queue(Draft(title = "From abroad", body = "Hello."))
         assertEquals(Publisher.Outcome.Done, abroad.publish(id))
         val text = github.text("_posts/2026-10-04-from-abroad.md")!!
         assertTrue(text, text.contains("date: 2026-10-04 22:15:00 -0700"))
+    }
+
+    @Test fun commitsNameNoAuthorUnlessTheWriterAsksForTheNoReplyAddress() = runBlocking {
+        // GitHub's default: the account, with whatever email its settings give.
+        publisher.publish(queue(Draft(title = "Default", body = "x")))
+        assertNull(github.commits.getValue(github.head).authorEmail)
+        c.settings.setCommitAsNoReply(true)
+        publisher.publish(queue(Draft(title = "Private", body = "x")))
+        assertEquals("1001+sample@users.noreply.github.com", github.commits.getValue(github.head).authorEmail)
     }
 
     @Test fun photosTheTextStillUsesGoInThePostsCommit() = runBlocking {
