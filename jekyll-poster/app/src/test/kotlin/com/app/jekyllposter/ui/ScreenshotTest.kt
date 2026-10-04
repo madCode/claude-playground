@@ -238,7 +238,7 @@ class ScreenshotTest {
     @Test fun blogPrivacy() {
         signIn()
         val vm = com.app.jekyllposter.ui.settings.BlogPrivacyViewModel(c) { java.time.ZoneId.of("Europe/Lisbon") }
-        shoot("15-blog-privacy", ready = { vm.state.value.noReplyEmail != null && vm.state.value.public != null }) {
+        shoot("15-blog-privacy", ready = { vm.state.value.noReplyEmail != null && vm.state.value.visibility != com.app.jekyllposter.ui.settings.Visibility.Loading }) {
             com.app.jekyllposter.ui.settings.BlogPrivacyScreen(vm) {}
         }
     }

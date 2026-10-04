@@ -31,13 +31,42 @@ class BlogPrivacyViewModelTest {
 
     @Test fun itShowsTheNoReplyAddressTheVisibilityAndTheSitesZone() {
         val vm = BlogPrivacyViewModel(c) { ZoneId.of("Asia/Tokyo") }
-        idleUntil { vm.state.value.noReplyEmail != null && vm.state.value.public != null }
+        idleUntil { vm.state.value.noReplyEmail != null && vm.state.value.visibility != Visibility.Loading }
         assertEquals("1001+sample@users.noreply.github.com", vm.state.value.noReplyEmail)
         assertEquals("America/Los_Angeles", vm.state.value.siteZone)
         assertEquals("Asia/Tokyo", vm.state.value.phoneZone)
         // Everything starts as GitHub and Jekyll would have it.
         assertEquals(false, vm.state.value.commitAsNoReply)
         assertEquals(false, vm.state.value.removeTrackingCodes)
+    }
+
+    @Test fun theNoReplyAddressIsKeptWhenTurnedOnSoPublishingNeedsNoLookUp() {
+        val vm = BlogPrivacyViewModel(c) { ZoneId.of("Asia/Tokyo") }
+        vm.setCommitAsNoReply(true)
+        idleUntil { vm.state.value.commitAsNoReply }
+        // GitHub can't be asked now; the kept address still signs the commit.
+        app.github.failures["user"] = 500
+        val author = runBlocking { c.settings.commitAuthor("sample") { error("looked up again") } }
+        assertEquals("1001+sample@users.noreply.github.com", author!!.email)
+    }
+
+    @Test fun aSwitchThatCantFindTheAddressStaysOff() {
+        app.github.failures["user"] = 500
+        val vm = BlogPrivacyViewModel(c) { ZoneId.of("Asia/Tokyo") }
+        vm.setCommitAsNoReply(true)
+        idleUntil { vm.state.value.message != null }
+        assertEquals(false, vm.state.value.commitAsNoReply)
+        assertEquals(Visibility.Public, vm.state.value.visibility)
+    }
+
+    @Test fun aZoneThatLandedIsShownEvenIfReadingTheBlogAgainFails() {
+        val vm = BlogPrivacyViewModel(c) { ZoneId.of("Asia/Tokyo") }
+        // The commit lands; then every read of the blog's files fails.
+        app.github.beforeRefUpdate = { app.github.failures["repos/sample/sample-blog/git/trees"] = 500 }
+        vm.useThisPhonesZone()
+        idleUntil(10_000) { vm.state.value.message != null }
+        assertTrue(vm.state.value.message!!.startsWith("The site's time zone is now Asia/Tokyo"))
+        assertEquals("Asia/Tokyo", vm.state.value.siteZone)
     }
 
     @Test fun usingThePhonesZoneChangesOnlyThatLineOfTheConfig() {

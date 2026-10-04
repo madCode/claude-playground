@@ -97,7 +97,7 @@ internal fun Heading(text: String) {
 @Composable
 internal fun Row(title: String, detail: String, onClick: (() -> Unit)? = null) {
     Column(
-        Modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it }.padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().let { if (onClick != null) it.clickable(role = Role.Button, onClick = onClick) else it }.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(title, style = MaterialTheme.typography.bodyLarge, color = if (onClick != null && title == "Sign out") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)

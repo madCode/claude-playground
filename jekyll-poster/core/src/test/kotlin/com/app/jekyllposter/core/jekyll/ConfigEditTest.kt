@@ -20,4 +20,13 @@ class ConfigEditTest {
         // And the reader agrees about which one counts.
         assertEquals(java.time.ZoneId.of("Europe/Paris"), SiteConfig.parse(ConfigEdit.withTimezone(config, "Europe/Paris")).timezone)
     }
+
+    @Test fun windowsLineEndingsStayWindowsLineEndings() {
+        assertEquals("title: Notes\r\ntimezone: UTC\r\n", ConfigEdit.withTimezone("title: Notes\r\n", "UTC"))
+        assertEquals("timezone: UTC\r\nbaseurl: /x\r\n", ConfigEdit.withTimezone("timezone: Asia/Tokyo\r\nbaseurl: /x\r\n", "UTC"))
+    }
+
+    @Test fun aQuotedKeyIsReplacedNotDuplicated() {
+        assertEquals("timezone: UTC\n", ConfigEdit.withTimezone("\"timezone\": Asia/Tokyo\n", "UTC"))
+    }
 }

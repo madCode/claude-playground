@@ -69,8 +69,15 @@ class PublisherTest {
         // GitHub's default: the account, with whatever email its settings give.
         publisher.publish(queue(Draft(title = "Default", body = "x")))
         assertNull(github.commits.getValue(github.head).authorEmail)
-        c.settings.setCommitAsNoReply(true)
+        c.settings.setCommitAsNoReply("sample", com.app.jekyllposter.core.github.CommitAuthor("Sample Writer", "1001+sample@users.noreply.github.com"))
         publisher.publish(queue(Draft(title = "Private", body = "x")))
+        assertEquals("1001+sample@users.noreply.github.com", github.commits.getValue(github.head).authorEmail)
+    }
+
+    @Test fun signedInAsSomeoneElseTheirOwnNoReplyAddressIsLookedUp() = runBlocking {
+        // Kept from another account; this one's is found once and kept instead.
+        c.settings.setCommitAsNoReply("someone-else", com.app.jekyllposter.core.github.CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
+        publisher.publish(queue(Draft(title = "Mine", body = "x")))
         assertEquals("1001+sample@users.noreply.github.com", github.commits.getValue(github.head).authorEmail)
     }
 

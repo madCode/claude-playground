@@ -53,6 +53,9 @@ class Publisher(
      */
     private val lock = Mutex()
 
+    /** Runs [block] between publishes, for another commit that a publish's plan relies on. */
+    suspend fun <T> betweenPublishes(block: suspend () -> T): T = lock.withLock { block() }
+
     suspend fun publish(id: Long): Outcome = lock.withLock {
         repeat(3) { attempt(id)?.let { return it } }
         Outcome.Retry
@@ -80,7 +83,13 @@ class Publisher(
             }
             if (plan is Plan.Finished) return plan.outcome
             plan as Plan.Commit
-            val author = if (settings.commitAsNoReply()) blog.user().noReplyAuthor else null
+            val author = try {
+                settings.commitAuthor(account.login) { blog.user().noReplyAuthor }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is GitHubException && e.retryable) return Outcome.Retry
+                return fail(draft, "Couldn't find your GitHub no-reply address. Try again, or turn it off in Blog & privacy.")
+            }
             val sha = blog.commit(plan.message, plan.changes, plan.expect, author)
             if (draft.destination == Destination.Delete) return deleted(draft, plan.path)
             published(drafts.get(id) ?: draft, plan.path, sha, plan.date?.let { postUrl(index, plan.path, it, plan.draft) })

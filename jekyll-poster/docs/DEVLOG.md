@@ -26,6 +26,15 @@ Times are when each cycle landed, Pacific.
 - **Shipped:** the page (commit email, the site's time zone, tracking codes, visibility and
   history). Removing tracking codes is now opt-in, under a new stored name so the old "keep"
   can't read as "remove".
+- **Its review found** (fixed, with tests): a time zone that landed was reported as failed if
+  reading the blog again failed, inviting a second commit; publishing asked GitHub for the account
+  on every post, and a failure there blamed the token's write access (the address is now looked
+  up once, when the switch is turned on, and kept); an account without an id would have got an
+  address that links to no one; visibility said "couldn't read it" while still loading; the zone
+  change could race a publish (it waits for one now); Windows line endings and a quoted
+  `"timezone":` key were mishandled; rows didn't say they're buttons.
+- **Left:** existing installs, where removing tracking codes was the default, now find it off, as
+  asked; GitHub may not show "Verified" on a commit with a set author.
 
 ### Cycle 16: a privacy audit
 - **Asked:** what goes to GitHub besides what's in the post?

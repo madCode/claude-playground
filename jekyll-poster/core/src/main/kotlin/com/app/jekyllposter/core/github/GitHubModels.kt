@@ -8,9 +8,10 @@ data class GitHubUser(val login: String, val name: String? = null, val id: Long 
     /**
      * Who a commit is by when the writer keeps their email out of it: the no-reply address GitHub
      * gives every account, `<id>+<login>@users.noreply.github.com`, which still links the commit
-     * to the account.
+     * to the account. Null without the account's id, rather than an address that links to no one.
      */
-    val noReplyAuthor: CommitAuthor get() = CommitAuthor(name?.takeIf { it.isNotBlank() } ?: login, "$id+$login@users.noreply.github.com")
+    val noReplyAuthor: CommitAuthor?
+        get() = if (id <= 0) null else CommitAuthor(name?.takeIf { it.isNotBlank() } ?: login, "$id+$login@users.noreply.github.com")
 }
 
 /** A commit's author; without one, GitHub uses the token's account and its email settings. */

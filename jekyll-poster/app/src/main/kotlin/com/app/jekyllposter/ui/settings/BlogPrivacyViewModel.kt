@@ -17,6 +17,8 @@ import kotlinx.coroutines.launch
 import java.time.ZoneId
 
 /** What the blog and the app tell GitHub and readers beyond the posts, and the switches for it. */
+enum class Visibility { Loading, Public, Private, Unknown }
+
 class BlogPrivacyViewModel(private val container: AppContainer, private val phoneZone: () -> ZoneId = { ZoneId.systemDefault() }) : ViewModel() {
     data class State(
         val repoName: String? = null,
@@ -29,8 +31,9 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
         val siteZone: String? = null,
         val phoneZone: String = "",
         val settingZone: Boolean = false,
-        /** Null until GitHub has said. */
-        val public: Boolean? = null,
+        /** Set here and landed, though the blog may not have been read again since. */
+        val committedZone: String? = null,
+        val visibility: Visibility = Visibility.Loading,
         val message: String? = null,
     )
 
@@ -40,20 +43,38 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
         local, container.settings.commitAsNoReply, container.settings.removeTrackingCodes, container.blogs.config, container.accounts.account,
     ) { s, noReply, removeTracking, config, account ->
         s.copy(
-            commitAsNoReply = noReply, removeTrackingCodes = removeTracking, siteZone = config.timezone?.id,
+            commitAsNoReply = noReply, removeTrackingCodes = removeTracking, siteZone = s.committedZone ?: config.timezone?.id,
             repoName = account?.repoName, branch = account?.branch,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, local.value)
 
     init {
         viewModelScope.launch {
-            val blog = container.blogs.blog() ?: return@launch
-            runCatching { blog.user() }.getOrNull()?.let { user -> local.update { it.copy(noReplyEmail = user.noReplyAuthor.email) } }
-            runCatching { blog.repository() }.getOrNull()?.let { repo -> local.update { it.copy(public = !repo.private) } }
+            val blog = container.blogs.blog()
+            val user = blog?.let { b -> runCatching { b.user() }.getOrNull() }
+            local.update { it.copy(noReplyEmail = user?.noReplyAuthor?.email) }
+            val repo = blog?.let { b -> runCatching { b.repository() }.getOrNull() }
+            local.update { it.copy(visibility = repo?.let { r -> if (r.private) Visibility.Private else Visibility.Public } ?: Visibility.Unknown) }
         }
     }
 
-    fun setCommitAsNoReply(on: Boolean) = viewModelScope.launch { container.settings.setCommitAsNoReply(on) }
+    /**
+     * On, the account's no-reply address is looked up now and kept, so publishing needs no extra
+     * call; if it can't be, the switch stays off and says why.
+     */
+    fun setCommitAsNoReply(on: Boolean) {
+        viewModelScope.launch {
+            val account = container.accounts.current() ?: return@launch
+            if (!on) return@launch container.settings.setCommitAsNoReply(account.login, null)
+            val author = runCatching { container.blogs.blog()?.user()?.noReplyAuthor }.getOrNull()
+            if (author == null) {
+                local.update { it.copy(message = "Couldn't find your GitHub no-reply address just now. Try again.") }
+                return@launch
+            }
+            container.settings.setCommitAsNoReply(account.login, author)
+            local.update { it.copy(noReplyEmail = author.email) }
+        }
+    }
 
     fun setRemoveTrackingCodes(on: Boolean) = viewModelScope.launch { container.settings.setRemoveTrackingCodes(on) }
 
@@ -68,15 +89,24 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
             val zone = local.value.phoneZone
             val message = try {
                 val blog = container.blogs.blog() ?: error("Sign in to change the blog.")
-                val current = blog.file(CONFIG)
-                val author = if (container.settings.commitAsNoReply()) blog.user().noReplyAuthor else null
-                blog.commit(
-                    "Set the site's time zone to $zone",
-                    listOf(FileChange.text(CONFIG, ConfigEdit.withTimezone(current?.text, zone))),
-                    mapOf(CONFIG to current?.sha), author,
-                )
-                container.blogs.refresh()
+                val account = container.accounts.current() ?: error("Sign in to change the blog.")
+                // Between publishes: one being planned would date its post in the old zone.
+                container.publisher.betweenPublishes {
+                    val current = blog.file(CONFIG)
+                    val author = container.settings.commitAuthor(account.login) { blog.user().noReplyAuthor }
+                    blog.commit(
+                        "Set the site's time zone to $zone",
+                        listOf(FileChange.text(CONFIG, ConfigEdit.withTimezone(current?.text, zone))),
+                        mapOf(CONFIG to current?.sha), author,
+                    )
+                }
+                // On its own: the commit has landed even if reading the blog again fails, and
+                // saying otherwise would invite committing it twice.
+                local.update { it.copy(committedZone = zone) }
+                runCatching { container.blogs.refresh() }
                 "The site's time zone is now $zone. The site rebuilds in a minute or two."
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: GitHubException) {
                 if (e.kind == GitHubException.Kind.Changed) "_config.yml changed on GitHub just now. Try again." else e.forWriter()
             } catch (e: Exception) {

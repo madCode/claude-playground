@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.app.jekyllposter.core.github.CommitAuthor
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +22,9 @@ class Settings(private val store: DataStore<Preferences>) {
     // A new name for the opposite default: a stored "keep" from before mustn't read as "remove".
     private val removeTrackingKey = booleanPreferencesKey("remove_tracking_codes")
     private val noReplyKey = booleanPreferencesKey("commit_as_no_reply")
+    private val noReplyLoginKey = stringPreferencesKey("no_reply_login")
+    private val noReplyNameKey = stringPreferencesKey("no_reply_name")
+    private val noReplyEmailKey = stringPreferencesKey("no_reply_email")
 
     /** Links shared into the app lose their tracking codes, in the editor where the writer sees it. */
     val removeTrackingCodes: Flow<Boolean> = store.data.map { it[removeTrackingKey] ?: false }
@@ -35,7 +40,33 @@ class Settings(private val store: DataStore<Preferences>) {
 
     suspend fun commitAsNoReply(): Boolean = commitAsNoReply.first()
 
-    suspend fun setCommitAsNoReply(noReply: Boolean) {
-        store.edit { it[noReplyKey] = noReply }
+    /**
+     * Turns the no-reply author on with [author], the address of the account [login], kept so
+     * publishing needs no extra call to GitHub; or off, with null.
+     */
+    suspend fun setCommitAsNoReply(login: String, author: CommitAuthor?) {
+        store.edit {
+            it[noReplyKey] = author != null
+            if (author != null) {
+                it[noReplyLoginKey] = login
+                it[noReplyNameKey] = author.name
+                it[noReplyEmailKey] = author.email
+            }
+        }
+    }
+
+    /**
+     * Who [login]'s commits are by: null for GitHub's default. When the switch is on but the kept
+     * address is another account's (signed in as someone else since), [lookUp] finds this one's.
+     */
+    suspend fun commitAuthor(login: String, lookUp: suspend () -> CommitAuthor?): CommitAuthor? {
+        val prefs = store.data.first()
+        if (prefs[noReplyKey] != true) return null
+        val name = prefs[noReplyNameKey]
+        val email = prefs[noReplyEmailKey]
+        if (prefs[noReplyLoginKey] == login && name != null && email != null) return CommitAuthor(name, email)
+        val found = lookUp() ?: error("No no-reply address for $login")
+        setCommitAsNoReply(login, found)
+        return found
     }
 }
