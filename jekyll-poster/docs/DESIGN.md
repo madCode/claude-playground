@@ -100,6 +100,8 @@ doesn't want to open a laptop and make a commit for every post.
   links when a post the site builds has that title or file name (`[[2025-04-20-reading-list]]`):
   published, not a draft, not dated in the future. A link to a note that isn't a post yet stays
   as written, `[[Like this]]`: it reads as a title. Code is left alone.
+- A site its own workflow builds with Jekyll 4 (its Gemfile says so, and a workflow runs
+  `jekyll build`) gets a plain `post_url`: Jekyll 4 adds the baseurl itself.
 - The blog's post list is refreshed first: a `post_url` to a post that's gone fails the site's
   build. So does deleting or renaming a post that others link to, later: Pages then keeps the
   last good build and the app says the build failed.
@@ -110,8 +112,9 @@ doesn't want to open a laptop and make a commit for every post.
   matched. A note whose rules can't be applied (unpaired, written twice, unreadable, a group
   that isn't there) isn't added, and the app says why without repeating the rule.
 - `![[photo.jpg]]` is found in the vault folder, chosen once (in the editor when a note first
-  needs it, or in Settings), and added like any photo, location stripped. Its `|alt text` is the
-  alt text; a size (`|300`) isn't. One not in the vault stays as written, and the app says so.
+  needs it, or in Settings), and added like any photo, location stripped. Choosing another
+  folder gives the old one's access back. Its `|alt text` is the
+  alt text; a size (`|300`) isn't. One not in the vault stays as written, and the app says so, naming it as the text writes it.
   Embedded notes and PDFs stay as written.
 - The preview shows a `post_url` link as a link that goes nowhere: only Jekyll knows where.
 

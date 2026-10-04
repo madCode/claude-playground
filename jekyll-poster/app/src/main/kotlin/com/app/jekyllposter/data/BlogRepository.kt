@@ -43,6 +43,10 @@ class BlogRepository(
     /** Where the blog keeps its images, as last read. */
     val imageFolder: StateFlow<String> = _imageFolder
 
+    /** Whether the site's `post_url` already includes the baseurl (Jekyll 4), as last read. */
+    @Volatile var postUrlHasBaseurl: Boolean = false
+        private set
+
     /** Every path on the branch as last read, so new files don't take an existing name. */
     @Volatile var paths: Set<String> = emptySet()
         private set
@@ -60,6 +64,7 @@ class BlogRepository(
         _imageFolder.value = index.imageFolder
         _siteUrl.value = index.siteUrl
         paths = index.paths
+        postUrlHasBaseurl = index.postUrlHasBaseurl
         return index
     }
 
@@ -70,6 +75,7 @@ class BlogRepository(
         _siteUrl.value = null
         _imageFolder.value = "assets/images"
         paths = emptySet()
+        postUrlHasBaseurl = false
     }
 
     private fun CachedPost.toSummary() = PostSummary(PostPath(path), sha, title, categories, tags, published)

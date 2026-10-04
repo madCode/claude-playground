@@ -20,6 +20,11 @@ data class SiteIndex(
     val paths: Set<String>,
     /** The site's address, no trailing slash: from `CNAME`, `_config.yml` or GitHub's convention. */
     val siteUrl: String,
+    /**
+     * Whether `post_url` already includes the baseurl: Jekyll 4 adds it, GitHub Pages' own build
+     * (Jekyll 3) doesn't. True only for a site its own workflow builds with Jekyll 4.
+     */
+    val postUrlHasBaseurl: Boolean = false,
 )
 
 /** A Jekyll blog in one GitHub repository and branch. */
@@ -38,8 +43,10 @@ class Blog(
         val configEntry = files.firstOrNull { it.path == "_config.yml" } ?: files.firstOrNull { it.path == "_config.yaml" }
         val postEntries = files.filter { PostPath(it.path).isPost }
         val cnameEntry = files.firstOrNull { it.path == "CNAME" }
+        val gemfileEntry = files.firstOrNull { it.path == "Gemfile" }
+        val workflowEntries = files.filter { it.path.startsWith(".github/workflows/") && (it.path.endsWith(".yml") || it.path.endsWith(".yaml")) }
         val missing = postEntries.filter { known[it.path]?.sha != it.sha }.map { it.sha } +
-            listOfNotNull(configEntry?.sha, cnameEntry?.sha)
+            listOfNotNull(configEntry?.sha, cnameEntry?.sha, gemfileEntry?.sha) + workflowEntries.map { it.sha }
         val texts = if (missing.isEmpty()) emptyMap() else client.blobTexts(owner, name, missing)
         val posts = postEntries.mapNotNull { entry ->
             known[entry.path]?.takeIf { it.sha == entry.sha }
@@ -53,6 +60,7 @@ class Blog(
             imageFolder = imageFolder(files),
             paths = files.map { it.path }.toSet(),
             siteUrl = Permalink.siteUrl(config, owner, name, cnameEntry?.let { texts[it.sha] }),
+            postUrlHasBaseurl = buildsWithJekyll4(gemfileEntry?.let { texts[it.sha] }, workflowEntries.mapNotNull { texts[it.sha] }),
         )
     }
 
@@ -65,6 +73,16 @@ class Blog(
     suspend fun file(path: String) = client.file(owner, name, branch, path)
 
     companion object {
+        /**
+         * A Gemfile pinning Jekyll 4 counts only with a workflow that runs `jekyll build` itself:
+         * GitHub's own Pages build ignores the Gemfile, and its Pages action uses Jekyll 3.
+         */
+        internal fun buildsWithJekyll4(gemfile: String?, workflows: List<String>): Boolean {
+            if (gemfile == null || Regex("""gem\s+["']github-pages["']""").containsMatchIn(gemfile)) return false
+            val jekyll4 = Regex("""gem\s+["']jekyll["']\s*,\s*["'][~>=\s]*4""").containsMatchIn(gemfile)
+            return jekyll4 && workflows.any { it.contains("jekyll build") }
+        }
+
         private val imageExtensions = setOf("jpg", "jpeg", "png", "gif", "webp", "svg")
         private val conventional = listOf("assets/images", "assets/img", "images", "img", "assets")
 

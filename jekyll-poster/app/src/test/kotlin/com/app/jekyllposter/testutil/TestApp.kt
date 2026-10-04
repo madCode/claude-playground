@@ -47,7 +47,9 @@ class TestApp : PosterApp() {
             // A plain folder stands in for the vault: Robolectric has no document provider to walk.
             vaultFiles = { tree ->
                 val root = java.io.File(android.net.Uri.parse(tree).path!!)
-                root.walkTopDown().filter { it.isFile }.map { com.app.jekyllposter.data.VaultFile(it.relativeTo(root).path, android.net.Uri.fromFile(it)) }.toList()
+                com.app.jekyllposter.data.VaultImages(
+                    root.walkTopDown().filter { it.isFile }.map { com.app.jekyllposter.data.VaultFile(it.relativeTo(root).path, android.net.Uri.fromFile(it)) }.toList(),
+                )
             },
             schedulePublish = { id ->
                 published += id

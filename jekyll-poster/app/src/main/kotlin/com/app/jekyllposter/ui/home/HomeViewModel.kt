@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -103,11 +104,19 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     val opened = MutableStateFlow<Long?>(null)
 
     /**
-     * Starts a post from what another app shared, in this ViewModel's scope: it outlives a
-     * rotation, which would cancel the screen's own coroutine and lose the share.
+     * Starts a post from what another app shared, outside the screen's own coroutine: a rotation
+     * would cancel that and lose the share. Home shows it working meanwhile.
      */
     fun startShared(shared: Shared) {
-        viewModelScope.launch { createShared(shared)?.let { opened.value = it } }
+        status.update { it.copy(refreshing = true) }
+        // The app's scope, not this screen's: Switch blog clears Home, and the share mustn't go with it.
+        container.appScope.launch {
+            try {
+                createShared(shared)?.let { opened.value = it }
+            } finally {
+                status.update { it.copy(refreshing = false) }
+            }
+        }
     }
 
     /**
@@ -123,14 +132,15 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         val text = fromFile?.second ?: shared.text
         // Fresh, if GitHub can be reached: a link to a post deleted since the last look would fail
         // the site's build. Best effort; the cached list does otherwise.
-        withTimeoutOrNull(10_000) { runCatching { container.blogs.refresh() } }
+        // Interruptible, so the timeout really stops a request GitHub is slow to answer.
+        withTimeoutOrNull(10_000) { runCatching { runInterruptible(Dispatchers.IO) { kotlinx.coroutines.runBlocking { container.blogs.refresh() } } } }
         val today = java.time.LocalDate.now(container.blogs.config.value.timezone ?: java.time.ZoneOffset.UTC)
         val posts = container.blogs.cachedPosts.first()
             // Only posts the site builds: GitHub Pages skips future-dated ones, and post_url fails on them.
             .filter { it.published && !PostPath(it.path).isDraft && (PostPath(it.path).date?.let { d -> d <= today } ?: false) }
             .map { ObsidianNote.LinkTarget(it.path, it.title) }
         // Off the main thread: a big note or a slow pattern mustn't freeze the screen.
-        val converted = withContext(Dispatchers.Default) { ObsidianNote.convert(text, fromFile?.first, posts) }
+        val converted = withContext(Dispatchers.Default) { ObsidianNote.convert(text, fromFile?.first, posts, container.blogs.postUrlHasBaseurl) }
         val note = when (val result = converted) {
             is ObsidianNote.Result.Problem -> {
                 status.update { it.copy(error = result.message) }

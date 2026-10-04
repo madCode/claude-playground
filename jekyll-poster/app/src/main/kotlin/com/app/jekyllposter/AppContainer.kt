@@ -41,7 +41,7 @@ class AppContainer(
     /** When the site has (or hasn't) built a published post; a notification in the app. */
     onBuildFinished: (com.app.jekyllposter.data.Draft) -> Unit = com.app.jekyllposter.publish.Notifier(context)::buildFinished,
     /** The files in an Obsidian vault folder; tests list a plain folder instead. */
-    val vaultFiles: suspend (tree: String) -> List<com.app.jekyllposter.data.VaultFile> = { com.app.jekyllposter.data.listVault(context, it) },
+    val vaultFiles: suspend (tree: String) -> com.app.jekyllposter.data.VaultImages = { com.app.jekyllposter.data.listVault(context, it) },
 ) {
     /** Photos shared from another app, waiting for the editor of the post they started. */
     val sharedPhotos = java.util.concurrent.ConcurrentHashMap<Long, List<android.net.Uri>>()

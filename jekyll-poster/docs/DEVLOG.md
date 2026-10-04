@@ -36,6 +36,10 @@ Times are when each cycle landed, Pacific.
   in a code example; choosing another folder kept the old one readable; conversion ran on the
   main thread; errors repeated the private word. Also: a second `find:` or a front matter
   without its closing line could have let words through; both now stop the note.
+- **The second look found** (fixed): a photo whose name a rule changed wasn't found when the
+  vault folder was chosen afterwards; Jekyll 4 builds would get the baseurl twice (detected
+  now); the refresh's timeout couldn't stop a slow request, and Switch blog dropped the share;
+  `.avif` and `.heic` could be missed; an escaped `\\` read as a group.
 - **Left:** a phrase broken across lines isn't matched (as in obyde; DESIGN says so); deleting a
   post others link to fails the next build (Pages keeps the last good one); indented code blocks
   aren't told apart from nested lists.

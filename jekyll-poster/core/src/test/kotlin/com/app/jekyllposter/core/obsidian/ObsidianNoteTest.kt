@@ -81,6 +81,11 @@ class ObsidianNoteTest {
         assertEquals("[[Odd]]", nested.body)
     }
 
+    @Test fun underJekyll4PostUrlAlreadyHasTheBaseurl() {
+        val note = ObsidianNote.convert("[[Welcome]]", null, posts, postUrlHasBaseurl = true) as Result.Converted
+        assertEquals("[Welcome]({% post_url 2025-01-12-welcome %})", note.body)
+    }
+
     @Test fun linksToNotesNotYetPostedStayAsWritten() {
         assertEquals("Next: [[Things I want to write]] and [[Later|soon]].", convert("Next: [[Things I want to write]] and [[Later|soon]].").body)
     }
@@ -123,6 +128,8 @@ class ObsidianNoteTest {
         assertEquals("Ada S. and Bo S.\n", note.body)
         val numbered = convert("---\nfind: ['(\\w+)@example\\.com']\nreplace: ['\\1 (email)']\n---\nWrite to ada@example.com.\n")
         assertEquals("Write to ada (email).\n", numbered.body)
+        // An escaped backslash then a digit is text, not a group.
+        assertEquals("C:\\1 here\n", convert("---\nfind: [here]\nreplace: ['C:\\\\1 here']\n---\nhere\n").body)
     }
 
     @Test fun theFileNameTitleIsScrubbedToo() {

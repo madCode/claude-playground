@@ -113,13 +113,15 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
      * one; one that isn't in the vault stays as written, and the writer is told.
      */
     private fun addEmbeds(embeds: List<ObsidianNote.Embed>) {
+        embeds.forEach { embedNames[it.raw] = it.name }
         val previous = photoJob
         photoJob = viewModelScope.launch {
             previous?.join()
             val tree = container.settings.obsidianVault()
             // Shown while the vault is walked too: on a big one that takes a while, and Back waits for it.
             if (tree != null) flags.update { it.copy(addingPhoto = true) }
-            val files = tree?.let { runCatching { container.vaultFiles(it) }.getOrNull() }
+            val vault = tree?.let { runCatching { container.vaultFiles(it) }.getOrNull() }
+            val files = vault?.files
             if (files == null) {
                 flags.update {
                     it.copy(
@@ -136,13 +138,13 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                     // Gone from the text meanwhile: the writer took it out.
                     if (!stillThere(embed)) continue
                     val file = ObsidianNote.resolve(embed.name, files.map { it.path })?.let { p -> files.first { it.path == p } }
-                    if (file == null) { missing += embed.name; continue }
+                    if (file == null) { missing += embed.raw; continue }
                     val prepared = try {
                         container.images.import(file.uri)
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        missing += embed.name
+                        missing += embed.raw
                         continue
                     }
                     val draft = text ?: return@launch
@@ -157,10 +159,18 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 flags.update { it.copy(addingPhoto = false) }
             }
             if (missing.isNotEmpty()) {
-                flags.update { it.copy(photoError = "Not in your Obsidian vault folder, so left as written: ${missing.distinct().joinToString(", ")}") }
+                // Named as the text has them: the vault's own name may hold a word a rule hides.
+                val where = if (vault.complete) "in your Obsidian vault folder" else "in the first 50,000 files of your Obsidian vault folder"
+                flags.update { it.copy(photoError = "Not found $where, so left as written: ${missing.distinct().joinToString(", ")}") }
             }
         }
     }
+
+    /**
+     * The vault file each embed names, by how the text writes it. In memory only: after the app
+     * is pushed out of memory, an embed whose name a rule changed isn't found, and says so.
+     */
+    private val embedNames = mutableMapOf<String, String>()
 
     private fun stillThere(embed: ObsidianNote.Embed) = text?.body?.let { body -> ObsidianNote.embeds(body).any { it.raw == embed.raw } } == true
 
@@ -174,7 +184,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         viewModelScope.launch {
             chooseVault(container.context, container.settings, tree)
             loading.join()
-            text?.body?.let { addEmbeds(ObsidianNote.embeds(it)) }
+            // The note's own file names where known: its rules may have changed them in the text.
+            text?.body?.let { body -> addEmbeds(ObsidianNote.embeds(body).map { e -> embedNames[e.raw]?.let { e.copy(name = it) } ?: e }) }
         }
     }
 

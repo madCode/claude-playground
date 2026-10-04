@@ -44,9 +44,10 @@ object ObsidianNote {
 
     /**
      * Converts [text]. [fileName] is the note's file name when it came as a file: Obsidian titles
-     * a note by it. [posts] are the blog's posts a link may resolve to.
+     * a note by it. [posts] are the blog's posts a link may resolve to. [postUrlHasBaseurl] is
+     * true for a site built with Jekyll 4, whose `post_url` already starts with the baseurl.
      */
-    fun convert(text: String, fileName: String?, posts: List<LinkTarget>): Result {
+    fun convert(text: String, fileName: String?, posts: List<LinkTarget>, postUrlHasBaseurl: Boolean = false): Result {
         var doc = FrontMatterDocument.parse(text)
         // Unread, its find: rules couldn't be applied, and the words they hide would go out.
         if (doc.hasFrontMatter && !doc.readable) return Result.Problem("The note's front matter isn't YAML the app can read, so it wasn't added.")
@@ -88,12 +89,15 @@ object ObsidianNote {
         val tags = doc.terms("tag", "tags").map { it.removePrefix("#") }.filter { it.isNotEmpty() }
         dropped.forEach { doc.set(it, null) }
         val extra = doc.others(PostWriter.MANAGED).takeIf { it.isNotBlank() }
-        body = outsideCode(body) { segment -> links(segment, posts) }
+        body = outsideCode(body) { segment -> links(segment, posts, if (postUrlHasBaseurl) "" else "{{ site.baseurl }}") }
         val found = embeds(body)
         // The rules may have renamed a file in the text; the vault still has it by its own name.
         val named = if (found.size == embedNames.size) found.mapIndexed { i, e -> e.copy(name = embedNames[i]) } else found
         return Result.Converted(title, body, categories, tags, extra, named)
     }
+
+    /** Whether [name] is a file an image embed can name, by its extension. */
+    fun isImage(name: String): Boolean = name.substringAfterLast('.', "").lowercase() in imageExtensions
 
     /** The image embeds in [body], outside code, in order. Embedded notes and PDFs aren't images. */
     fun embeds(body: String): List<Embed> {
@@ -103,7 +107,7 @@ object ObsidianNote {
                 val inner = m.groupValues[2]
                 val target = inner.substringBefore('|').trim()
                 val alias = inner.substringAfter('|', "").trim()
-                if (target.substringAfterLast('.').lowercase() in imageExtensions) {
+                if (isImage(target)) {
                     // `|300` or `|300x200` is a display size, not alt text.
                     out += Embed(m.value, target, alias.takeUnless { Regex("""\d+(x\d+)?""").matches(it) }.orEmpty())
                 }
@@ -139,7 +143,7 @@ object ObsidianNote {
     private val fence = Regex("""^\s{0,3}(`{3,}|~{3,})""")
     private val inlineCode = Regex("""(`+)[\s\S]*?\1""")
 
-    private fun links(text: String, posts: List<LinkTarget>): String = wikilink.replace(text) { m ->
+    private fun links(text: String, posts: List<LinkTarget>, prefix: String): String = wikilink.replace(text) { m ->
         if (m.groupValues[1] == "!") return@replace m.value
         val inner = m.groupValues[2]
         val target = inner.substringBefore('|').substringBefore('#').trim()
@@ -147,8 +151,8 @@ object ObsidianNote {
         val post = find(target, posts) ?: return@replace m.value
         val name = postUrlName(post.path) ?: return@replace m.value
         val shown = alias.ifEmpty { target }
-        // post_url leaves out the baseurl on GitHub Pages' Jekyll, so a project site needs it added.
-        "[${shown.replace("[", "\\[").replace("]", "\\]")}]({{ site.baseurl }}{% post_url $name %})"
+        // post_url leaves out the baseurl on GitHub Pages' Jekyll 3, so a project site needs it added.
+        "[${shown.replace("[", "\\[").replace("]", "\\]")}]($prefix{% post_url $name %})"
     }
 
     /** The post titled [target], or named it (`2025-01-12-welcome`); the newest if several. */
@@ -260,7 +264,9 @@ object ObsidianNote {
 
     /** The groups a Python replacement refers to: numbers, or names from `\g<name>`. */
     private fun references(template: String): List<String> =
-        Regex("""\\(\d{1,2})|\\g<(\w+)>""").findAll(template).map { it.groupValues[1].ifEmpty { it.groupValues[2] } }.toList()
+        // An escaped backslash (`\\1`) is matched first, so its digit isn't read as a group.
+        Regex("""\\\\|\\(\d{1,2})|\\g<(\w+)>""").findAll(template).filter { it.value != "\\\\" }
+            .map { it.groupValues[1].ifEmpty { it.groupValues[2] } }.toList()
 
     /**
      * [Rule.replacement] expanded as Python's `re.sub` does: `\1` and `\g<name>` are groups, `\n`

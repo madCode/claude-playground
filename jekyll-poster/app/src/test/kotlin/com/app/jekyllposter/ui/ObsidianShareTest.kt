@@ -80,7 +80,7 @@ class ObsidianShareTest {
         idleUntil(10_000) { editor.text?.images?.size == 1 && !editor.state.value.addingPhoto && editor.state.value.photoError != null }
         val sitePath = editor.text!!.images.single().sitePath
         assertEquals("Look:\n\n![A cat asleep]({{ '$sitePath' | relative_url }})\n\n![[gone.png]]\n", editor.text!!.body)
-        assertEquals("Not in your Obsidian vault folder, so left as written: gone.png", editor.state.value.photoError)
+        assertEquals("Not found in your Obsidian vault folder, so left as written: ![[gone.png]]", editor.state.value.photoError)
         // It came with alt text, so nothing to ask.
         assertTrue(editor.state.value.describing.isEmpty())
     }

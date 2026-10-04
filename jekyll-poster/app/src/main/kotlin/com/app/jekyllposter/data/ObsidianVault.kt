@@ -3,11 +3,15 @@ package com.app.jekyllposter.data
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
+import com.app.jekyllposter.core.obsidian.ObsidianNote
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** A file in the Obsidian vault: its path from the vault's top, as Obsidian names it, and where to read it. */
 data class VaultFile(val path: String, val uri: Uri)
+
+/** The vault's images; [complete] is false when the walk stopped early, in a huge vault. */
+data class VaultImages(val files: List<VaultFile>, val complete: Boolean = true)
 
 /**
  * The images in the vault folder the writer picked, for finding a note's `![[photo.jpg]]`. Walked
@@ -15,7 +19,7 @@ data class VaultFile(val path: String, val uri: Uri)
  * for all of the phone's files. Hidden folders (`.obsidian`, `.trash`) are skipped, and the walk
  * stops after [limit] entries, so a huge vault can't stall the editor.
  */
-suspend fun listVault(context: Context, tree: String, limit: Int = 50_000): List<VaultFile> = withContext(Dispatchers.IO) {
+suspend fun listVault(context: Context, tree: String, limit: Int = 50_000): VaultImages = withContext(Dispatchers.IO) {
     val treeUri = Uri.parse(tree)
     val out = mutableListOf<VaultFile>()
     var seen = 0
@@ -31,11 +35,12 @@ suspend fun listVault(context: Context, tree: String, limit: Int = 50_000): List
                 if (name.startsWith(".")) continue
                 val path = prefix + name
                 if (c.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR) folders += childId to "$path/"
-                else if (c.getString(2)?.startsWith("image/") == true) out += VaultFile(path, DocumentsContract.buildDocumentUriUsingTree(treeUri, childId))
+                // By extension, as embeds are: providers report some images (.avif, .heic) as octet-stream.
+                else if (ObsidianNote.isImage(name)) out += VaultFile(path, DocumentsContract.buildDocumentUriUsingTree(treeUri, childId))
             }
         }
     }
-    out
+    VaultImages(out, complete = folders.isEmpty() && seen <= limit)
 }
 
 /**
