@@ -34,6 +34,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         val categories: List<String> = emptyList(),
         /** What the writer is searching for; null when not searching. */
         val query: String? = null,
+        val blogHasPosts: Boolean = false,
         val error: String? = null,
     ) {
         val searching: Boolean get() = !query.isNullOrBlank()
@@ -55,7 +56,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         val inCategory = category?.let { c -> posts.filter { post -> post.categories.any { it.equals(c, ignoreCase = true) } } } ?: posts
         val shown = if (q.isEmpty()) inCategory else inCategory.filter { it.matches(q) }
         val listed = mine.filter { (it.state != PostState.Published || recent(it)) && !it.untouched }
-        s.copy(account = account, onPhone = if (q.isEmpty()) listed else listed.filter { it.title.contains(q, ignoreCase = true) }, onBlog = shown, categories = categories, category = category)
+        // Search narrows the blog's posts only: the phone's are few, and a failed one must stay in sight.
+        s.copy(account = account, onPhone = listed, blogHasPosts = posts.isNotEmpty(), onBlog = shown, categories = categories, category = category)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), State())
 
     init {

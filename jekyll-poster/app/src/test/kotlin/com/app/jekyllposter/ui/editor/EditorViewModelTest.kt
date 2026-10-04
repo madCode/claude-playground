@@ -219,7 +219,7 @@ class EditorViewModelTest {
     }
 
     @Test fun searchMatchesTitlesCategoriesAndTagsWithinTheFilter() {
-        runBlocking { c.drafts.insert(Draft(title = "Sourdough notes")); c.drafts.insert(Draft(title = "Something else")) }
+        runBlocking { c.drafts.insert(Draft(title = "Something else", state = PostState.Failed, error = "GitHub said no.")) }
         val home = HomeViewModel(c)
         val watching = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch { home.state.collect {} }
         idleUntil(15_000) { home.state.value.onBlog.size == 6 && !home.state.value.refreshing }
@@ -229,7 +229,8 @@ class EditorViewModelTest {
         assertEquals(6, home.state.value.onBlog.size)
         home.search("SOURDOUGH")
         idleUntil { home.state.value.onBlog.map { it.title } == listOf("Sourdough, again: a 72% loaf") }
-        assertEquals(listOf("Sourdough notes"), home.state.value.onPhone.map { it.title })
+        // The phone's posts aren't narrowed: a failed one stays in sight.
+        assertEquals(listOf("Something else"), home.state.value.onPhone.map { it.title })
         // A tag (walking) and a category (Writing) match too.
         home.search("walk")
         idleUntil { home.state.value.onBlog.map { it.title } == listOf("A coastal walk") }

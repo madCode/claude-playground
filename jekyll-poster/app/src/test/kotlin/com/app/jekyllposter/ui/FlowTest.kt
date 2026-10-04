@@ -148,6 +148,20 @@ class FlowTest {
         assertTrue(runBlocking { app.container.drafts.get(recent) } != null)
     }
 
+    @Test fun searchingSaysWhatFoundNothingAndBackCloses() {
+        signIn()
+        start()
+        compose.waitFor("Welcome to the notebook")
+        compose.onNodeWithContentDescription("Search your posts").performClick()
+        compose.onNodeWithTag("search").performTextInput("zeppelin")
+        compose.waitFor("No posts match “zeppelin”.")
+        compose.onNodeWithText("meta").performClick()
+        compose.waitFor("No posts in meta match “zeppelin”.")
+        androidx.test.espresso.Espresso.pressBack()
+        compose.waitFor("Welcome to the notebook")
+        compose.onNodeWithTag("search").assertDoesNotExist()
+    }
+
     @Test fun aDraftIsKeptOnTheList() {
         signIn()
         start()

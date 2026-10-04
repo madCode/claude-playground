@@ -23,6 +23,10 @@ Times are when each cycle landed, Pacific.
 ### Cycle 14: search your posts
 - **Shipped:** a search in Home's top bar: the blog's posts by title, category or tag, as you
   type, within the chosen category.
+- **Its review found** (fixed): searching hid a failed post on the phone, with its error; the
+  keyboard came back over the results after a rotation or a post; "No posts match" ignored the
+  chosen category; the field had no name for TalkBack once typed in. (The keyboard's return is
+  untested: Robolectric has no keyboard to see.)
 
 ### Cycle 13: a documentation pass
 - Architecture, README and this status brought up to delete, the shortcut and the camera.

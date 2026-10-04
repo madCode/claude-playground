@@ -46,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
@@ -131,7 +132,8 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
                         Text(
                             when {
                                 state.refreshing -> "Reading your blog…"
-                                state.searching -> "No posts match “${state.query!!.trim()}”."
+                                state.searching && state.blogHasPosts ->
+                                    "No posts ${state.category?.let { "in $it " }.orEmpty()}match “${state.query!!.trim()}”."
                                 else -> LocalWhimsy.current.emptyBlog
                             },
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -195,9 +197,15 @@ private fun SearchField(query: String, onChange: (String) -> Unit) {
             focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
             focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
         ),
-        modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("search"),
+        modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("search").semantics { contentDescription = "Search your posts" },
     )
-    LaunchedEffect(Unit) { focus.requestFocus() }
+    // Only when the search opens: coming back to results (from a post, after a rotation) would
+    // otherwise bring the keyboard up over them.
+    var opening by rememberSaveable { mutableStateOf(query.isEmpty()) }
+    LaunchedEffect(Unit) {
+        if (opening) focus.requestFocus()
+        opening = false
+    }
 }
 
 @Composable
