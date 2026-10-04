@@ -373,8 +373,8 @@ private fun VaultBanner(count: Int, onChoose: () -> Unit, onSkip: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
             Text(
-                "This note has ${if (count == 1) "a photo" else "$count photos"} from Obsidian. Choose your vault folder, " +
-                    "once, and they're added from there.",
+                if (count == 1) "This note has a photo from Obsidian. Choose your vault folder, once, and it's added from there."
+                else "This note has $count photos from Obsidian. Choose your vault folder, once, and they're added from there.",
                 style = MaterialTheme.typography.bodyMedium,
             )
             Row(Modifier.align(Alignment.End)) {
