@@ -1,0 +1,84 @@
+name: Jekyll Poster
+
+on:
+  push:
+    branches: [main]
+    paths: ['jekyll-poster/**', '.github/workflows/jekyll-poster.yml']
+  pull_request:
+    branches: [main]
+    paths: ['jekyll-poster/**', '.github/workflows/jekyll-poster.yml']
+
+# Read-only unless a job asks for more; the build runs third-party plugins and dependencies.
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: jekyll-poster
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+      - name: Build, unit tests and coverage
+        run: ./gradlew build koverXmlReport koverHtmlReport koverVerify
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: jekyll-poster-debug-apk
+          path: jekyll-poster/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jekyll-poster-reports
+          path: |
+            jekyll-poster/app/build/reports/tests/
+            jekyll-poster/core/build/reports/tests/
+            jekyll-poster/build/reports/kover/
+          retention-days: 14
+
+  # A fixed link to the newest build from main, for installing on a phone:
+  # https://github.com/madCode/claude-playground/releases/download/jekyll-poster-debug/jekyll-poster-debug.apk
+  publish-debug:
+    needs: build
+    # Not on a re-run: an older run's number is a lower version code, which a phone with a newer build can't install.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: jekyll-poster-debug
+      cancel-in-progress: true
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: jekyll-poster-debug-apk
+      - name: Update the jekyll-poster-debug release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mv app-debug.apk jekyll-poster-debug.apk
+          build="${{ github.run_number }}"
+          short="${GITHUB_SHA::7}"
+          title="Jekyll Poster debug build $build · $short"
+          notes="Build $build from main ($short). Installs as com.app.jekyllposter.debug."
+          if gh release view jekyll-poster-debug > /dev/null 2>&1; then
+            gh release upload jekyll-poster-debug jekyll-poster-debug.apk --clobber
+            gh api -X PATCH "repos/$GH_REPO/git/refs/tags/jekyll-poster-debug" -f sha="$GITHUB_SHA" -F force=true > /dev/null
+            gh release edit jekyll-poster-debug --title "$title" --notes "$notes"
+          else
+            gh release create jekyll-poster-debug jekyll-poster-debug.apk --prerelease --target "$GITHUB_SHA" --title "$title" --notes "$notes"
+          fi

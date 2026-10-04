@@ -1,0 +1,78 @@
+package com.app.jekyllposter.publish
+
+import android.content.Context
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.CoroutineWorker
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
+import androidx.work.workDataOf
+import com.app.jekyllposter.PosterApp
+import com.app.jekyllposter.core.github.GitHubException
+import com.app.jekyllposter.data.Account
+import com.app.jekyllposter.data.AccountStore
+import com.app.jekyllposter.data.BuildState
+import com.app.jekyllposter.data.DraftDao
+import com.app.jekyllposter.core.github.GitHubClient
+import java.util.concurrent.TimeUnit
+
+/**
+ * Whether the site has a published post yet. Every GitHub Pages site deploys through an Actions run
+ * now, so the run for the post's commit says when it's live or why it isn't.
+ */
+class BuildWatcher(
+    private val drafts: DraftDao,
+    private val accounts: AccountStore,
+    private val clientFor: (Account) -> GitHubClient,
+) {
+    /** True when there's nothing more to wait for. */
+    suspend fun check(id: Long, giveUp: Boolean): Boolean {
+        val draft = drafts.get(id) ?: return true
+        val sha = draft.commitSha ?: return true
+        if (draft.buildState != BuildState.Building) return true
+        val account = accounts.current() ?: return true
+        val state = try {
+            val runs = clientFor(account).workflowRuns(account.owner, account.repo, sha)
+            when {
+                runs.isEmpty() -> null
+                runs.any { it.status == "completed" && it.conclusion != "success" && it.conclusion != "skipped" } -> BuildState.Failed
+                runs.all { it.status == "completed" } -> BuildState.Live
+                else -> null
+            }
+        } catch (e: GitHubException) {
+            // A token without Actions: read, or a repo that isn't a Pages site: nothing to watch.
+            if (e.retryable) null else BuildState.Unknown
+        }
+        val final = state ?: if (giveUp) BuildState.Unknown else return false
+        drafts.get(id)?.let { drafts.update(it.copy(buildState = final)) }
+        return true
+    }
+}
+
+class BuildWatchWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result {
+        val container = (applicationContext as PosterApp).container
+        val done = container.buildWatcher.check(inputData.getLong(KEY_ID, -1), giveUp = runAttemptCount >= MAX_ATTEMPTS)
+        return if (done) Result.success() else Result.retry()
+    }
+
+    companion object {
+        private const val KEY_ID = "draft"
+
+        /** About ten minutes of checks; a Pages build usually takes one or two. */
+        private const val MAX_ATTEMPTS = 20
+
+        fun enqueue(context: Context, id: Long) {
+            val request = OneTimeWorkRequestBuilder<BuildWatchWorker>()
+                .setInputData(workDataOf(KEY_ID to id))
+                .setInitialDelay(20, TimeUnit.SECONDS)
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.SECONDS)
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork("build-$id", ExistingWorkPolicy.REPLACE, request)
+        }
+    }
+}

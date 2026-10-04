@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keep in step with backup_rules.xml. The GitHub token is sealed by a Keystore key that never
+     leaves this phone, so a restored copy couldn't be read anyway. Drafts are backed up. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="datastore/account.preferences_pb" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="datastore/account.preferences_pb" />
+    </device-transfer>
+</data-extraction-rules>
