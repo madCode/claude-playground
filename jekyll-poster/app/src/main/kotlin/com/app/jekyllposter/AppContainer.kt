@@ -40,9 +40,14 @@ class AppContainer(
     val schedulePublish: (Long) -> Unit = { com.app.jekyllposter.publish.PublishWorker.enqueue(context, it) },
     /** When the site has (or hasn't) built a published post; a notification in the app. */
     onBuildFinished: (com.app.jekyllposter.data.Draft) -> Unit = com.app.jekyllposter.publish.Notifier(context)::buildFinished,
+    /** The files in an Obsidian vault folder; tests list a plain folder instead. */
+    val vaultFiles: suspend (tree: String) -> List<com.app.jekyllposter.data.VaultFile> = { com.app.jekyllposter.data.listVault(context, it) },
 ) {
     /** Photos shared from another app, waiting for the editor of the post they started. */
     val sharedPhotos = java.util.concurrent.ConcurrentHashMap<Long, List<android.net.Uri>>()
+
+    /** A shared Obsidian note's `![[photo]]` embeds, waiting for the editor to find them in the vault. */
+    val sharedEmbeds = java.util.concurrent.ConcurrentHashMap<Long, List<com.app.jekyllposter.core.obsidian.ObsidianNote.Embed>>()
 
     /** For work that must outlive the screen that starts it, like signing out. */
     val appScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)

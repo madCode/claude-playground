@@ -15,6 +15,9 @@
     post and its images land in one commit. `expect` names files that must be unchanged at the
     head the commit lands on, checked on every rebuild. Post contents are fetched in batches
     through GraphQL by blob sha. `DeviceFlow` is Sign in with GitHub: code, polling, refresh.
+  - `obsidian/`: `ObsidianNote` turns a note into a post's fields: front matter mapped,
+    find/replace rules applied and removed, `[[links]]` to `post_url`, image embeds listed and
+    resolved against the vault's files as Obsidian does.
   - `blog/`: `Blog` ties one repository and branch together: `index()` reads the posts,
     taxonomy, config and image folder, reusing summaries for unchanged blobs.
   - Test fixtures: `FakeGitHub`, a MockWebServer that serves one repository with real commits.
@@ -23,6 +26,8 @@
   - `data/`: `AccountStore` (DataStore, token sealed by `SecretCipher`), Room
     (`Draft` for posts written on the phone, `CachedPost` for the blog's posts as last read),
     `BlogRepository` (refreshing that cache, the taxonomy flow).
+  - `data/ObsidianVault`: lists the vault folder the writer picked, through the Storage Access
+    Framework, for a note's `![[photo]]`. The editor imports what it finds like any photo.
   - `data/ImageImporter`: a picked, shared or camera photo → upright, scaled, re-encoded file in
     app storage. Camera photos arrive in `cache/camera/` through a FileProvider and are deleted
     once imported.
@@ -36,7 +41,7 @@
     (`SectionHeading`, `TermPill`, `PosterFab`, `InkButton`). `DesignRoundTest` renders styles
     side by side with `-Pdesign`.
     `PosterNavHost` picks the first screen once the stored account has loaded, and starts a
-    shared or New post once (a saved flag: Home's effects run again each time it returns).
+    shared (`HomeViewModel.startShared`, through `ObsidianNote`) or New post once (a saved flag: Home's effects run again each time it returns).
   - `MainActivity`: `postToStart` turns its intent (a share, the launcher's New post shortcut)
     into the post to start; the shortcut is a dynamic one it adds.
   - `AppContainer`: manual DI. Tests swap the GitHub address, cipher, database, DataStore and

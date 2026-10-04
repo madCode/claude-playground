@@ -72,6 +72,28 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: ()
                     "Turn on if a link needs them, an affiliate link say.",
                 keepTracking,
             ) { scope.launch { container.settings.setKeepTrackingCodes(it) } }
+            Heading("Obsidian")
+            val vault by container.settings.obsidianVault.collectAsStateWithLifecycle(null)
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val chooseVault = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { tree ->
+                if (tree != null) scope.launch {
+                    runCatching { context.contentResolver.takePersistableUriPermission(tree, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+                    container.settings.setObsidianVault(tree.toString())
+                }
+            }
+            Row(
+                vault?.let(::vaultName) ?: "Vault folder",
+                if (vault != null) "Photos in shared notes are found here. Tap to choose another." else "Where photos in shared notes are found. Not chosen yet.",
+                onClick = { chooseVault.launch(null) },
+            )
+            if (vault != null) {
+                Row("Forget the vault folder", "The app stops reading it", onClick = {
+                    scope.launch {
+                        vault?.let { v -> runCatching { context.contentResolver.releasePersistableUriPermission(android.net.Uri.parse(v), android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } }
+                        container.settings.setObsidianVault(null)
+                    }
+                })
+            }
             Heading("About")
             Row("Jekyll Poster ${BuildConfig.VERSION_NAME}", "Posts to a Jekyll blog on GitHub Pages")
         }
@@ -115,3 +137,8 @@ private fun Row(title: String, detail: String, onClick: (() -> Unit)? = null) {
     }
     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
 }
+
+/** A vault folder's own name, from its document tree (`primary:Documents/Notes` → Notes). */
+private fun vaultName(tree: String): String = runCatching {
+    android.provider.DocumentsContract.getTreeDocumentId(android.net.Uri.parse(tree)).substringAfter(':').trimEnd('/').substringAfterLast('/').ifEmpty { "Vault folder" }
+}.getOrDefault("Vault folder")

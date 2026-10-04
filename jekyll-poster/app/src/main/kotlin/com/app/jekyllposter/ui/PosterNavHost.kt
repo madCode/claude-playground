@@ -73,10 +73,7 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
             LaunchedEffect(Unit) {
                 if (shared != null && pending) {
                     pending = false
-                    // Links shared in lose their tracking codes, unless the writer chose to keep them.
-                    val text = if (container.settings.keepTrackingCodes()) shared.text else com.app.jekyllposter.core.text.Tracking.strip(shared.text)
-                    val id = container.drafts.insert(Draft(blog = container.accounts.current()?.blogKey, body = text))
-                    container.sharedPhotos[id] = shared.images
+                    val id = vm.startShared(shared) ?: return@LaunchedEffect
                     // Room may resume this off the main thread, where navigation isn't allowed.
                     withContext(Dispatchers.Main) { nav.navigate("editor/$id") }
                 }

@@ -10,6 +10,7 @@ import com.app.jekyllposter.core.jekyll.Edit
 import com.app.jekyllposter.core.jekyll.Images
 import com.app.jekyllposter.core.jekyll.MarkdownEdits
 import com.app.jekyllposter.core.jekyll.Preview
+import com.app.jekyllposter.core.obsidian.ObsidianNote
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.DraftImage
 import java.io.File
@@ -52,6 +53,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         /** Publish was stopped by the front matter; the screen opens it and says why. */
         val frontMatterBlocked: String? = null,
         val photoError: String? = null,
+        /** Photos in a shared Obsidian note, waiting for the writer to choose the vault folder. */
+        val vaultPhotos: Int = 0,
         val closed: Boolean = false,
     ) {
         /** Published posts and ones on their way are read-only; edit the blog's copy instead. */
@@ -99,7 +102,81 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             Snapshot.withMutableSnapshot { text = loaded }
             loaded?.body?.let { bodySelection = TextRange(it.length) }
             container.sharedPhotos.remove(id)?.forEach(::addPhoto)
+            container.sharedEmbeds.remove(id)?.let(::addEmbeds)
         }
+    }
+
+    /** A shared note's embeds that wait for the vault folder to be chosen. */
+    private var waitingEmbeds: List<ObsidianNote.Embed> = emptyList()
+
+    /**
+     * Finds a shared note's `![[photo]]` embeds in the Obsidian vault folder, and puts each photo
+     * in its place, prepared like any other (no location). Without a folder chosen, they wait for
+     * one; one that isn't in the vault stays as written, and the writer is told.
+     */
+    private fun addEmbeds(embeds: List<ObsidianNote.Embed>) {
+        val previous = photoJob
+        photoJob = viewModelScope.launch {
+            previous?.join()
+            val tree = container.settings.obsidianVault()
+            val files = tree?.let { runCatching { container.vaultFiles(it) }.getOrNull() }
+            if (files == null) {
+                waitingEmbeds = embeds
+                flags.update {
+                    it.copy(
+                        vaultPhotos = embeds.size,
+                        photoError = if (tree != null) "Couldn't open your Obsidian vault folder. Choose it again." else it.photoError,
+                    )
+                }
+                return@launch
+            }
+            flags.update { it.copy(addingPhoto = true) }
+            val missing = mutableListOf<String>()
+            try {
+                for (embed in embeds) {
+                    // Gone from the text meanwhile: the writer took it out.
+                    if (text?.body?.contains(embed.raw) != true) continue
+                    val file = ObsidianNote.resolve(embed.name, files.map { it.path })?.let { p -> files.first { it.path == p } }
+                    if (file == null) { missing += embed.name; continue }
+                    val prepared = try {
+                        container.images.import(file.uri)
+                    } catch (e: Exception) {
+                        missing += embed.name
+                        continue
+                    }
+                    val draft = text ?: return@launch
+                    val taken = draft.images.map { it.sitePath }.toSet() + container.blogs.paths
+                    val sitePath = Images.sitePath(container.blogs.imageFolder.value, LocalDateTime.now().year, "photo", prepared.extension, taken)
+                    edit { it.copy(images = it.images + DraftImage(sitePath, prepared.file.path), body = ObsidianNote.replaceEmbed(it.body, embed.raw, Images.markdown(sitePath, embed.alt))) }
+                    if (embed.alt.isBlank()) flags.update { it.copy(describing = it.describing + sitePath) }
+                }
+            } finally {
+                flags.update { it.copy(addingPhoto = false) }
+            }
+            if (missing.isNotEmpty()) {
+                flags.update { it.copy(photoError = "Not in your Obsidian vault folder, so left as written: ${missing.distinct().joinToString(", ")}") }
+            }
+        }
+    }
+
+    /** The writer chose the vault folder: kept for later notes, and the waiting photos are found in it. */
+    fun vaultChosen(tree: Uri) {
+        runCatching {
+            container.context.contentResolver.takePersistableUriPermission(tree, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        val waiting = waitingEmbeds
+        waitingEmbeds = emptyList()
+        flags.update { it.copy(vaultPhotos = 0) }
+        viewModelScope.launch {
+            container.settings.setObsidianVault(tree.toString())
+            addEmbeds(waiting)
+        }
+    }
+
+    /** Not now: the embeds stay in the text as written. */
+    fun skipVault() {
+        waitingEmbeds = emptyList()
+        flags.update { it.copy(vaultPhotos = 0) }
     }
 
     private fun edit(change: (Draft) -> Draft) {

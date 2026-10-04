@@ -87,6 +87,29 @@ doesn't want to open a laptop and make a commit for every post.
   the blog (a taken name is renamed, in the text too). Deleted from the phone once uploaded, or
   with their draft.
 
+## From Obsidian
+
+- Share a note from Obsidian, as text or as its `.md` file, and it becomes a post, the way obyde
+  turns notes into Jekyll posts. Any shared text goes the same way; plain text comes out as it went in.
+- The title is the note's `title:`, else its file name, else a first `# heading`. A first
+  heading that repeats the title is dropped.
+- `tags:` and `categories:` fill the post's own, in the blog's spelling. `date:` and `layout:`
+  go (the app sets those when publishing), and so do Obsidian's `aliases:` and `cssclasses:`.
+  Other keys are the post's "more front matter", to see before publishing.
+- `[[Post title]]` and `[[Post title|shown text]]` become `{% post_url … %}` links when a
+  published post on the blog has that title or file name. A link to a note that isn't a post yet
+  stays as written, `[[Like this]]`: it reads as a title. Code is left alone.
+- obyde's `find:` and `replace:` lists (Python regular expressions, in pairs) are taken out of
+  the note first, then applied to everything else: title, text, tags, other front matter, and
+  the file name the title may come from. So the words they hide never reach the phone's draft or
+  the blog. A note whose rules can't be applied (unpaired, unreadable) isn't added, and the app
+  says why.
+- `![[photo.jpg]]` is found in the vault folder, chosen once (in the editor when a note first
+  needs it, or in Settings), and added like any photo, location stripped. Its `|alt text` is the
+  alt text; a size (`|300`) isn't. One not in the vault stays as written, and the app says so.
+  Embedded notes and PDFs stay as written.
+- The preview shows a `post_url` link as a link that goes nowhere: only Jekyll knows where.
+
 ## Front matter
 
 - Keys beyond the editor's fields (`image:`, `excerpt:`, `comments: false`, …) are YAML in a
@@ -155,6 +178,7 @@ doesn't want to open a laptop and make a commit for every post.
 ## Settings
 
 - **Keep tracking codes in shared links**, off by default.
+- **Obsidian:** the vault folder photos in shared notes come from; choose another or forget it.
 - The blog (repository and branch) and the site's address.
 - **Switch blog** lists the repositories the current sign-in can write to.
 - **Sign out** keeps drafts on the phone for when that blog is signed in again.

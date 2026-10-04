@@ -11,6 +11,14 @@ import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.ui.forWriter
+import com.app.jekyllposter.Shared
+import com.app.jekyllposter.core.obsidian.ObsidianNote
+import com.app.jekyllposter.core.text.Tracking
+import android.net.Uri
+import android.provider.OpenableColumns
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -90,6 +98,67 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     fun stopSearch() = status.update { it.copy(query = null) }
 
+    /**
+     * Starts a post from what another app shared, and returns it; null, with [State.error] saying
+     * why, when it can't be taken. Text and notes go through [ObsidianNote], which leaves plain
+     * text as it is: a note's `[[links]]`, find/replace rules and front matter are what change.
+     */
+    suspend fun startShared(shared: Shared): Long? {
+        val fromFile = shared.note?.let { uri -> readNote(uri) ?: run {
+            status.update { it.copy(error = "Couldn't read the shared note.") }
+            return null
+        } }
+        val text = fromFile?.second ?: shared.text
+        val posts = container.blogs.cachedPosts.first()
+            .filter { it.published && !PostPath(it.path).isDraft }
+            .map { ObsidianNote.LinkTarget(it.path, it.title) }
+        val note = when (val result = ObsidianNote.convert(text, fromFile?.first, posts)) {
+            is ObsidianNote.Result.Problem -> {
+                status.update { it.copy(error = result.message) }
+                return null
+            }
+            is ObsidianNote.Result.Converted -> result
+        }
+        // Links shared in lose their tracking codes, unless the writer chose to keep them.
+        val body = if (container.settings.keepTrackingCodes()) note.body else Tracking.strip(note.body)
+        val taxonomy = container.blogs.taxonomy.first()
+        // The blog's spelling wins, as when a term is picked in the editor.
+        fun spelled(terms: List<String>, known: List<com.app.jekyllposter.core.jekyll.Term>) =
+            terms.map { t -> known.firstOrNull { it.name.equals(t, ignoreCase = true) }?.name ?: t }.distinctBy { it.lowercase() }
+        val id = container.drafts.insert(
+            Draft(
+                blog = container.accounts.current()?.blogKey, title = note.title, body = body,
+                categories = spelled(note.categories, taxonomy.categories), tags = spelled(note.tags, taxonomy.tags),
+                extraFrontMatter = note.extra,
+            ),
+        )
+        container.sharedPhotos[id] = shared.images
+        if (note.embeds.isNotEmpty()) container.sharedEmbeds[id] = note.embeds
+        return id
+    }
+
+    /** A shared file's name and text; null when it can't be read, or is too big to be a note. */
+    private suspend fun readNote(uri: Uri): Pair<String?, String>? = withContext(Dispatchers.IO) {
+        runCatching {
+            val resolver = container.context.contentResolver
+            val name = runCatching {
+                resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+            }.getOrNull() ?: uri.lastPathSegment
+            // Read up to one byte past the limit, so a bigger file is told apart without reading it all.
+            val bytes = resolver.openInputStream(uri)?.use { input ->
+                val out = java.io.ByteArrayOutputStream()
+                val chunk = ByteArray(8192)
+                while (out.size() <= MAX_NOTE) {
+                    val n = input.read(chunk)
+                    if (n < 0) break
+                    out.write(chunk, 0, n)
+                }
+                out.toByteArray()
+            } ?: return@runCatching null
+            if (bytes.size > MAX_NOTE) null else name to bytes.toString(Charsets.UTF_8)
+        }.getOrNull()
+    }
+
     /** Opening a post goes through here so [open] runs on the main thread, where navigation must. */
     fun newDraft(open: (Long) -> Unit) {
         viewModelScope.launch { open(container.drafts.insert(Draft(blog = container.accounts.current()?.blogKey))) }
@@ -149,3 +218,6 @@ private val Draft.untouched: Boolean get() = isEmpty && state == PostState.Draft
 /** A post matches a search by its title, or by one of its categories or tags. */
 private fun CachedPost.matches(query: String): Boolean =
     title.contains(query, ignoreCase = true) || (categories + tags).any { it.contains(query, ignoreCase = true) }
+
+/** A shared note bigger than this is surely not one: 1 MB of text. */
+private const val MAX_NOTE = 1024 * 1024
