@@ -63,10 +63,12 @@ doesn't want to open a laptop and make a commit for every post.
 
 ## Photos
 
-- From the photo picker, or shared from the gallery (in the order shared). Each goes in at the
+- From the photo picker, taken with the camera, or shared from the gallery (in the order shared). Each goes in at the
   cursor, after any selection, on a paragraph of its own, and asks for alt text (skippable).
 - Each is turned upright (mirrored ones too), scaled to at most 2000 px and re-encoded, which
   drops its EXIF: no location, camera or time goes to a public blog. PNGs stay PNG.
+- A camera photo is written to the app's cache, never backed up, and deleted once prepared: its
+  original, location included, doesn't stay on the phone either.
 - GIFs keep their frames and loop but lose comment and application blocks, where XMP (and a
   location) can hide. GIFs over 10 MB are refused.
 - Named by when they were added, beside the blog's images:

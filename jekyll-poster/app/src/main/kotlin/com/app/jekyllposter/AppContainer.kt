@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit
 
 /** The app's objects, built once. Tests pass their own GitHub address, cipher and database. */
 class AppContainer(
-    context: Context,
+    val context: Context,
     val apiBase: HttpUrl = "https://api.github.com/".toHttpUrl(),
     /** github.com itself, where the device flow's sign-in pages live. */
     githubWeb: HttpUrl = "https://github.com/".toHttpUrl(),

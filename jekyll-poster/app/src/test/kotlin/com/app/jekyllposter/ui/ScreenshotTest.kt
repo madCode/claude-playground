@@ -202,4 +202,9 @@ class ScreenshotTest {
             compose.onNode(hasText("Delete from the blog")).performClick()
         }) { EditorScreen(vm) {} }
     }
+
+    @Test fun photoMenu() {
+        val vm = editorWithDraft()
+        shoot("11-photo-menu", act = { compose.onNode(hasContentDescription("Add a photo")).performClick() }) { EditorScreen(vm) {} }
+    }
 }

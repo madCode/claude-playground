@@ -19,6 +19,12 @@ Times are when each cycle landed, Pacific.
 
 ## Night 1 · Sun 4 Oct
 
+### Cycle 12: take a photo
+- **Shipped:** the photo button offers Choose photos or Take a photo. The camera app writes to
+  the cache through a FileProvider; the photo is prepared like any other and the original deleted.
+- **Tests:** FileProvider caches its paths statically, against the first Robolectric test's data
+  directory; the camera tests clear it.
+
 ### Cycle 11: New post from the app icon
 - **Shipped:** long-press the icon for New post. The shortcut is added by the app (a
   shortcuts.xml can't name the debug build's package), once.

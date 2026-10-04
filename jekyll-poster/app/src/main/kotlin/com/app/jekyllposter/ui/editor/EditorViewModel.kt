@@ -159,6 +159,40 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         }
     }
 
+    /** The file the camera app is writing the next photo to, until it comes back. */
+    private var cameraFile: File? = null
+
+    /**
+     * Where the camera app should write a photo for this post: a file in the cache, offered to it
+     * through the FileProvider. Null if it can't be made.
+     */
+    fun cameraTarget(): Uri? = runCatching {
+        val context = container.context
+        val dir = File(context.cacheDir, "camera").apply { mkdirs() }
+        val file = File(dir, "${System.currentTimeMillis()}.jpg")
+        cameraFile = file
+        androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.camera", file)
+    }.getOrNull()
+
+    /** The camera app came back: adds the photo if one was taken, then deletes the original. */
+    fun photoTaken(taken: Boolean) {
+        val file = cameraFile ?: return
+        cameraFile = null
+        if (!taken || !file.exists() || file.length() == 0L) {
+            file.delete()
+            return
+        }
+        addPhoto(Uri.fromFile(file))
+        // The original keeps its EXIF, location included; only the prepared copy stays.
+        viewModelScope.launch { photoJob?.join(); file.delete() }
+    }
+
+    fun cameraUnavailable() {
+        cameraFile?.delete()
+        cameraFile = null
+        flags.update { it.copy(photoError = "No camera app to take a photo with.") }
+    }
+
     /** A photo still being prepared; Publish and Back wait for it, so it isn't lost. */
     private var photoJob: Job? = null
 

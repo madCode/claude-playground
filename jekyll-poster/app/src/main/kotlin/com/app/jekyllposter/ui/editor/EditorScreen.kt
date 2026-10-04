@@ -59,6 +59,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -133,6 +135,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri?.let(viewModel::addPhoto)
     }
+    val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture(), viewModel::photoTaken)
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     // Asked on the first Publish, when "tell you when it's live" makes sense; publishing goes ahead either way.
@@ -230,7 +233,15 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                     formatting = bodyFocused,
                     addingPhoto = state.addingPhoto,
                     onFormat = viewModel::format,
-                    onPhoto = { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    onPickPhoto = { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    onTakePhoto = {
+                        val target = viewModel.cameraTarget()
+                        try {
+                            if (target != null) takePhoto.launch(target) else viewModel.cameraUnavailable()
+                        } catch (e: android.content.ActivityNotFoundException) {
+                            viewModel.cameraUnavailable()
+                        }
+                    },
                 )
             }
         },
@@ -407,7 +418,8 @@ private fun DescribePhoto(sitePath: String, onDone: (String) -> Unit) {
  * themselves when pressed again. Formatting needs the body focused; a photo can go in any time.
  */
 @Composable
-private fun FormatBar(formatting: Boolean, addingPhoto: Boolean, onFormat: ((Edit) -> Edit) -> Unit, onPhoto: () -> Unit) {
+private fun FormatBar(formatting: Boolean, addingPhoto: Boolean, onFormat: ((Edit) -> Edit) -> Unit, onPickPhoto: () -> Unit, onTakePhoto: () -> Unit) {
+    var photoMenu by remember { mutableStateOf(false) }
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding()) {
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "**") } }) { Icon(Icons.Default.FormatBold, "Bold") }
@@ -420,7 +432,21 @@ private fun FormatBar(formatting: Boolean, addingPhoto: Boolean, onFormat: ((Edi
             if (addingPhoto) {
                 CircularProgressIndicator(Modifier.padding(12.dp).size(24.dp).semantics { contentDescription = "Adding the photo" }, strokeWidth = 2.dp)
             } else {
-                IconButton(onClick = onPhoto) { Icon(Icons.Default.AddPhotoAlternate, "Add a photo") }
+                Box {
+                    IconButton(onClick = { photoMenu = true }) { Icon(Icons.Default.AddPhotoAlternate, "Add a photo") }
+                    DropdownMenu(expanded = photoMenu, onDismissRequest = { photoMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Choose photos") },
+                            leadingIcon = { Icon(Icons.Default.PhotoLibrary, null) },
+                            onClick = { photoMenu = false; onPickPhoto() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Take a photo") },
+                            leadingIcon = { Icon(Icons.Default.PhotoCamera, null) },
+                            onClick = { photoMenu = false; onTakePhoto() },
+                        )
+                    }
+                }
             }
         }
     }

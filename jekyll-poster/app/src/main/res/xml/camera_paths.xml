@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Where the camera app writes a photo taken for a post: the cache, never backed up, and emptied
+     once the photo is prepared (its EXIF, location included, goes with it). -->
+<paths>
+    <cache-path name="camera" path="camera/" />
+</paths>
