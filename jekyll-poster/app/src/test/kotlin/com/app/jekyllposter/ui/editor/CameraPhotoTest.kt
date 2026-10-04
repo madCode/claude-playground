@@ -68,7 +68,8 @@ class CameraPhotoTest {
         val id = runBlocking { app.container.drafts.insert(draft) }
         val target = EditorViewModel(app.container, id).also { vm -> idleUntil { vm.text != null } }.cameraTarget()!!
         shoot(target.path)
-        val rebuilt = EditorViewModel(app.container, id).also { vm -> idleUntil { vm.text != null && vm.state.value.draft != null } }
+        // The answer arrives as the new editor starts, before its draft has loaded.
+        val rebuilt = EditorViewModel(app.container, id)
         rebuilt.photoTaken(target.path, true)
         idleUntil(10_000) { rebuilt.text?.images?.size == 1 && !rebuilt.state.value.addingPhoto }
         idleUntil { originals().isEmpty() }
@@ -96,6 +97,7 @@ class CameraPhotoTest {
         val target = vm.cameraTarget()!!
         shoot(target.path)
         vm.photoTaken(target.path, true)
+        idleUntil { vm.state.value.photoError != null }
         assertEquals("The photo wasn't added: this post can't be changed now.", vm.state.value.photoError)
         assertTrue(originals().isEmpty())
     }

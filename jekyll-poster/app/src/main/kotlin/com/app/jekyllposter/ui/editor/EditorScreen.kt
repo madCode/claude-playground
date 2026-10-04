@@ -244,7 +244,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                     onTakePhoto = take@{
                         // One at a time: a second tap before the camera opens would orphan a file.
                         if (cameraPath != null) return@take
-                        val target = viewModel.cameraTarget() ?: return@take viewModel.cameraUnavailable(null)
+                        val target = viewModel.cameraTarget() ?: return@take viewModel.cameraNotReady()
                         cameraPath = target.path
                         try {
                             takePhoto.launch(target.uri)

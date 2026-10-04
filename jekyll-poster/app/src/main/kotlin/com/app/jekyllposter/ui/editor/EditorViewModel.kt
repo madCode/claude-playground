@@ -89,8 +89,11 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         f.copy(draft = draft, taxonomy = taxonomy)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, State())
 
+    /** The draft read from the database; a camera photo arriving first waits for it. */
+    private val loading: Job
+
     init {
-        viewModelScope.launch {
+        loading = viewModelScope.launch {
             val loaded = container.drafts.get(id)
             // Applied at once, so the screen sees it even if no frame is pending to pick it up.
             Snapshot.withMutableSnapshot { text = loaded }
@@ -178,17 +181,29 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             file.delete()
             return
         }
-        if (text == null || (state.value.draft != null && !state.value.editable)) {
-            file.delete()
-            flags.update { it.copy(photoError = "The photo wasn't added: this post can't be changed now.") }
-            return
+        viewModelScope.launch {
+            // After the app was pushed out of memory, the answer reaches a new editor before
+            // its draft has loaded.
+            try {
+                loading.join()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                file.delete()
+                throw e
+            }
+            if (text == null || (state.value.draft != null && !state.value.editable)) {
+                file.delete()
+                flags.update { it.copy(photoError = "The photo wasn't added: this post can't be changed now.") }
+                return@launch
+            }
+            addPhoto(Uri.fromFile(file))
+            // The original keeps its EXIF, location included; only the prepared copy stays. In the
+            // app's scope, so the delete still happens if the editor closes mid-import.
+            val importing = photoJob
+            container.appScope.launch { importing?.join(); file.delete() }
         }
-        addPhoto(Uri.fromFile(file))
-        // The original keeps its EXIF, location included; only the prepared copy stays. In the
-        // app's scope, so the delete still happens if the editor closes mid-import.
-        val importing = photoJob
-        container.appScope.launch { importing?.join(); file.delete() }
     }
+
+    fun cameraNotReady() = flags.update { it.copy(photoError = "Couldn't get a file ready for the camera. Is the phone's storage full?") }
 
     fun cameraUnavailable(path: String?) {
         path?.let { File(it).delete() }

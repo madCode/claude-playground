@@ -28,6 +28,8 @@ Times are when each cycle landed, Pacific.
   published vanished silently; a double tap orphaned a file; the cancel test couldn't fail. The
   path now lives in the screen's saved state, every way out deletes the original, and stale
   originals are swept on start (untested: it runs before a test can set one up).
+- **The second look found** (fixed): after the app was pushed out of memory, the photo reached the
+  new editor before its draft had loaded and was refused; it now waits for the draft.
 - **Tests:** FileProvider caches its paths statically, against the first Robolectric test's data
   directory; the camera tests clear it.
 
