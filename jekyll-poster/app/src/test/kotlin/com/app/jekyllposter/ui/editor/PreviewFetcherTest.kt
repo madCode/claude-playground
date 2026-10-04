@@ -36,6 +36,12 @@ class PreviewFetcherTest {
         assertEquals(404, fetcher.fetch("https://unreachable.invalid/x.jpg")!!.statusCode)
     }
 
+    @Test fun somethingTooBigForAPictureIsNotRead() {
+        // A video linked in the post, say: not read into memory.
+        server.enqueue(MockResponse.Builder().code(200).addHeader("Content-Type", "video/mp4").body(okio.Buffer().write(ByteArray(16 * 1024 * 1024))).build())
+        assertEquals(404, fetcher.fetch(server.url("/big.mp4").toString())!!.statusCode)
+    }
+
     @Test fun photosFromThePhoneAreLeftToTheWebView() {
         assertNull(fetcher.fetch("data:image/jpeg;base64,AAAA"))
     }

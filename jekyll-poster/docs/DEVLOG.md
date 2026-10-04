@@ -33,6 +33,11 @@ Times are when each cycle landed, Pacific.
   history.
 - **Checked:** photos lose EXIF; camera originals never leave the phone; no analytics; the token
   only goes to api.github.com.
+- **Its review found** (fixed): Markdown right after a link (`**`, a backtick) was eaten with
+  the last tracking code; `&amp;`-escaped links lost parameters; the preview read any linked
+  file whole (a video could run the phone out of memory) and kept no cache; an edit's photo year
+  used UTC. Left: a four-step, two-device way for a restored photo link to show another post's
+  photo of the same name (nothing is ever overwritten).
 
 ### Cycle 15: the tag picker, from first use
 - **Reported:** a tag added with the keyboard's checkmark vanished from the sheet (it was on the

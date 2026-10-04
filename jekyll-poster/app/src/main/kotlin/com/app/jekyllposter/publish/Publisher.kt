@@ -116,7 +116,8 @@ class Publisher(
             return Plan.Finished(published(draft, path, null, null))
         }
         if (current.sha != draft.baseSha) return Plan.Finished(fail(draft, CHANGED))
-        val year = now().withZoneSameInstant(siteZone(index)).year
+        // The same clock as a new post's date, so a photo lands in the year folder its post would.
+        val year = (index.config.timezone?.let { now().withZoneSameInstant(it) } ?: now()).year
         val (ready, photos) = photos(draft, index, ours = emptySet(), PostPath(path).slug, year) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
         val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content())
         val date = doc.string("date")?.let { parseJekyllDate(it, siteZone(index)) }

@@ -26,4 +26,15 @@ class TrackingTest {
         val text = "Two links: https://a.example/x and https://b.example/y?utm_source=feed, both good."
         assertEquals("Two links: https://a.example/x and https://b.example/y, both good.", Tracking.strip(text))
     }
+
+    @Test fun markdownAroundALinkStays() {
+        assertEquals("**https://x.example/?a=1**", Tracking.strip("**https://x.example/?a=1&utm_source=b**"))
+        assertEquals("`https://x.example/`", Tracking.strip("`https://x.example/?utm_source=a`"))
+        assertEquals("| https://x.example/ |", Tracking.strip("| https://x.example/?utm_source=a |"))
+        assertEquals("_https://x.example/?a=1_", Tracking.strip("_https://x.example/?a=1&utm_source=b_"))
+    }
+
+    @Test fun htmlEscapedAmpersandsKeepTheirParameters() {
+        assertEquals("https://x.example/p?id=5&amp;page=2", Tracking.strip("https://x.example/p?utm_source=s&amp;id=5&amp;page=2"))
+    }
 }

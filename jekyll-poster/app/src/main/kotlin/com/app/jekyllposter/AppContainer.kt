@@ -59,8 +59,14 @@ class AppContainer(
 
     val settings = com.app.jekyllposter.data.Settings(settingsData)
 
-    /** For the preview's images: a client of its own, with no GitHub token on it. */
-    val previewFetcher by lazy { com.app.jekyllposter.ui.editor.PreviewFetcher(okhttp3.OkHttpClient()) }
+    /**
+     * For the preview's images: a client of its own, with no GitHub token on it, and a cache, so
+     * switching back to the preview doesn't download them all again.
+     */
+    val previewFetcher by lazy {
+        val cache = okhttp3.Cache(java.io.File(context.cacheDir, "preview"), 20L * 1024 * 1024)
+        com.app.jekyllposter.ui.editor.PreviewFetcher(okhttp3.OkHttpClient.Builder().cache(cache).build())
+    }
 
     val accounts = AccountStore(accountData, cipher, deviceFlow?.let { flow -> { refreshToken: String -> flow.refresh(refreshToken) } })
     val drafts = database.drafts()
