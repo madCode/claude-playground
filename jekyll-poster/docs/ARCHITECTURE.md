@@ -13,8 +13,8 @@
   - `github/`: `GitHubClient`, a thin OkHttp client. Commits go through the Git Data API
     (blobs, tree on `base_tree`, commit, fast-forward ref update, rebuilt on a conflict), so a
     post and its images land in one commit. `expect` names files that must be unchanged at the
-    head the commit lands on, checked on every rebuild. Post contents are fetched in batches through
-    GraphQL by blob sha.
+    head the commit lands on, checked on every rebuild. Post contents are fetched in batches
+    through GraphQL by blob sha. `DeviceFlow` is Sign in with GitHub: code, polling, refresh.
   - `blog/`: `Blog` ties one repository and branch together: `index()` reads the posts,
     taxonomy, config and image folder, reusing summaries for unchanged blobs.
   - Test fixtures: `FakeGitHub`, a MockWebServer that serves one repository with real commits.
@@ -24,7 +24,8 @@
     (`Draft` for posts written on the phone, `CachedPost` for the blog's posts as last read),
     `BlogRepository` (refreshing that cache, the taxonomy flow).
   - `data/ImageImporter`: picked photo → upright, scaled, re-encoded file in app storage.
-  - `publish/`: `Publisher` (the rules for sending a queued post, one at a time), `PublishWorker`
+  - `publish/`: `Publisher` (the rules for sending a queued post, one at a time: it plans a new
+    post, an edit or a move out of `_drafts`, then commits the plan), `PublishWorker`
     (WorkManager, needs a network, exponential backoff, unique per post), `BuildWatcher` and
     `BuildWatchWorker` (polls the Pages run for the post's commit), `Notifier`.
   - `ui/`: Compose screens with a ViewModel each: `connect`, `home`, `editor`, `settings`.

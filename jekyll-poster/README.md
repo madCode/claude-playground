@@ -12,6 +12,8 @@ tells you when GitHub Pages has rebuilt the site.
 - **Writing is on the phone; publishing waits for a connection.** Drafts stay on the phone.
   A post queued offline goes out when you're back online, exactly once.
 - **Edits are safe.** If a post changed on GitHub since you opened it, the app won't overwrite it.
+- **Front matter when you want it.** `image:`, `excerpt:` and the rest as YAML, checked before
+  it's published.
 - **Photos without your location.** Picked photos are scaled down and stripped of EXIF before
   they go in the post's commit.
 - **A bit of fun.** It looks like a risograph zine: cream paper, fluoro inks, a stamp of a
