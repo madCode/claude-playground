@@ -7,8 +7,18 @@ and moves it to Done.
 
 - [ ] Try it on your own blog (the sample blog works from the phone)
 - [ ] Register the GitHub App and set the repository variables *(you: [how](GITHUB_APP.md))*
-- [ ] A first green run of the live check *(you: the `SAMPLE_BLOG_TOKEN` secret; it runs from
-  main's Actions tab once merged)*
+- [ ] Posts from Obsidian *(agreed in outline; details below are a proposal)*. Share a note
+  from Obsidian and it arrives as a post the blog can read, as obyde does it:
+  - Plain Markdown stays as it is.
+  - `[[Note]]` and `[[Note|shown text]]`: a link when a post on the blog has that title (or
+    file name), else left as `[[Note]]`, as obyde does: it reads as a title, not as prose.
+  - obyde's `find:`/`replace:` lists in the front matter: taken out first, then applied to the
+    rest (text, title, other front matter). They hold the very words meant to stay private, so
+    they're never published; obyde keeps them, so its users add rules to hide the rules, and
+    those then match nothing.
+  - `![[photo.jpg]]`: found in the vault folder, picked once, and added like any photo
+    (location stripped).
+  - A live-check case publishes a converted note.
 - [ ] Find the Compose-test Room hang (DEVLOG, cycles 1 and 11: likely Compose's main
   dispatcher bound to the first test's looper)
 
@@ -24,6 +34,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] A live check: publishes to and deletes from the sample blog from Actions
 - [x] Cycle 16: a privacy audit, and its fixes
 - [x] Cycle 15: the tag picker, from first use
 - [x] Cycle 14: search your posts
