@@ -12,12 +12,17 @@ tells you when GitHub Pages has rebuilt the site.
 - **Writing is on the phone; publishing waits for a connection.** Drafts stay on the phone.
   A post queued offline goes out when you're back online, exactly once.
 - **Edits are safe.** If a post changed on GitHub since you opened it, the app won't overwrite it.
+- **Photos without your location.** Picked photos are scaled down and stripped of EXIF before
+  they go in the post's commit.
+- **Preview, and a nudge when it's live.** See the post as a page before publishing; get a
+  notification with its address once GitHub Pages has rebuilt.
 
 **Install:** the newest build from main is
 [jekyll-poster-debug.apk](https://github.com/madCode/claude-playground/releases/download/jekyll-poster-debug/jekyll-poster-debug.apk).
 
 **Sign in:** make a fine-grained token for your blog's repository with Contents (read and
-write) and Actions (read). The app links to GitHub's form with these filled in.
+write) and Actions (read); the app links to GitHub's form with these filled in. Or, once a
+GitHub App is set up ([how](docs/GITHUB_APP.md)), "Sign in with GitHub".
 
 ## Docs
 

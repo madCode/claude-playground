@@ -3,15 +3,25 @@ package com.app.jekyllposter.publish
 import com.app.jekyllposter.core.frontmatter.FrontMatterDocument
 import com.app.jekyllposter.core.github.FileChange
 import com.app.jekyllposter.core.github.GitHubException
+import com.app.jekyllposter.core.jekyll.Images
+import com.app.jekyllposter.core.jekyll.Permalink
 import com.app.jekyllposter.core.jekyll.PostContent
 import com.app.jekyllposter.core.jekyll.PostPath
 import com.app.jekyllposter.core.jekyll.PostWriter
 import com.app.jekyllposter.core.jekyll.Slug
+import com.app.jekyllposter.core.blog.Blog
+import com.app.jekyllposter.core.blog.SiteIndex
+import com.app.jekyllposter.data.AccountStore
 import com.app.jekyllposter.data.BlogRepository
 import com.app.jekyllposter.data.BuildState
+import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.DraftDao
 import com.app.jekyllposter.data.PostState
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.io.File
+import java.io.IOException
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
@@ -25,6 +35,7 @@ import java.time.format.DateTimeFormatter
  */
 class Publisher(
     private val drafts: DraftDao,
+    private val accounts: AccountStore,
     private val blogs: BlogRepository,
     private val now: () -> ZonedDateTime = { ZonedDateTime.now() },
 ) {
@@ -34,58 +45,230 @@ class Publisher(
         data class Failed(val message: String) : Outcome
     }
 
-    suspend fun publish(id: Long): Outcome {
+    /**
+     * One publish at a time: two queued posts with the same title would otherwise both see the
+     * name free and the second would replace the first.
+     */
+    private val lock = Mutex()
+
+    suspend fun publish(id: Long): Outcome = lock.withLock {
+        repeat(3) { attempt(id)?.let { return it } }
+        Outcome.Retry
+    }
+
+    /** Null when a file changed under the commit: decide again from the blog as it is now. */
+    private suspend fun attempt(id: Long): Outcome? {
         val draft = drafts.get(id) ?: return Outcome.Done
         if (draft.state != PostState.Queued) return Outcome.Done
-        val blog = blogs.blog() ?: return fail(draft, "Sign in to publish.")
+        val account = accounts.current() ?: return fail(draft, "Sign in to publish.")
+        if (draft.blog != null && draft.blog != account.blogKey) {
+            return fail(draft, "This post was written for ${draft.blog.substringBefore('@')}. Sign in to that blog to publish it.")
+        }
+        val blog = blogs.blog(account)
         return try {
-            val index = blog.index()
-            val (path, text, message) = if (draft.editingPath != null) {
-                val current = index.posts.firstOrNull { it.path.path == draft.editingPath }
-                    ?: return fail(draft, "This post isn't on the blog any more.")
-                if (current.sha != draft.baseSha) {
-                    return fail(draft, "This post changed on GitHub since you opened it. Open it again to get the new version.")
-                }
-                val original = blog.read(draft.editingPath) ?: return fail(draft, "This post isn't on the blog any more.")
-                val doc = PostWriter.edit(FrontMatterDocument.parse(original), draft.content())
-                Triple(draft.editingPath, doc.render(), "Update post: ${draft.title}")
-            } else {
-                val fixed = fixTarget(draft, index.paths)
-                val date = ZonedDateTime.parse(fixed.publishDate)
-                val doc = PostWriter.newPost(draft.content(), date, index.config)
-                Triple(fixed.targetPath!!, doc.render(), "Add post: ${draft.title}")
+            val index = blogs.refresh() ?: return Outcome.Retry
+            val editing = draft.editingPath
+            val moving = editing != null && PostPath(editing).isDraft && draft.destination == Destination.Posts
+            val plan = when {
+                editing != null && !moving -> planEdit(draft, editing, index, blog) ?: return null
+                moving -> planMove(draft, editing!!, index, blog) ?: return null
+                else -> planNew(draft, index, blog) ?: return null
             }
-            val landed = path in index.paths && blog.read(path) == text
-            val sha = if (landed) null else blog.commit(message, listOf(FileChange.text(path, text)))
-            val latest = drafts.get(id) ?: draft
-            drafts.update(
-                latest.copy(
-                    state = PostState.Published, targetPath = path, commitSha = sha ?: latest.commitSha,
-                    buildState = if (sha != null) BuildState.Building else latest.buildState ?: BuildState.Unknown,
-                    error = null, updatedAt = System.currentTimeMillis(),
-                ),
-            )
-            runCatching { blogs.refresh() }
-            Outcome.Done
+            if (plan is Plan.Finished) return plan.outcome
+            plan as Plan.Commit
+            val sha = blog.commit(plan.message, plan.changes, plan.expect)
+            published(drafts.get(id) ?: draft, plan.path, sha, plan.date?.let { postUrl(index, plan.path, it, plan.draft) })
         } catch (e: GitHubException) {
             when {
+                e.kind == GitHubException.Kind.Changed -> null
                 e.retryable -> Outcome.Retry
                 e.kind == GitHubException.Kind.Unauthorized -> fail(draft, "GitHub didn't accept the sign-in. Sign in again, then publish.")
                 e.kind == GitHubException.Kind.NoAccess -> fail(draft, "Your token can't write to this repository. Give it Contents: read and write.")
                 else -> fail(draft, "GitHub said: ${e.message}")
             }
+        } catch (e: IOException) {
+            // Reading a photo from the phone's storage, say; worth another try.
+            Outcome.Retry
         }
     }
 
-    /** Picks the new post's path and date once, avoiding any file already on the branch. */
-    private suspend fun fixTarget(draft: Draft, existing: Set<String>): Draft {
-        if (draft.targetPath != null && draft.publishDate != null) return draft
+    private sealed interface Plan {
+        class Finished(val outcome: Outcome) : Plan
+        class Commit(
+            val draft: Draft,
+            val path: String,
+            val message: String,
+            val changes: List<FileChange>,
+            val expect: Map<String, String?>,
+            val date: ZonedDateTime?,
+        ) : Plan
+    }
+
+    /** An edit of a post or Jekyll draft, in place. */
+    private suspend fun planEdit(draft: Draft, path: String, index: SiteIndex, blog: Blog): Plan? {
+        val current = blog.file(path) ?: return Plan.Finished(fail(draft, "This post isn't on the blog any more."))
+        // Checked before the conflict rule: after a crash, the post on GitHub may be this very
+        // edit, which no longer has the sha the writer opened.
+        if (current.text == PostWriter.edit(FrontMatterDocument.parse(current.text), draft.content()).render()) {
+            return Plan.Finished(published(draft, path, null, null))
+        }
+        if (current.sha != draft.baseSha) return Plan.Finished(fail(draft, CHANGED))
+        val (ready, photos) = photos(draft, index, ours = emptySet()) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
+        val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content())
+        val date = doc.string("date")?.let { parseJekyllDate(it, siteZone(index)) }
+            ?: PostPath(path).date?.atStartOfDay(siteZone(index))
+        val kind = if (PostPath(path).isDraft) "draft" else "post"
+        return Plan.Commit(
+            ready, path, "Update $kind: ${ready.title}",
+            listOf(FileChange.text(path, doc.render())) + photos.changes,
+            mapOf(path to current.sha) + photos.expect, date,
+        )
+    }
+
+    /** A Jekyll draft published from the phone: dated, written to _posts, out of _drafts, in one commit. */
+    private suspend fun planMove(draft: Draft, path: String, index: SiteIndex, blog: Blog): Plan? {
+        val current = blog.file(path)
+        if (current == null) {
+            // Gone from _drafts. If what's at the new name is what this phone sent, an earlier
+            // attempt landed; otherwise it was published or deleted elsewhere, and the phone's
+            // changes (and photos) are kept for the writer rather than marked done.
+            val target = draft.targetPath?.takeIf { it in index.paths }?.let { blog.file(it) }
+            if (target != null && target.sha in draft.sentShas) return Plan.Finished(published(draft, draft.targetPath!!, null, null))
+            return Plan.Finished(fail(draft, "This draft isn't in _drafts any more: it was published or removed elsewhere. Copy your text to keep it."))
+        }
+        if (current.sha != draft.baseSha) return Plan.Finished(fail(draft, CHANGED))
+        val (ready, photos) = photos(draft, index, ours = emptySet()) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
+        // A name picked on an earlier attempt and taken since is picked again.
+        val stale = ready.targetPath?.let { it in index.paths } == true
+        val fixed = fixTarget(if (stale) ready.copy(targetPath = null, publishDate = null) else ready, index)
+        val date = ZonedDateTime.parse(fixed.publishDate)
+        val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content())
+        doc.setRaw("date", PostWriter.timestamp(date))
+        val target = fixed.targetPath!!
+        drafts.update(fixed.copy(sentShas = (fixed.sentShas + gitBlobSha(doc.render())).distinct()))
+        return Plan.Commit(
+            fixed, target, "Publish draft: ${ready.title}",
+            listOf(FileChange.text(target, doc.render()), FileChange.delete(path)) + photos.changes,
+            mapOf(path to current.sha, target to null) + photos.expect, date,
+        )
+    }
+
+    /** A new post, or a new Jekyll draft. */
+    private suspend fun planNew(draft: Draft, index: SiteIndex, blog: Blog): Plan? {
+        val toDrafts = draft.destination == Destination.Drafts
+        fun render(d: Draft, at: ZonedDateTime) =
+            if (toDrafts) PostWriter.newDraft(d.content(), index.config).render() else PostWriter.newPost(d.content(), at, index.config).render()
+        var fixed = fixTarget(draft, index)
+        var date = ZonedDateTime.parse(fixed.publishDate)
+        val there = fixed.targetPath!!.takeIf { it in index.paths }?.let { blog.file(it) }
+        if (there?.text == render(fixed, date)) return Plan.Finished(published(fixed, fixed.targetPath!!, null, postUrl(index, fixed.targetPath!!, date, fixed)))
+        // The file is there but different. If it's what this post last sent, an earlier attempt
+        // landed unheard and the writer has edited since: update it. Otherwise the name was taken
+        // by something else meanwhile: pick another.
+        val ours = there != null && there.sha in fixed.sentShas
+        if (there != null && !ours) {
+            fixed = fixTarget(fixed.copy(targetPath = null, publishDate = null), index)
+            date = ZonedDateTime.parse(fixed.publishDate)
+        }
+        // Photos already on the branch from that landed attempt are this post's own.
+        val sent = if (ours) fixed.images.map { it.sitePath.removePrefix("/") }.filter { it in index.paths }.toSet() else emptySet()
+        val (ready, photos) = photos(fixed, index, sent) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
+        val target = ready.targetPath!!
+        val text = render(ready, date)
+        // Added before the commit, never replaced: any of them may be the one that landed.
+        drafts.update(ready.copy(sentShas = (ready.sentShas + gitBlobSha(text)).distinct()))
+        val verb = when {
+            ours -> "Update ${if (toDrafts) "draft" else "post"}"
+            toDrafts -> "Add draft"
+            else -> "Add post"
+        }
+        return Plan.Commit(
+            ready, target, "$verb: ${ready.title}",
+            listOf(FileChange.text(target, text)) + photos.changes,
+            mapOf(target to there?.sha?.takeIf { ours }) + photos.expect, date,
+        )
+    }
+
+    private class Photos(val changes: List<FileChange>, val expect: Map<String, String?>)
+
+    /**
+     * The photos the text still links to, as file changes, each expected not to exist yet. A
+     * photo whose name is taken on the blog meanwhile is renamed, in the text too, so it can't
+     * replace a picture in an older post; [ours] are already there from this post's own earlier
+     * attempt. Null when a photo's file is gone from the phone.
+     */
+    private suspend fun photos(draft: Draft, index: SiteIndex, ours: Set<String>): Pair<Draft, Photos>? {
+        var body = draft.body
+        // Names given out in this pass count as taken, so two renamed photos never share one.
+        val taken = (index.paths + draft.images.map { it.sitePath }).toMutableSet()
+        val images = draft.images.map { image ->
+            val path = image.sitePath.removePrefix("/")
+            if (!Images.isUsed(body, image.sitePath) || path !in index.paths || path in ours) return@map image
+            val ext = image.sitePath.substringAfterLast('.')
+            val renamed = Images.sitePath(index.imageFolder, java.time.LocalDateTime.now(), ext, taken)
+            taken += renamed
+            body = body.replace(image.sitePath, renamed)
+            image.copy(sitePath = renamed)
+        }
+        val ready = if (body == draft.body) draft else draft.copy(body = body, images = images).also { drafts.update(it) }
+        val used = images.filter { Images.isUsed(body, it.sitePath) && it.sitePath.removePrefix("/") !in ours }
+        if (used.any { !File(it.file).exists() }) return null
+        val changes = used.map { FileChange(it.sitePath.removePrefix("/"), File(it.file).readBytes()) }
+        return ready to Photos(changes, changes.associate { it.path to null })
+    }
+
+    private fun siteZone(index: SiteIndex) = index.config.timezone ?: java.time.ZoneOffset.UTC
+
+    private fun postUrl(index: SiteIndex, path: String, date: ZonedDateTime, draft: Draft): String? {
+        val postPath = PostPath(path)
+        if (postPath.isDraft) return null
+        // Jekyll puts front matter categories first, then the folders above _posts.
+        return index.siteUrl + Permalink.path(index.config, date, postPath.slug, draft.categories + postPath.folderCategories)
+    }
+
+    /** Marks the post published; [sha] is null when an earlier attempt's commit had already landed. */
+    private suspend fun published(draft: Draft, path: String, sha: String?, url: String?): Outcome {
+        val latest = drafts.get(draft.id) ?: draft
+        drafts.update(
+            latest.copy(
+                state = PostState.Published, targetPath = path, commitSha = sha ?: latest.commitSha,
+                postUrl = url ?: latest.postUrl,
+                // A Jekyll draft isn't built into the site, so there's nothing to watch for it.
+                buildState = when {
+                    PostPath(path).isDraft -> null
+                    sha != null -> BuildState.Building
+                    else -> latest.buildState ?: BuildState.Unknown
+                },
+                error = null, updatedAt = System.currentTimeMillis(),
+            ),
+        )
+        // The photos are on the blog now; the preview loads them from there.
+        latest.images.forEach { File(it.file).delete() }
+        runCatching { blogs.refresh() }
+        return Outcome.Done
+    }
+
+    /**
+     * Picks the new post's path and date once, avoiding any file already on the branch, and any
+     * existing post's address: under a date-free permalink (`/:title/`), a free file name can
+     * still be another post's URL, and Jekyll would build one over the other.
+     */
+    private suspend fun fixTarget(draft: Draft, index: SiteIndex): Draft {
+        val toDrafts = draft.destination == Destination.Drafts && draft.editingPath == null
+        // Kept across attempts, unless the writer has since chosen the other destination.
+        val kept = draft.targetPath?.let { PostPath(it).isDraft == toDrafts } == true
+        if (kept && draft.publishDate != null) return draft
         val date = now()
         val slug = Slug.of(draft.title).ifEmpty { "post" }
-        var path = PostPath.newPost(date.toLocalDate(), slug).path
+        fun at(s: String) = if (toDrafts) PostPath.newDraft(s).path else PostPath.newPost(date.toLocalDate(), s).path
+        val urls = if (toDrafts) emptySet() else index.posts.filterNot { it.path.isDraft }.mapNotNull { post ->
+            post.path.date?.let { Permalink.path(index.config, it.atStartOfDay(siteZone(index)), post.path.slug, post.categories) }
+        }.toSet()
+        fun taken(s: String) = at(s) in index.paths || (!toDrafts && Permalink.path(index.config, date, s, draft.categories) in urls)
+        var chosen = slug
         var n = 2
-        while (path in existing) path = PostPath.newPost(date.toLocalDate(), "$slug-${n++}").path
-        val fixed = draft.copy(targetPath = path, publishDate = date.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+        while (taken(chosen)) chosen = "$slug-${n++}"
+        val fixed = draft.copy(targetPath = at(chosen), publishDate = date.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
         drafts.update(fixed)
         return fixed
     }
@@ -94,6 +277,33 @@ class Publisher(
         drafts.update((drafts.get(draft.id) ?: draft).copy(state = PostState.Failed, error = message, updatedAt = System.currentTimeMillis()))
         return Outcome.Failed(message)
     }
+}
+
+private const val PHOTO_GONE = "A photo in this post is no longer on the phone. Remove it from the text and try again."
+
+private const val CHANGED = "This post changed on GitHub since you opened it. Discard your changes to start again from the new version (copy your text first)."
+
+/**
+ * A front matter date as Jekyll reads it: `2025-03-02 18:05:00 -0800`; one without an offset, or a
+ * bare day, is in the site's time zone [zone].
+ */
+internal fun parseJekyllDate(value: String, zone: java.time.ZoneId): ZonedDateTime? {
+    val v = value.trim()
+    val zoned = listOf("yyyy-MM-dd HH:mm:ss Z", "yyyy-MM-dd HH:mm:ss XXX", "yyyy-MM-dd'T'HH:mm:ssXXX", "yyyy-MM-dd HH:mm Z")
+    zoned.forEach { p -> runCatching { return ZonedDateTime.parse(v, DateTimeFormatter.ofPattern(p)) } }
+    listOf("yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd HH:mm").forEach { p ->
+        runCatching { return java.time.LocalDateTime.parse(v, DateTimeFormatter.ofPattern(p)).atZone(zone) }
+    }
+    return runCatching { java.time.LocalDate.parse(v.take(10)).atStartOfDay(zone) }.getOrNull()
+}
+
+/** Git's id for a file's content, as GitHub reports it: SHA-1 of `blob <size>\0<bytes>`. */
+internal fun gitBlobSha(text: String): String {
+    val bytes = text.toByteArray(Charsets.UTF_8)
+    val digest = java.security.MessageDigest.getInstance("SHA-1")
+    digest.update("blob ${bytes.size}\u0000".toByteArray())
+    digest.update(bytes)
+    return digest.digest().joinToString("") { "%02x".format(it) }
 }
 
 fun Draft.content() = PostContent(title.trim(), body, categories, tags)

@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.app.jekyllposter.AppContainer
+import com.app.jekyllposter.Shared
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.ui.connect.ConnectScreen
 import com.app.jekyllposter.ui.connect.ConnectViewModel
@@ -19,11 +20,13 @@ import com.app.jekyllposter.ui.editor.EditorScreen
 import com.app.jekyllposter.ui.editor.EditorViewModel
 import com.app.jekyllposter.ui.home.HomeScreen
 import com.app.jekyllposter.ui.home.HomeViewModel
+import com.app.jekyllposter.ui.settings.SettingsScreen
+import kotlinx.coroutines.launch
 
 private object Loading
 
 @Composable
-fun PosterNavHost(container: AppContainer, sharedText: String? = null) {
+fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
     // Wait for the stored account before choosing the first screen, so a signed-in writer never
     // sees the connect screen flash by.
     val signedIn by produceState<Any?>(Loading) { container.accounts.account.collect { value = it != null } }
@@ -32,18 +35,44 @@ fun PosterNavHost(container: AppContainer, sharedText: String? = null) {
     NavHost(nav, startDestination = if (signedIn == true) "home" else "connect") {
         composable("connect") {
             ConnectScreen(viewModel { ConnectViewModel(container) }) {
-                nav.navigate("home") { popUpTo("connect") { inclusive = true } }
+                nav.navigate("home") { popUpTo(0) { inclusive = true } }
             }
+        }
+        composable("switch") {
+            // Straight to the blog list, with the sign-in already in hand.
+            ConnectScreen(viewModel { ConnectViewModel(container).also { it.switchBlog() } }, onCancel = { nav.popBackStack() }) {
+                nav.navigate("home") { popUpTo(0) { inclusive = true } }
+            }
+        }
+        composable("settings") {
+            SettingsScreen(
+                container,
+                onBack = { nav.popBackStack() },
+                onSwitchBlog = { nav.navigate("switch") },
+                onSignOut = {
+                    // Navigation first, here on the main thread; the sign-out finishes behind it, in
+                    // a scope that outlives this screen.
+                    nav.navigate("connect") { popUpTo(0) { inclusive = true } }
+                    container.appScope.launch {
+                        container.accounts.signOut()
+                        container.blogs.clear()
+                    }
+                },
+            )
         }
         composable("home") {
             val vm = viewModel { HomeViewModel(container) }
-            LaunchedEffect(sharedText) {
-                if (sharedText != null) nav.navigate("editor/${container.drafts.insert(Draft(body = sharedText))}")
+            LaunchedEffect(shared) {
+                if (shared != null) {
+                    val id = container.drafts.insert(Draft(blog = container.accounts.current()?.blogKey, body = shared.text))
+                    container.sharedPhotos[id] = shared.images
+                    nav.navigate("editor/$id")
+                }
             }
             HomeScreen(
                 vm,
                 onOpenDraft = { nav.navigate("editor/$it") },
-                onSignedOut = { nav.navigate("connect") { popUpTo("home") { inclusive = true } } },
+                onSettings = { nav.navigate("settings") },
             )
         }
         composable("editor/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->

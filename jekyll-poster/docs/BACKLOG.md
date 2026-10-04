@@ -5,13 +5,8 @@ and moves it to Done.
 
 ## Next
 
-- [ ] Preview: render the Markdown as the site would (commonmark, the blog's base URL, Liquid
-  `relative_url` image links resolved)
-- [ ] Photos: pick from the gallery, downscale, strip EXIF (location!), upload beside the blog's
-  images in the same commit, insert the Markdown link with `relative_url`
-- [ ] Notify when a post is live, with a link to it (permalink from `_config.yml`)
-- [ ] Sign in with GitHub (device flow, GitHub App client ID at build time), beside the token
-- [ ] Save to the blog's `_drafts` (unpublished, but on GitHub and on the laptop)
+- [ ] Photos: alt text (prompted when added), and placing them at the cursor rather than the end
+- [ ] Register the GitHub App and set the repository variables (yours: docs/GITHUB_APP.md)
 - [ ] Settings: switch blog, signed-in account, app version
 - [ ] Find the Compose-test Room hang (DEVLOG, cycle 1)
 
@@ -23,6 +18,16 @@ and moves it to Done.
 - [ ] Hugo, or other static site generators on GitHub
 
 ## Done
+
+- [x] Cycle 6: photos shared from the gallery, alt text; cycle 5's second look
+
+- [x] Cycle 5: Markdown toolbar, photos at the cursor, settings; cycles 3–4's review
+
+- [x] Cycle 4: the blog's `_drafts` (save, update, publish by moving); cycle 2's review
+- [x] Cycle 3: Sign in with GitHub (device flow), token renewal
+
+- [x] Cycle 2: preview; photos (upright, scaled, EXIF stripped, same commit); the post's address
+  and a notification when it's live; the cycle 1 review's fifteen findings
 
 - [x] Cycle 1: sign in with a token, pick the blog, read posts and categories, write, pick
   categories and tags (existing or new), publish once, edit safely, follow the Pages build

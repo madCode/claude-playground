@@ -45,6 +45,15 @@ class FakeGitHub(
     /** Status of the Pages workflow run for each commit; commits without one have no run yet. */
     val runs = mutableMapOf<String, Pair<String, String?>>()
 
+    /** Other workflow runs per commit, as (name, status, conclusion): CI, linters. */
+    val otherRuns = mutableMapOf<String, List<Triple<String, String, String?>>>()
+
+    /** Whether the writer has entered the device-flow code on "github.com". */
+    var deviceApproved = false
+
+    /** Set to make the tree listing say it was cut short, as GitHub does for huge repositories. */
+    var truncated = false
+
     /** Paths that answer with this HTTP status instead, to test failures. */
     val failures = mutableMapOf<String, Int>()
 
@@ -88,6 +97,22 @@ class FakeGitHub(
         val path = url.encodedPath.removePrefix("/")
         log += "${request.method} $path"
         failures.entries.firstOrNull { path.startsWith(it.key) }?.let { return error(it.value, "Simulated failure") }
+        if (path == "login/device/code") {
+            return ok(buildJsonObject {
+                put("device_code", "device-1"); put("user_code", "WDJB-MJHT"); put("verification_uri", "https://github.com/login/device")
+                put("expires_in", 900); put("interval", 1)
+            })
+        }
+        if (path == "login/oauth/access_token") {
+            val form = request.body?.utf8().orEmpty()
+            return when {
+                form.contains("grant_type=refresh_token") -> ok(buildJsonObject {
+                    put("access_token", token); put("expires_in", 28800); put("refresh_token", "refresh-2")
+                })
+                !deviceApproved -> ok(buildJsonObject { put("error", "authorization_pending") })
+                else -> ok(buildJsonObject { put("access_token", token); put("expires_in", 28800); put("refresh_token", "refresh-1") })
+            }
+        }
         if (request.headers["Authorization"] != "Bearer $token") return error(401, "Bad credentials")
         val body = request.body?.utf8()
         val base = "repos/$owner/$repo"
@@ -110,7 +135,7 @@ class FakeGitHub(
                 val tree = trees.getValue(commits.getValue(commit).tree)
                 ok(buildJsonObject {
                     put("sha", commits.getValue(commit).tree)
-                    put("truncated", false)
+                    put("truncated", truncated)
                     put("tree", buildJsonArray {
                         tree.forEach { (p, s) -> add(buildJsonObject { put("path", p); put("type", "blob"); put("sha", s); put("mode", "100644") }) }
                     })
@@ -119,7 +144,8 @@ class FakeGitHub(
             path.startsWith("$base/contents/") -> {
                 val file = java.net.URLDecoder.decode(path.removePrefix("$base/contents/"), "UTF-8")
                 val ref = url.queryParameter("ref") ?: branch
-                val sha = refs[ref]?.let { trees.getValue(commits.getValue(it).tree)[file] } ?: return error(404, "Not Found")
+                val commit = refs[ref] ?: ref.takeIf { it in commits }
+                val sha = commit?.let { trees.getValue(commits.getValue(it).tree)[file] } ?: return error(404, "Not Found")
                 ok(buildJsonObject { put("sha", sha); put("encoding", "base64"); put("content", Base64.getMimeEncoder().encodeToString(blobs.getValue(sha))) })
             }
             path == "$base/git/blobs" -> {
@@ -170,6 +196,13 @@ class FakeGitHub(
                                 put("name", "pages build and deployment"); put("status", status); put("head_sha", sha)
                                 if (conclusion != null) put("conclusion", conclusion) else put("conclusion", JsonNull)
                                 put("html_url", "https://github.com/$owner/$repo/actions/runs/1")
+                                put("path", "dynamic/pages/pages-build-deployment")
+                            })
+                        }
+                        otherRuns[sha].orEmpty().forEach { (name, status, conclusion) ->
+                            add(buildJsonObject {
+                                put("name", name); put("status", status); put("head_sha", sha); put("path", ".github/workflows/ci.yml")
+                                if (conclusion != null) put("conclusion", conclusion) else put("conclusion", JsonNull)
                             })
                         }
                     })

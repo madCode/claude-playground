@@ -42,11 +42,11 @@ class BlogTest {
         val first = blog.index()
         github.push("Edit on a laptop", mapOf("_posts/2025-01-12-welcome.md" to "---\ntitle: Hello again\ncategories: [meta]\n---\n"))
         github.log.clear()
-        val second = blog.index(first.posts.associateBy { it.sha })
+        val second = blog.index(first.posts.associateBy { it.path.path })
         assertEquals("Hello again", second.posts.first { it.path.slug == "welcome" }.title)
         assertEquals(1, github.log.count { it.startsWith("POST graphql") })
         github.log.clear()
-        blog.index(second.posts.associateBy { it.sha })
+        blog.index(second.posts.associateBy { it.path.path })
         // Only the config is fetched again; every post is known.
         assertEquals(1, github.log.count { it.startsWith("POST graphql") })
     }
@@ -68,6 +68,38 @@ class BlogTest {
         blog.commit("Add post", listOf(FileChange.text("_posts/2026-10-04-hi.md", "x")))
         assertEquals("About", github.text("about.md"))
         assertEquals("x", github.text("_posts/2026-10-04-hi.md"))
+    }
+
+    @Test fun aCommitThatExpectsAFileUnchangedRefusesWhenItChangedMeanwhile() = runTest {
+        val path = "_posts/2025-01-12-welcome.md"
+        val seen = client.file("sample", "sample-blog", "main", path)!!.sha
+        github.beforeRefUpdate = { github.push("Laptop edit", mapOf(path to "edited elsewhere")) }
+        // The first attempt loses the race to the laptop's push; the rebuilt one sees the change.
+        try {
+            blog.commit("Edit", listOf(FileChange.text(path, "mine")), expect = mapOf(path to seen))
+            fail()
+        } catch (e: GitHubException) {
+            assertEquals(GitHubException.Kind.Changed, e.kind)
+        }
+        assertEquals("edited elsewhere", github.text(path))
+        try {
+            blog.commit("New", listOf(FileChange.text("_posts/2025-01-12-welcome.md", "x")), expect = mapOf(path to null))
+            fail()
+        } catch (e: GitHubException) {
+            assertEquals(GitHubException.Kind.Changed, e.kind)
+        }
+    }
+
+    @Test fun aRepositoryTooBigToListIsRefusedRatherThanReadInPart() = runTest {
+        github.truncated = true
+        try { blog.index(); fail() } catch (e: GitHubException) { assertTrue(e.message!!.contains("too big")) }
+    }
+
+    @Test fun identicalFilesAtTwoPathsAreTwoPosts() = runTest {
+        github.push("Copy", mapOf("_drafts/welcome.md" to github.text("_posts/2025-01-12-welcome.md")))
+        val first = blog.index()
+        assertEquals(2, first.posts.count { it.path.slug == "welcome" })
+        assertEquals(2, blog.index(first.posts.associateBy { it.path.path }).posts.count { it.path.slug == "welcome" })
     }
 
     @Test fun deletingAFile() = runTest {

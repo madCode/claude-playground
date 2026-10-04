@@ -22,6 +22,8 @@ android {
         // A GitHub App's client ID turns on "Sign in with GitHub" (device flow). Not a secret: the
         // device flow needs no client secret. Empty hides the button and leaves token sign-in.
         buildConfigField("String", "GITHUB_CLIENT_ID", "\"${providers.gradleProperty("githubClientId").getOrElse("")}\"")
+        // The GitHub App's URL name, for the "install it on your blog" link.
+        buildConfigField("String", "GITHUB_APP_SLUG", "\"${providers.gradleProperty("githubAppSlug").getOrElse("")}\"")
     }
 
     signingConfigs {
@@ -93,6 +95,7 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

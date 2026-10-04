@@ -3,6 +3,17 @@ package com.app.jekyllposter.ui.editor
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.jekyllposter.AppContainer
+import android.net.Uri
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import com.app.jekyllposter.core.jekyll.Edit
+import com.app.jekyllposter.core.jekyll.Images
+import com.app.jekyllposter.core.jekyll.MarkdownEdits
+import com.app.jekyllposter.core.jekyll.Preview
+import com.app.jekyllposter.data.Destination
+import com.app.jekyllposter.data.DraftImage
+import java.io.File
+import java.time.LocalDateTime
 import com.app.jekyllposter.core.jekyll.Taxonomy
 import com.app.jekyllposter.core.jekyll.Term
 import com.app.jekyllposter.data.Draft
@@ -12,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
@@ -33,6 +45,11 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val draft: Draft? = null,
         val taxonomy: Taxonomy = Taxonomy.EMPTY,
         val titleMissing: Boolean = false,
+        val previewing: Boolean = false,
+        /** Photos just added, waiting for the writer to describe them (alt text), first first. */
+        val describing: List<String> = emptyList(),
+        val addingPhoto: Boolean = false,
+        val photoError: String? = null,
         val closed: Boolean = false,
     ) {
         /** Published posts and ones on their way are read-only; edit the blog's copy instead. */
@@ -46,6 +63,17 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     var text by mutableStateOf<Draft?>(null)
         private set
     private val local = snapshotFlow { text }
+
+    /** Where the cursor is in the body, for the toolbar and for placing photos. */
+    var bodySelection by mutableStateOf(TextRange(0))
+        private set
+
+    /**
+     * The keyboard's word in progress. Kept with the selection: a field rebuilt without it makes
+     * predictive keyboards lose or repeat what's being typed.
+     */
+    var bodyComposition by mutableStateOf<TextRange?>(null)
+        private set
     private val flags = MutableStateFlow(State())
     private var saveJob: Job? = null
 
@@ -54,7 +82,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val draft = when {
             stored == null -> null
             mine == null -> stored
-            else -> stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags)
+            else -> stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images)
         }
         f.copy(draft = draft, taxonomy = taxonomy)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, State())
@@ -64,6 +92,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             val loaded = container.drafts.get(id)
             // Applied at once, so the screen sees it even if no frame is pending to pick it up.
             Snapshot.withMutableSnapshot { text = loaded }
+            loaded?.body?.let { bodySelection = TextRange(it.length) }
+            container.sharedPhotos.remove(id)?.forEach(::addPhoto)
         }
     }
 
@@ -80,8 +110,82 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         }
     }
 
+    fun togglePreview() = flags.update { it.copy(previewing = !it.previewing) }
+
+    /** The post as a page, with site images loaded from the live site (or GitHub, before Pages has one). */
+    suspend fun previewHtml(dark: Boolean): String = withContext(Dispatchers.IO) { buildPreview(dark) }
+
+    private suspend fun buildPreview(dark: Boolean): String {
+        val draft = text ?: return ""
+        val account = container.accounts.current()
+        val base = account?.siteUrl?.trimEnd('/')
+            ?: account?.let { "https://raw.githubusercontent.com/${it.owner}/${it.repo}/${it.branch}" }
+            ?: ""
+        val local = draft.images.associate { it.sitePath to it.file }
+        val preview = Preview(container.blogs.config.value) { path ->
+            // A photo not on the site yet is shown from the phone, inline: the preview has no file access.
+            local[path]?.let(::File)?.takeIf { it.exists() }?.let(::dataUri) ?: (base + path)
+        }
+        return preview.page(draft.title, draft.body, dark)
+    }
+
+    /** Prepares a picked photo and adds its link to the end of the post. */
+    fun addPhoto(uri: Uri) {
+        if (text == null || (state.value.draft != null && !state.value.editable)) return
+        flags.update { it.copy(addingPhoto = true, photoError = null) }
+        // One at a time, in order: several photos shared at once go in as they were picked.
+        val previous = photoJob
+        photoJob = viewModelScope.launch {
+            previous?.join()
+            flags.update { it.copy(addingPhoto = true) }
+            try {
+                val prepared = container.images.import(uri)
+                val draft = text ?: return@launch
+                val taken = draft.images.map { it.sitePath }.toSet() + container.blogs.paths
+                val sitePath = Images.sitePath(container.blogs.imageFolder.value, LocalDateTime.now(), prepared.extension, taken)
+                val link = Images.markdown(sitePath, "")
+                // At the cursor, on a paragraph of its own; the image list first, so the text never
+                // links to a photo the draft doesn't know.
+                edit { it.copy(images = it.images + DraftImage(sitePath, prepared.file.path)) }
+                format { MarkdownEdits.insertBlock(it, link) }
+                flags.update { it.copy(describing = it.describing + sitePath) }
+            } catch (e: Exception) {
+                flags.update { it.copy(photoError = "Couldn't add that photo: ${e.message ?: "it couldn't be read"}") }
+            } finally {
+                flags.update { it.copy(addingPhoto = false) }
+            }
+        }
+    }
+
+    /** A photo still being prepared; Publish and Back wait for it, so it isn't lost. */
+    private var photoJob: Job? = null
+
+    /** Sets the alt text of the photo being described; blank leaves it empty. */
+    fun describe(sitePath: String, alt: String) {
+        if (alt.isNotBlank()) edit { it.copy(body = Images.withAlt(it.body, sitePath, alt)) }
+        flags.update { it.copy(describing = it.describing - sitePath) }
+    }
+
+    fun dismissPhotoError() = flags.update { it.copy(photoError = null) }
+
     fun setTitle(title: String) = edit { it.copy(title = title) }
-    fun setBody(body: String) = edit { it.copy(body = body) }
+    fun setBody(value: TextFieldValue) {
+        bodySelection = value.selection
+        bodyComposition = value.composition
+        if (value.text != text?.body) edit { it.copy(body = value.text) }
+    }
+
+    fun setBody(body: String) = setBody(TextFieldValue(body, TextRange(body.length)))
+
+    /** Applies a toolbar button to the body at the cursor or selection. */
+    fun format(change: (Edit) -> Edit) {
+        val body = text?.body ?: return
+        val sel = bodySelection
+        val result = change(Edit(body, sel.min.coerceIn(0, body.length), sel.max.coerceIn(0, body.length)))
+        bodySelection = TextRange(result.start, result.end)
+        bodyComposition = null
+        edit { it.copy(body = result.text) }
+    }
 
     fun add(kind: TermKind, term: String) {
         val clean = term.trim().trimStart('#')
@@ -122,11 +226,13 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val mine = text ?: return
         val stored = container.drafts.get(id) ?: return
         if (stored.state != PostState.Draft && stored.state != PostState.Failed) return
-        container.drafts.update(stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, updatedAt = System.currentTimeMillis()))
+        container.drafts.update(stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, updatedAt = System.currentTimeMillis()))
     }
 
-    fun publish() {
+    /** Sends the post to [destination]: the site's `_posts`, or the blog's `_drafts`. */
+    fun publish(destination: Destination? = null) {
         viewModelScope.launch {
+            photoJob?.join()
             saveJob?.cancel()
             save()
             val draft = container.drafts.get(id) ?: return@launch
@@ -134,7 +240,21 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 flags.update { it.copy(titleMissing = true) }
                 return@launch
             }
-            container.drafts.update(draft.copy(state = PostState.Queued, error = null, updatedAt = System.currentTimeMillis()))
+            // A failed post that never attempted a commit gets a fresh name and date: the old ones
+            // may be days stale. One that did keeps them, so a commit that landed unheard is
+            // recognised rather than published twice.
+            val again = draft.state == PostState.Failed && draft.editingPath == null && draft.sentShas.isEmpty()
+            container.drafts.update(
+                draft.copy(
+                    state = PostState.Queued, error = null, updatedAt = System.currentTimeMillis(),
+                    destination = destination ?: draft.destination,
+                    blog = draft.blog ?: container.accounts.current()?.blogKey,
+                    // A failed post sent again later gets a fresh name and date: the old ones may
+                    // be days stale, or taken by now.
+                    targetPath = if (again) null else draft.targetPath,
+                    publishDate = if (again) null else draft.publishDate,
+                ),
+            )
             container.schedulePublish(id)
             flags.update { it.copy(closed = true) }
         }
@@ -143,6 +263,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     /** Leaving the editor: saves, and drops a draft that was never written in. */
     fun close() {
         viewModelScope.launch {
+            photoJob?.join()
             saveJob?.cancel()
             save()
             container.drafts.get(id)?.let { if (it.isEmpty && it.state == PostState.Draft) container.drafts.delete(id) }
@@ -153,8 +274,15 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     fun delete() {
         viewModelScope.launch {
             saveJob?.cancel()
+            photoJob?.cancel()
+            container.drafts.get(id)?.images?.forEach { File(it.file).delete() }
             container.drafts.delete(id)
             flags.update { it.copy(closed = true) }
         }
     }
+}
+
+private fun dataUri(file: File): String {
+    val type = when (file.extension) { "png" -> "image/png"; "gif" -> "image/gif"; else -> "image/jpeg" }
+    return "data:$type;base64," + android.util.Base64.encodeToString(file.readBytes(), android.util.Base64.NO_WRAP)
 }

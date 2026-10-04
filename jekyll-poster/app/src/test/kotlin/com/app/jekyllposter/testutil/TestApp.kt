@@ -28,6 +28,9 @@ class TestApp : PosterApp() {
         container = AppContainer(
             this,
             apiBase = github.apiBase,
+            githubWeb = github.apiBase,
+            githubClientId = "Iv1.test",
+            githubAppSlug = "jekyll-poster-test",
             cipher = testCipher(),
             // A file of its own: the app's DataStore is a process-wide singleton that would carry
             // one test's sign-in into the next.

@@ -4,7 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.core.github.GitHubRepo
+import com.app.jekyllposter.core.github.DeviceFlow
 import com.app.jekyllposter.data.Account
+import com.app.jekyllposter.data.withTokens
+import kotlinx.coroutines.Job
 import com.app.jekyllposter.ui.forWriter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,31 +23,99 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
         val busy: Boolean = false,
         val error: String? = null,
         val done: Boolean = false,
+        /** While signing in with GitHub: the code to enter on github.com. */
+        val deviceCode: DeviceFlow.Code? = null,
     )
+
+    val signInWithGitHubAvailable: Boolean get() = container.deviceFlow != null
+
+    /** Tokens from "Sign in with GitHub", kept until a blog is picked, and when they arrived. */
+    private var deviceTokens: DeviceFlow.Tokens? = null
+    private var tokensAt = 0L
+    private var waiting: Job? = null
 
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state
+
+    /** Starts "Sign in with GitHub": shows a code, then waits for the writer to enter it on GitHub. */
+    fun signInWithGitHub() {
+        val flow = container.deviceFlow ?: return
+        _state.update { it.copy(busy = true, error = null) }
+        waiting?.cancel()
+        waiting = viewModelScope.launch {
+            try {
+                val code = flow.start()
+                _state.update { it.copy(busy = false, deviceCode = code) }
+                val tokens = flow.await(code)
+                deviceTokens = tokens
+                tokensAt = System.currentTimeMillis()
+                _state.update { it.copy(deviceCode = null, busy = true) }
+                listRepos(tokens.accessToken)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { it.copy(busy = false, deviceCode = null, error = e.forWriter()) }
+            }
+        }
+    }
+
+    fun cancelSignIn() {
+        waiting?.cancel()
+        _state.update { it.copy(deviceCode = null, busy = false) }
+    }
+
+    /** github.com's page for installing the app on a repository, when the build names the app. */
+    val installUrl: String?
+        get() = if (deviceTokens == null) null else container.githubAppSlug.takeIf { it.isNotBlank() }?.let { "https://github.com/apps/$it/installations/new" }
 
     fun setToken(token: String) = _state.update { it.copy(token = token, error = null) }
 
     fun checkToken() {
         val token = _state.value.token.trim()
         if (token.isEmpty()) return
+        deviceTokens = null
         _state.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
             try {
-                val client = container.client(token)
-                val user = client.user()
-                // Pages sites first: they're the likely blogs.
-                val repos = client.writableRepos().sortedByDescending { it.hasPages }
-                _state.update { it.copy(login = user.login, repos = repos, busy = false) }
+                listRepos(token)
             } catch (e: Exception) {
                 _state.update { it.copy(busy = false, error = e.forWriter()) }
             }
         }
     }
 
+    private suspend fun listRepos(token: String) {
+        val client = container.client(token)
+        val user = client.user()
+        // Pages sites first: they're the likely blogs.
+        val repos = client.writableRepos().sortedByDescending { it.hasPages }
+        _state.update { it.copy(login = user.login, repos = repos, busy = false, token = token) }
+    }
+
+    /** Switching blogs: Back leaves to where it came from, not to a sign-in screen. */
+    var switching = false
+        private set
+
     fun back() = _state.update { it.copy(repos = null, error = null) }
+
+    /** Lists the blogs the current sign-in can write to, to switch to another. */
+    fun switchBlog() {
+        switching = true
+        _state.update { it.copy(busy = true, error = null, repos = emptyList()) }
+        viewModelScope.launch {
+            val account = container.accounts.current() ?: return@launch _state.update { it.copy(busy = false, repos = null) }
+            if (account.refreshToken != null) {
+                deviceTokens = DeviceFlow.Tokens(account.token, account.expiresAt?.let { (it - System.currentTimeMillis()) / 1000 }, account.refreshToken)
+                tokensAt = System.currentTimeMillis()
+            }
+            try {
+                listRepos(account.token)
+            } catch (e: Exception) {
+                // Stays on the blog list with the error; no token is put in a field to resubmit.
+                _state.update { it.copy(busy = false, error = e.forWriter()) }
+            }
+        }
+    }
 
     fun choose(repo: GitHubRepo) {
         val s = _state.value
@@ -54,7 +125,16 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
             val client = container.client(s.token.trim())
             val siteUrl = runCatching { client.pages(repo.owner.login, repo.name)?.htmlUrl }.getOrNull()
             container.blogs.clear()
-            container.accounts.save(Account(login, s.token.trim(), repo.owner.login, repo.name, repo.defaultBranch, siteUrl))
+            val stored = if (switching) container.accounts.current() else null
+            val account = if (stored != null) {
+                // The sign-in as stored now: it may have been renewed while the list was open.
+                stored.copy(owner = repo.owner.login, repo = repo.name, branch = repo.defaultBranch, siteUrl = siteUrl)
+            } else {
+                val fresh = Account(login, s.token.trim(), repo.owner.login, repo.name, repo.defaultBranch, siteUrl)
+                // Expiry counts from when the token arrived, not from when a blog was picked.
+                deviceTokens?.let { fresh.withTokens(it, tokensAt) } ?: fresh
+            }
+            container.accounts.save(account)
             // A first read fills the category picker; if it fails, Home tries again.
             runCatching { container.blogs.refresh() }
             _state.update { it.copy(busy = false, done = true) }

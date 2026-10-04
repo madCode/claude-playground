@@ -74,6 +74,20 @@ class FlowTest {
         assertTrue(text, Regex("""(?s)---\ntitle: From the bus\ndate: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{4}\ncategories: \[writing, commute]\n---\n\nShort one, written on the way home.\n""").matches(text))
     }
 
+    @Test fun signInWithGitHubShowsACodeThenTheBlogs() {
+        start()
+        compose.waitFor("Sign in with GitHub")
+        compose.onNodeWithText("Sign in with GitHub").performClick()
+        compose.waitFor("WDJB-MJHT")
+        github.deviceApproved = true
+        compose.waitFor("sample/sample-blog", timeoutMs = 15_000)
+        compose.onNodeWithText("sample/sample-blog").performClick()
+        compose.waitFor("Welcome to the notebook")
+        val account = runBlocking { app.container.accounts.current() }!!
+        assertEquals("refresh-1", account.refreshToken)
+        assertTrue(account.expiresAt!! > System.currentTimeMillis())
+    }
+
     @Test fun aPostNeedsATitle() {
         signIn()
         start()
@@ -119,11 +133,25 @@ class FlowTest {
         compose.waitFor("GitHub didn't accept that token. Check it was copied whole and hasn't expired.")
     }
 
+    @Test fun switchingBlogListsTheSignInsRepositories() {
+        signIn()
+        start()
+        compose.waitFor("Your blog")
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Settings").performClick()
+        compose.waitFor("Switch blog")
+        compose.onNodeWithText("Switch blog").performClick()
+        compose.waitFor("Which blog?")
+        compose.waitFor("sample/sample-blog")
+    }
+
     @Test fun signingOutReturnsToConnect() {
         signIn()
         start()
         compose.waitFor("Your blog")
         compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Settings").performClick()
+        compose.waitFor("sample/sample-blog")
         compose.onNodeWithText("Sign out").performClick()
         compose.waitFor("Connect with a token")
     }

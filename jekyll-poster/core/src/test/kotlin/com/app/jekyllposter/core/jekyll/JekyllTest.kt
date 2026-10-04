@@ -90,6 +90,8 @@ class JekyllTest {
         val original = FrontMatterDocument.parse("---\nlayout: post\ntitle: Old\ncategory: Writing\nimage: /a.png\n---\n\nOld body\n")
         val edited = PostWriter.edit(original, PostContent("New", "New body", listOf("Writing"), listOf("books")))
         assertEquals("---\nlayout: post\ntitle: New\ncategory: Writing\nimage: /a.png\ntags: [books]\n---\n\nNew body\n", edited.render())
+        val spaced = PostWriter.edit(FrontMatterDocument.parse("---\ncategory: Web Development\n---\n"), PostContent("T", "b", listOf("Web Development")))
+        assertEquals("---\ncategory: Web Development\ntitle: T\n---\n\nb\n", spaced.render())
         val two = PostWriter.edit(original, PostContent("New", "b", listOf("Writing", "Books")))
         assertEquals(listOf("Writing", "Books"), two.list("categories"))
         assertFalse(two.keys.contains("category"))

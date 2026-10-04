@@ -1,7 +1,42 @@
 package com.app.jekyllposter.ui.editor
 
 import androidx.activity.compose.BackHandler
+import android.Manifest
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Title
+import androidx.compose.ui.text.input.TextFieldValue
+import com.app.jekyllposter.core.jekyll.Edit
+import com.app.jekyllposter.core.jekyll.MarkdownEdits
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.core.content.ContextCompat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -54,6 +89,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -62,6 +98,10 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.jekyllposter.ui.editor.EditorViewModel.TermKind
+import androidx.compose.material.icons.filled.Drafts
+import androidx.compose.material.icons.filled.Public
+import com.app.jekyllposter.data.Destination
+import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.ui.home.status
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -70,39 +110,125 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val text = viewModel.text
     var picker by remember { mutableStateOf<TermKind?>(null) }
+    // The toolbar formats the body, so it only works while the body has the focus.
+    var bodyFocused by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     LaunchedEffect(state.closed) { if (state.closed) onClose() }
     BackHandler(onBack = viewModel::close)
     val editable = state.editable
+    val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        uri?.let(viewModel::addPhoto)
+    }
+    val snackbar = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    // Asked on the first Publish, when "tell you when it's live" makes sense; publishing goes ahead either way.
+    val askToNotify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val askForNotifications = {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            askToNotify.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        Unit
+    }
+    val jekyllDraft = text?.editingPath?.contains("_drafts/") == true
+    val send = { destination: Destination ->
+        // Only a post for the site gets a "live" notification.
+        if (destination == Destination.Posts) askForNotifications()
+        viewModel.publish(destination)
+    }
+    LaunchedEffect(state.photoError) {
+        state.photoError?.let { snackbar.showSnackbar(it); viewModel.dismissPhotoError() }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (text?.editingPath != null) "Edit post" else "New post") },
+                title = {
+                    Text(
+                        when {
+                            state.draft?.state == PostState.Published -> "Published"
+                            state.draft?.state == PostState.Queued -> "Publishing"
+                            text?.editingPath != null -> "Edit post"
+                            else -> "New post"
+                        },
+                    )
+                },
                 navigationIcon = { IconButton(onClick = viewModel::close) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = {
-                    if (editable) {
-                        TextButton(onClick = viewModel::publish) { Text(if (text?.editingPath != null) "Update" else "Publish") }
+                    IconButton(onClick = viewModel::togglePreview) {
+                        if (state.previewing) Icon(Icons.Default.EditNote, "Back to writing")
+                        else Icon(Icons.Default.Visibility, "Preview")
                     }
-                    IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More") }
-                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        DropdownMenuItem(
-                            text = { Text(if (text?.editingPath != null) "Discard changes" else "Delete draft") },
-                            leadingIcon = { Icon(Icons.Default.Delete, null) },
-                            onClick = { menu = false; confirmDelete = true },
-                        )
+                    if (editable) {
+                        TextButton(onClick = { send(if (jekyllDraft) Destination.Drafts else Destination.Posts) }) {
+                            Text(
+                                when {
+                                    jekyllDraft -> "Update draft"
+                                    text?.editingPath != null -> "Update"
+                                    else -> "Publish"
+                                },
+                            )
+                        }
+                    }
+                    // A queued post may be mid-commit; deleting it then would lose the phone's record
+                    // of a post that still goes out.
+                    if (state.draft?.state != PostState.Queued) {
+                        IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More") }
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            if (editable && text?.editingPath == null) {
+                                DropdownMenuItem(
+                                    text = { Text("Save to the blog's _drafts") },
+                                    leadingIcon = { Icon(Icons.Default.Drafts, null) },
+                                    onClick = { menu = false; send(Destination.Drafts) },
+                                )
+                            }
+                            if (editable && jekyllDraft) {
+                                DropdownMenuItem(
+                                    text = { Text("Publish to the site") },
+                                    leadingIcon = { Icon(Icons.Default.Public, null) },
+                                    onClick = { menu = false; send(Destination.Posts) },
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(deleteLabel(state.draft)) },
+                                leadingIcon = { Icon(Icons.Default.Delete, null) },
+                                onClick = { menu = false; confirmDelete = true },
+                            )
+                        }
                     }
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbar) },
+        bottomBar = {
+            if (editable && !state.previewing && text != null) {
+                FormatBar(
+                    formatting = bodyFocused,
+                    addingPhoto = state.addingPhoto,
+                    onFormat = viewModel::format,
+                    onPhoto = { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                )
+            }
+        },
     ) { padding ->
         if (text == null) return@Scaffold
-        Column(Modifier.padding(padding).fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
+        if (state.previewing) {
+            PostPreview(viewModel, Modifier.padding(padding).fillMaxSize())
+            return@Scaffold
+        }
+        Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
             state.draft?.takeIf { !editable || it.error != null }?.let { draft ->
                 val (label, isError) = draft.status()
+                val uri = LocalUriHandler.current
                 Surface(color = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
-                    Text(label, Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
+                    Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, Modifier.weight(1f).padding(vertical = 8.dp), style = MaterialTheme.typography.bodyMedium)
+                        if (draft.state == PostState.Published && draft.postUrl != null) {
+                            TextButton(onClick = { uri.openUri(draft.postUrl) }) { Text("Open on the site") }
+                        }
+                    }
                 }
             }
             TextField(
@@ -121,29 +247,119 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
             TermRow("Tags", text.tags, editable, onAdd = { picker = TermKind.Tag }, onRemove = { viewModel.remove(TermKind.Tag, it) })
             HorizontalDivider(Modifier.padding(horizontal = 16.dp))
             TextField(
-                value = text.body,
-                onValueChange = viewModel::setBody,
+                value = TextFieldValue(text.body, viewModel.bodySelection, viewModel.bodyComposition),
+                onValueChange = { viewModel.setBody(it) },
                 placeholder = { Text("Write in Markdown…") },
                 readOnly = !editable,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 colors = plainField(),
-                modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp).testTag("body"),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp).testTag("body").onFocusChanged { bodyFocused = it.isFocused },
             )
         }
     }
 
+    state.describing.firstOrNull()?.let { sitePath ->
+        DescribePhoto(sitePath, onDone = { viewModel.describe(sitePath, it) })
+    }
     picker?.let { kind ->
         TermPicker(kind, viewModel, onDismiss = { picker = null })
     }
     if (confirmDelete) {
+        val published = state.draft?.state == PostState.Published
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text(if (text?.editingPath != null) "Discard your changes?" else "Delete this draft?") },
-            text = { Text(if (text?.editingPath != null) "The post on your blog stays as it is." else "It's only on this phone, so it can't be brought back.") },
-            confirmButton = { TextButton(onClick = { confirmDelete = false; viewModel.delete() }) { Text(if (text?.editingPath != null) "Discard" else "Delete") } },
+            title = { Text(if (published) "Remove from this list?" else if (text?.editingPath != null) "Discard your changes?" else "Delete this draft?") },
+            text = {
+                Text(
+                    when {
+                        published -> "The post stays on your blog; this only clears it from the phone."
+                        text?.editingPath != null -> "The post on your blog stays as it is."
+                        else -> "It's only on this phone, so it can't be brought back."
+                    },
+                )
+            },
+            confirmButton = { TextButton(onClick = { confirmDelete = false; viewModel.delete() }) { Text(if (published) "Remove" else if (text?.editingPath != null) "Discard" else "Delete") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Keep") } },
         )
     }
+}
+
+/** Asks for a just-added photo's alt text: what a screen reader says, and what shows if it won't load. */
+@Composable
+private fun DescribePhoto(sitePath: String, onDone: (String) -> Unit) {
+    var alt by remember(sitePath) { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = { onDone("") },
+        title = { Text("Describe the photo") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("For people using screen readers, and for when it doesn't load.", style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(
+                    value = alt, onValueChange = { alt = it }, placeholder = { Text("A loaf of sourdough on a board") },
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { onDone(alt) }),
+                    modifier = Modifier.fillMaxWidth().testTag("altText"),
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { onDone(alt) }) { Text("Done") } },
+        dismissButton = { TextButton(onClick = { onDone("") }) { Text("Skip") } },
+    )
+}
+
+/**
+ * Markdown at the cursor, above the keyboard; bold, italic, code and the line prefixes undo
+ * themselves when pressed again. Formatting needs the body focused; a photo can go in any time.
+ */
+@Composable
+private fun FormatBar(formatting: Boolean, addingPhoto: Boolean, onFormat: ((Edit) -> Edit) -> Unit, onPhoto: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding()) {
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
+            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "**") } }) { Icon(Icons.Default.FormatBold, "Bold") }
+            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "_") } }) { Icon(Icons.Default.FormatItalic, "Italic") }
+            IconButton(enabled = formatting, onClick = { onFormat(MarkdownEdits::link) }) { Icon(Icons.Default.Link, "Link") }
+            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "## ") } }) { Icon(Icons.Default.Title, "Heading") }
+            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "- ") } }) { Icon(Icons.AutoMirrored.Filled.FormatListBulleted, "List") }
+            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "> ") } }) { Icon(Icons.Default.FormatQuote, "Quote") }
+            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "`") } }) { Icon(Icons.Default.Code, "Code") }
+            if (addingPhoto) {
+                CircularProgressIndicator(Modifier.padding(12.dp).size(24.dp).semantics { contentDescription = "Adding the photo" }, strokeWidth = 2.dp)
+            } else {
+                IconButton(onClick = onPhoto) { Icon(Icons.Default.AddPhotoAlternate, "Add a photo") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PostPreview(viewModel: EditorViewModel, modifier: Modifier) {
+    val dark = isSystemInDarkTheme()
+    val html by produceState("", viewModel.text, dark) { value = viewModel.previewHtml(dark) }
+    AndroidView(
+        factory = { context ->
+            WebView(context).apply {
+                // The writer's own HTML, but still: no scripts, no file access.
+                settings.javaScriptEnabled = false
+                settings.allowFileAccess = false
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                // A tapped link opens in the browser, not in place of the preview.
+                webViewClient = object : WebViewClient() {
+                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
+                        return true
+                    }
+                }
+            }
+        },
+        update = { it.loadDataWithBaseURL(null, html, "text/html", "utf-8", null) },
+        modifier = modifier.semantics { contentDescription = "Preview of the post" },
+    )
+}
+
+private fun deleteLabel(draft: com.app.jekyllposter.data.Draft?) = when {
+    draft?.state == PostState.Published -> "Remove from this list"
+    draft?.editingPath != null -> "Discard changes"
+    else -> "Delete draft"
 }
 
 @Composable
@@ -159,13 +375,15 @@ private fun plainField() = TextFieldDefaults.colors(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TermRow(label: String, terms: List<String>, editable: Boolean, onAdd: () -> Unit, onRemove: (String) -> Unit) {
+    if (!editable && terms.isEmpty()) return
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 12.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             terms.forEach { term ->
                 InputChip(
                     selected = false,
-                    onClick = { if (editable) onRemove(term) },
+                    enabled = editable,
+                    onClick = { onRemove(term) },
                     label = { Text(term) },
                     trailingIcon = if (editable) ({ Icon(Icons.Default.Close, "Remove $term") }) else null,
                 )

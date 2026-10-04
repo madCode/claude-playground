@@ -65,6 +65,8 @@ data class WorkflowRun(
     val conclusion: String? = null,
     @SerialName("head_sha") val headSha: String,
     @SerialName("html_url") val htmlUrl: String? = null,
+    /** The workflow file, or `dynamic/pages/pages-build-deployment` for GitHub's own Pages build. */
+    val path: String? = null,
 )
 
 /** A file to write in a commit. [content] is raw bytes, so images and text go the same way. */

@@ -26,8 +26,9 @@ claude-playground repository; run commands from this folder.
 JDK 21 and the Android SDK (compileSdk 37) are required; `tools/install-android-sdk.sh` installs
 the SDK for a cloud session. CI publishes main's debug APK to the `jekyll-poster-debug` release.
 
-Changing a Room entity means bumping the database version and adding a migration once a
-version has shipped; until then (version 1) the schema can change in place.
+Debug builds are installed and in use, so changing a Room entity means bumping the database
+version, adding a Migration with a `MigrationTest` case, and committing the new schema JSON in
+`app/schemas`.
 
 ## Privacy
 

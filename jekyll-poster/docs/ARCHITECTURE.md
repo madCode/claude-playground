@@ -7,11 +7,13 @@
     and keeps the rest byte for byte. SnakeYAML Engine reads values; the app writes its few value
     shapes itself, quoting only what YAML would misread.
   - `jekyll/`: Jekyll's conventions. `PostPath` (what's a post, its date, slug and folder
-    categories), `Slug`, `SiteConfig` (from `_config.yml`), `PostSummary`, `Taxonomy`, and
-    `PostWriter`, which builds new posts and applies edits.
+    categories), `Slug`, `SiteConfig` (from `_config.yml`), `PostSummary`, `Taxonomy`,
+    `PostWriter` (new posts and edits), `Permalink` (a post's address, the site's address),
+    `Images` (where a new photo goes and its Markdown) and `Preview` (commonmark, Liquid links).
   - `github/`: `GitHubClient`, a thin OkHttp client. Commits go through the Git Data API
     (blobs, tree on `base_tree`, commit, fast-forward ref update, rebuilt on a conflict), so a
-    post and its images land in one commit. Post contents are fetched in batches through
+    post and its images land in one commit. `expect` names files that must be unchanged at the
+    head the commit lands on, checked on every rebuild. Post contents are fetched in batches through
     GraphQL by blob sha.
   - `blog/`: `Blog` ties one repository and branch together: `index()` reads the posts,
     taxonomy, config and image folder, reusing summaries for unchanged blobs.
@@ -21,9 +23,10 @@
   - `data/`: `AccountStore` (DataStore, token sealed by `SecretCipher`), Room
     (`Draft` for posts written on the phone, `CachedPost` for the blog's posts as last read),
     `BlogRepository` (refreshing that cache, the taxonomy flow).
-  - `publish/`: `Publisher` (the rules for sending a queued post), `PublishWorker` (WorkManager,
-    needs a network, exponential backoff, unique per post), `BuildWatcher` and
-    `BuildWatchWorker` (polls the Actions run for the post's commit).
+  - `data/ImageImporter`: picked photo → upright, scaled, re-encoded file in app storage.
+  - `publish/`: `Publisher` (the rules for sending a queued post, one at a time), `PublishWorker`
+    (WorkManager, needs a network, exponential backoff, unique per post), `BuildWatcher` and
+    `BuildWatchWorker` (polls the Pages run for the post's commit), `Notifier`.
   - `ui/`: Compose screens with a ViewModel each: `connect`, `home`, `editor`.
     `PosterNavHost` picks the first screen once the stored account has loaded.
   - `AppContainer`: manual DI. Tests swap the GitHub address, cipher, database, DataStore and

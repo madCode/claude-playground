@@ -106,7 +106,7 @@ class ScreenshotTest {
         }
         val vm = HomeViewModel(c)
         shoot("03-home", ready = { vm.state.value.onBlog.isNotEmpty() && !vm.state.value.refreshing }) {
-            HomeScreen(vm, onOpenDraft = {}, onSignedOut = {})
+            HomeScreen(vm, onOpenDraft = {}, onSettings = {})
         }
     }
 
@@ -129,6 +129,26 @@ class ScreenshotTest {
     @Test fun editor() {
         val vm = editorWithDraft()
         shoot("04-editor") { EditorScreen(vm) {} }
+    }
+
+    @Test fun publishedPost() {
+        signIn()
+        val id = runBlocking {
+            c.drafts.insert(
+                Draft(
+                    title = "A walk to the lighthouse", body = "Out past the harbour wall at low tide.", categories = listOf("travel"),
+                    state = PostState.Published, buildState = BuildState.Live,
+                    postUrl = "https://sample.github.io/sample-blog/travel/2026/10/04/a-walk-to-the-lighthouse/",
+                ),
+            )
+        }
+        val vm = EditorViewModel(c, id)
+        shoot("06-published", ready = { vm.text != null && vm.state.value.draft != null }) { EditorScreen(vm) {} }
+    }
+
+    @Test fun settings() {
+        signIn()
+        shoot("07-settings", ready = { c.blogs.siteUrl.value != null }) { com.app.jekyllposter.ui.settings.SettingsScreen(c, {}, {}, {}) }
     }
 
     @Test fun categoryPicker() {

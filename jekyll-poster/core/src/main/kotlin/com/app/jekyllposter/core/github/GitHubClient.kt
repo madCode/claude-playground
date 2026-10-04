@@ -51,17 +51,25 @@ class GitHubClient(
 
     /** Every file on [branch], with each blob's sha so unchanged files needn't be fetched again. */
     suspend fun files(owner: String, name: String, branch: String): List<TreeEntry> {
-        val tree: Tree = get("repos/$owner/$name/git/trees/${enc(branch)}?recursive=1")
+        val tree: Tree = get("repos/$owner/$name/git/trees/${ref(branch)}?recursive=1")
+        // A partial list would make posts look deleted and existing files look free to overwrite.
+        if (tree.truncated) throw GitHubException(GitHubException.Kind.Other, "This repository is too big for GitHub to list in one go.")
         return tree.tree.filter { it.type == "blob" }
     }
 
-    /** One file's text, or null when it isn't there. */
-    suspend fun text(owner: String, name: String, branch: String, path: String): String? = try {
-        val obj: JsonObject = get("repos/$owner/$name/contents/${path.split('/').joinToString("/") { enc(it) }}?ref=${enc(branch)}")
-        obj["content"]?.jsonPrimitive?.contentOrNull?.let { String(Base64.getMimeDecoder().decode(it), Charsets.UTF_8) }
+    /** A file as it is on a branch: its text and blob sha. */
+    data class FileAt(val text: String, val sha: String)
+
+    /** One file's text and sha on [ref] (a branch or a commit), or null when it isn't there. */
+    suspend fun file(owner: String, name: String, ref: String, path: String): FileAt? = try {
+        val obj: JsonObject = get("repos/$owner/$name/contents/${path.split('/').joinToString("/") { enc(it) }}?ref=${enc(ref)}")
+        val content = obj["content"]?.jsonPrimitive?.contentOrNull ?: return null
+        FileAt(String(Base64.getMimeDecoder().decode(content), Charsets.UTF_8), obj.getValue("sha").jsonPrimitive.content)
     } catch (e: GitHubException) {
         if (e.status == 404) null else throw e
     }
+
+    suspend fun text(owner: String, name: String, branch: String, path: String): String? = file(owner, name, branch, path)?.text
 
     /**
      * Many small text files at once, by blob sha: one GraphQL query per [batch] files instead of a
@@ -78,8 +86,12 @@ class GitHubClient(
             }
             val result: JsonObject = post("graphql", body)
             val errors = result["errors"] as? JsonArray
+            // GraphQL reports rate limits and timeouts as 200 with errors; both pass, so retry them.
             val repository = (result["data"] as? JsonObject)?.get("repository") as? JsonObject
-                ?: throw GitHubException(GitHubException.Kind.Other, errors?.toString() ?: "GraphQL returned no data")
+                ?: throw GitHubException(
+                    if (errors.toString().contains("RATE_LIMITED")) GitHubException.Kind.RateLimited else GitHubException.Kind.Network,
+                    "GitHub couldn't read the posts just now",
+                )
             chunk.forEachIndexed { i, sha ->
                 val blob = repository["b$i"] as? JsonObject
                 out[sha] = blob?.get("text")?.takeIf { it != JsonNull }?.jsonPrimitive?.contentOrNull
@@ -93,7 +105,19 @@ class GitHubClient(
      * post and its images land together (one Pages build, no half-published post). If the branch
      * moves meanwhile, the commit is rebuilt on the new head; the blobs are already uploaded.
      */
-    suspend fun commit(owner: String, name: String, branch: String, message: String, changes: List<FileChange>, attempts: Int = 3): String {
+    suspend fun commit(
+        owner: String,
+        name: String,
+        branch: String,
+        message: String,
+        changes: List<FileChange>,
+        /**
+         * Paths that must still be as the caller last saw them, by blob sha (null: absent). Checked
+         * on every attempt, so rebuilding on a newer head never overwrites a change made there.
+         */
+        expect: Map<String, String?> = emptyMap(),
+        attempts: Int = 3,
+    ): String {
         val blobs = changes.associate { change ->
             change.path to change.content?.let { bytes ->
                 post<Sha>("repos/$owner/$name/git/blobs", buildJsonObject {
@@ -104,7 +128,12 @@ class GitHubClient(
         }
         var lastConflict: GitHubException? = null
         repeat(attempts) {
-            val head: Ref = get("repos/$owner/$name/git/ref/heads/${enc(branch)}")
+            val head: Ref = get("repos/$owner/$name/git/ref/heads/${ref(branch)}")
+            expect.forEach { (path, sha) ->
+                if (file(owner, name, head.obj.sha, path)?.sha != sha) {
+                    throw GitHubException(GitHubException.Kind.Changed, "$path changed on GitHub")
+                }
+            }
             val parent: Commit = get("repos/$owner/$name/git/commits/${head.obj.sha}")
             val tree: Sha = post("repos/$owner/$name/git/trees", buildJsonObject {
                 put("base_tree", parent.tree.sha)
@@ -126,7 +155,7 @@ class GitHubClient(
                 put("parents", buildJsonArray { add(kotlinx.serialization.json.JsonPrimitive(head.obj.sha)) })
             })
             try {
-                patch<JsonObject>("repos/$owner/$name/git/refs/heads/${enc(branch)}", buildJsonObject {
+                patch<JsonObject>("repos/$owner/$name/git/refs/heads/${ref(branch)}", buildJsonObject {
                     put("sha", commit.sha)
                     put("force", false)
                 })
@@ -161,7 +190,15 @@ class GitHubClient(
     private suspend inline fun <reified T> patch(path: String, body: JsonObject): T =
         decode(send(request(path).patch(body.toString().toRequestBody(jsonType)).build()))
 
-    private inline fun <reified T> decode(body: String): T = json.decodeFromString(body)
+    /**
+     * A 2xx that isn't GitHub's JSON is almost always a network in the way (a captive portal's
+     * login page), so it's retried like any other failure to reach GitHub.
+     */
+    private inline fun <reified T> decode(body: String): T = try {
+        json.decodeFromString(body)
+    } catch (e: IllegalArgumentException) {
+        throw GitHubException(GitHubException.Kind.Network, "GitHub's answer didn't come through", cause = e)
+    }
 
     private fun request(path: String): Request.Builder = Request.Builder()
         .url(apiBase.toString().trimEnd('/') + "/" + path)
@@ -170,13 +207,14 @@ class GitHubClient(
         .header("X-GitHub-Api-Version", "2022-11-28")
 
     private suspend fun send(request: Request): String = withContext(Dispatchers.IO) {
-        val response = try {
-            http.newCall(request).execute()
+        // Reading the body can fail too (a connection dropped mid-response); that's as retryable
+        // as not connecting, and must not escape as a bare IOException.
+        val (response, body) = try {
+            http.newCall(request).execute().use { it to it.body.string() }
         } catch (e: IOException) {
             throw GitHubException(GitHubException.Kind.Network, "Couldn't reach GitHub", cause = e)
         }
-        response.use {
-            val body = it.body.string()
+        response.let {
             if (it.isSuccessful) return@withContext body
             val message = runCatching { json.parseToJsonElement(body).jsonObject["message"]?.jsonPrimitive?.contentOrNull }.getOrNull() ?: it.message
             val kind = when {
@@ -192,4 +230,7 @@ class GitHubClient(
     }
 
     private fun enc(s: String) = java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20")
+
+    /** A branch in a URL path: each segment encoded, the slashes of `site/main` kept. */
+    private fun ref(branch: String) = branch.split('/').joinToString("/") { enc(it) }
 }
