@@ -20,6 +20,16 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Fix: the preview crashed on the phone
+- **Found by the writer:** the eye button crashed the app on every post. Android compiles
+  regular expressions with ICU, which refuses a `}` that doesn't close a repeat; the JVM the
+  tests run on takes it. The preview's Liquid patterns had one since the preview was built, and
+  so did the pattern that sets a photo's alt text.
+- **Fixed:** every brace escaped, checked against ICU itself; `AndroidRegexTest` reads the
+  app's patterns for a bare `}`, so a test fails here before the phone does. A test now taps
+  the eye button too.
+- **Also:** a tap or long press on the version in Settings copies it, for bug reports.
+
 ### Cycle 18: posts from Obsidian
 - **Shipped:** share a note from Obsidian (text or its `.md` file) and it becomes a post, as
   obyde does it: front matter to the editor's fields, `[[links]]` to the blog's posts as

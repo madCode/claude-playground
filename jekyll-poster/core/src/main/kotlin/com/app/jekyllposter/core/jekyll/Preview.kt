@@ -70,10 +70,11 @@ class Preview(private val config: SiteConfig, private val resolveUrl: (String) -
     }
 
     private companion object {
-        val filtered = Regex("""\{\{\s*(['"])(.*?)\1\s*\|\s*(relative_url|absolute_url)\s*}}""")
-        val baseurlTag = Regex("""\{\{\s*site\.baseurl\s*}}""")
-        val urlTag = Regex("""\{\{\s*site\.url\s*}}""")
-        val postUrlTag = Regex("""(\{\{\s*site\.baseurl\s*}})?\{%-?\s*post_url\s+\S+\s*-?%}""")
+        // Every brace escaped: Android's regex engine (ICU) refuses a bare `}`, where Java's takes it.
+        val filtered = Regex("""\{\{\s*(['"])(.*?)\1\s*\|\s*(relative_url|absolute_url)\s*\}\}""")
+        val baseurlTag = Regex("""\{\{\s*site\.baseurl\s*\}\}""")
+        val urlTag = Regex("""\{\{\s*site\.url\s*\}\}""")
+        val postUrlTag = Regex("""(\{\{\s*site\.baseurl\s*\}\})?\{%-?\s*post_url\s+\S+\s*-?%\}""")
 
         fun escape(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
