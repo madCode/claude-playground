@@ -4,6 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -32,6 +35,9 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
     val signedIn by produceState<Any?>(Loading) { container.accounts.account.collect { value = it != null } }
     if (signedIn === Loading) return
     val nav = rememberNavController()
+    // Home leaves the composition while the editor is open and its effects run again on the way
+    // back, so a share is taken once, here, or every Back would start another post from it.
+    var pending by rememberSaveable { mutableStateOf(shared != null) }
     NavHost(nav, startDestination = if (signedIn == true) "home" else "connect") {
         composable("connect") {
             ConnectScreen(viewModel { ConnectViewModel(container) }) {
@@ -62,8 +68,9 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
         }
         composable("home") {
             val vm = viewModel { HomeViewModel(container) }
-            LaunchedEffect(shared) {
-                if (shared != null) {
+            LaunchedEffect(Unit) {
+                if (shared != null && pending) {
+                    pending = false
                     val id = container.drafts.insert(Draft(blog = container.accounts.current()?.blogKey, body = shared.text))
                     container.sharedPhotos[id] = shared.images
                     nav.navigate("editor/$id")

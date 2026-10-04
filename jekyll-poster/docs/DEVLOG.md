@@ -19,6 +19,13 @@ Times are when each cycle landed, Pacific.
 
 ## Night 1 · Sun 4 Oct
 
+### Cycle 11: New post from the app icon
+- **Shipped:** long-press the icon for New post, a shortcut added when the app starts (a
+  shortcuts.xml can't name the debug build's package).
+- **Found on the way:** since cycle 6, Back from a post started by a share made another post
+  from the same share and opened it again, so the editor couldn't be left. Home's effect ran each
+  time Home came back; the share is now taken once. A flow test covers it.
+
 ### Cycle 10: delete a post from the blog
 - **Shipped:** Delete from the blog, in the editor's menu: asks first, one commit, only the
   version that was opened. Photos stay; the history keeps the text.

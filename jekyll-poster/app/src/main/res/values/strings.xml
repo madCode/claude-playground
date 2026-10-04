@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Jekyll Poster</string>
+    <string name="shortcut_new_post">New post</string>
 </resources>

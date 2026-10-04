@@ -24,6 +24,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun shared(intent: Intent?): Shared? {
+        if (intent?.action == ACTION_NEW_POST) return Shared("", emptyList())
         if (intent?.action != Intent.ACTION_SEND && intent?.action != Intent.ACTION_SEND_MULTIPLE) return null
         val images = when (intent.action) {
             Intent.ACTION_SEND -> listOfNotNull(intent.parcelable<Uri>(Intent.EXTRA_STREAM))
@@ -42,7 +43,12 @@ class MainActivity : ComponentActivity() {
 
     private inline fun <reified T : android.os.Parcelable> Intent.parcelables(key: String): List<T> =
         (if (Build.VERSION.SDK_INT >= 33) getParcelableArrayListExtra(key, T::class.java) else @Suppress("DEPRECATION") getParcelableArrayListExtra(key)).orEmpty()
+
+    companion object {
+        /** The launcher's New post shortcut: opens an empty post. */
+        const val ACTION_NEW_POST = "com.app.jekyllposter.NEW_POST"
+    }
 }
 
-/** What another app shared to start a post with: text or a link, and photos. */
+/** What to start a post with: text or a link and photos another app shared, or nothing (New post). */
 data class Shared(val text: String, val images: List<Uri>)

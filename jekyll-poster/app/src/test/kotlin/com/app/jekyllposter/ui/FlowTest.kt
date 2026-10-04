@@ -122,6 +122,17 @@ class FlowTest {
         compose.waitUntil(3_000) { runBlocking { app.container.database.drafts().snapshotCount() } == 0 }
     }
 
+    @Test fun aSharedLinkMakesOnePostEvenAfterGoingBack() {
+        signIn()
+        compose.setContent { PosterTheme { PosterNavHost(app.container, com.app.jekyllposter.Shared("[A good read](https://example.com/read)\n", emptyList())) } }
+        compose.waitForTag("title")
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.waitFor("On this phone")
+        compose.waitForIdle()
+        assertEquals(1, runBlocking { app.container.database.drafts().snapshotCount() })
+        compose.onNodeWithTag("title").assertDoesNotExist()
+    }
+
     @Test fun aDraftIsKeptOnTheList() {
         signIn()
         start()

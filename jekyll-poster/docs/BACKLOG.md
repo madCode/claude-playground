@@ -22,6 +22,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 11: New post from the app icon; a share no longer starts a post again on Back
 - [x] Cycle 10: delete a post from the blog
 - [x] Cycle 9: a documentation pass
 - [x] Cycle 8: more front matter (YAML), filter by category
