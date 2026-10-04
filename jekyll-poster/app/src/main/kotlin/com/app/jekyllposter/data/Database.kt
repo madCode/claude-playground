@@ -12,6 +12,7 @@ import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /** Where a post written on the phone stands. */
@@ -39,10 +40,14 @@ enum class BuildState { Building, Live, Failed, Unknown }
 @Entity(tableName = "drafts")
 data class Draft(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** The blog it's written for ([Account.blogKey]); null until it's first saved for one. */
+    val blog: String? = null,
     val title: String = "",
     val body: String = "",
     val categories: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
+    /** Photos added on the phone, uploaded with the post if its text still links to them. */
+    val images: List<DraftImage> = emptyList(),
     /** For an edit of a post already on the blog: its path, and its blob sha when it was opened. */
     val editingPath: String? = null,
     val baseSha: String? = null,
@@ -54,6 +59,8 @@ data class Draft(
     val targetPath: String? = null,
     val publishDate: String? = null,
     val commitSha: String? = null,
+    /** Where the published post will be on the site. */
+    val postUrl: String? = null,
     val buildState: BuildState? = null,
     val error: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
@@ -62,11 +69,21 @@ data class Draft(
     val isEmpty: Boolean get() = title.isBlank() && body.isBlank()
 }
 
+/** A photo added to a post: prepared on the phone, uploaded in the post's commit. */
+@Serializable
+data class DraftImage(
+    /** Where it goes on the site, as the post links to it: `/assets/images/2026/….jpg`. */
+    val sitePath: String,
+    /** The prepared file in the app's storage. */
+    val file: String,
+)
+
 /** A post already on the blog, as last read, keyed by blob sha so unchanged posts aren't fetched again. */
 @Entity(tableName = "posts")
 data class CachedPost(
-    @PrimaryKey val sha: String,
-    val path: String,
+    // By path: two posts with identical bytes share a blob sha.
+    @PrimaryKey val path: String,
+    val sha: String,
     val title: String,
     val categories: List<String>,
     val tags: List<String>,
@@ -91,8 +108,8 @@ interface DraftDao {
     @Query("SELECT * FROM drafts WHERE id = :id")
     fun watch(id: Long): Flow<Draft?>
 
-    @Query("SELECT * FROM drafts WHERE editingPath = :path AND state != 'Published' LIMIT 1")
-    suspend fun openEditOf(path: String): Draft?
+    @Query("SELECT * FROM drafts WHERE editingPath = :path AND blog = :blog AND state != 'Published' LIMIT 1")
+    suspend fun openEditOf(path: String, blog: String): Draft?
 
     @Insert
     suspend fun insert(draft: Draft): Long
@@ -118,9 +135,8 @@ interface PostDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(posts: List<CachedPost>)
 
-    /** Drops posts no longer on the blog. Paths too, since a renamed post keeps its sha. */
-    @Query("DELETE FROM posts WHERE sha || ' ' || path NOT IN (:keep)")
-    suspend fun keepOnly(keep: List<String>)
+    @Query("DELETE FROM posts WHERE path IN (:paths)")
+    suspend fun deletePaths(paths: List<String>)
 
     @Query("DELETE FROM posts")
     suspend fun clear()
@@ -129,6 +145,8 @@ interface PostDao {
 class Converters {
     @TypeConverter fun fromList(list: List<String>): String = Json.encodeToString(list)
     @TypeConverter fun toList(json: String): List<String> = Json.decodeFromString(json)
+    @TypeConverter fun fromImages(list: List<DraftImage>): String = Json.encodeToString(list)
+    @TypeConverter fun toImages(json: String): List<DraftImage> = Json.decodeFromString(json)
 }
 
 @Database(entities = [Draft::class, CachedPost::class], version = 1)

@@ -14,13 +14,13 @@ data class PostSummary(
     companion object {
         fun of(path: PostPath, sha: String, content: String): PostSummary {
             val doc = FrontMatterDocument.parse(content)
-            val frontCategories = doc.list("categories").ifEmpty { doc.list("category") }
+            val frontCategories = doc.terms("category", "categories")
             return PostSummary(
                 path = path,
                 sha = sha,
                 title = doc.string("title")?.takeIf { it.isNotBlank() } ?: titleFromSlug(path.slug),
                 categories = (path.folderCategories + frontCategories).distinct(),
-                tags = doc.list("tags").ifEmpty { doc.list("tag") },
+                tags = doc.terms("tag", "tags"),
                 published = doc.values()["published"] != false,
             )
         }

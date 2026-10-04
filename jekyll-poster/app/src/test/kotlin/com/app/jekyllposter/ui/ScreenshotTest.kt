@@ -131,6 +131,21 @@ class ScreenshotTest {
         shoot("04-editor") { EditorScreen(vm) {} }
     }
 
+    @Test fun publishedPost() {
+        signIn()
+        val id = runBlocking {
+            c.drafts.insert(
+                Draft(
+                    title = "A walk to the lighthouse", body = "Out past the harbour wall at low tide.", categories = listOf("travel"),
+                    state = PostState.Published, buildState = BuildState.Live,
+                    postUrl = "https://sample.github.io/sample-blog/travel/2026/10/04/a-walk-to-the-lighthouse/",
+                ),
+            )
+        }
+        val vm = EditorViewModel(c, id)
+        shoot("06-published", ready = { vm.text != null && vm.state.value.draft != null }) { EditorScreen(vm) {} }
+    }
+
     @Test fun categoryPicker() {
         val vm = editorWithDraft()
         shoot("05-category-picker", act = { compose.onNode(hasContentDescription("Add category")).performClick() }) { EditorScreen(vm) {} }

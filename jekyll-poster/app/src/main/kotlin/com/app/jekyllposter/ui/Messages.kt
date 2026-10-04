@@ -8,7 +8,7 @@ fun Throwable.forWriter(): String = when ((this as? GitHubException)?.kind) {
     GitHubException.Kind.NoAccess -> "The token can't see that. Make sure it covers the blog's repository."
     GitHubException.Kind.RateLimited -> "GitHub asked us to slow down. Try again in a few minutes."
     GitHubException.Kind.Network -> "Couldn't reach GitHub. Check your connection."
-    GitHubException.Kind.Conflict -> "Something changed on GitHub at the same moment. Try again."
+    GitHubException.Kind.Conflict, GitHubException.Kind.Changed -> "Something changed on GitHub at the same moment. Try again."
     GitHubException.Kind.Other -> "GitHub said: $message"
     null -> "Something went wrong: ${message ?: javaClass.simpleName}"
 }

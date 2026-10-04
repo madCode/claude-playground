@@ -57,6 +57,31 @@ class FrontMatterTest {
         assertEquals("one\n\ntwo\n", doc.string("description"))
     }
 
+    @Test fun duplicateKeysReadAsJekyllReadsThemLastOneWinning() {
+        val doc = FrontMatterDocument.parse("---\ntitle: Real title\ntags: [a]\ntags: [b]\n---\n")
+        assertEquals("Real title", doc.string("title"))
+        assertEquals(listOf("b"), doc.list("tags"))
+        assertTrue(doc.readable)
+    }
+
+    @Test fun unreadableYamlIsSaidSo() {
+        assertFalse(FrontMatterDocument.parse("---\ntitle: [unclosed\n---\n").readable)
+        assertTrue(FrontMatterDocument.parse("---\n---\nbody").readable)
+    }
+
+    @Test fun keysWithColonsAndQuotesAreTheirOwnKeys() {
+        val doc = FrontMatterDocument.parse("---\ntitle: Foo\nog:image: /a.png\n\"a:b\": x\nlink: https://example.com/x\n---\n")
+        assertEquals(listOf("title", "og:image", "a:b", "link"), doc.keys)
+        doc.set("title", "Bar")
+        assertEquals("---\ntitle: Bar\nog:image: /a.png\n\"a:b\": x\nlink: https://example.com/x\n---\n", doc.render())
+    }
+
+    @Test fun theSingularKeyWinsAndIsTakenWhole() {
+        val doc = FrontMatterDocument.parse("---\ncategory: Web Development\ncategories: a b\n---\n")
+        assertEquals(listOf("Web Development"), doc.terms("category", "categories"))
+        assertEquals(listOf("a", "b"), FrontMatterDocument.parse("---\ncategories: a  b\n---\n").terms("category", "categories"))
+    }
+
     @Test fun windowsLineEndingsAndBomAreRead() {
         val doc = FrontMatterDocument.parse("﻿---\r\ntitle: Hi\r\n---\r\nBody\r\n")
         assertEquals("Hi", doc.string("title"))

@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -91,7 +92,11 @@ private fun TokenStep(state: ConnectViewModel.State, viewModel: ConnectViewModel
             modifier = Modifier.fillMaxWidth(),
         )
         Button(onClick = viewModel::checkToken, enabled = state.token.isNotBlank() && !state.busy, modifier = Modifier.fillMaxWidth()) {
-            if (state.busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text("Continue")
+            if (state.busy) {
+                CircularProgressIndicator(Modifier.size(18.dp).semantics { contentDescription = "Checking the token" }, strokeWidth = 2.dp)
+            } else {
+                Text("Continue")
+            }
         }
         Text(
             "The token stays on this phone, sealed with a key that never leaves it.",

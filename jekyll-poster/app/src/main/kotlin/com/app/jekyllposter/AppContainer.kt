@@ -9,6 +9,7 @@ import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.AccountStore
 import com.app.jekyllposter.data.AesGcmCipher
 import com.app.jekyllposter.data.BlogRepository
+import com.app.jekyllposter.data.ImageImporter
 import com.app.jekyllposter.data.PosterDatabase
 import com.app.jekyllposter.data.SecretCipher
 import com.app.jekyllposter.data.accountDataStore
@@ -28,6 +29,8 @@ class AppContainer(
     val database: PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db").build(),
     /** Starts publishing a queued post; WorkManager in the app, direct calls in tests. */
     val schedulePublish: (Long) -> Unit = { com.app.jekyllposter.publish.PublishWorker.enqueue(context, it) },
+    /** When the site has (or hasn't) built a published post; a notification in the app. */
+    onBuildFinished: (com.app.jekyllposter.data.Draft) -> Unit = com.app.jekyllposter.publish.Notifier(context)::buildFinished,
 ) {
     val http: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
@@ -39,6 +42,7 @@ class AppContainer(
     val accounts = AccountStore(accountData, cipher)
     val drafts = database.drafts()
     val blogs = BlogRepository(accounts, database.posts()) { account: Account -> client(account.token) }
-    val publisher = Publisher(drafts, blogs)
-    val buildWatcher = BuildWatcher(drafts, accounts) { client(it.token) }
+    val publisher = Publisher(drafts, accounts, blogs)
+    val images = ImageImporter(context.contentResolver, java.io.File(context.filesDir, "images"))
+    val buildWatcher = BuildWatcher(drafts, accounts, { client(it.token) }, onBuildFinished)
 }

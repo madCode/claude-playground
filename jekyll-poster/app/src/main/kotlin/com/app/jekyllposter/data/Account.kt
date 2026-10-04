@@ -22,6 +22,9 @@ data class Account(
     val siteUrl: String? = null,
 ) {
     val repoName: String get() = "$owner/$repo"
+
+    /** Which blog a draft belongs to: `owner/repo@branch`. */
+    val blogKey: String get() = "$owner/$repo@$branch"
 }
 
 val Context.accountDataStore: DataStore<Preferences> by preferencesDataStore(name = "account")

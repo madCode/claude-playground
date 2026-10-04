@@ -15,6 +15,9 @@ class GitHubException(val kind: Kind, message: String, val status: Int = 0, caus
         /** Someone else pushed in between; the caller retries on the new head. */
         Conflict,
 
+        /** A file the commit relies on changed on GitHub; the caller decides again from fresh state. */
+        Changed,
+
         /** No connection, or GitHub didn't answer: worth retrying later. */
         Network,
 

@@ -41,8 +41,28 @@ class FrontMatterDocument private constructor(
     fun list(key: String): List<String> = when (val v = values()[key]) {
         null -> emptyList()
         is List<*> -> v.filterNotNull().map { it.toString().trim() }.filter { it.isNotEmpty() }
-        else -> v.toString().split(' ').map { it.trim() }.filter { it.isNotEmpty() }
+        else -> v.toString().split(Regex("""\s+""")).filter { it.isNotEmpty() }
     }
+
+    /**
+     * Categories or tags as Jekyll reads them: the singular key (`category:`) wins and is taken
+     * whole, so `category: Web Development` is one category; otherwise the plural key, split as in
+     * [list].
+     */
+    fun terms(singular: String, plural: String): List<String> {
+        val values = values()
+        if (values.containsKey(singular)) {
+            return when (val v = values[singular]) {
+                null -> emptyList()
+                is List<*> -> v.filterNotNull().map { it.toString().trim() }.filter { it.isNotEmpty() }
+                else -> listOf(v.toString().trim()).filter { it.isNotEmpty() }
+            }
+        }
+        return list(plural)
+    }
+
+    /** False when there are keys but the YAML can't be read, so values would all look missing. */
+    val readable: Boolean get() = entries.isEmpty() || values().isNotEmpty()
 
     /** Sets [key] to [value] (a String, Number, Boolean or List of those); null removes it. */
     fun set(key: String, value: Any?) {
@@ -83,7 +103,9 @@ class FrontMatterDocument private constructor(
     }
 
     companion object {
-        private val keyLine = Regex("""^([^\s#\-][^:#]*?)\s*:(\s.*|)$""")
+        // A key is plain text up to the first colon followed by a space (so `og:image` is one key),
+        // or a quoted string.
+        private val keyLine = Regex("""^("[^"]*"|'[^']*'|[^\s#\-"'][^#]*?)\s*:(\s.*|)$""")
 
         fun empty(body: String = ""): FrontMatterDocument =
             FrontMatterDocument(mutableListOf(), emptyList(), body, hasFrontMatter = true)
@@ -127,7 +149,8 @@ class FrontMatterDocument private constructor(
 
         internal fun parseYaml(yaml: String): Map<String, Any?> = try {
             @Suppress("UNCHECKED_CAST")
-            (Load(LoadSettings.builder().build()).loadFromString(yaml) as? Map<String, Any?>) ?: emptyMap()
+            // Duplicate keys are allowed, last one winning, as Ruby's YAML (and so Jekyll) reads them.
+            (Load(LoadSettings.builder().setAllowDuplicateKeys(true).build()).loadFromString(yaml) as? Map<String, Any?>) ?: emptyMap()
         } catch (e: Exception) {
             emptyMap()
         }

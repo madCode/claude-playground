@@ -1,7 +1,30 @@
 package com.app.jekyllposter.ui.editor
 
 import androidx.activity.compose.BackHandler
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.core.content.ContextCompat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -62,6 +85,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.jekyllposter.ui.editor.EditorViewModel.TermKind
+import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.ui.home.status
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -75,34 +99,89 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     LaunchedEffect(state.closed) { if (state.closed) onClose() }
     BackHandler(onBack = viewModel::close)
     val editable = state.editable
+    val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        uri?.let(viewModel::addPhoto)
+    }
+    val snackbar = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    // Asked on the first Publish, when "tell you when it's live" makes sense; publishing goes ahead either way.
+    val askToNotify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val publish = {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            askToNotify.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        viewModel.publish()
+    }
+    LaunchedEffect(state.photoError) {
+        state.photoError?.let { snackbar.showSnackbar(it); viewModel.dismissPhotoError() }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (text?.editingPath != null) "Edit post" else "New post") },
+                title = {
+                    Text(
+                        when {
+                            state.draft?.state == PostState.Published -> "Published"
+                            state.draft?.state == PostState.Queued -> "Publishing"
+                            text?.editingPath != null -> "Edit post"
+                            else -> "New post"
+                        },
+                    )
+                },
                 navigationIcon = { IconButton(onClick = viewModel::close) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = {
-                    if (editable) {
-                        TextButton(onClick = viewModel::publish) { Text(if (text?.editingPath != null) "Update" else "Publish") }
+                    if (editable && !state.previewing) {
+                        if (state.addingPhoto) {
+                            CircularProgressIndicator(Modifier.padding(12.dp).size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            IconButton(onClick = { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
+                                Icon(Icons.Default.AddPhotoAlternate, "Add a photo")
+                            }
+                        }
                     }
-                    IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More") }
-                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        DropdownMenuItem(
-                            text = { Text(if (text?.editingPath != null) "Discard changes" else "Delete draft") },
-                            leadingIcon = { Icon(Icons.Default.Delete, null) },
-                            onClick = { menu = false; confirmDelete = true },
-                        )
+                    IconButton(onClick = viewModel::togglePreview) {
+                        if (state.previewing) Icon(Icons.Default.EditNote, "Back to writing")
+                        else Icon(Icons.Default.Visibility, "Preview")
+                    }
+                    if (editable) {
+                        TextButton(onClick = publish) { Text(if (text?.editingPath != null) "Update" else "Publish") }
+                    }
+                    // A queued post may be mid-commit; deleting it then would lose the phone's record
+                    // of a post that still goes out.
+                    if (state.draft?.state != PostState.Queued) {
+                        IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More") }
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(deleteLabel(state.draft)) },
+                                leadingIcon = { Icon(Icons.Default.Delete, null) },
+                                onClick = { menu = false; confirmDelete = true },
+                            )
+                        }
                     }
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         if (text == null) return@Scaffold
+        if (state.previewing) {
+            PostPreview(viewModel, Modifier.padding(padding).fillMaxSize())
+            return@Scaffold
+        }
         Column(Modifier.padding(padding).fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
             state.draft?.takeIf { !editable || it.error != null }?.let { draft ->
                 val (label, isError) = draft.status()
+                val uri = LocalUriHandler.current
                 Surface(color = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
-                    Text(label, Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
+                    Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, Modifier.weight(1f).padding(vertical = 8.dp), style = MaterialTheme.typography.bodyMedium)
+                        if (draft.state == PostState.Published && draft.postUrl != null) {
+                            TextButton(onClick = { uri.openUri(draft.postUrl) }) { Text("Open on the site") }
+                        }
+                    }
                 }
             }
             TextField(
@@ -136,14 +215,54 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
         TermPicker(kind, viewModel, onDismiss = { picker = null })
     }
     if (confirmDelete) {
+        val published = state.draft?.state == PostState.Published
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text(if (text?.editingPath != null) "Discard your changes?" else "Delete this draft?") },
-            text = { Text(if (text?.editingPath != null) "The post on your blog stays as it is." else "It's only on this phone, so it can't be brought back.") },
-            confirmButton = { TextButton(onClick = { confirmDelete = false; viewModel.delete() }) { Text(if (text?.editingPath != null) "Discard" else "Delete") } },
+            title = { Text(if (published) "Remove from this list?" else if (text?.editingPath != null) "Discard your changes?" else "Delete this draft?") },
+            text = {
+                Text(
+                    when {
+                        published -> "The post stays on your blog; this only clears it from the phone."
+                        text?.editingPath != null -> "The post on your blog stays as it is."
+                        else -> "It's only on this phone, so it can't be brought back."
+                    },
+                )
+            },
+            confirmButton = { TextButton(onClick = { confirmDelete = false; viewModel.delete() }) { Text(if (published) "Remove" else if (text?.editingPath != null) "Discard" else "Delete") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Keep") } },
         )
     }
+}
+
+@Composable
+private fun PostPreview(viewModel: EditorViewModel, modifier: Modifier) {
+    val dark = isSystemInDarkTheme()
+    val html by produceState("", viewModel.text, dark) { value = viewModel.previewHtml(dark) }
+    AndroidView(
+        factory = { context ->
+            WebView(context).apply {
+                // The writer's own HTML, but still: no scripts, no file access.
+                settings.javaScriptEnabled = false
+                settings.allowFileAccess = false
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                // A tapped link opens in the browser, not in place of the preview.
+                webViewClient = object : WebViewClient() {
+                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
+                        return true
+                    }
+                }
+            }
+        },
+        update = { it.loadDataWithBaseURL(null, html, "text/html", "utf-8", null) },
+        modifier = modifier.semantics { contentDescription = "Preview of the post" },
+    )
+}
+
+private fun deleteLabel(draft: com.app.jekyllposter.data.Draft?) = when {
+    draft?.state == PostState.Published -> "Remove from this list"
+    draft?.editingPath != null -> "Discard changes"
+    else -> "Delete draft"
 }
 
 @Composable
@@ -159,13 +278,15 @@ private fun plainField() = TextFieldDefaults.colors(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TermRow(label: String, terms: List<String>, editable: Boolean, onAdd: () -> Unit, onRemove: (String) -> Unit) {
+    if (!editable && terms.isEmpty()) return
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 12.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             terms.forEach { term ->
                 InputChip(
                     selected = false,
-                    onClick = { if (editable) onRemove(term) },
+                    enabled = editable,
+                    onClick = { onRemove(term) },
                     label = { Text(term) },
                     trailingIcon = if (editable) ({ Icon(Icons.Default.Close, "Remove $term") }) else null,
                 )

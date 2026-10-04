@@ -30,7 +30,9 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     private val status = MutableStateFlow(State())
 
     val state: StateFlow<State> = combine(container.accounts.account, container.drafts.all(), container.blogs.cachedPosts, status) { account, drafts, posts, s ->
-        s.copy(account = account, onPhone = drafts.filter { it.state != PostState.Published || recent(it) }, onBlog = posts)
+        // Drafts for another blog wait, hidden, until that blog is signed in again.
+        val mine = drafts.filter { it.blog == null || it.blog == account?.blogKey }
+        s.copy(account = account, onPhone = mine.filter { it.state != PostState.Published || recent(it) }, onBlog = posts)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), State())
 
     init {
@@ -49,7 +51,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     /** Opening a post goes through here so [open] runs on the main thread, where navigation must. */
     fun newDraft(open: (Long) -> Unit) {
-        viewModelScope.launch { open(container.drafts.insert(Draft())) }
+        viewModelScope.launch { open(container.drafts.insert(Draft(blog = container.accounts.current()?.blogKey))) }
     }
 
     fun edit(post: CachedPost, open: (Long) -> Unit) {
@@ -61,23 +63,33 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
      * edit of the same post is reopened instead, so its changes aren't lost to a second copy.
      */
     suspend fun editPost(post: CachedPost): Long? {
-        container.drafts.openEditOf(post.path)?.let { return it.id }
-        val blog = container.blogs.blog() ?: return null
-        val text = try {
-            blog.read(post.path)
+        val account = container.accounts.current() ?: return null
+        container.drafts.openEditOf(post.path, account.blogKey)?.let { return it.id }
+        // The text and its sha from the branch now, not the list's cache, which may be older.
+        val file = try {
+            container.blogs.blog(account).file(post.path)
         } catch (e: Exception) {
             status.update { it.copy(error = e.forWriter()) }
             return null
-        } ?: return null
-        val doc = FrontMatterDocument.parse(text)
+        } ?: run {
+            status.update { it.copy(error = "That post isn't on the blog any more.") }
+            return null
+        }
+        val doc = FrontMatterDocument.parse(file.text)
+        if (!doc.readable) {
+            // Editing would write the title and categories over what the app couldn't read.
+            status.update { it.copy(error = "This post's front matter isn't valid YAML, so the app can't edit it safely. Fix it on GitHub first.") }
+            return null
+        }
         return container.drafts.insert(
             Draft(
+                blog = account.blogKey,
                 title = doc.string("title") ?: post.title,
                 body = doc.text,
-                categories = doc.list("categories").ifEmpty { doc.list("category") },
-                tags = doc.list("tags").ifEmpty { doc.list("tag") },
+                categories = doc.terms("category", "categories"),
+                tags = doc.terms("tag", "tags"),
                 editingPath = post.path,
-                baseSha = post.sha,
+                baseSha = file.sha,
             ),
         )
     }

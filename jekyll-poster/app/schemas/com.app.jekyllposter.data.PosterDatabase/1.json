@@ -2,17 +2,22 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "0c970a1ae664ee2c87d5f6b545d53fbf",
+    "identityHash": "b7204c29fea6fb741cb25979cec5d63d",
     "entities": [
       {
         "tableName": "drafts",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, `body` TEXT NOT NULL, `categories` TEXT NOT NULL, `tags` TEXT NOT NULL, `editingPath` TEXT, `baseSha` TEXT, `state` TEXT NOT NULL, `targetPath` TEXT, `publishDate` TEXT, `commitSha` TEXT, `buildState` TEXT, `error` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `blog` TEXT, `title` TEXT NOT NULL, `body` TEXT NOT NULL, `categories` TEXT NOT NULL, `tags` TEXT NOT NULL, `images` TEXT NOT NULL, `editingPath` TEXT, `baseSha` TEXT, `state` TEXT NOT NULL, `targetPath` TEXT, `publishDate` TEXT, `commitSha` TEXT, `postUrl` TEXT, `buildState` TEXT, `error` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
             "columnName": "id",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "blog",
+            "columnName": "blog",
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "title",
@@ -35,6 +40,12 @@
           {
             "fieldPath": "tags",
             "columnName": "tags",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "images",
+            "columnName": "images",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -70,6 +81,11 @@
             "affinity": "TEXT"
           },
           {
+            "fieldPath": "postUrl",
+            "columnName": "postUrl",
+            "affinity": "TEXT"
+          },
+          {
             "fieldPath": "buildState",
             "columnName": "buildState",
             "affinity": "TEXT"
@@ -101,17 +117,17 @@
       },
       {
         "tableName": "posts",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`sha` TEXT NOT NULL, `path` TEXT NOT NULL, `title` TEXT NOT NULL, `categories` TEXT NOT NULL, `tags` TEXT NOT NULL, `published` INTEGER NOT NULL, `date` TEXT, PRIMARY KEY(`sha`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`path` TEXT NOT NULL, `sha` TEXT NOT NULL, `title` TEXT NOT NULL, `categories` TEXT NOT NULL, `tags` TEXT NOT NULL, `published` INTEGER NOT NULL, `date` TEXT, PRIMARY KEY(`path`))",
         "fields": [
           {
-            "fieldPath": "sha",
-            "columnName": "sha",
+            "fieldPath": "path",
+            "columnName": "path",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "path",
-            "columnName": "path",
+            "fieldPath": "sha",
+            "columnName": "sha",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -148,14 +164,14 @@
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "sha"
+            "path"
           ]
         }
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0c970a1ae664ee2c87d5f6b545d53fbf')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b7204c29fea6fb741cb25979cec5d63d')"
     ]
   }
 }

@@ -5,8 +5,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Draft
+import com.app.jekyllposter.data.DraftImage
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.testutil.TestApp
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -26,7 +28,7 @@ class PublisherTest {
     private val c = app.container
     private val github = app.github
     private val evening = ZonedDateTime.of(2026, 10, 4, 22, 15, 0, 0, ZoneId.of("America/Los_Angeles"))
-    private val publisher = Publisher(c.drafts, c.blogs) { evening }
+    private val publisher = Publisher(c.drafts, c.accounts, c.blogs) { evening }
 
     @Before fun signIn() = runBlocking {
         c.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
@@ -50,6 +52,67 @@ class PublisherTest {
         assertEquals("Add post: Late night: notes", github.commits.getValue(github.head).message)
         // The blog is read again, so the post shows under "On your blog".
         assertTrue(c.database.posts().snapshot().any { it.path == "_posts/2026-10-04-late-night-notes.md" })
+    }
+
+    @Test fun photosTheTextStillUsesGoInThePostsCommit() = runBlocking {
+        val kept = java.io.File.createTempFile("kept", ".jpg").apply { writeBytes(byteArrayOf(1, 2, 3)) }
+        val dropped = java.io.File.createTempFile("dropped", ".jpg").apply { writeBytes(byteArrayOf(9)) }
+        val id = queue(
+            Draft(
+                title = "Lighthouse", body = "Look:\n\n![]({{ '/assets/images/2026/a.jpg' | relative_url }})\n",
+                images = listOf(DraftImage("/assets/images/2026/a.jpg", kept.path), DraftImage("/assets/images/2026/b.jpg", dropped.path)),
+            ),
+        )
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        val files = github.files()
+        assertTrue(files.getValue("assets/images/2026/a.jpg").contentEquals(byteArrayOf(1, 2, 3)))
+        assertTrue("assets/images/2026/b.jpg" !in files)
+        // One commit for the post and its photo.
+        assertEquals(github.commits.getValue(github.head).parent, github.commits.values.first { it.message == "Initial commit" }.sha)
+    }
+
+    @Test fun aPhotoMissingFromThePhoneStopsThePostRatherThanBreakingIt() = runBlocking {
+        val id = queue(Draft(title = "T", body = "![]({{ '/assets/images/x.jpg' | relative_url }})", images = listOf(DraftImage("/assets/images/x.jpg", "/nope/x.jpg"))))
+        assertTrue(publisher.publish(id) is Publisher.Outcome.Failed)
+        assertTrue(github.files().keys.none { it.endsWith("-t.md") })
+    }
+
+    @Test fun aRetriedEditThatHadLandedIsDoneNotAConflict() = runBlocking {
+        c.blogs.refresh()
+        val path = "_posts/2025-01-12-welcome.md"
+        val sha = github.files().let { c.database.posts().snapshot().first { it.path == path }.sha }
+        val id = queue(Draft(title = "Welcome", body = "New words.", editingPath = path, baseSha = sha))
+        publisher.publish(id)
+        val head = github.head
+        c.drafts.update(c.drafts.get(id)!!.copy(state = PostState.Queued))
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertEquals(PostState.Published, c.drafts.get(id)!!.state)
+        assertEquals(head, github.head)
+    }
+
+    @Test fun twoPostsWithTheSameTitleBothLand() = runBlocking {
+        val a = queue(Draft(title = "Weekly notes", body = "One"))
+        val b = queue(Draft(title = "Weekly notes", body = "Two"))
+        kotlinx.coroutines.coroutineScope {
+            launch(kotlinx.coroutines.Dispatchers.IO) { publisher.publish(a) }
+            launch(kotlinx.coroutines.Dispatchers.IO) { publisher.publish(b) }
+        }
+        assertTrue(github.text("_posts/2026-10-04-weekly-notes.md")!!.contains("One") xor github.text("_posts/2026-10-04-weekly-notes.md")!!.contains("Two"))
+        assertTrue(github.text("_posts/2026-10-04-weekly-notes-2.md") != null)
+    }
+
+    @Test fun aPostWrittenForAnotherBlogWaitsForIt() = runBlocking {
+        val id = queue(Draft(blog = "sample/other-blog@main", title = "Elsewhere", body = "x"))
+        assertTrue(publisher.publish(id) is Publisher.Outcome.Failed)
+        assertTrue(c.drafts.get(id)!!.error!!.contains("sample/other-blog"))
+        assertTrue(github.files().keys.none { it.contains("elsewhere") })
+    }
+
+    @Test fun aPublishedPostKnowsItsAddress() = runBlocking {
+        val id = queue(Draft(title = "Bus notes", body = "x", categories = listOf("Writing")))
+        publisher.publish(id)
+        // The sample blog's permalink is /:categories/:year/:month/:day/:title/ in Los Angeles time.
+        assertEquals("https://sample.github.io/sample-blog/writing/2026/10/04/bus-notes/", c.drafts.get(id)!!.postUrl)
     }
 
     @Test fun aRetryAfterTheCommitLandedDoesNotPostTwice() = runBlocking {
@@ -126,6 +189,18 @@ class PublisherTest {
         assertEquals(false, c.buildWatcher.check(id, giveUp = false))
         github.runs[sha] = "completed" to "success"
         assertEquals(true, c.buildWatcher.check(id, giveUp = false))
+        assertEquals(BuildState.Live, c.drafts.get(id)!!.buildState)
+    }
+
+    @Test fun otherWorkflowsOnTheCommitDontDecideWhetherThePostIsLive() = runBlocking {
+        val id = queue(Draft(title = "With CI", body = "x"))
+        publisher.publish(id)
+        val sha = c.drafts.get(id)!!.commitSha!!
+        github.otherRuns[sha] = listOf(Triple("CI", "completed", "failure"))
+        // Only CI has run so far: not live yet, and not failed.
+        assertEquals(false, c.buildWatcher.check(id, giveUp = false))
+        github.runs[sha] = "completed" to "success"
+        c.buildWatcher.check(id, giveUp = false)
         assertEquals(BuildState.Live, c.drafts.get(id)!!.buildState)
     }
 

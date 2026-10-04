@@ -3,6 +3,12 @@ package com.app.jekyllposter.ui.editor
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.jekyllposter.AppContainer
+import android.net.Uri
+import com.app.jekyllposter.core.jekyll.Images
+import com.app.jekyllposter.core.jekyll.Preview
+import com.app.jekyllposter.data.DraftImage
+import java.io.File
+import java.time.LocalDateTime
 import com.app.jekyllposter.core.jekyll.Taxonomy
 import com.app.jekyllposter.core.jekyll.Term
 import com.app.jekyllposter.data.Draft
@@ -33,6 +39,9 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val draft: Draft? = null,
         val taxonomy: Taxonomy = Taxonomy.EMPTY,
         val titleMissing: Boolean = false,
+        val previewing: Boolean = false,
+        val addingPhoto: Boolean = false,
+        val photoError: String? = null,
         val closed: Boolean = false,
     ) {
         /** Published posts and ones on their way are read-only; edit the blog's copy instead. */
@@ -54,7 +63,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val draft = when {
             stored == null -> null
             mine == null -> stored
-            else -> stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags)
+            else -> stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images)
         }
         f.copy(draft = draft, taxonomy = taxonomy)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, State())
@@ -79,6 +88,48 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             save()
         }
     }
+
+    fun togglePreview() = flags.update { it.copy(previewing = !it.previewing) }
+
+    /** The post as a page, with site images loaded from the live site (or GitHub, before Pages has one). */
+    suspend fun previewHtml(dark: Boolean): String {
+        val draft = text ?: return ""
+        val account = container.accounts.current()
+        val base = account?.siteUrl?.trimEnd('/')
+            ?: account?.let { "https://raw.githubusercontent.com/${it.owner}/${it.repo}/${it.branch}" }
+            ?: ""
+        val local = draft.images.associate { it.sitePath to it.file }
+        val preview = Preview(container.blogs.config.value) { path ->
+            // A photo not on the site yet is shown from the phone, inline: the preview has no file access.
+            local[path]?.let { dataUri(File(it)) } ?: (base + path)
+        }
+        return preview.page(draft.title, draft.body, dark)
+    }
+
+    /** Prepares a picked photo and adds its link to the end of the post. */
+    fun addPhoto(uri: Uri) {
+        if (text == null || !state.value.editable) return
+        flags.update { it.copy(addingPhoto = true, photoError = null) }
+        viewModelScope.launch {
+            try {
+                val prepared = container.images.import(uri)
+                val draft = text ?: return@launch
+                val taken = draft.images.map { it.sitePath }.toSet() + container.blogs.paths
+                val sitePath = Images.sitePath(container.blogs.imageFolder.value, LocalDateTime.now(), prepared.extension, taken)
+                val link = Images.markdown(sitePath, "")
+                edit {
+                    val body = if (it.body.isBlank()) link else it.body.trimEnd() + "\n\n" + link
+                    it.copy(body = body + "\n", images = it.images + DraftImage(sitePath, prepared.file.path))
+                }
+            } catch (e: Exception) {
+                flags.update { it.copy(photoError = "Couldn't add that photo: ${e.message ?: "it couldn't be read"}") }
+            } finally {
+                flags.update { it.copy(addingPhoto = false) }
+            }
+        }
+    }
+
+    fun dismissPhotoError() = flags.update { it.copy(photoError = null) }
 
     fun setTitle(title: String) = edit { it.copy(title = title) }
     fun setBody(body: String) = edit { it.copy(body = body) }
@@ -122,7 +173,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val mine = text ?: return
         val stored = container.drafts.get(id) ?: return
         if (stored.state != PostState.Draft && stored.state != PostState.Failed) return
-        container.drafts.update(stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, updatedAt = System.currentTimeMillis()))
+        container.drafts.update(stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, updatedAt = System.currentTimeMillis()))
     }
 
     fun publish() {
@@ -134,7 +185,17 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 flags.update { it.copy(titleMissing = true) }
                 return@launch
             }
-            container.drafts.update(draft.copy(state = PostState.Queued, error = null, updatedAt = System.currentTimeMillis()))
+            val again = draft.state == PostState.Failed && draft.editingPath == null
+            container.drafts.update(
+                draft.copy(
+                    state = PostState.Queued, error = null, updatedAt = System.currentTimeMillis(),
+                    blog = draft.blog ?: container.accounts.current()?.blogKey,
+                    // A failed post sent again later gets a fresh name and date: the old ones may
+                    // be days stale, or taken by now.
+                    targetPath = if (again) null else draft.targetPath,
+                    publishDate = if (again) null else draft.publishDate,
+                ),
+            )
             container.schedulePublish(id)
             flags.update { it.copy(closed = true) }
         }
@@ -157,4 +218,9 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             flags.update { it.copy(closed = true) }
         }
     }
+}
+
+private fun dataUri(file: File): String {
+    val type = when (file.extension) { "png" -> "image/png"; "gif" -> "image/gif"; else -> "image/jpeg" }
+    return "data:$type;base64," + android.util.Base64.encodeToString(file.readBytes(), android.util.Base64.NO_WRAP)
 }

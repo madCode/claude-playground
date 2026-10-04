@@ -3,6 +3,7 @@ package com.app.jekyllposter.core.blog
 import com.app.jekyllposter.core.github.FileChange
 import com.app.jekyllposter.core.github.GitHubClient
 import com.app.jekyllposter.core.github.TreeEntry
+import com.app.jekyllposter.core.jekyll.Permalink
 import com.app.jekyllposter.core.jekyll.PostPath
 import com.app.jekyllposter.core.jekyll.PostSummary
 import com.app.jekyllposter.core.jekyll.SiteConfig
@@ -17,6 +18,8 @@ data class SiteIndex(
     val imageFolder: String,
     /** Every path on the branch, to keep new files from overwriting old ones. */
     val paths: Set<String>,
+    /** The site's address, no trailing slash: from `CNAME`, `_config.yml` or GitHub's convention. */
+    val siteUrl: String,
 )
 
 /** A Jekyll blog in one GitHub repository and branch. */
@@ -27,18 +30,19 @@ class Blog(
     val branch: String,
 ) {
     /**
-     * Reads the blog. [known] holds summaries from an earlier read, by blob sha; only posts that
-     * changed since are fetched, so reopening a big blog costs a request or two.
+     * Reads the blog. [known] holds summaries from an earlier read, by path; only posts whose
+     * content changed since are fetched, so reopening a big blog costs a request or two.
      */
     suspend fun index(known: Map<String, PostSummary> = emptyMap()): SiteIndex {
         val files = client.files(owner, name, branch)
         val configEntry = files.firstOrNull { it.path == "_config.yml" } ?: files.firstOrNull { it.path == "_config.yaml" }
         val postEntries = files.filter { PostPath(it.path).isPost }
-        val missing = postEntries.filter { known[it.sha]?.path?.path != it.path }.map { it.sha } +
-            listOfNotNull(configEntry?.sha)
+        val cnameEntry = files.firstOrNull { it.path == "CNAME" }
+        val missing = postEntries.filter { known[it.path]?.sha != it.sha }.map { it.sha } +
+            listOfNotNull(configEntry?.sha, cnameEntry?.sha)
         val texts = if (missing.isEmpty()) emptyMap() else client.blobTexts(owner, name, missing)
         val posts = postEntries.mapNotNull { entry ->
-            known[entry.sha]?.takeIf { it.path.path == entry.path }
+            known[entry.path]?.takeIf { it.sha == entry.sha }
                 ?: texts[entry.sha]?.let { PostSummary.of(PostPath(entry.path), entry.sha, it) }
         }
         val config = SiteConfig.parse(configEntry?.let { texts[it.sha] })
@@ -48,14 +52,17 @@ class Blog(
             taxonomy = Taxonomy.of(posts),
             imageFolder = imageFolder(files),
             paths = files.map { it.path }.toSet(),
+            siteUrl = Permalink.siteUrl(config, owner, name, cnameEntry?.let { texts[it.sha] }),
         )
     }
 
     suspend fun read(path: String): String? = client.text(owner, name, branch, path)
 
     /** Writes the changes as one commit, returning its sha. */
-    suspend fun commit(message: String, changes: List<FileChange>): String =
-        client.commit(owner, name, branch, message, changes)
+    suspend fun commit(message: String, changes: List<FileChange>, expect: Map<String, String?> = emptyMap()): String =
+        client.commit(owner, name, branch, message, changes, expect)
+
+    suspend fun file(path: String) = client.file(owner, name, branch, path)
 
     companion object {
         private val imageExtensions = setOf("jpg", "jpeg", "png", "gif", "webp", "svg")
