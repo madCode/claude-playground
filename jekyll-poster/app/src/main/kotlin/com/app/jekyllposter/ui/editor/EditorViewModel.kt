@@ -79,6 +79,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             val loaded = container.drafts.get(id)
             // Applied at once, so the screen sees it even if no frame is pending to pick it up.
             Snapshot.withMutableSnapshot { text = loaded }
+            loaded?.body?.let { bodySelection = TextRange(it.length) }
+            container.sharedPhotos.remove(id)?.forEach(::addPhoto)
         }
     }
 
@@ -116,9 +118,13 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
 
     /** Prepares a picked photo and adds its link to the end of the post. */
     fun addPhoto(uri: Uri) {
-        if (text == null || !state.value.editable) return
+        if (text == null || (state.value.draft != null && !state.value.editable)) return
         flags.update { it.copy(addingPhoto = true, photoError = null) }
+        // One at a time, in order: several photos shared at once go in as they were picked.
+        val previous = photoJob
         photoJob = viewModelScope.launch {
+            previous?.join()
+            flags.update { it.copy(addingPhoto = true) }
             try {
                 val prepared = container.images.import(uri)
                 val draft = text ?: return@launch

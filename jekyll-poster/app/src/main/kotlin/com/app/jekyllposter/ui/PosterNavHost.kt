@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.app.jekyllposter.AppContainer
+import com.app.jekyllposter.Shared
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.ui.connect.ConnectScreen
 import com.app.jekyllposter.ui.connect.ConnectViewModel
@@ -25,7 +26,7 @@ import kotlinx.coroutines.launch
 private object Loading
 
 @Composable
-fun PosterNavHost(container: AppContainer, sharedText: String? = null) {
+fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
     // Wait for the stored account before choosing the first screen, so a signed-in writer never
     // sees the connect screen flash by.
     val signedIn by produceState<Any?>(Loading) { container.accounts.account.collect { value = it != null } }
@@ -61,8 +62,12 @@ fun PosterNavHost(container: AppContainer, sharedText: String? = null) {
         }
         composable("home") {
             val vm = viewModel { HomeViewModel(container) }
-            LaunchedEffect(sharedText) {
-                if (sharedText != null) nav.navigate("editor/${container.drafts.insert(Draft(body = sharedText))}")
+            LaunchedEffect(shared) {
+                if (shared != null) {
+                    val id = container.drafts.insert(Draft(blog = container.accounts.current()?.blogKey, body = shared.text))
+                    container.sharedPhotos[id] = shared.images
+                    nav.navigate("editor/$id")
+                }
             }
             HomeScreen(
                 vm,

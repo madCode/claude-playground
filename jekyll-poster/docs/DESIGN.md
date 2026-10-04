@@ -36,7 +36,8 @@ doesn't want to open a laptop and make a commit for every post.
 - Categories and tags are picked from the blog's own, most used first with their counts, or
   typed in as new ones.
 - A new post with nothing written is dropped when you leave it.
-- Sharing text or a link to the app starts a post with it.
+- Sharing text, a link or photos to the app starts a post with them; several photos go in in
+  the order they were shared.
 - A **toolbar** above the keyboard: bold, italic, link (a selected URL becomes the address),
   heading, list, quote and code. Pressing a button again undoes it.
 - **Preview** shows the post as a page: Markdown (with tables and strikethrough), the

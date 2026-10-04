@@ -39,6 +39,9 @@ class AppContainer(
     /** When the site has (or hasn't) built a published post; a notification in the app. */
     onBuildFinished: (com.app.jekyllposter.data.Draft) -> Unit = com.app.jekyllposter.publish.Notifier(context)::buildFinished,
 ) {
+    /** Photos shared from another app, waiting for the editor of the post they started. */
+    val sharedPhotos = java.util.concurrent.ConcurrentHashMap<Long, List<android.net.Uri>>()
+
     /** For work that must outlive the screen that starts it, like signing out. */
     val appScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
 
