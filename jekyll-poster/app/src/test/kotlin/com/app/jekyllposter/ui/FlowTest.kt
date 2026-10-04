@@ -133,6 +133,18 @@ class FlowTest {
         compose.onNodeWithTag("title").assertDoesNotExist()
     }
 
+    @Test fun aNewPostDropsOneLeftEmptyWhenTheAppClosed() {
+        signIn()
+        // Left by the editor when the app was closed under it, without Back.
+        val stranded = runBlocking { app.container.drafts.insert(com.app.jekyllposter.data.Draft(blog = "sample/sample-blog@main")) }
+        val kept = runBlocking { app.container.drafts.insert(com.app.jekyllposter.data.Draft(title = "Half an idea")) }
+        compose.setContent { PosterTheme { PosterNavHost(app.container, com.app.jekyllposter.Shared("", emptyList())) } }
+        compose.waitForTag("title")
+        val ids = runBlocking { app.container.drafts.list() }.map { it.id }
+        assertEquals(2, ids.size)
+        assertTrue(kept in ids && stranded !in ids)
+    }
+
     @Test fun aDraftIsKeptOnTheList() {
         signIn()
         start()

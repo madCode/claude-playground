@@ -9,7 +9,8 @@ and moves it to Done.
 - [ ] Register the GitHub App and set the repository variables *(you: [how](GITHUB_APP.md))*
 - [ ] A live check: a tool that publishes to and deletes from a test repository through the real
   API, for a session that has a token for one
-- [ ] Find the Compose-test Room hang (DEVLOG, cycle 1)
+- [ ] Find the Compose-test Room hang (DEVLOG, cycles 1 and 11: likely Compose's main
+  dispatcher bound to the first test's looper)
 
 ## Later
 

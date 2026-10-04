@@ -322,6 +322,17 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         }
     }
 
+    /**
+     * The editor gone without Back (the app closed under it, e.g. by the launcher's shortcut):
+     * the last keystrokes, still waiting on the autosave's delay, are saved anyway.
+     */
+    override fun onCleared() {
+        if (saveJob?.isActive == true) {
+            saveJob?.cancel()
+            container.appScope.launch { save() }
+        }
+    }
+
     fun delete() {
         viewModelScope.launch {
             saveJob?.cancel()

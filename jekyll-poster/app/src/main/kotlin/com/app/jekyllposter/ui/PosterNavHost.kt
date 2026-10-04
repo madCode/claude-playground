@@ -17,6 +17,7 @@ import androidx.navigation.navArgument
 import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.Shared
 import com.app.jekyllposter.data.Draft
+import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.ui.connect.ConnectScreen
 import com.app.jekyllposter.ui.connect.ConnectViewModel
 import com.app.jekyllposter.ui.editor.EditorScreen
@@ -24,7 +25,9 @@ import com.app.jekyllposter.ui.editor.EditorViewModel
 import com.app.jekyllposter.ui.home.HomeScreen
 import com.app.jekyllposter.ui.home.HomeViewModel
 import com.app.jekyllposter.ui.settings.SettingsScreen
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private object Loading
 
@@ -71,9 +74,14 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
             LaunchedEffect(Unit) {
                 if (shared != null && pending) {
                     pending = false
+                    // A post left untouched when the app was closed under it (the launcher's
+                    // shortcut restarts the app without going Back) is dropped, as Back would.
+                    container.drafts.list().filter { it.isEmpty && it.state == PostState.Draft && it.editingPath == null }
+                        .forEach { container.drafts.delete(it.id) }
                     val id = container.drafts.insert(Draft(blog = container.accounts.current()?.blogKey, body = shared.text))
                     container.sharedPhotos[id] = shared.images
-                    nav.navigate("editor/$id")
+                    // Room may resume this off the main thread, where navigation isn't allowed.
+                    withContext(Dispatchers.Main) { nav.navigate("editor/$id") }
                 }
             }
             HomeScreen(

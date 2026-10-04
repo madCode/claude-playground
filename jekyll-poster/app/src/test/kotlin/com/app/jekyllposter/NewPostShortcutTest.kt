@@ -4,13 +4,10 @@ import android.content.Intent
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.app.jekyllposter.data.Account
-import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.testutil.TestApp
-import com.app.jekyllposter.testutil.idleUntil
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -20,24 +17,22 @@ import org.robolectric.annotation.Config
 @Config(application = TestApp::class)
 class NewPostShortcutTest {
     private val app = ApplicationProvider.getApplicationContext<TestApp>()
+    private val newPost = Intent(app, MainActivity::class.java).setAction(MainActivity.ACTION_NEW_POST)
 
     @After fun close() = app.github.close()
 
     @Test fun theLauncherOffersNewPost() {
-        val shortcut = ShortcutManagerCompat.getDynamicShortcuts(app).single { it.id == PosterApp.NEW_POST_SHORTCUT }
-        assertEquals("New post", shortcut.shortLabel)
-        assertEquals(MainActivity.ACTION_NEW_POST, shortcut.intent.action)
+        Robolectric.buildActivity(MainActivity::class.java).setup().use {
+            val shortcut = ShortcutManagerCompat.getDynamicShortcuts(app).single { it.id == MainActivity.NEW_POST_SHORTCUT }
+            assertEquals("New post", shortcut.shortLabel)
+            assertEquals(Shared("", emptyList()), postToStart(shortcut.intent))
+        }
     }
 
-    @Test fun theShortcutOpensAnEmptyPostForTheBlog() {
-        runBlocking { app.container.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main")) }
-        val intent = Intent(app, MainActivity::class.java).setAction(MainActivity.ACTION_NEW_POST)
-        Robolectric.buildActivity(MainActivity::class.java, intent).setup().use {
-            idleUntil { runBlocking { app.container.drafts.list() }.isNotEmpty() }
-            val draft = runBlocking { app.container.drafts.list() }.single()
-            assertEquals(PostState.Draft, draft.state)
-            assertEquals("", draft.body)
-            assertEquals("sample/sample-blog@main", draft.blog)
-        }
+    @Test fun reopeningFromRecentsStartsNothing() {
+        assertNull(postToStart(Intent(newPost).addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)))
+        val share = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "A thought")
+        assertEquals(Shared("A thought", emptyList()), postToStart(share))
+        assertNull(postToStart(Intent(share).addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)))
     }
 }

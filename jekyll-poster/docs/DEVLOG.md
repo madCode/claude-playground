@@ -20,11 +20,19 @@ Times are when each cycle landed, Pacific.
 ## Night 1 · Sun 4 Oct
 
 ### Cycle 11: New post from the app icon
-- **Shipped:** long-press the icon for New post, a shortcut added when the app starts (a
-  shortcuts.xml can't name the debug build's package).
+- **Shipped:** long-press the icon for New post. The shortcut is added by the app (a
+  shortcuts.xml can't name the debug build's package), once.
 - **Found on the way:** since cycle 6, Back from a post started by a share made another post
   from the same share and opened it again, so the editor couldn't be left. Home's effect ran each
-  time Home came back; the share is now taken once. A flow test covers it.
+  time Home came back; the share is now taken once.
+- **Its review found** (fixed, with tests): reopening from Recents replayed the shortcut or
+  share; the shortcut restarting the app left an empty "Untitled" draft and could drop the last
+  keystrokes; a rotation on the sign-in screen lost a share; the shortcut was pushed on every
+  process start, background work included.
+- **Tests:** an activity started with Robolectric's `buildActivity` stops composing after the
+  first test in a JVM, with every thread idle: Compose's main dispatcher seems bound to the first
+  test's looper. Likely the cause of the Compose-test hang (cycle 1), still open. Activity-level
+  checks are now plain functions, and screens are tested through the Compose rule.
 
 ### Cycle 10: delete a post from the blog
 - **Shipped:** Delete from the blog, in the editor's menu: asks first, one commit, only the
