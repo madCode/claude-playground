@@ -66,19 +66,27 @@ class FrontMatterDocument private constructor(
 
     /** Sets [key] to [value] (a String, Number, Boolean or List of those); null removes it. */
     fun set(key: String, value: Any?) {
-        val existing = entries.indexOfFirst { it.key == key }
         if (value == null || (value is List<*> && value.isEmpty())) {
-            if (existing >= 0) entries.removeAt(existing)
+            entries.removeAll { it.key == key }
             return
         }
         setRaw(key, Yaml.render(value))
     }
 
-    /** Sets [key] to YAML written exactly as given, for values like timestamps that must stay unquoted. */
+    /**
+     * Sets [key] to YAML written exactly as given, for values like timestamps that must stay
+     * unquoted. With the key written twice, the last one is what Jekyll reads, so that's the one
+     * replaced, and the others go.
+     */
     fun setRaw(key: String, yamlValue: String) {
         val line = "$key: $yamlValue"
-        val existing = entries.indexOfFirst { it.key == key }
-        if (existing >= 0) entries[existing].lines = listOf(line) else entries += Entry(key, listOf(line))
+        val last = entries.indexOfLast { it.key == key }
+        if (last < 0) {
+            entries += Entry(key, listOf(line))
+            return
+        }
+        entries[last].lines = listOf(line)
+        for (i in last - 1 downTo 0) if (entries[i].key == key) entries.removeAt(i)
     }
 
     /** A copy with [newBody], separated from the front matter by one blank line. */

@@ -64,6 +64,14 @@ class FrontMatterTest {
         assertTrue(doc.readable)
     }
 
+    @Test fun writingADuplicatedKeyReplacesTheOneJekyllReads() {
+        val doc = FrontMatterDocument.parse("---\ntitle: Old one\nlayout: post\ntitle: Shown one\n---\n")
+        doc.set("title", "New")
+        assertEquals("---\nlayout: post\ntitle: New\n---\n", doc.render())
+        doc.set("title", null)
+        assertEquals(listOf("layout"), doc.keys)
+    }
+
     @Test fun unreadableYamlIsSaidSo() {
         assertFalse(FrontMatterDocument.parse("---\ntitle: [unclosed\n---\n").readable)
         assertTrue(FrontMatterDocument.parse("---\n---\nbody").readable)

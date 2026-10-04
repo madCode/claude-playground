@@ -161,6 +161,52 @@ class PublisherTest {
         assertEquals("Update draft: Garden plans", github.commits.getValue(github.head).message)
     }
 
+    @Test fun aPostThatLandedUnheardThenFailedIsNotPublishedTwice() = runBlocking {
+        val id = queue(Draft(title = "Once only", body = "First version."))
+        publisher.publish(id)
+        // As if the response to the commit was lost and a later attempt failed on sign-in: the
+        // writer then edits and publishes again.
+        c.drafts.update(c.drafts.get(id)!!.copy(state = PostState.Queued, body = "Second version."))
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        val files = github.files().keys.filter { it.contains("once-only") }
+        assertEquals(listOf("_posts/2026-10-04-once-only.md"), files)
+        assertTrue(github.text(files.single())!!.contains("Second version."))
+        assertEquals("Update post: Once only", github.commits.getValue(github.head).message)
+    }
+
+    @Test fun aNewPostDoesntTakeAnOlderPostsAddress() = runBlocking {
+        // Under a date-free permalink, a free file name can still be another post's URL.
+        github.push("Permalinks", mapOf("_config.yml" to "permalink: /:title/\n", "_posts/2020-01-01-weekly-notes.md" to "---\ntitle: Weekly notes\n---\n"))
+        val id = queue(Draft(title = "Weekly notes", body = "x"))
+        publisher.publish(id)
+        assertEquals("_posts/2026-10-04-weekly-notes-2.md", c.drafts.get(id)!!.targetPath)
+    }
+
+    @Test fun aPhotoWhoseNameWasTakenIsRenamedNotOverwritten() = runBlocking {
+        val photo = java.io.File.createTempFile("photo", ".jpg").apply { writeBytes(byteArrayOf(4, 5)) }
+        val taken = "/assets/images/2025/loaf.jpg"
+        val id = queue(Draft(title = "Bread", body = "![]({{ '$taken' | relative_url }})", images = listOf(DraftImage(taken, photo.path))))
+        val before = github.files().getValue("assets/images/2025/loaf.jpg")
+        publisher.publish(id)
+        assertTrue(github.files().getValue("assets/images/2025/loaf.jpg").contentEquals(before))
+        val post = github.text("_posts/2026-10-04-bread.md")!!
+        val renamed = Regex("""'(/assets/images/2026/[^']+)'""").find(post)!!.groupValues[1]
+        assertTrue(github.files().getValue(renamed.removePrefix("/")).contentEquals(byteArrayOf(4, 5)))
+        // Uploaded, so the phone's copy goes.
+        assertTrue(!photo.exists())
+    }
+
+    @Test fun anEditsAddressUsesTheSitesTimeZoneForADateWithoutOne() = runBlocking {
+        c.blogs.refresh()
+        val path = "_posts/2025-04-20-reading-list.md"
+        github.push("Date", mapOf(path to "---\ntitle: April\ndate: 2025-04-20 00:30:00\ncategory: Writing\n---\n"))
+        val sha = c.blogs.blog()!!.file(path)!!.sha
+        val id = queue(Draft(title = "April", body = "x", categories = listOf("Writing"), editingPath = path, baseSha = sha))
+        publisher.publish(id)
+        // 00:30 in Los Angeles, the sample blog's zone, is still the 20th there.
+        assertEquals("https://sample.github.io/sample-blog/writing/2025/04/20/reading-list/", c.drafts.get(id)!!.postUrl)
+    }
+
     @Test fun aRetryAfterTheCommitLandedDoesNotPostTwice() = runBlocking {
         val id = queue(Draft(title = "Once", body = "Only once."))
         publisher.publish(id)

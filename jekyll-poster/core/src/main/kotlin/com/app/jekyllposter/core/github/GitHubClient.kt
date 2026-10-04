@@ -190,7 +190,15 @@ class GitHubClient(
     private suspend inline fun <reified T> patch(path: String, body: JsonObject): T =
         decode(send(request(path).patch(body.toString().toRequestBody(jsonType)).build()))
 
-    private inline fun <reified T> decode(body: String): T = json.decodeFromString(body)
+    /**
+     * A 2xx that isn't GitHub's JSON is almost always a network in the way (a captive portal's
+     * login page), so it's retried like any other failure to reach GitHub.
+     */
+    private inline fun <reified T> decode(body: String): T = try {
+        json.decodeFromString(body)
+    } catch (e: IllegalArgumentException) {
+        throw GitHubException(GitHubException.Kind.Network, "GitHub's answer didn't come through", cause = e)
+    }
 
     private fun request(path: String): Request.Builder = Request.Builder()
         .url(apiBase.toString().trimEnd('/') + "/" + path)

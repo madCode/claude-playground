@@ -22,8 +22,8 @@ object Permalink {
         val template = styles[config.permalink] ?: config.permalink
         val local = date.withZoneSameInstant(config.timezone ?: ZoneOffset.UTC)
         val values = mapOf(
-            // Jekyll lowercases categories in URLs; spaces become hyphens.
-            "categories" to categories.map { it.lowercase().replace(' ', '-') }.distinct().joinToString("/"),
+            // Jekyll lowercases categories in URLs and escapes the rest: a space becomes %20.
+            "categories" to categories.map { escape(it.lowercase()) }.distinct().joinToString("/"),
             "year" to "%04d".format(local.year),
             "short_year" to "%02d".format(local.year % 100),
             "month" to "%02d".format(local.monthValue),
@@ -44,6 +44,14 @@ object Permalink {
         return "/" + out.split('/').filter { it.isNotEmpty() }.joinToString("/") + if (out.endsWith("/")) "/" else ""
     }
 
+    /** As Jekyll's URL escaping: letters, digits and `-._~` stay, the rest is percent-encoded. */
+    private fun escape(segment: String): String = buildString {
+        segment.toByteArray(Charsets.UTF_8).forEach { b ->
+            val c = b.toInt().toChar()
+            if (b >= 0 && (c.isLetterOrDigit() || c in "-._~!$&'()*+,;=:@")) append(c) else append("%%%02X".format(b.toInt() and 0xff))
+        }
+    }
+
     /**
      * The site's address, with no trailing slash: a custom domain from the `CNAME` file, else
      * `url` from `_config.yml`, else GitHub's own (`owner.github.io`, plus `/repo` for a project
@@ -51,10 +59,15 @@ object Permalink {
      */
     fun siteUrl(config: SiteConfig, owner: String, repo: String, cname: String?): String {
         val domain = cname?.lineSequence()?.map { it.trim() }?.firstOrNull { it.isNotEmpty() }
+        val userSite = repo.equals("${owner}.github.io", ignoreCase = true)
         return when {
             domain != null -> "https://$domain${config.baseurl}"
+            // A project site built by Actions often leaves baseurl empty in _config.yml and gets
+            // `--baseurl /repo` from the workflow, so the github.io address still needs the repo.
+            !config.url.isNullOrBlank() && config.baseurl.isEmpty() && !userSite &&
+                config.url.contains(".github.io", ignoreCase = true) -> config.url + "/" + repo
             !config.url.isNullOrBlank() -> config.url + config.baseurl
-            repo.equals("${owner}.github.io", ignoreCase = true) -> "https://${owner.lowercase()}.github.io${config.baseurl}"
+            userSite -> "https://${owner.lowercase()}.github.io${config.baseurl}"
             else -> "https://${owner.lowercase()}.github.io${config.baseurl.ifEmpty { "/$repo" }}"
         }
     }

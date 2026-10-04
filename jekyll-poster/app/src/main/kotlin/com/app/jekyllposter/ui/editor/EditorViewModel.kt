@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
@@ -93,7 +94,9 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     fun togglePreview() = flags.update { it.copy(previewing = !it.previewing) }
 
     /** The post as a page, with site images loaded from the live site (or GitHub, before Pages has one). */
-    suspend fun previewHtml(dark: Boolean): String {
+    suspend fun previewHtml(dark: Boolean): String = withContext(Dispatchers.IO) { buildPreview(dark) }
+
+    private suspend fun buildPreview(dark: Boolean): String {
         val draft = text ?: return ""
         val account = container.accounts.current()
         val base = account?.siteUrl?.trimEnd('/')
@@ -102,7 +105,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val local = draft.images.associate { it.sitePath to it.file }
         val preview = Preview(container.blogs.config.value) { path ->
             // A photo not on the site yet is shown from the phone, inline: the preview has no file access.
-            local[path]?.let { dataUri(File(it)) } ?: (base + path)
+            local[path]?.let(::File)?.takeIf { it.exists() }?.let(::dataUri) ?: (base + path)
         }
         return preview.page(draft.title, draft.body, dark)
     }
@@ -111,7 +114,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     fun addPhoto(uri: Uri) {
         if (text == null || !state.value.editable) return
         flags.update { it.copy(addingPhoto = true, photoError = null) }
-        viewModelScope.launch {
+        photoJob = viewModelScope.launch {
             try {
                 val prepared = container.images.import(uri)
                 val draft = text ?: return@launch
@@ -129,6 +132,9 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             }
         }
     }
+
+    /** A photo still being prepared; Publish and Back wait for it, so it isn't lost. */
+    private var photoJob: Job? = null
 
     fun dismissPhotoError() = flags.update { it.copy(photoError = null) }
 
@@ -180,6 +186,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     /** Sends the post to [destination]: the site's `_posts`, or the blog's `_drafts`. */
     fun publish(destination: Destination? = null) {
         viewModelScope.launch {
+            photoJob?.join()
             saveJob?.cancel()
             save()
             val draft = container.drafts.get(id) ?: return@launch
@@ -187,7 +194,10 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 flags.update { it.copy(titleMissing = true) }
                 return@launch
             }
-            val again = draft.state == PostState.Failed && draft.editingPath == null
+            // A failed post that never got as far as a commit (nothing sent) gets a fresh name and
+            // date: the old ones may be days stale. One that did send keeps them, so a commit
+            // that landed unheard is recognised rather than published twice.
+            val again = draft.state == PostState.Failed && draft.editingPath == null && draft.sentSha == null
             container.drafts.update(
                 draft.copy(
                     state = PostState.Queued, error = null, updatedAt = System.currentTimeMillis(),
@@ -207,6 +217,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     /** Leaving the editor: saves, and drops a draft that was never written in. */
     fun close() {
         viewModelScope.launch {
+            photoJob?.join()
             saveJob?.cancel()
             save()
             container.drafts.get(id)?.let { if (it.isEmpty && it.state == PostState.Draft) container.drafts.delete(id) }
@@ -217,6 +228,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     fun delete() {
         viewModelScope.launch {
             saveJob?.cancel()
+            photoJob?.cancel()
+            container.drafts.get(id)?.images?.forEach { File(it.file).delete() }
             container.drafts.delete(id)
             flags.update { it.copy(closed = true) }
         }

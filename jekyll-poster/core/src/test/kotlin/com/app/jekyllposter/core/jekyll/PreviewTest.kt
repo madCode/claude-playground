@@ -74,7 +74,13 @@ class PermalinkTest {
         assertEquals("/blog/25/4/21/hello/", Permalink.path(SiteConfig(permalink = "/blog/:short_year/:i_month/:i_day/:slug/"), evening, "hello", emptyList()))
     }
 
+    @Test fun categoriesAreEscapedNotHyphenated() {
+        assertEquals("/web%20development/2025/04/21/x.html", Permalink.path(SiteConfig(), evening, "x", listOf("Web Development")))
+    }
+
     @Test fun siteAddresses() {
+        // An Actions-built project site: url set, baseurl left for the workflow to pass.
+        assertEquals("https://me.github.io/blog", Permalink.siteUrl(SiteConfig(url = "https://me.github.io"), "me", "blog", null))
         assertEquals("https://notes.example.com", Permalink.siteUrl(SiteConfig(), "me", "blog", "notes.example.com\n"))
         assertEquals("https://me.github.io", Permalink.siteUrl(SiteConfig(), "Me", "me.github.io", null))
         assertEquals("https://me.github.io/blog", Permalink.siteUrl(SiteConfig(), "me", "blog", null))

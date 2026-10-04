@@ -45,7 +45,17 @@ doesn't want to open a laptop and make a commit for every post.
   PNG, GIFs are copied as they are. It's named by when it was added
   (`/assets/images/2026/20261004-221500.jpg`, beside the blog's own images) and linked with
   `relative_url`, so it works on a project site.
+- Photos are prepared in the app's storage and deleted once uploaded, or with their draft. GIFs
+  keep their frames and loop but lose comment and application blocks (where XMP, and a location,
+  can hide); GIFs over 10 MB are refused. Mirrored orientations are undone too.
 - A draft belongs to the blog it was written for. Signed in to another blog, it waits, hidden.
+
+## The blog's _drafts
+
+- **Save to the blog's _drafts** (the editor's menu) commits a new post to `_drafts/<slug>.md`,
+  undated. Jekyll doesn't publish drafts, so it's there to finish on a laptop.
+- Opening a Jekyll draft from the list: **Update draft** keeps it in `_drafts`; **Publish to the
+  site** moves it to `_posts/<date>-<slug>.md` with a date, in one commit.
 
 ## Publishing
 
@@ -60,11 +70,19 @@ doesn't want to open a laptop and make a commit for every post.
   post already there and doesn't publish it twice.
 - Each publish is one commit ("Add post: Title"), with the photos the text still links to.
 - The commit is checked against the branch as it is when it lands: if the post's name was taken
-  meanwhile, it picks another; a failed post sent again gets a fresh name and date.
+  meanwhile, it picks another. A name is also passed over when the post's address would be an
+  existing post's (under `/:title/`, two posts of the same title would overwrite each other).
+- A photo whose name was taken on the blog meanwhile is renamed, in the text too; photos never
+  replace files already on the blog.
+- If a commit landed but the app didn't hear back, the next attempt recognises the file as this
+  post's own (by the sha it last sent) and updates it, rather than publishing a second copy.
+- A failed post that never got as far as a commit gets a fresh name and date when sent again.
 - The app works out the post's address as Jekyll would: `permalink` from `_config.yml`, the
   date in the site's time zone (UTC on GitHub when none is set, so an evening post west of
-  Greenwich can carry tomorrow's date in its URL), lowercased categories. The site's address is
-  the `CNAME` domain, else `url`, else `owner.github.io[/repo]`.
+  Greenwich can carry tomorrow's date in its URL; a front matter date without an offset is read in
+  the site's zone), lowercased and escaped categories, front matter's first, then folders'. The site's address is
+  the `CNAME` domain, else `url` (plus `/repo` for a github.io project site that leaves `baseurl`
+  to its workflow), else `owner.github.io[/repo]`.
 - After publishing, the app follows the Pages deployment for that commit (an Actions run with
   Pages in its name or file; CI and other workflows don't count) for about eleven minutes:
   "rebuilding", then "live" or "build failed", with a notification. Tapping "live" opens the
@@ -83,4 +101,4 @@ doesn't want to open a laptop and make a commit for every post.
 
 ## Not yet
 
-See the [backlog](BACKLOG.md): Sign in with GitHub, drafts to `_drafts`, settings.
+See the [backlog](BACKLOG.md).

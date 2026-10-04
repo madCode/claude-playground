@@ -7,6 +7,29 @@ Times are Pacific.
 
 ## Night 1 · Sun 4 Oct
 
+### Cycle 4: the blog's _drafts (03:45–04:15)
+- **Shipped:** save a new post to the blog's `_drafts` to finish on a laptop; update a Jekyll
+  draft in place; publish one from the phone, dated and moved to `_posts` in one commit.
+- **Cycle 2's review found** (all fixed, with tests): cycle 1's debug build shipped a database
+  that this one changed without a migration, so it would crash on launch (now version 2 with a
+  migration and `MigrationTest`); a post that landed unheard and then failed could be published
+  twice when sent again (the sha last sent now identifies it); a captive portal's HTML left a
+  post stuck "publishing"; a new post could take an older post's address under `/:title/`;
+  categories with spaces and folder categories made the wrong address, as did dates without an
+  offset; a duplicated key was read from the last line but written to the first; mirrored photos
+  stayed mirrored; a photo picked just before Publish or Back was lost; prepared photos were
+  never deleted, and the preview read them on the main thread; photos could overwrite a file on
+  the blog; a project site's address lost its `/repo`.
+- **Left:** a post with both `category:` and `categories:` shows only `category:` (as Jekyll's
+  documented rule says; the review thought Jekyll combines them, unverified).
+
+### Cycle 3: Sign in with GitHub (03:15–03:45)
+- **From you:** let people sign in either way, token first.
+- **Shipped:** GitHub's device flow for a GitHub App: a code to copy, github.com opened, the
+  app waits; expiring tokens renewed before they expire, refresh tokens sealed like the token.
+  The button appears once a build names the app: [setup](GITHUB_APP.md), yours to do since only
+  you can register an app. CI picks it up from repository variables.
+
 ### Cycle 2: preview, photos, live (02:40–)
 - **Shipped:** a preview of the post as a page; photos from the picker, turned upright, scaled
   and stripped of EXIF (location), uploaded in the post's own commit and linked with

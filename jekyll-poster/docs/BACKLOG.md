@@ -7,7 +7,6 @@ and moves it to Done.
 
 - [ ] Photos: alt text (prompted when added), and placing them at the cursor rather than the end
 - [ ] Register the GitHub App and set the repository variables (yours: docs/GITHUB_APP.md)
-- [ ] Save to the blog's `_drafts` (unpublished, but on GitHub and on the laptop)
 - [ ] Settings: switch blog, signed-in account, app version
 - [ ] Find the Compose-test Room hang (DEVLOG, cycle 1)
 
@@ -19,6 +18,9 @@ and moves it to Done.
 - [ ] Hugo, or other static site generators on GitHub
 
 ## Done
+
+- [x] Cycle 4: the blog's `_drafts` (save, update, publish by moving); cycle 2's review
+- [x] Cycle 3: Sign in with GitHub (device flow), token renewal
 
 - [x] Cycle 2: preview; photos (upright, scaled, EXIF stripped, same commit); the post's address
   and a notification when it's live; the cycle 1 review's fifteen findings

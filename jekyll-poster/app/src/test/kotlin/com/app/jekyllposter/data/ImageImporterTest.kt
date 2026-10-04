@@ -7,7 +7,9 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
@@ -47,6 +49,31 @@ class ImageImporterTest {
         val exif = ExifInterface(prepared.file)
         assertNull(exif.latLong)
         assertNull(exif.getAttribute(ExifInterface.TAG_MAKE))
+    }
+
+    @Test fun aMirroredPhotoIsUnmirrored() = runBlocking {
+        val file = tmp.newFile("selfie.jpg")
+        // Red on the left, as stored; the tag says to show it mirrored, so red belongs on the right.
+        val bitmap = Bitmap.createBitmap(200, 100, Bitmap.Config.ARGB_8888).apply {
+            for (x in 0 until 200) for (y in 0 until 100) setPixel(x, y, if (x < 100) android.graphics.Color.RED else android.graphics.Color.BLUE)
+        }
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+        ExifInterface(file).apply { setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_FLIP_HORIZONTAL.toString()); saveAttributes() }
+        val out = BitmapFactory.decodeFile(importer.import(Uri.fromFile(file)).file.path)
+        assertTrue(android.graphics.Color.red(out.getPixel(190, 50)) > 200)
+        assertTrue(android.graphics.Color.blue(out.getPixel(10, 50)) > 200)
+    }
+
+    @Test fun aGifKeepsItsFramesAndLoopButNotItsComments() {
+        // A 1×1 GIF with a loop block, an XMP application block and a comment.
+        val header = byteArrayOf(0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0, 0x80.toByte(), 0, 0, 0, 0, 0, -1, -1, -1)
+        val loop = byteArrayOf(0x21, 0xFF.toByte(), 11) + "NETSCAPE2.0".toByteArray() + byteArrayOf(3, 1, 0, 0, 0)
+        val xmp = byteArrayOf(0x21, 0xFF.toByte(), 11) + "XMP DataXMP".toByteArray() + byteArrayOf(5) + "GPS:1".toByteArray() + byteArrayOf(0)
+        val comment = byteArrayOf(0x21, 0xFE.toByte(), 4) + "home".toByteArray() + byteArrayOf(0)
+        val image = byteArrayOf(0x2C, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 0x44, 0x01, 0)
+        val gif = header + loop + xmp + comment + image + byteArrayOf(0x3B)
+        val out = Gif.withoutMetadata(gif)
+        assertArrayEquals(header + loop + image + byteArrayOf(0x3B), out)
     }
 
     @Test fun aSmallPhotoKeepsItsSize() = runBlocking {
