@@ -19,7 +19,6 @@ val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(na
  * would on their own and never changes what was written; turning one on tightens things.
  */
 class Settings(private val store: DataStore<Preferences>) {
-    // A new name for the opposite default: a stored "keep" from before mustn't read as "remove".
     private val removeTrackingKey = booleanPreferencesKey("remove_tracking_codes")
     private val noReplyKey = booleanPreferencesKey("commit_as_no_reply")
     private val noReplyLoginKey = stringPreferencesKey("no_reply_login")
@@ -42,12 +41,13 @@ class Settings(private val store: DataStore<Preferences>) {
 
     /**
      * Turns the no-reply author on with [author], the address of the account [login], kept so
-     * publishing needs no extra call to GitHub; or off, with null.
+     * publishing needs no extra call to GitHub; or off, with null. The address stays when off.
      */
     suspend fun setCommitAsNoReply(login: String, author: CommitAuthor?) {
         store.edit {
             it[noReplyKey] = author != null
             if (author != null) {
+                // One edit, so the switch and the address it uses never disagree.
                 it[noReplyLoginKey] = login
                 it[noReplyNameKey] = author.name
                 it[noReplyEmailKey] = author.email
@@ -57,7 +57,8 @@ class Settings(private val store: DataStore<Preferences>) {
 
     /**
      * Who [login]'s commits are by: null for GitHub's default. When the switch is on but the kept
-     * address is another account's (signed in as someone else since), [lookUp] finds this one's.
+     * address is another account's (signed in as someone else since), [lookUp] finds this one's,
+     * which is kept without touching the switch: the writer may have turned it off meanwhile.
      */
     suspend fun commitAuthor(login: String, lookUp: suspend () -> CommitAuthor?): CommitAuthor? {
         val prefs = store.data.first()
@@ -65,8 +66,15 @@ class Settings(private val store: DataStore<Preferences>) {
         val name = prefs[noReplyNameKey]
         val email = prefs[noReplyEmailKey]
         if (prefs[noReplyLoginKey] == login && name != null && email != null) return CommitAuthor(name, email)
-        val found = lookUp() ?: error("No no-reply address for $login")
-        setCommitAsNoReply(login, found)
+        val found = lookUp() ?: throw NoAddress(login)
+        store.edit {
+            it[noReplyLoginKey] = login
+            it[noReplyNameKey] = found.name
+            it[noReplyEmailKey] = found.email
+        }
         return found
     }
+
+    /** GitHub gave no account id to build [login]'s no-reply address from. */
+    class NoAddress(login: String) : Exception("No no-reply address for $login")
 }

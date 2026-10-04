@@ -81,6 +81,24 @@ class PublisherTest {
         assertEquals("1001+sample@users.noreply.github.com", github.commits.getValue(github.head).authorEmail)
     }
 
+    @Test fun aRejectedSignInDuringTheLookUpSaysToSignInAgain() = runBlocking {
+        c.settings.setCommitAsNoReply("someone-else", com.app.jekyllposter.core.github.CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
+        github.failures["user"] = 401
+        val id = queue(Draft(title = "Expired", body = "x"))
+        assertTrue(publisher.publish(id) is Publisher.Outcome.Failed)
+        assertTrue(c.drafts.get(id)!!.error!!.startsWith("GitHub didn't accept the sign-in"))
+    }
+
+    @Test fun aLookUpNeverTurnsTheSwitchBackOn() = runBlocking {
+        c.settings.setCommitAsNoReply("someone-else", com.app.jekyllposter.core.github.CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
+        // The writer turns it off while the address is being looked up.
+        c.settings.commitAuthor("sample") {
+            c.settings.setCommitAsNoReply("sample", null)
+            com.app.jekyllposter.core.github.CommitAuthor("Sample", "1001+sample@users.noreply.github.com")
+        }
+        assertEquals(false, c.settings.commitAsNoReply())
+    }
+
     @Test fun photosTheTextStillUsesGoInThePostsCommit() = runBlocking {
         val kept = java.io.File.createTempFile("kept", ".jpg").apply { writeBytes(byteArrayOf(1, 2, 3)) }
         val dropped = java.io.File.createTempFile("dropped", ".jpg").apply { writeBytes(byteArrayOf(9)) }

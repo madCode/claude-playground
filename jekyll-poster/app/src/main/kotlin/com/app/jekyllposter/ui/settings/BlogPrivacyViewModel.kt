@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 
@@ -31,8 +32,9 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
         val siteZone: String? = null,
         val phoneZone: String = "",
         val settingZone: Boolean = false,
-        /** Set here and landed, though the blog may not have been read again since. */
+        /** Set here and landed, shown while the blog as last read still has [zoneBefore]. */
         val committedZone: String? = null,
+        val zoneBefore: String? = null,
         val visibility: Visibility = Visibility.Loading,
         val message: String? = null,
     )
@@ -43,7 +45,7 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
         local, container.settings.commitAsNoReply, container.settings.removeTrackingCodes, container.blogs.config, container.accounts.account,
     ) { s, noReply, removeTracking, config, account ->
         s.copy(
-            commitAsNoReply = noReply, removeTrackingCodes = removeTracking, siteZone = s.committedZone ?: config.timezone?.id,
+            commitAsNoReply = noReply, removeTrackingCodes = removeTracking, siteZone = s.committedZone?.takeIf { config.timezone?.id == s.zoneBefore } ?: config.timezone?.id,
             repoName = account?.repoName, branch = account?.branch,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, local.value)
@@ -62,11 +64,16 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
      * On, the account's no-reply address is looked up now and kept, so publishing needs no extra
      * call; if it can't be, the switch stays off and says why.
      */
+    private var switching: kotlinx.coroutines.Job? = null
+
     fun setCommitAsNoReply(on: Boolean) {
-        viewModelScope.launch {
+        // The last tap wins: an "on" still looking up the address mustn't land after an "off".
+        switching?.cancel()
+        switching = viewModelScope.launch {
             val account = container.accounts.current() ?: return@launch
             if (!on) return@launch container.settings.setCommitAsNoReply(account.login, null)
             val author = runCatching { container.blogs.blog()?.user()?.noReplyAuthor }.getOrNull()
+            ensureActive()
             if (author == null) {
                 local.update { it.copy(message = "Couldn't find your GitHub no-reply address just now. Try again.") }
                 return@launch
@@ -102,7 +109,7 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
                 }
                 // On its own: the commit has landed even if reading the blog again fails, and
                 // saying otherwise would invite committing it twice.
-                local.update { it.copy(committedZone = zone) }
+                local.update { it.copy(committedZone = zone, zoneBefore = container.blogs.config.value.timezone?.id) }
                 runCatching { container.blogs.refresh() }
                 "The site's time zone is now $zone. The site rebuilds in a minute or two."
             } catch (e: kotlinx.coroutines.CancellationException) {

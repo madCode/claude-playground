@@ -1,6 +1,9 @@
 package com.app.jekyllposter.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.foundation.layout.Row as LayoutRow
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Switch
@@ -95,13 +98,23 @@ internal fun Heading(text: String) {
 }
 
 @Composable
-internal fun Row(title: String, detail: String, onClick: (() -> Unit)? = null) {
+internal fun Row(title: String, detail: String, onClick: (() -> Unit)? = null, link: String? = null) {
     Column(
-        Modifier.fillMaxWidth().let { if (onClick != null) it.clickable(role = Role.Button, onClick = onClick) else it }.padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().let { if (onClick != null) it.clickable(role = Role.Button, onClickLabel = link, onClick = onClick) else it }.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(title, style = MaterialTheme.typography.bodyLarge, color = if (onClick != null && title == "Sign out") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
         Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // A row that leaves the app says so, looking like the link it is.
+        if (link != null && onClick != null) {
+            LayoutRow(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    link, style = MaterialTheme.typography.labelLarge.copy(textDecoration = TextDecoration.Underline),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            }
+        }
     }
     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
 }

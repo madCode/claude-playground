@@ -87,3 +87,24 @@ class FileChange(val path: String, val content: ByteArray?) {
         fun delete(path: String) = FileChange(path, null)
     }
 }
+
+/**
+ * A commit as GitHub shows it: [login] is the account it's attributed to (null when GitHub links
+ * the email to no account), and whether GitHub marks it Verified.
+ */
+@Serializable
+data class CommitView(val author: Account? = null, val commit: Details) {
+    @Serializable
+    data class Account(val login: String)
+
+    @Serializable
+    data class Details(val author: Person, val verification: Verification? = null)
+
+    @Serializable
+    data class Person(val name: String, val email: String)
+
+    @Serializable
+    data class Verification(val verified: Boolean = false, val reason: String? = null)
+
+    val login: String? get() = author?.login
+}

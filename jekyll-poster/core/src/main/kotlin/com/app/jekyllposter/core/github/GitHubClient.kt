@@ -172,6 +172,9 @@ class GitHubClient(
         throw lastConflict!!
     }
 
+    /** A commit as GitHub shows it, with the account it's attributed to. */
+    suspend fun commitView(owner: String, name: String, sha: String): CommitView = get("repos/$owner/$name/commits/$sha")
+
     suspend fun pages(owner: String, name: String): PagesSite? = try {
         get("repos/$owner/$name/pages")
     } catch (e: GitHubException) {

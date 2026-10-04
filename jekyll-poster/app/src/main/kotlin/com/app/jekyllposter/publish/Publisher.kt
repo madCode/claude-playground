@@ -83,12 +83,11 @@ class Publisher(
             }
             if (plan is Plan.Finished) return plan.outcome
             plan as Plan.Commit
+            // GitHub's errors and storage's fall to the handlers below, as for any other call.
             val author = try {
                 settings.commitAuthor(account.login) { blog.user().noReplyAuthor }
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                if (e is GitHubException && e.retryable) return Outcome.Retry
-                return fail(draft, "Couldn't find your GitHub no-reply address. Try again, or turn it off in Blog & privacy.")
+            } catch (e: Settings.NoAddress) {
+                return fail(draft, "GitHub didn't give your account's no-reply address. Turn it off in Blog & privacy to publish.")
             }
             val sha = blog.commit(plan.message, plan.changes, plan.expect, author)
             if (draft.destination == Destination.Delete) return deleted(draft, plan.path)

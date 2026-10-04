@@ -24,8 +24,7 @@ Times are when each cycle landed, Pacific.
 - **Asked:** one page for the audit's settings, with defaults for the average blogger and easy
   switches for the privacy-minded; and don't change what was written unless asked.
 - **Shipped:** the page (commit email, the site's time zone, tracking codes, visibility and
-  history). Removing tracking codes is now opt-in, under a new stored name so the old "keep"
-  can't read as "remove".
+  history). Removing tracking codes is now opt-in: the post is never changed unless asked.
 - **Its review found** (fixed, with tests): a time zone that landed was reported as failed if
   reading the blog again failed, inviting a second commit; publishing asked GitHub for the account
   on every post, and a failure there blamed the token's write access (the address is now looked
@@ -33,8 +32,12 @@ Times are when each cycle landed, Pacific.
   address that links to no one; visibility said "couldn't read it" while still loading; the zone
   change could race a publish (it waits for one now); Windows line endings and a quoted
   `"timezone":` key were mishandled; rows didn't say they're buttons.
-- **Left:** existing installs, where removing tracking codes was the default, now find it off, as
-  asked; GitHub may not show "Verified" on a commit with a set author.
+- **The second look found** (fixed): an "on" still looking up the address could land after an
+  "off", and a publish's lookup could turn the switch back on; an expired sign-in during the
+  lookup said "no address" instead of "sign in again"; a storage hiccup failed the post instead
+  of retrying.
+- **The live check** now also commits as the no-reply address and asks GitHub whose commit it
+  is, and whether it's Verified: the two things the fake GitHub can't answer.
 
 ### Cycle 16: a privacy audit
 - **Asked:** what goes to GitHub besides what's in the post?

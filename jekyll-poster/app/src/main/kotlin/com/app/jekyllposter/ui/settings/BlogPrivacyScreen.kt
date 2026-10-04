@@ -91,17 +91,19 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
                     Visibility.Loading, Visibility.Unknown -> "Repository visibility"
                 },
                 when (state.visibility) {
-                    Visibility.Public -> "Anyone can read it on GitHub, including _drafts and every earlier version of a post. Change it on GitHub."
-                    Visibility.Private -> "Only people you give access can read it, though the site itself is public. Change it on GitHub."
+                    Visibility.Public -> "Anyone can read it on GitHub, including _drafts and every earlier version of a post."
+                    Visibility.Private -> "Only people you give access can read it, though the site itself is public."
                     Visibility.Loading -> "Asking GitHub…"
-                    Visibility.Unknown -> "Couldn't read it from GitHub just now. See it on GitHub."
+                    Visibility.Unknown -> "Couldn't read it from GitHub just now."
                 },
                 onClick = github?.let { { uri.openUri("$it/settings") } },
+                link = "Open on GitHub",
             )
             Row(
                 "Earlier versions stay",
-                "Every edit and deleted post stays in the repository's history. See it on GitHub.",
+                "Every edit and deleted post stays in the repository's history.",
                 onClick = github?.let { { uri.openUri("$it/commits/${state.branch ?: ""}") } },
+                link = "Open the history on GitHub",
             )
         }
     }
