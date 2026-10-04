@@ -188,7 +188,8 @@ private fun SearchField(query: String, onChange: (String) -> Unit) {
     TextField(
         value = query,
         onValueChange = onChange,
-        placeholder = { Text("Search your posts") },
+        // A label, not a placeholder: it stays as the field's name for TalkBack once text is typed.
+        label = { Text("Search your posts") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         // The list filters as the writer types; Search just puts the keyboard away to read it.
@@ -197,7 +198,7 @@ private fun SearchField(query: String, onChange: (String) -> Unit) {
             focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
             focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
         ),
-        modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("search").semantics { contentDescription = "Search your posts" },
+        modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("search"),
     )
     // Only when the search opens: coming back to results (from a post, after a rotation) would
     // otherwise bring the keyboard up over them.
