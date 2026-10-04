@@ -242,4 +242,17 @@ class ScreenshotTest {
             com.app.jekyllposter.ui.settings.BlogPrivacyScreen(vm) {}
         }
     }
+
+    @Test fun noteFromObsidian() {
+        signIn()
+        val note = com.app.jekyllposter.core.obsidian.ObsidianNote.convert(
+            "---\ntags: [walking]\n---\nOut past the harbour wall, as in [[What I read in April]].\n\n![[lighthouse.jpg]]\n\nNext time: [[The second stile]].\n",
+            "A walk to the lighthouse.md",
+            listOf(com.app.jekyllposter.core.obsidian.ObsidianNote.LinkTarget("_posts/2025-04-20-reading-list.md", "What I read in April")),
+        ) as com.app.jekyllposter.core.obsidian.ObsidianNote.Result.Converted
+        val id = runBlocking { c.drafts.insert(Draft(title = note.title, body = note.body, tags = note.tags)) }
+        c.sharedEmbeds[id] = note.embeds
+        val vm = EditorViewModel(c, id)
+        shoot("16-note-from-obsidian", ready = { vm.text != null && vm.state.value.vaultPhotos == 1 }) { EditorScreen(vm) {} }
+    }
 }

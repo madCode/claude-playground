@@ -16,6 +16,11 @@ class PreviewTest {
         assertEquals("{% include note.html %}", preview.liquid("{% include note.html %}"))
     }
 
+    @Test fun aPostUrlLinkStillReadsAsALink() {
+        val html = preview.body("See [the list]({{ site.baseurl }}{% post_url 2025-04-20-reading-list %}).")
+        assertTrue(html, html.contains("<a href=\"#\">the list</a>"))
+    }
+
     @Test fun siteImagesLoadFromWhereThePreviewCanReachThem() {
         val html = preview.body("![Loaf]({{ '/assets/images/loaf.jpg' | relative_url }}) and ![x](/assets/b.png) and ![y](https://cdn.example/c.png)")
         assertTrue(html, html.contains("src=\"https://raw.example/main/assets/images/loaf.jpg\""))

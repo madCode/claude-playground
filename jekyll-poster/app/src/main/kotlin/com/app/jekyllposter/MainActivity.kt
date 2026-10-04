@@ -63,15 +63,19 @@ internal fun postToStart(intent: Intent?): Shared? {
     if (intent == null || intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return null
     if (intent.action == MainActivity.ACTION_NEW_POST) return Shared("", emptyList())
     if (intent.action != Intent.ACTION_SEND && intent.action != Intent.ACTION_SEND_MULTIPLE) return null
-    val images = when (intent.action) {
+    val streams = when (intent.action) {
         Intent.ACTION_SEND -> listOfNotNull(intent.parcelable<Uri>(Intent.EXTRA_STREAM))
         else -> intent.parcelables<Uri>(Intent.EXTRA_STREAM)
-    }.filter { intent.type?.startsWith("image/") == true }
+    }
+    val images = streams.filter { intent.type?.startsWith("image/") == true }
+    // A note shared as a file (Markdown, or plain text), as Obsidian and file managers share them.
+    val note = streams.singleOrNull()?.takeIf { intent.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true }
     val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }?.let { text ->
         val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
         // A shared link becomes a Markdown link, titled by the page when the sharing app says it.
         if (subject != null && text.trim().startsWith("http") && !text.trim().contains(' ')) "[$subject](${text.trim()})\n" else text
     }
+    if (note != null) return Shared(text.orEmpty(), emptyList(), note)
     return if (text == null && images.isEmpty()) null else Shared(text.orEmpty(), images)
 }
 
@@ -81,5 +85,8 @@ private inline fun <reified T : android.os.Parcelable> Intent.parcelable(key: St
 private inline fun <reified T : android.os.Parcelable> Intent.parcelables(key: String): List<T> =
     (if (Build.VERSION.SDK_INT >= 33) getParcelableArrayListExtra(key, T::class.java) else @Suppress("DEPRECATION") getParcelableArrayListExtra(key)).orEmpty()
 
-/** What to start a post with: text or a link and photos another app shared, or nothing (New post). */
-data class Shared(val text: String, val images: List<Uri>)
+/**
+ * What to start a post with: text or a link and photos another app shared, a note shared as a
+ * file (read in place of [text]), or nothing (New post).
+ */
+data class Shared(val text: String, val images: List<Uri>, val note: Uri? = null)

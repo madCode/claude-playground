@@ -10,8 +10,10 @@ import com.app.jekyllposter.core.jekyll.Edit
 import com.app.jekyllposter.core.jekyll.Images
 import com.app.jekyllposter.core.jekyll.MarkdownEdits
 import com.app.jekyllposter.core.jekyll.Preview
+import com.app.jekyllposter.core.obsidian.ObsidianNote
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.DraftImage
+import com.app.jekyllposter.data.chooseVault
 import java.io.File
 import java.time.LocalDateTime
 import com.app.jekyllposter.core.jekyll.Taxonomy
@@ -52,6 +54,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         /** Publish was stopped by the front matter; the screen opens it and says why. */
         val frontMatterBlocked: String? = null,
         val photoError: String? = null,
+        /** Photos in a shared Obsidian note, waiting for the writer to choose the vault folder. */
+        val vaultPhotos: Int = 0,
         val closed: Boolean = false,
     ) {
         /** Published posts and ones on their way are read-only; edit the blog's copy instead. */
@@ -99,8 +103,94 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             Snapshot.withMutableSnapshot { text = loaded }
             loaded?.body?.let { bodySelection = TextRange(it.length) }
             container.sharedPhotos.remove(id)?.forEach(::addPhoto)
+            container.sharedEmbeds.remove(id)?.let(::addEmbeds)
         }
     }
+
+    /**
+     * Finds a shared note's `![[photo]]` embeds in the Obsidian vault folder, and puts each photo
+     * in its place, prepared like any other (no location). Without a folder chosen, they wait for
+     * one; one that isn't in the vault stays as written, and the writer is told.
+     */
+    private fun addEmbeds(embeds: List<ObsidianNote.Embed>) {
+        embeds.forEach { embedNames[it.raw] = it.name }
+        val previous = photoJob
+        photoJob = viewModelScope.launch {
+            previous?.join()
+            val tree = container.settings.obsidianVault()
+            // Shown while the vault is walked too: on a big one that takes a while, and Back waits for it.
+            if (tree != null) flags.update { it.copy(addingPhoto = true) }
+            val vault = tree?.let { runCatching { container.vaultFiles(it) }.getOrNull() }
+            val files = vault?.files
+            if (files == null) {
+                flags.update {
+                    it.copy(
+                        addingPhoto = false,
+                        vaultPhotos = embeds.size,
+                        photoError = if (tree != null) "Couldn't open your Obsidian vault folder. Choose it again." else it.photoError,
+                    )
+                }
+                return@launch
+            }
+            val missing = mutableListOf<String>()
+            try {
+                for (embed in embeds) {
+                    // Gone from the text meanwhile: the writer took it out.
+                    if (!stillThere(embed)) continue
+                    val file = ObsidianNote.resolve(embed.name, files.map { it.path })?.let { p -> files.first { it.path == p } }
+                    if (file == null) { missing += embed.raw; continue }
+                    val prepared = try {
+                        container.images.import(file.uri)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        missing += embed.raw
+                        continue
+                    }
+                    val draft = text ?: return@launch
+                    val taken = draft.images.map { it.sitePath }.toSet() + container.blogs.paths
+                    val sitePath = Images.sitePath(container.blogs.imageFolder.value, LocalDateTime.now().year, "photo", prepared.extension, taken)
+                    // Checked again: the writer may have deleted it while the photo was prepared.
+                    if (!stillThere(embed)) { prepared.file.delete(); continue }
+                    edit { it.copy(images = it.images + DraftImage(sitePath, prepared.file.path), body = ObsidianNote.replaceEmbed(it.body, embed.raw, Images.markdown(sitePath, embed.alt))) }
+                    if (embed.alt.isBlank()) flags.update { it.copy(describing = it.describing + sitePath) }
+                }
+            } finally {
+                flags.update { it.copy(addingPhoto = false) }
+            }
+            if (missing.isNotEmpty()) {
+                // Named as the text has them: the vault's own name may hold a word a rule hides.
+                val where = if (vault.complete) "in your Obsidian vault folder" else "in the first 50,000 files of your Obsidian vault folder"
+                flags.update { it.copy(photoError = "Not found $where, so left as written: ${missing.distinct().joinToString(", ")}") }
+            }
+        }
+    }
+
+    /**
+     * The vault file each embed names, by how the text writes it. In memory only: after the app
+     * is pushed out of memory, an embed whose name a rule changed isn't found, and says so.
+     */
+    private val embedNames = mutableMapOf<String, String>()
+
+    private fun stillThere(embed: ObsidianNote.Embed) = text?.body?.let { body -> ObsidianNote.embeds(body).any { it.raw == embed.raw } } == true
+
+    /**
+     * The writer chose the vault folder: kept for later notes, and the photos the text embeds are
+     * found in it. Read from the text, not remembered: the picker may have pushed the app out of
+     * memory, and this is then a new ViewModel.
+     */
+    fun vaultChosen(tree: Uri) {
+        flags.update { it.copy(vaultPhotos = 0) }
+        viewModelScope.launch {
+            chooseVault(container.context, container.settings, tree)
+            loading.join()
+            // The note's own file names where known: its rules may have changed them in the text.
+            text?.body?.let { body -> addEmbeds(ObsidianNote.embeds(body).map { e -> embedNames[e.raw]?.let { e.copy(name = it) } ?: e }) }
+        }
+    }
+
+    /** Not now: the embeds stay in the text as written. */
+    fun skipVault() = flags.update { it.copy(vaultPhotos = 0) }
 
     private fun edit(change: (Draft) -> Draft) {
         val base = text ?: return

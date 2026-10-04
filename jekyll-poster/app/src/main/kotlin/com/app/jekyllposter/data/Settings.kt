@@ -77,4 +77,15 @@ class Settings(private val store: DataStore<Preferences>) {
 
     /** GitHub gave no account id to build [login]'s no-reply address from. */
     class NoAddress(login: String) : Exception("No no-reply address for $login")
+
+    private val vaultKey = stringPreferencesKey("obsidian_vault")
+
+    /** The Obsidian vault folder (a document tree URI) photos in shared notes are found in. */
+    val obsidianVault: Flow<String?> = store.data.map { it[vaultKey] }
+
+    suspend fun obsidianVault(): String? = obsidianVault.first()
+
+    suspend fun setObsidianVault(tree: String?) {
+        store.edit { if (tree == null) it.remove(vaultKey) else it[vaultKey] = tree }
+    }
 }

@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.heading
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.BuildConfig
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,6 +66,23 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: ()
                     if (a.refreshToken != null) "Signed in with GitHub" else "Signed in with a token",
                 )
                 Row("Sign out", "Drafts stay on this phone, for when you sign in to this blog again", onClick = onSignOut)
+            }
+            val scope = rememberCoroutineScope()
+            Heading("Obsidian")
+            val vault by container.settings.obsidianVault.collectAsStateWithLifecycle(null)
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val chooseVault = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { tree ->
+                if (tree != null) scope.launch { com.app.jekyllposter.data.chooseVault(context, container.settings, tree) }
+            }
+            Row(
+                vault?.let(::vaultName) ?: "Vault folder",
+                if (vault != null) "Photos in shared notes are found here. Tap to choose another." else "Where photos in shared notes are found. Not chosen yet.",
+                onClick = { chooseVault.launch(null) },
+            )
+            if (vault != null) {
+                Row("Forget the vault folder", "The app stops reading it", onClick = {
+                    scope.launch { com.app.jekyllposter.data.chooseVault(context, container.settings, null) }
+                })
             }
             Heading("About")
             Row("Jekyll Poster ${BuildConfig.VERSION_NAME}", "Posts to a Jekyll blog on GitHub Pages")
@@ -118,3 +137,8 @@ internal fun Row(title: String, detail: String, onClick: (() -> Unit)? = null, l
     }
     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
 }
+
+/** A vault folder's own name, from its document tree (`primary:Documents/Notes` → Notes). */
+private fun vaultName(tree: String): String = runCatching {
+    android.provider.DocumentsContract.getTreeDocumentId(android.net.Uri.parse(tree)).substringAfter(':').trimEnd('/').substringAfterLast('/').ifEmpty { "Vault folder" }
+}.getOrDefault("Vault folder")

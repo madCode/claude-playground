@@ -12,8 +12,9 @@ import org.commonmark.renderer.html.HtmlRenderer
 /**
  * A post as a page, close enough to judge how it reads: Markdown rendered as kramdown would for
  * the common cases (GitHub-style tables and strikethrough too), and the Liquid that posts use for
- * links (`relative_url`, `absolute_url`, `site.baseurl`, `site.url`) resolved. Other Liquid is
- * left as written, since only Jekyll can run it.
+ * links (`relative_url`, `absolute_url`, `site.baseurl`, `site.url`) resolved. A `post_url` link
+ * goes nowhere: only Jekyll knows where it points. Other Liquid is left as written, since only
+ * Jekyll can run it.
  *
  * @param resolveUrl turns a site path (`/assets/a.jpg`) into one the preview can load; images not
  *   on the site yet map to local files here.
@@ -49,6 +50,8 @@ class Preview(private val config: SiteConfig, private val resolveUrl: (String) -
 
     /** Resolves the Liquid that makes links, so they point where the built site's would. */
     internal fun liquid(markdown: String): String = markdown
+        // Left as written, its spaces would stop Markdown reading the link at all.
+        .replace(postUrlTag, "#")
         .replace(filtered) { m ->
             val path = m.groupValues[2]
             when (m.groupValues[3]) {
@@ -70,6 +73,7 @@ class Preview(private val config: SiteConfig, private val resolveUrl: (String) -
         val filtered = Regex("""\{\{\s*(['"])(.*?)\1\s*\|\s*(relative_url|absolute_url)\s*}}""")
         val baseurlTag = Regex("""\{\{\s*site\.baseurl\s*}}""")
         val urlTag = Regex("""\{\{\s*site\.url\s*}}""")
+        val postUrlTag = Regex("""(\{\{\s*site\.baseurl\s*}})?\{%-?\s*post_url\s+\S+\s*-?%}""")
 
         fun escape(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 

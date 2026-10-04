@@ -1,7 +1,8 @@
 package com.app.jekyllposter.core.github
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -25,7 +26,8 @@ import java.util.Base64
 
 /**
  * The few GitHub REST and GraphQL calls the app makes, with a token from a fine-grained personal
- * access token or the OAuth device flow. Blocking calls run on [Dispatchers.IO].
+ * access token or the OAuth device flow. Requests run on OkHttp's own threads and stop when
+ * the calling coroutine is cancelled.
  */
 class GitHubClient(
     private val http: OkHttpClient,
@@ -213,16 +215,16 @@ class GitHubClient(
         .header("Accept", "application/vnd.github+json")
         .header("X-GitHub-Api-Version", "2022-11-28")
 
-    private suspend fun send(request: Request): String = withContext(Dispatchers.IO) {
+    private suspend fun send(request: Request): String {
         // Reading the body can fail too (a connection dropped mid-response); that's as retryable
         // as not connecting, and must not escape as a bare IOException.
         val (response, body) = try {
-            http.newCall(request).execute().use { it to it.body.string() }
+            execute(http.newCall(request))
         } catch (e: IOException) {
             throw GitHubException(GitHubException.Kind.Network, "Couldn't reach GitHub", cause = e)
         }
-        response.let {
-            if (it.isSuccessful) return@withContext body
+        return response.let {
+            if (it.isSuccessful) return body
             val message = runCatching { json.parseToJsonElement(body).jsonObject["message"]?.jsonPrimitive?.contentOrNull }.getOrNull() ?: it.message
             val kind = when {
                 it.code == 401 -> GitHubException.Kind.Unauthorized
@@ -234,6 +236,21 @@ class GitHubClient(
             }
             throw GitHubException(kind, message, it.code)
         }
+    }
+
+    /**
+     * The call's response and body. Cancelling the coroutine cancels the call: a blocking
+     * `execute()` would hold a timed-out caller until the socket gave up on its own.
+     */
+    private suspend fun execute(call: okhttp3.Call): Pair<okhttp3.Response, String> = suspendCancellableCoroutine { cont ->
+        cont.invokeOnCancellation { call.cancel() }
+        call.enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: IOException) = cont.resumeWithException(e)
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                val read = runCatching { response.use { it to it.body.string() } }
+                read.fold({ cont.resume(it) }, { cont.resumeWithException(it) })
+            }
+        })
     }
 
     private fun enc(s: String) = java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20")

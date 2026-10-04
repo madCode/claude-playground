@@ -2,6 +2,7 @@ package com.app.jekyllposter.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,7 +17,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.Shared
-import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.ui.connect.ConnectScreen
 import com.app.jekyllposter.ui.connect.ConnectViewModel
 import com.app.jekyllposter.ui.editor.EditorScreen
@@ -24,9 +24,7 @@ import com.app.jekyllposter.ui.editor.EditorViewModel
 import com.app.jekyllposter.ui.home.HomeScreen
 import com.app.jekyllposter.ui.home.HomeViewModel
 import com.app.jekyllposter.ui.settings.SettingsScreen
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 private object Loading
 
@@ -77,12 +75,14 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
             LaunchedEffect(Unit) {
                 if (shared != null && pending) {
                     pending = false
-                    // Before the editor opens, so the writer sees the links as they'll be published.
-                    val text = if (container.settings.removeTrackingCodes()) com.app.jekyllposter.core.text.Tracking.strip(shared.text) else shared.text
-                    val id = container.drafts.insert(Draft(blog = container.accounts.current()?.blogKey, body = text))
-                    container.sharedPhotos[id] = shared.images
-                    // Room may resume this off the main thread, where navigation isn't allowed.
-                    withContext(Dispatchers.Main) { nav.navigate("editor/$id") }
+                    vm.startShared(shared)
+                }
+            }
+            val opened by vm.opened.collectAsState()
+            LaunchedEffect(opened) {
+                opened?.let { id ->
+                    vm.opened.value = null
+                    nav.navigate("editor/$id")
                 }
             }
             HomeScreen(

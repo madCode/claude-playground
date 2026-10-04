@@ -143,6 +143,9 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
         cameraPath?.let { viewModel.photoTaken(it, taken) }
         cameraPath = null
     }
+    val chooseVault = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
+        if (tree != null) viewModel.vaultChosen(tree)
+    }
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     // Asked on the first Publish, when "tell you when it's live" makes sense; publishing goes ahead either way.
@@ -284,6 +287,9 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                     }
                 }
             }
+            if (state.vaultPhotos > 0) {
+                VaultBanner(state.vaultPhotos, onChoose = { chooseVault.launch(null) }, onSkip = viewModel::skipVault)
+            }
             TextField(
                 value = text.title,
                 onValueChange = viewModel::setTitle,
@@ -358,6 +364,24 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
             confirmButton = { TextButton(onClick = { confirmDeleteFromBlog = false; viewModel.deleteFromBlog() }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { confirmDeleteFromBlog = false }) { Text("Keep") } },
         )
+    }
+}
+
+/** Asks for the Obsidian vault folder, once, so a shared note's photos can be found in it. */
+@Composable
+private fun VaultBanner(count: Int, onChoose: () -> Unit, onSkip: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
+            Text(
+                if (count == 1) "This note has a photo from Obsidian. Choose your vault folder, once, and it's added from there."
+                else "This note has $count photos from Obsidian. Choose your vault folder, once, and they're added from there.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Row(Modifier.align(Alignment.End)) {
+                TextButton(onClick = onSkip) { Text("Not now") }
+                TextButton(onClick = onChoose) { Text("Choose folder") }
+            }
+        }
     }
 }
 

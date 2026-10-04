@@ -35,4 +35,13 @@ class NewPostShortcutTest {
         assertEquals(Shared("A thought", emptyList()), postToStart(share))
         assertNull(postToStart(Intent(share).addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)))
     }
+
+    @Test fun aNoteSharedAsAFileStartsAPostFromIt() {
+        val note = android.net.Uri.parse("content://notes/Bus%20notes.md")
+        val share = Intent(Intent.ACTION_SEND).setType("text/markdown").putExtra(Intent.EXTRA_STREAM, note)
+        assertEquals(Shared("", emptyList(), note), postToStart(share))
+        // An image is a photo, not a note.
+        val photo = Intent(Intent.ACTION_SEND).setType("image/jpeg").putExtra(Intent.EXTRA_STREAM, note)
+        assertEquals(Shared("", listOf(note)), postToStart(photo))
+    }
 }

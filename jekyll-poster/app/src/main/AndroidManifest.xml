@@ -22,11 +22,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Sharing text, a link or photos from another app starts a post with them. -->
+            <!-- Sharing text, a link, a note or photos from another app starts a post with them. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
+                <data android:mimeType="text/markdown" />
+                <data android:mimeType="text/x-markdown" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

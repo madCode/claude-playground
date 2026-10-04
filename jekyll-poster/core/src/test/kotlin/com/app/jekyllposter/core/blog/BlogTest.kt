@@ -143,4 +143,13 @@ class BlogTest {
         assertEquals("assets/img", Blog.imageFolder(files("assets/img/2024/a.jpg")))
         assertFalse(Blog.imageFolder(emptyList()).isEmpty())
     }
+
+    @Test fun onlyAWorkflowBuildingWithJekyll4PutsTheBaseurlInPostUrl() {
+        val build = "steps:\n  - run: bundle exec jekyll build --baseurl /blog\n"
+        assertTrue(Blog.buildsWithJekyll4("source 'https://rubygems.org'\ngem \"jekyll\", \"~> 4.3\"\n", listOf(build)))
+        // GitHub's own build ignores the Gemfile; its Pages action is Jekyll 3.
+        assertFalse(Blog.buildsWithJekyll4("gem \"jekyll\", \"~> 4.3\"\n", listOf("uses: actions/jekyll-build-pages@v1")))
+        assertFalse(Blog.buildsWithJekyll4("gem \"github-pages\", group: :jekyll_plugins\n", listOf(build)))
+        assertFalse(Blog.buildsWithJekyll4(null, listOf(build)))
+    }
 }
