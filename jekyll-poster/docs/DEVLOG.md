@@ -8,9 +8,10 @@ Times are when each cycle landed, Pacific.
 ## Status
 
 - **Last night:** night 1 built the app from nothing: sign-in two ways, the blog's own
-  categories, writing with a toolbar, photos without their location, publishing exactly once,
-  following the Pages build, safe edits, front matter, `_drafts`, and a zine look picked over
-  four design rounds. Every PR had a fresh-eyes review; 65 findings were fixed.
+  categories, writing with a toolbar, photos without their location (picked, shared or taken),
+  publishing exactly once, following the Pages build, safe edits and deletes, front matter,
+  `_drafts`, a New post shortcut, and a zine look picked over four design rounds. Every code PR
+  had a fresh-eyes review; 90 findings, all but one fixed.
 - **Not yet tried on a real blog:** everything ran against a fake GitHub. The sample blog
   ([madCode/sample-blog](https://github.com/madCode/sample-blog), live on Pages) is ready for
   the first real post.
@@ -18,6 +19,9 @@ Times are when each cycle landed, Pacific.
   ([how](GITHUB_APP.md)); the Android SDK in the environment's setup script.
 
 ## Night 1 · Sun 4 Oct
+
+### Cycle 13: a documentation pass
+- Architecture, README and this status brought up to delete, the shortcut and the camera.
 
 ### Cycle 12: take a photo
 - **Shipped:** the photo button offers Choose photos or Take a photo. The camera app writes to
