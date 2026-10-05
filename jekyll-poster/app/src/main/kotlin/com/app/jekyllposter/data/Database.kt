@@ -89,6 +89,11 @@ data class Draft(
     @ColumnInfo(defaultValue = "[]") val sentShas: List<String> = emptyList(),
     /** Where the published post will be on the site. */
     val postUrl: String? = null,
+    /**
+     * The date the post is to carry, from a shared note's `date:` (ISO, with its offset); null
+     * dates it when it's published.
+     */
+    val noteDate: String? = null,
     val buildState: BuildState? = null,
     val error: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
@@ -190,7 +195,7 @@ class Converters {
     @TypeConverter fun toImages(json: String): List<DraftImage> = Json.decodeFromString(json)
 }
 
-@Database(entities = [Draft::class, CachedPost::class], version = 3)
+@Database(entities = [Draft::class, CachedPost::class], version = 4)
 @TypeConverters(Converters::class)
 abstract class PosterDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
@@ -222,5 +227,12 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE drafts ADD COLUMN extraFrontMatter TEXT")
         db.execSQL("ALTER TABLE drafts ADD COLUMN extraFrontMatterOpened TEXT")
+    }
+}
+
+/** Drafts gain the date a shared note asked for. */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE drafts ADD COLUMN noteDate TEXT")
     }
 }

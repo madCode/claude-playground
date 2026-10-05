@@ -302,6 +302,9 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                 colors = plainField(),
                 modifier = Modifier.fillMaxWidth().testTag("title"),
             )
+            text.noteDate?.let { iso ->
+                NoteDate(iso, editable, onDrop = viewModel::useThePublishDay)
+            }
             TermRow("Categories", text.categories, editable, onAdd = { picker = TermKind.Category }, onRemove = { viewModel.remove(TermKind.Category, it) })
             TermRow("Tags", text.tags, editable, onAdd = { picker = TermKind.Tag }, onRemove = { viewModel.remove(TermKind.Tag, it) })
             // An edit from before the app kept front matter can't safely change it: shown read-only.
@@ -364,6 +367,18 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
             confirmButton = { TextButton(onClick = { confirmDeleteFromBlog = false; viewModel.deleteFromBlog() }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { confirmDeleteFromBlog = false }) { Text("Keep") } },
         )
+    }
+}
+
+/** The date a shared note carries, which the post keeps; dropping it dates the post when published. */
+@Composable
+private fun NoteDate(iso: String, editable: Boolean, onDrop: () -> Unit) {
+    val day = runCatching {
+        java.time.ZonedDateTime.parse(iso).format(java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG))
+    }.getOrDefault(iso)
+    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("Dated $day, from the note", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (editable) TextButton(onClick = onDrop) { Text("Use the publish day") }
     }
 }
 

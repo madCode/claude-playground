@@ -55,6 +55,13 @@ class PublisherTest {
         assertTrue(c.database.posts().snapshot().any { it.path == "_posts/2026-10-04-late-night-notes.md" })
     }
 
+    @Test fun aNoteKeepsItsOwnDateInItsFileNameAndFrontMatter() = runBlocking {
+        val id = queue(Draft(title = "Jumping", body = "From the note.", noteDate = "2021-06-24T00:00-07:00"))
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertEquals("---\ntitle: Jumping\ndate: 2021-06-24 00:00:00 -0700\n---\n\nFrom the note.\n", github.text("_posts/2021-06-24-jumping.md"))
+        assertEquals("https://sample.github.io/sample-blog/2021/06/24/jumping/", c.drafts.get(id)!!.postUrl)
+    }
+
     @Test fun aPostWrittenAbroadIsDatedInTheSitesTimeZoneNotThePhones() = runBlocking {
         // Tokyo, Monday morning: Sunday evening at the site, in Los Angeles.
         val tokyo = evening.withZoneSameInstant(ZoneId.of("Asia/Tokyo"))

@@ -54,6 +54,13 @@ class ObsidianNoteTest {
         assertEquals("On the 22.", note.body)
     }
 
+    @Test fun aNotesDateIsKeptForThePostNotLeftInItsFrontMatter() {
+        val note = convert("---\ndate: 2021-06-24\nlast_modified_at: 2021-08-24\n---\nx\n")
+        assertEquals("2021-06-24", note.date)
+        assertEquals("last_modified_at: 2021-08-24", note.extra)
+        assertNull(convert("No front matter.\n").date)
+    }
+
     @Test fun aFirstHeadingIsTheTitleWhenThereIsNoOther() {
         val note = convert("# Bus notes\n\nOn the 22.\n")
         assertEquals("Bus notes", note.title)

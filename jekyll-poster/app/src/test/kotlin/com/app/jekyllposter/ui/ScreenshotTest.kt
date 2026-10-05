@@ -250,7 +250,7 @@ class ScreenshotTest {
             "A walk to the lighthouse.md",
             listOf(com.app.jekyllposter.core.obsidian.ObsidianNote.LinkTarget("_posts/2025-04-20-reading-list.md", "What I read in April")),
         ) as com.app.jekyllposter.core.obsidian.ObsidianNote.Result.Converted
-        val id = runBlocking { c.drafts.insert(Draft(title = note.title, body = note.body, tags = note.tags)) }
+        val id = runBlocking { c.drafts.insert(Draft(title = note.title, body = note.body, tags = note.tags, noteDate = "2021-06-24T00:00-07:00")) }
         c.sharedEmbeds[id] = note.embeds
         val vm = EditorViewModel(c, id)
         shoot("16-note-from-obsidian", ready = { vm.text != null && vm.state.value.vaultPhotos == 1 }) { EditorScreen(vm) {} }

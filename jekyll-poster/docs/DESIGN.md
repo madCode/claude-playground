@@ -96,8 +96,11 @@ doesn't want to open a laptop and make a commit for every post.
   The note stays as it is, and opening it again starts another post.
 - The title is the note's `title:`, else its file name, else a first `# heading`. A first
   heading that repeats the title is dropped.
-- `tags:` and `categories:` fill the post's own, in the blog's spelling. `date:` and `layout:`
-  go (the app sets those when publishing), and so do Obsidian's `aliases:` and `cssclasses:`.
+- `tags:` and `categories:` fill the post's own, in the blog's spelling. `layout:` goes, and so
+  do Obsidian's `aliases:` and `cssclasses:`.
+- A note's `date:` is the post's date, in its file name and front matter (a bare day is midnight
+  in the site's time zone, as Jekyll reads it). The editor shows it, and **Use the publish day**
+  drops it. A future date is kept too, and Jekyll won't show the post until then.
   Other keys are the post's "more front matter", to see before publishing.
 - `[[Post title]]` and `[[Post title|shown text]]` become `{{ site.baseurl }}{% post_url … %}`
   links when a post the site builds has that title or file name (`[[2025-04-20-reading-list]]`):

@@ -28,6 +28,8 @@ object ObsidianNote {
             /** Front matter beyond the editor's fields, as YAML; null with none. */
             val extra: String?,
             val embeds: List<Embed>,
+            /** The note's `date:` as written, for the post to keep; null when it has none. */
+            val date: String? = null,
         ) : Result
 
         /** The note can't be taken as it is; [message] says why, for the writer. */
@@ -35,8 +37,8 @@ object ObsidianNote {
     }
 
     /**
-     * Keys dropped from a note: obyde's rules, Obsidian's own, and `date`, which the app sets when
-     * the post is published.
+     * Keys dropped from a note: obyde's rules and Obsidian's own. `date` goes to [Result.Converted.date]
+     * rather than the front matter: the app writes it itself, in the file name too.
      */
     private val dropped = setOf("find", "replace", "aliases", "alias", "cssclasses", "cssclass", "date", "layout")
 
@@ -87,13 +89,14 @@ object ObsidianNote {
         }
         val categories = doc.terms("category", "categories").map { it.removePrefix("#") }.filter { it.isNotEmpty() }
         val tags = doc.terms("tag", "tags").map { it.removePrefix("#") }.filter { it.isNotEmpty() }
+        val date = doc.string("date")?.trim()?.takeIf { it.isNotEmpty() }
         dropped.forEach { doc.set(it, null) }
         val extra = doc.others(PostWriter.MANAGED).takeIf { it.isNotBlank() }
         body = outsideCode(body) { segment -> links(segment, posts, if (postUrlHasBaseurl) "" else "{{ site.baseurl }}") }
         val found = embeds(body)
         // The rules may have renamed a file in the text; the vault still has it by its own name.
         val named = if (found.size == embedNames.size) found.mapIndexed { i, e -> e.copy(name = embedNames[i]) } else found
-        return Result.Converted(title, body, categories, tags, extra, named)
+        return Result.Converted(title, body, categories, tags, extra, named, date)
     }
 
     /** Whether [name] is a file an image embed can name, by its extension. */
