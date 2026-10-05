@@ -3,17 +3,19 @@ package com.app.bartwidget
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.app.bartwidget.testutil.FakeBart
 import java.time.ZoneId
 
 class DeparturesTest {
     private val t0 = 1_760_000_000_000L
 
-    private fun fixture(name: String) = javaClass.classLoader!!.getResource(name)!!.readText()
-
     @Test
     fun parsesARealResponse() {
-        val trains = parseEtd(fixture("etd-mont.json"), t0)
-        assertTrue(trains.isNotEmpty())
+        val trains = parseEtd(FakeBart.fixture("etd-mont.json")!!, t0)
+        assertEquals(24, trains.size)
+        // "Leaving" is now.
+        assertEquals(t0, trains.first().departsAt)
+        assertEquals("Daly City", trains.first().destination)
         assertEquals(trains.sortedBy { it.departsAt }, trains)
         assertTrue(trains.all { it.departsAt >= t0 && it.hexColor.startsWith("#") })
     }
@@ -38,6 +40,21 @@ class DeparturesTest {
         val trains = parseEtd(json, t0)
         assertEquals(listOf(t0, t0 + 20 * 60_000), trains.map { it.departsAt })
         assertEquals(listOf(false, true), trains.map { it.delayed })
+    }
+
+    @Test
+    fun aResponseWithoutAStationIsNoTrains() {
+        assertEquals(emptyList<Train>(), parseEtd("""{"root":{"message":{"error":"Invalid orig"}}}""", t0))
+        assertEquals(emptyList<Train>(), parseEtd("""{"other":1}""", t0))
+    }
+
+    @Test
+    fun missingFieldsGetDefaults() {
+        val json = """{"root":{"station":{"etd":{"estimate":[{"minutes":"3"},{"minutes":"soon"}]}}}}"""
+        val train = parseEtd(json, t0).single()
+        assertEquals("?", train.destination)
+        assertEquals("#888888", train.hexColor)
+        assertEquals(0, train.cars)
     }
 
     @Test

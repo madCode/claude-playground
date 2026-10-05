@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -78,7 +79,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        lifecycleScope.launch { Refresher.refresh(applicationContext) }
+        lifecycleScope.launch { container.refresher.refresh() }
     }
 
     // The widget puts the station it was tapped on in the intent; whatever it says is what we show.
@@ -102,17 +103,18 @@ private fun AppTheme(content: @Composable () -> Unit) {
 private fun App(focused: String?, onFocus: (String?) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val starred by Store.starred(context).collectAsStateWithLifecycle(emptyList())
-    val snapshot by Store.snapshot(context).collectAsStateWithLifecycle(Snapshot())
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val c = context.container
+    val starred by c.store.starred.collectAsStateWithLifecycle(emptyList())
+    val snapshot by c.store.snapshot.collectAsStateWithLifecycle(Snapshot())
+    var now by remember { mutableLongStateOf(c.clock()) }
     LaunchedEffect(Unit) {
         while (true) {
             delay(15_000)
-            now = System.currentTimeMillis()
+            now = c.clock()
         }
     }
-    val refresh: () -> Unit = { scope.launch { Refresher.refresh(context.applicationContext); now = System.currentTimeMillis() } }
-    val toggle: (String) -> Unit = { abbr -> scope.launch { Store.toggle(context, abbr); Refresher.refresh(context.applicationContext) } }
+    val refresh: () -> Unit = { scope.launch { c.refresher.refresh(); now = c.clock() } }
+    val toggle: (String) -> Unit = { abbr -> scope.launch { c.store.toggle(abbr); c.refresher.refresh() } }
     BackHandler(enabled = focused != null) { onFocus(null) }
 
     Scaffold(
@@ -123,7 +125,7 @@ private fun App(focused: String?, onFocus: (String?) -> Unit) {
                     if (focused != null) IconButton(onClick = { onFocus(null) }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "All stations") }
                 },
                 actions = {
-                    if (focused != null) StarButton(focused in starred) { toggle(focused) }
+                    if (focused != null) StarButton(focused, focused in starred) { toggle(focused) }
                     IconButton(onClick = refresh) { Icon(Icons.Filled.Refresh, "Refresh") }
                 },
             )
@@ -154,7 +156,7 @@ private fun App(focused: String?, onFocus: (String?) -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(station.name, Modifier.weight(1f))
-                    StarButton(station.abbr in starred) { toggle(station.abbr) }
+                    StarButton(station.abbr, station.abbr in starred) { toggle(station.abbr) }
                 }
             }
         }
@@ -162,8 +164,8 @@ private fun App(focused: String?, onFocus: (String?) -> Unit) {
 }
 
 @Composable
-private fun StarButton(starred: Boolean, onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
+private fun StarButton(abbr: String, starred: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.testTag("star-$abbr")) {
         if (starred) Icon(Icons.Filled.Star, "Unstar", tint = Color(0xFFF2B01E))
         else Icon(Icons.Outlined.StarBorder, "Star")
     }
@@ -171,7 +173,7 @@ private fun StarButton(starred: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun BoardCard(abbr: String, board: Board?, now: Long, showName: Boolean, onClick: (() -> Unit)?) {
-    Card(Modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it }) {
+    Card(Modifier.fillMaxWidth().testTag("board-$abbr").let { if (onClick != null) it.clickable(onClick = onClick) else it }) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (showName) Text(stationName(abbr), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             val muted = MaterialTheme.colorScheme.onSurfaceVariant
@@ -193,7 +195,8 @@ private fun BoardCard(abbr: String, board: Board?, now: Long, showName: Boolean,
                     Text(
                         row.trains.joinToString("   ") { t ->
                             val m = minutesUntil(t.departsAt, now)
-                            "${formatClock(t.departsAt)} (${if (m == 0) "now" else "$m min"})"
+                            // No-break spaces: a line wraps between trains, never inside one.
+                            "${formatClock(t.departsAt)}\u00A0(${if (m == 0) "now" else "$m\u00A0min"})"
                         },
                         Modifier.padding(start = 18.dp),
                         style = MaterialTheme.typography.bodyLarge,

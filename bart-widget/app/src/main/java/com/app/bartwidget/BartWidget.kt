@@ -45,21 +45,22 @@ val StationParam = ActionParameters.Key<String>("station")
 
 class BartWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val starredFlow = Store.starred(context)
-        val snapshotFlow = Store.snapshot(context)
+        val c = context.container
+        val starredFlow = c.store.starred
+        val snapshotFlow = c.store.snapshot
         val firstStarred = starredFlow.first()
         val firstSnapshot = snapshotFlow.first()
         val parking = parkingIntent(context)
         provideContent {
             val starred by starredFlow.collectAsState(firstStarred)
             val snapshot by snapshotFlow.collectAsState(firstSnapshot)
-            GlanceTheme { Content(starred, snapshot, System.currentTimeMillis(), parking) }
+            GlanceTheme { WidgetContent(starred, snapshot, c.clock(), parking) }
         }
     }
 }
 
 @Composable
-private fun Content(starred: List<String>, snapshot: Snapshot, now: Long, parking: android.content.Intent) {
+internal fun WidgetContent(starred: List<String>, snapshot: Snapshot, now: Long, parking: android.content.Intent) {
     val text = GlanceTheme.colors.onSurface
     val muted = GlanceTheme.colors.onSurfaceVariant
     Column(
@@ -85,7 +86,7 @@ private fun Content(starred: List<String>, snapshot: Snapshot, now: Long, parkin
             )
             return@Column
         }
-        LazyColumn {
+        LazyColumn(GlanceModifier.fillMaxWidth().defaultWeight()) {
             items(starred, itemId = { it.hashCode().toLong() }) { abbr ->
                 StationBlock(abbr, snapshot.boards[abbr], now)
             }
@@ -137,7 +138,7 @@ fun lineColor(hex: String): ColorProvider =
 
 class RefreshAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        Refresher.refresh(context)
+        context.container.refresher.refresh()
     }
 }
 

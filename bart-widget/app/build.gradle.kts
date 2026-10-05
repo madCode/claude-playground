@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kover)
 }
 
 val ciRun = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
@@ -50,7 +51,22 @@ android {
     }
 
     testOptions {
-        unitTests.isReturnDefaultValues = true
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+            all {
+                // Robolectric's Android 16+ runtime needs this on JDK 21.
+                it.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
+                it.systemProperty("screenshotDir", layout.buildDirectory.dir("screenshots").get().asFile.path)
+                // LiveCheckTest calls the real BART API, so it only runs with -PliveCheck: BART being
+                // down, or no trains at 2am, isn't a failure of the change being built.
+                if (providers.gradleProperty("liveCheck").isPresent) it.systemProperty("liveCheck", "true")
+            }
+        }
+    }
+
+    packaging {
+        resources.excludes += setOf("META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/versions/9/OSGI-INF/MANIFEST.MF")
     }
 
     dependenciesInfo {
@@ -74,11 +90,18 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation(libs.serialization.json)
 
-    testImplementation(libs.junit)
-}
+    debugImplementation(libs.compose.ui.test.manifest)
 
-androidComponents {
-    onVariants(selector().withBuildType("debug")) { variant ->
-        ciRun?.let { run -> variant.outputs.forEach { it.versionCode.set(run) } }
-    }
+    testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.junit)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    // Compose UI test pulls an older Espresso that crashes on API 37.
+    testImplementation(libs.espresso.core)
+    testImplementation(libs.glance.appwidget.testing)
+    testImplementation(libs.work.testing)
 }

@@ -5,13 +5,9 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 
-object BartApi {
-    // BART's public key, published for anyone to use: https://api.bart.gov/docs/overview/
-    private const val KEY = "MW9S-E7SL-26DU-VV8V"
-
-    suspend fun departures(abbr: String, now: Long = System.currentTimeMillis()): List<Train> = withContext(Dispatchers.IO) {
-        val url = URL("https://api.bart.gov/api/etd.aspx?cmd=etd&orig=$abbr&key=$KEY&json=y")
-        val conn = url.openConnection() as HttpURLConnection
+class BartApi(private val base: String) {
+    suspend fun departures(abbr: String, now: Long): List<Train> = withContext(Dispatchers.IO) {
+        val conn = URL("$base/api/etd.aspx?cmd=etd&orig=$abbr&key=$KEY&json=y").openConnection() as HttpURLConnection
         conn.connectTimeout = 10_000
         conn.readTimeout = 10_000
         try {
@@ -20,5 +16,10 @@ object BartApi {
         } finally {
             conn.disconnect()
         }
+    }
+
+    companion object {
+        // BART's public key, published for anyone to use: https://api.bart.gov/docs/overview/
+        const val KEY = "MW9S-E7SL-26DU-VV8V"
     }
 }

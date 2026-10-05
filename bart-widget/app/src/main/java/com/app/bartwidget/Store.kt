@@ -1,36 +1,35 @@
 package com.app.bartwidget
 
-import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 
-private val Context.dataStore by preferencesDataStore("bart")
-
-object Store {
-    private val STARRED = stringPreferencesKey("starred")
-    private val SNAPSHOT = stringPreferencesKey("snapshot")
-    private val json = Json { ignoreUnknownKeys = true }
-
+class Store(private val data: DataStore<Preferences>) {
     /** Starred stations in the order they were starred; that's the order the widget shows them. */
-    fun starred(context: Context): Flow<List<String>> =
-        context.dataStore.data.map { p -> p[STARRED]?.split(",")?.filter { it.isNotEmpty() } ?: emptyList() }
+    val starred: Flow<List<String>> = data.data.map { it.starredList() }
 
-    suspend fun toggle(context: Context, abbr: String) {
-        context.dataStore.edit { p ->
-            val now = p[STARRED]?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
-            p[STARRED] = toggleStar(now, abbr).joinToString(",")
-        }
-    }
-
-    fun snapshot(context: Context): Flow<Snapshot> = context.dataStore.data.map { p ->
+    val snapshot: Flow<Snapshot> = data.data.map { p ->
+        // An unreadable snapshot (an older format, say) is only a cache: start again.
         p[SNAPSHOT]?.let { runCatching { json.decodeFromString<Snapshot>(it) }.getOrNull() } ?: Snapshot()
     }
 
-    suspend fun saveSnapshot(context: Context, snapshot: Snapshot) {
-        context.dataStore.edit { it[SNAPSHOT] = json.encodeToString(Snapshot.serializer(), snapshot) }
+    suspend fun toggle(abbr: String) {
+        data.edit { p -> p[STARRED] = toggleStar(p.starredList(), abbr).joinToString(",") }
+    }
+
+    suspend fun saveSnapshot(snapshot: Snapshot) {
+        data.edit { it[SNAPSHOT] = json.encodeToString(Snapshot.serializer(), snapshot) }
+    }
+
+    private fun Preferences.starredList() = this[STARRED]?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
+
+    private companion object {
+        val STARRED = stringPreferencesKey("starred")
+        val SNAPSHOT = stringPreferencesKey("snapshot")
+        val json = Json { ignoreUnknownKeys = true }
     }
 }
