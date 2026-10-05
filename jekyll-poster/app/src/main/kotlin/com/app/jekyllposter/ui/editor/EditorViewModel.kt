@@ -88,7 +88,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val draft = when {
             stored == null -> null
             mine == null -> stored
-            else -> stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, extraFrontMatter = mine.extraFrontMatter)
+            else -> stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, extraFrontMatter = mine.extraFrontMatter, noteDate = mine.noteDate)
         }
         f.copy(draft = draft, taxonomy = taxonomy)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, State())
@@ -317,6 +317,9 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
 
     fun setTitle(title: String) = edit { it.copy(title = title) }
 
+    /** Drops a shared note's date: the post is then dated when it's published. */
+    fun useThePublishDay() = edit { it.copy(noteDate = null) }
+
     fun setExtraFrontMatter(yaml: String) {
         // An edit opened before the app kept front matter doesn't know the post's other keys, so
         // writing here would replace keys the writer never saw.
@@ -385,7 +388,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val mine = text ?: return
         val stored = container.drafts.get(id) ?: return
         if (stored.state != PostState.Draft && stored.state != PostState.Failed) return
-        container.drafts.update(stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, extraFrontMatter = mine.extraFrontMatter, updatedAt = System.currentTimeMillis()))
+        container.drafts.update(stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, extraFrontMatter = mine.extraFrontMatter, noteDate = mine.noteDate, updatedAt = System.currentTimeMillis()))
     }
 
     /** Sends the post to [destination]: the site's `_posts`, or the blog's `_drafts`. */

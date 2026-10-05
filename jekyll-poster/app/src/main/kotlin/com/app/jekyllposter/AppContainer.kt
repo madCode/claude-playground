@@ -35,7 +35,7 @@ class AppContainer(
     accountData: DataStore<Preferences> = context.accountDataStore,
     settingsData: DataStore<Preferences> = context.settingsDataStore,
     val database: PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db")
-        .addMigrations(com.app.jekyllposter.data.MIGRATION_1_2, com.app.jekyllposter.data.MIGRATION_2_3).build(),
+        .addMigrations(com.app.jekyllposter.data.MIGRATION_1_2, com.app.jekyllposter.data.MIGRATION_2_3, com.app.jekyllposter.data.MIGRATION_3_4).build(),
     /** Starts publishing a queued post; WorkManager in the app, direct calls in tests. */
     val schedulePublish: (Long) -> Unit = { com.app.jekyllposter.publish.PublishWorker.enqueue(context, it) },
     /** When the site has (or hasn't) built a published post; a notification in the app. */

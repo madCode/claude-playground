@@ -52,6 +52,19 @@ class MigrationTest {
         }
     }
 
+    @Test fun version3DraftsGainANoteDate() {
+        helper.createDatabase(DB, 3).use { db ->
+            db.execSQL("INSERT INTO drafts (id, title, body, categories, tags, state, createdAt, updatedAt) VALUES (5, 'Kept', 'b', '[]', '[]', 'Draft', 0, 0)")
+        }
+        helper.runMigrationsAndValidate(DB, 4, true, MIGRATION_3_4).use { db ->
+            db.query("SELECT title, noteDate FROM drafts WHERE id = 5").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("Kept", c.getString(0))
+                assertTrue(c.isNull(1))
+            }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
     }

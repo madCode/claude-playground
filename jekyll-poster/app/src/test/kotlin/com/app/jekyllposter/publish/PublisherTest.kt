@@ -55,6 +55,23 @@ class PublisherTest {
         assertTrue(c.database.posts().snapshot().any { it.path == "_posts/2026-10-04-late-night-notes.md" })
     }
 
+    @Test fun aNoteKeepsItsOwnDateInItsFileNameAndFrontMatter() = runBlocking {
+        // A bare day is midnight in the site's zone (Los Angeles), as Jekyll reads it, not UTC.
+        val id = queue(Draft(title = "Jumping", body = "From the note.", noteDate = "2021-06-24"))
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertEquals("---\ntitle: Jumping\ndate: 2021-06-24 00:00:00 -0700\n---\n\nFrom the note.\n", github.text("_posts/2021-06-24-jumping.md"))
+        assertEquals("https://sample.github.io/sample-blog/2021/06/24/jumping/", c.drafts.get(id)!!.postUrl)
+    }
+
+    @Test fun jekyllDatesAreReadInTheirWrittenFormsAndNotGuessedAt() {
+        val la = ZoneId.of("America/Los_Angeles")
+        assertEquals(ZonedDateTime.of(2021, 6, 24, 23, 30, 0, 0, ZoneId.of("-10:00")).toInstant(), parseJekyllDate("2021-06-24T23:30:00.000-10:00", la)!!.toInstant())
+        assertEquals(ZonedDateTime.of(2021, 6, 24, 10, 15, 0, 0, la), parseJekyllDate("2021-06-24T10:15", la))
+        assertEquals(ZonedDateTime.of(2021, 6, 24, 0, 0, 0, 0, la), parseJekyllDate("2021-06-24", la))
+        assertEquals(null, parseJekyllDate("2021-06-24 whenever", la))
+        assertEquals(null, parseJekyllDate("June 24, 2021", la))
+    }
+
     @Test fun aPostWrittenAbroadIsDatedInTheSitesTimeZoneNotThePhones() = runBlocking {
         // Tokyo, Monday morning: Sunday evening at the site, in Los Angeles.
         val tokyo = evening.withZoneSameInstant(ZoneId.of("Asia/Tokyo"))

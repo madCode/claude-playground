@@ -55,7 +55,7 @@ class ObsidianShareTest {
         signIn()
         val file = tmp.newFile("Lunch with Priya.md")
         file.writeText(
-            "---\ntags: [food, Priya]\naliases: [lunch]\nfind: [Priya]\nreplace: [a friend]\n---\n" +
+            "---\ndate: 2021-06-24\ntags: [food, Priya]\naliases: [lunch]\nfind: [Priya]\nreplace: [a friend]\n---\n" +
                 "Priya liked [[What I read in April]]. Next: [[Soup recipes]].\n",
         )
         val home = HomeViewModel(app.container)
@@ -68,6 +68,8 @@ class ObsidianShareTest {
         assertEquals(listOf("food", "a friend"), draft.tags)
         assertEquals("a friend liked [What I read in April]({{ site.baseurl }}{% post_url 2025-04-20-reading-list %}). Next: [[Soup recipes]].\n", draft.body)
         assertNull(draft.extraFrontMatter)
+        // As written: read when publishing, in the site's time zone as it is then.
+        assertEquals("2021-06-24", draft.noteDate)
         assertFalse(draft.toString(), draft.toString().contains("Priya"))
     }
 
