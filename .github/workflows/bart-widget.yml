@@ -1,0 +1,73 @@
+name: BART widget
+
+on:
+  push:
+    branches: [main]
+    paths: ['bart-widget/**', '.github/workflows/bart-widget.yml']
+  pull_request:
+    branches: [main]
+    paths: ['bart-widget/**', '.github/workflows/bart-widget.yml']
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: bart-widget
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+      - name: Build, lint and unit tests
+        run: ./gradlew build
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: bart-widget-debug-apk
+          path: bart-widget/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+  # A fixed link to the newest build from main, for installing on a phone:
+  # https://github.com/madCode/claude-playground/releases/download/bart-widget-debug/bart-widget-debug.apk
+  publish-debug:
+    needs: build
+    # Not on a re-run: an older run's number is a lower version code, which a phone with a newer build can't install.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: bart-widget-debug
+      cancel-in-progress: true
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: bart-widget-debug-apk
+      - name: Update the bart-widget-debug release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mv app-debug.apk bart-widget-debug.apk
+          build="${{ github.run_number }}"
+          short="${GITHUB_SHA::7}"
+          title="BART widget debug build $build · $short"
+          notes="Build $build from main ($short). Installs as com.app.bartwidget.debug."
+          if gh release view bart-widget-debug > /dev/null 2>&1; then
+            gh release upload bart-widget-debug bart-widget-debug.apk --clobber
+            gh api -X PATCH "repos/$GH_REPO/git/refs/tags/bart-widget-debug" -f sha="$GITHUB_SHA" -F force=true > /dev/null
+            gh release edit bart-widget-debug --title "$title" --notes "$notes"
+          else
+            gh release create bart-widget-debug bart-widget-debug.apk --prerelease --target "$GITHUB_SHA" --title "$title" --notes "$notes"
+          fi
