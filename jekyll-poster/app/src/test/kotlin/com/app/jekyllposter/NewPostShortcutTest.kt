@@ -44,4 +44,10 @@ class NewPostShortcutTest {
         val photo = Intent(Intent.ACTION_SEND).setType("image/jpeg").putExtra(Intent.EXTRA_STREAM, note)
         assertEquals(Shared("", listOf(note)), postToStart(photo))
     }
+
+    @Test fun aNoteOpenedWithTheAppStartsAPostFromIt() {
+        val note = android.net.Uri.parse("content://notes/Bus%20notes.md")
+        assertEquals(Shared("", emptyList(), note), postToStart(Intent(Intent.ACTION_VIEW).setDataAndType(note, "text/markdown")))
+        assertNull(postToStart(Intent(Intent.ACTION_VIEW).setDataAndType(note, "text/markdown").addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)))
+    }
 }

@@ -29,7 +29,8 @@ object Images {
 
     /** [body] with the alt text of the image at [sitePath] set to [alt]. */
     fun withAlt(body: String, sitePath: String, alt: String): String {
-        val link = Regex("""!\[((?:\\.|[^\]])*)]\(\{\{ '${Regex.escape(sitePath)}' \| relative_url }}\)""")
+        // `\}` escaped: Android's regex engine (ICU) refuses a bare one.
+        val link = Regex("""!\[((?:\\.|[^\]])*)]\(\{\{ '${Regex.escape(sitePath)}' \| relative_url \}\}\)""")
         return link.replace(body) { markdown(sitePath, alt.trim()) }
     }
 

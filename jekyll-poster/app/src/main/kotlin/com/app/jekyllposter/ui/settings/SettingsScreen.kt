@@ -1,6 +1,13 @@
 package com.app.jekyllposter.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.platform.LocalContext
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -85,9 +92,36 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: ()
                 })
             }
             Heading("About")
-            Row("Jekyll Poster ${BuildConfig.VERSION_NAME}", "Posts to a Jekyll blog on GitHub Pages")
+            VersionRow(BuildConfig.VERSION_NAME)
         }
     }
+}
+
+/**
+ * The app's version. A tap or a long press copies it, for a bug report: it names the build (the CI
+ * run and commit, in a debug build), which a screenshot of the row can cut short. Both, so neither
+ * gesture does nothing: TalkBack's double tap is a tap, and on e-ink a long press is slow to tell.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun VersionRow(version: String) {
+    val context = LocalContext.current
+    val copy = {
+        val clipboard = context.getSystemService(ClipboardManager::class.java)
+        clipboard.setPrimaryClip(ClipData.newPlainText("Jekyll Poster version", "Jekyll Poster $version"))
+        // Android 13 and later confirm a copy themselves; before that, nothing would.
+        if (Build.VERSION.SDK_INT < 33) Toast.makeText(context, "Version copied", Toast.LENGTH_SHORT).show()
+    }
+    Column(
+        Modifier.fillMaxWidth()
+            .combinedClickable(role = Role.Button, onClickLabel = "Copy version", onLongClickLabel = "Copy version", onLongClick = copy, onClick = copy)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text("Jekyll Poster $version", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        Text("Posts to a Jekyll blog on GitHub Pages. Tap to copy the version.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
 }
 
 @Composable
