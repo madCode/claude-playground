@@ -61,6 +61,13 @@ class ObsidianNoteTest {
         assertNull(convert("No front matter.\n").date)
     }
 
+    @Test fun commasSeparateANotesTagsAsInObsidian() {
+        val note = convert("---\ncategory: thingy\njekyll-tags: personal-philosophy, jumping\nfind: [jekyll-tags]\nreplace: [tags]\n---\nx\n")
+        assertEquals(listOf("personal-philosophy", "jumping"), note.tags)
+        assertEquals(listOf("thingy"), note.categories)
+        assertEquals(listOf("a", "b", "c"), convert("---\ntags: [a, \"b,c\", '#a']\n---\nx\n").tags)
+    }
+
     @Test fun aFirstHeadingIsTheTitleWhenThereIsNoOther() {
         val note = convert("# Bus notes\n\nOn the 22.\n")
         assertEquals("Bus notes", note.title)

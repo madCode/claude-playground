@@ -87,8 +87,8 @@ object ObsidianNote {
                 body = body.substring(m.range.last + 1).trimStart('\n')
             }
         }
-        val categories = doc.terms("category", "categories").map { it.removePrefix("#") }.filter { it.isNotEmpty() }
-        val tags = doc.terms("tag", "tags").map { it.removePrefix("#") }.filter { it.isNotEmpty() }
+        val categories = noteTerms(doc.terms("category", "categories"))
+        val tags = noteTerms(doc.terms("tag", "tags"))
         val date = doc.string("date")?.trim()?.takeIf { it.isNotEmpty() }
         dropped.forEach { doc.set(it, null) }
         val extra = doc.others(PostWriter.MANAGED).takeIf { it.isNotBlank() }
@@ -98,6 +98,14 @@ object ObsidianNote {
         val named = if (found.size == embedNames.size) found.mapIndexed { i, e -> e.copy(name = embedNames[i]) } else found
         return Result.Converted(title, body, categories, tags, extra, named, date)
     }
+
+    /**
+     * Categories or tags as a note means them. A comma separates them too, as in Obsidian:
+     * `tags: personal-philosophy, jumping` is two tags, where Jekyll alone would keep the comma on
+     * the first. A leading `#`, Obsidian's way of writing a tag, goes.
+     */
+    private fun noteTerms(terms: List<String>): List<String> =
+        terms.flatMap { it.split(',') }.map { it.trim().removePrefix("#") }.filter { it.isNotEmpty() }.distinct()
 
     /** Whether [name] is a file an image embed can name, by its extension. */
     fun isImage(name: String): Boolean = name.substringAfterLast('.', "").lowercase() in imageExtensions

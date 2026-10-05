@@ -96,7 +96,9 @@ doesn't want to open a laptop and make a commit for every post.
   The note stays as it is, and opening it again starts another post.
 - The title is the note's `title:`, else its file name, else a first `# heading`. A first
   heading that repeats the title is dropped.
-- `tags:` and `categories:` fill the post's own, in the blog's spelling. `layout:` goes, and so
+- `tags:` and `categories:` fill the post's own, in the blog's spelling. A comma separates them
+  too, as in Obsidian (`personal-philosophy, jumping` is two tags; Jekyll alone would keep the
+  comma). `layout:` goes, and so
   do Obsidian's `aliases:` and `cssclasses:`.
 - A note's `date:` is the post's date, in its file name and front matter. It's kept as written
   and read when publishing, in the site's time zone as it is then: a bare day is midnight there,
