@@ -1,0 +1,30 @@
+name: BART widget live check
+
+# Fetches real boards from api.bart.gov and checks they parse, and that the stations the app
+# bundles are still BART's. Not part of the build: BART being down isn't a failure of a change.
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays, mid-morning Pacific, when trains are running.
+    - cron: '17 17 * * 1'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: bart-widget
+
+jobs:
+  live-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+      - name: Check live BART data
+        run: ./gradlew :app:testDebugUnitTest --tests '*LiveCheckTest' -PliveCheck

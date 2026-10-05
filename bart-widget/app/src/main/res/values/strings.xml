@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">BART Stations</string>
+    <string name="widget_name">Starred BART stations</string>
+    <string name="widget_description">Departure times for the stations you star</string>
+</resources>

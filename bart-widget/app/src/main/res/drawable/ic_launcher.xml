@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A train front on BART blue. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path android:fillColor="#0099D8" android:pathData="M24,0a24,24 0,1 1,0 48a24,24 0,1 1,0 -48z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M16,12h16a4,4 0,0 1,4 4v14a4,4 0,0 1,-4 4h-16a4,4 0,0 1,-4 -4v-14a4,4 0,0 1,4 -4z" />
+    <path android:fillColor="#0099D8" android:pathData="M16,16h16v7h-16z" />
+    <path android:fillColor="#0099D8" android:pathData="M18,29m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0" />
+    <path android:fillColor="#0099D8" android:pathData="M30,29m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M17,34h3l-3,5h-3zM31,34h-3l3,5h3z" />
+</vector>
