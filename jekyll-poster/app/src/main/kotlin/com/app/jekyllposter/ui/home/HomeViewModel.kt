@@ -203,7 +203,12 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
      */
     suspend fun editPost(post: CachedPost): Long? {
         val account = container.accounts.current() ?: return null
-        container.drafts.openEditOf(post.path, account.blogKey)?.let { return it.id }
+        container.drafts.openEditOf(post.path, account.blogKey)?.let { open ->
+            // One never changed (left when the app closed under it) holds nothing of the writer's,
+            // only an older copy of the post: GitHub's is fetched instead.
+            if (!open.unchangedEdit) return open.id
+            container.drafts.deleteIfUnchangedEdit(open.id)
+        }
         // The text and its sha from the branch now, not the list's cache, which may be older.
         val file = try {
             container.blogs.blog(account).file(post.path)

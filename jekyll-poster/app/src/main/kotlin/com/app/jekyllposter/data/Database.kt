@@ -155,6 +155,13 @@ interface DraftDao {
     suspend fun openEditOf(path: String, blog: String): Draft?
 
     /**
+     * Deletes the draft only if it's still an edit opened and never changed ([Draft.unchangedEdit]),
+     * in one statement: an Update or Delete queued from it in the same moment must not be lost.
+     */
+    @Query("DELETE FROM drafts WHERE id = :id AND editingPath IS NOT NULL AND state = 'Draft' AND updatedAt = createdAt")
+    suspend fun deleteIfUnchangedEdit(id: Long)
+
+    /**
      * The phone's published records of the post now at [path] (where publishing put it, whether
      * written here or edited), e.g. once the post is deleted from the blog.
      */

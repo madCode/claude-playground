@@ -468,7 +468,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             photoJob?.join()
             saveJob?.cancel()
             save()
-            container.drafts.get(id)?.let { if ((it.isEmpty && it.state == PostState.Draft) || it.unchangedEdit) container.drafts.delete(id) }
+            container.drafts.get(id)?.let { if (it.isEmpty && it.state == PostState.Draft) container.drafts.delete(id) }
+            container.drafts.deleteIfUnchangedEdit(id)
             flags.update { it.copy(closed = true) }
         }
     }

@@ -54,4 +54,14 @@ class EditLeftUnchangedTest {
         leave(editor)
         assertEquals("What I read in April, and May", runBlocking { c.drafts.list() }.single().title)
     }
+
+    @Test fun anUnchangedEditLeftBehindIsntReopenedWithItsOldText() {
+        // Left when the app closed under the editor: no Back, so nothing dropped it.
+        val stale = openReadingList().text!!
+        runBlocking { c.drafts.update(stale.copy(body = "An older copy.", baseSha = "0000")) }
+        val fresh = openReadingList().text!!
+        assertTrue(fresh.id != stale.id)
+        assertTrue(fresh.body.contains("A few books, a few essays."))
+        assertEquals(listOf(fresh.id), runBlocking { c.drafts.list() }.map { it.id })
+    }
 }
