@@ -87,8 +87,8 @@ object ObsidianNote {
                 body = body.substring(m.range.last + 1).trimStart('\n')
             }
         }
-        val categories = doc.terms("category", "categories").map { it.removePrefix("#") }.filter { it.isNotEmpty() }
-        val tags = doc.terms("tag", "tags").map { it.removePrefix("#") }.filter { it.isNotEmpty() }
+        val categories = noteTerms(doc, "category", "categories")
+        val tags = noteTerms(doc, "tag", "tags")
         val date = doc.string("date")?.trim()?.takeIf { it.isNotEmpty() }
         dropped.forEach { doc.set(it, null) }
         val extra = doc.others(PostWriter.MANAGED).takeIf { it.isNotBlank() }
@@ -97,6 +97,24 @@ object ObsidianNote {
         // The rules may have renamed a file in the text; the vault still has it by its own name.
         val named = if (found.size == embedNames.size) found.mapIndexed { i, e -> e.copy(name = embedNames[i]) } else found
         return Result.Converted(title, body, categories, tags, extra, named, date)
+    }
+
+    /**
+     * Categories or tags as a note means them: as Jekyll reads them, except that a plain string
+     * under the plural key with a comma in it is split on commas alone, as Obsidian does
+     * (`tags: personal-philosophy, jumping` is two tags, `Web Development, Design` two categories),
+     * where Jekyll would split on spaces and keep the commas. A YAML list keeps each item whole,
+     * comma or not, and so does the singular key: that's how a name with a comma is written. A
+     * leading `#`, Obsidian's way of writing a tag, goes.
+     */
+    private fun noteTerms(doc: FrontMatterDocument, singular: String, plural: String): List<String> {
+        val value = doc.values()[plural]
+        val terms = if (!doc.values().containsKey(singular) && value is String && value.contains(',')) {
+            value.split(',')
+        } else {
+            doc.terms(singular, plural)
+        }
+        return terms.map { it.trim().removePrefix("#").trim() }.filter { it.isNotEmpty() }.distinct()
     }
 
     /** Whether [name] is a file an image embed can name, by its extension. */
