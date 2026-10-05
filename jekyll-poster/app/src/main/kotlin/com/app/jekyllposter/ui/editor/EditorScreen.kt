@@ -303,7 +303,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().testTag("title"),
             )
             text.noteDate?.let { iso ->
-                NoteDate(iso, editable, onDrop = viewModel::useThePublishDay)
+                NoteDate(iso, editable && state.draft?.sentShas.isNullOrEmpty(), onDrop = viewModel::useThePublishDay)
             }
             TermRow("Categories", text.categories, editable, onAdd = { picker = TermKind.Category }, onRemove = { viewModel.remove(TermKind.Category, it) })
             TermRow("Tags", text.tags, editable, onAdd = { picker = TermKind.Tag }, onRemove = { viewModel.remove(TermKind.Tag, it) })
@@ -370,15 +370,22 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     }
 }
 
-/** The date a shared note carries, which the post keeps; dropping it dates the post when published. */
+/**
+ * The date a shared note carries, which the post keeps; dropping it dates the post when published.
+ * Not offered once a commit was tried: the post then keeps its name and date, so it can't go twice.
+ */
 @Composable
-private fun NoteDate(iso: String, editable: Boolean, onDrop: () -> Unit) {
-    val day = runCatching {
-        java.time.ZonedDateTime.parse(iso).format(java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG))
-    }.getOrDefault(iso)
+private fun NoteDate(written: String, canDrop: Boolean, onDrop: () -> Unit) {
+    // The day as written: the site's time zone, which can move it, is applied when publishing.
+    val day = com.app.jekyllposter.publish.parseJekyllDate(written, java.time.ZoneOffset.UTC)?.let {
+        java.time.LocalDate.parse(written.trim().take(10)).format(java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG))
+    }
     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("Dated $day, from the note", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (editable) TextButton(onClick = onDrop) { Text("Use the publish day") }
+        Text(
+            if (day != null) "Dated $day, from the note" else "The note's date, “$written”, isn't one the app can read: it's dated when published",
+            Modifier.weight(1f).padding(vertical = 8.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (canDrop && day != null) TextButton(onClick = onDrop) { Text("Use the publish day") }
     }
 }
 

@@ -90,8 +90,8 @@ data class Draft(
     /** Where the published post will be on the site. */
     val postUrl: String? = null,
     /**
-     * The date the post is to carry, from a shared note's `date:` (ISO, with its offset); null
-     * dates it when it's published.
+     * The date the post is to carry: a shared note's `date:` as written, read when publishing in
+     * the site's time zone as it is then. Null dates the post when it's published.
      */
     val noteDate: String? = null,
     val buildState: BuildState? = null,

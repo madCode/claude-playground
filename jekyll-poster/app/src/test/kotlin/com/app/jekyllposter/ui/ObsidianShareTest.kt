@@ -68,8 +68,8 @@ class ObsidianShareTest {
         assertEquals(listOf("food", "a friend"), draft.tags)
         assertEquals("a friend liked [What I read in April]({{ site.baseurl }}{% post_url 2025-04-20-reading-list %}). Next: [[Soup recipes]].\n", draft.body)
         assertNull(draft.extraFrontMatter)
-        // A bare day, as Jekyll reads it: midnight in the site's time zone (Los Angeles).
-        assertEquals("2021-06-24T00:00-07:00", draft.noteDate)
+        // As written: read when publishing, in the site's time zone as it is then.
+        assertEquals("2021-06-24", draft.noteDate)
         assertFalse(draft.toString(), draft.toString().contains("Priya"))
     }
 

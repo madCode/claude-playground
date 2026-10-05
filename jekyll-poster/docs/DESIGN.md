@@ -98,9 +98,14 @@ doesn't want to open a laptop and make a commit for every post.
   heading that repeats the title is dropped.
 - `tags:` and `categories:` fill the post's own, in the blog's spelling. `layout:` goes, and so
   do Obsidian's `aliases:` and `cssclasses:`.
-- A note's `date:` is the post's date, in its file name and front matter (a bare day is midnight
-  in the site's time zone, as Jekyll reads it). The editor shows it, and **Use the publish day**
-  drops it. A future date is kept too, and Jekyll won't show the post until then.
+- A note's `date:` is the post's date, in its file name and front matter. It's kept as written
+  and read when publishing, in the site's time zone as it is then: a bare day is midnight there,
+  as Jekyll reads it. The editor shows it, and **Use the publish day** drops it (until a commit
+  was tried: then the post keeps its name and date, so it can't go out twice). A date the app
+  can't read is shown as such, and the post is dated when published.
+- A future date is kept too: Jekyll won't show the post until then, though the app says live.
+- Saved to the blog's `_drafts` first, a note loses its date: drafts are undated, and Publish to
+  the site dates them then.
   Other keys are the post's "more front matter", to see before publishing.
 - `[[Post title]]` and `[[Post title|shown text]]` become `{{ site.baseurl }}{% post_url … %}`
   links when a post the site builds has that title or file name (`[[2025-04-20-reading-list]]`):
@@ -144,7 +149,7 @@ doesn't want to open a laptop and make a commit for every post.
 - A new post becomes `_posts/<date>-<slug>.md`, dated in the site's `timezone` when
   `_config.yml` sets one (`2026-10-04 22:15:00 -0700`): the same day Jekyll will give it, and no
   hint of where the writer is. Without one, the phone's offset, so the site builds it on the day
-  the writer meant.
+  the writer meant. A shared note's own date is used instead of now (see From Obsidian).
   `layout: post` is added only when `_config.yml` doesn't default posts to a layout.
 - The name avoids files already on the branch (`-2`) and existing posts' addresses: under
   `/:title/`, two posts of the same title would overwrite each other.
@@ -152,7 +157,7 @@ doesn't want to open a laptop and make a commit for every post.
   where it lands, so it never replaces a file that appeared meanwhile.
 - Never twice: every text sent for a post is remembered, so a commit that landed unheard is
   recognised on the next attempt. A failed post that never got as far as a commit gets a fresh
-  name and date when sent again.
+  name and date when sent again; a note's date stays.
 - The post's address, as Jekyll builds it: `permalink` from `_config.yml`; the date in the site's
   time zone (UTC on GitHub when unset, so an evening post can carry tomorrow's date in its URL);
   categories lowercased and escaped, front matter's first, then folders'. The site is the

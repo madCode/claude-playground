@@ -314,8 +314,9 @@ class Publisher(
         // In the site's time zone when it names one: the phone's offset says where the writer is
         // (a trip abroad shows as +0900), and the site's gives the same day and URL Jekyll will.
         val zone = index.config.timezone
-        // A note's own date wins (a post written months ago keeps its day), in the site's zone too.
-        val noted = draft.noteDate?.let { runCatching { ZonedDateTime.parse(it) }.getOrNull() }?.let { d -> zone?.let { d.withZoneSameInstant(it) } ?: d }
+        // A note's own date wins (a post written months ago keeps its day), read here, where the
+        // site's zone is known: a bare day is midnight there, as Jekyll reads it.
+        val noted = draft.noteDate?.let { parseJekyllDate(it, zone ?: java.time.ZoneOffset.UTC) }?.let { d -> zone?.let { d.withZoneSameInstant(it) } ?: d }
         val date = noted ?: zone?.let { now().withZoneSameInstant(it) } ?: now()
         val slug = Slug.of(draft.title).ifEmpty { "post" }
         fun at(s: String) = if (toDrafts) PostPath.newDraft(s).path else PostPath.newPost(date.toLocalDate(), s).path
@@ -347,12 +348,16 @@ private const val CHANGED = "This post changed on GitHub since you opened it. Di
  */
 internal fun parseJekyllDate(value: String, zone: java.time.ZoneId): ZonedDateTime? {
     val v = value.trim()
-    val zoned = listOf("yyyy-MM-dd HH:mm:ss Z", "yyyy-MM-dd HH:mm:ss XXX", "yyyy-MM-dd'T'HH:mm:ssXXX", "yyyy-MM-dd HH:mm Z")
+    val zoned = listOf(
+        "yyyy-MM-dd HH:mm:ss Z", "yyyy-MM-dd HH:mm:ss XXX", "yyyy-MM-dd'T'HH:mm:ssXXX", "yyyy-MM-dd HH:mm Z",
+        "yyyy-MM-dd'T'HH:mm:ss.SSSXXX", "yyyy-MM-dd'T'HH:mmXXX", "yyyy-MM-dd HH:mm:ss.SSS Z",
+    )
     zoned.forEach { p -> runCatching { return ZonedDateTime.parse(v, DateTimeFormatter.ofPattern(p)) } }
-    listOf("yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd HH:mm").forEach { p ->
+    listOf("yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd HH:mm", "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss.SSS").forEach { p ->
         runCatching { return java.time.LocalDateTime.parse(v, DateTimeFormatter.ofPattern(p)).atZone(zone) }
     }
-    return runCatching { java.time.LocalDate.parse(v.take(10)).atStartOfDay(zone) }.getOrNull()
+    // A bare day only: "2021-06-24 whatever" isn't a date the app should guess at.
+    return runCatching { java.time.LocalDate.parse(v).atStartOfDay(zone) }.getOrNull()
 }
 
 /** Git's id for a file's content, as GitHub reports it: SHA-1 of `blob <size>\0<bytes>`. */

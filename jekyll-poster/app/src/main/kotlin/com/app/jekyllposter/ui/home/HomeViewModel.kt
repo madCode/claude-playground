@@ -157,9 +157,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 blog = container.accounts.current()?.blogKey, title = note.title, body = body,
                 categories = spelled(note.categories, taxonomy.categories), tags = spelled(note.tags, taxonomy.tags),
                 extraFrontMatter = note.extra,
-                // As Jekyll would read it: a bare day is midnight in the site's zone.
-                noteDate = note.date?.let { com.app.jekyllposter.publish.parseJekyllDate(it, container.blogs.config.value.timezone ?: java.time.ZoneOffset.UTC) }
-                    ?.format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                // As written: it's read when publishing, in the site's time zone as it is then.
+                noteDate = note.date,
             ),
         )
         container.sharedPhotos[id] = shared.images
