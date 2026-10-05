@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
@@ -181,7 +182,8 @@ class WidgetTest {
     fun placingTheWidgetStartsBackgroundRefreshAndRemovingItStopsIt() {
         val receiver = BartWidgetReceiver()
         receiver.onEnabled(app)
-        assertEquals(WorkInfo.State.ENQUEUED, refreshWork())
+        // Scheduled: waiting, or already on its first run, which test WorkManager may start at once.
+        assertTrue(refreshWork().toString(), !refreshWork().isFinished)
         receiver.onDisabled(app)
         assertEquals(WorkInfo.State.CANCELLED, refreshWork())
     }
