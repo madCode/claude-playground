@@ -7,6 +7,8 @@ another, and tapping a starred station can open the "nearest" one instead. It's 
 wrong board and leave at the wrong time. This app never asks where you are.
 
 - **Your stations only.** Star them in the app; the widget lists them in the order you starred them.
+- **Star the lines you take**, per station (Antioch from Montgomery, say). The widget shows only
+  those, or the next three when none are starred; "+N more" expands a station to every line.
 - **Tapping a station opens that station.** Not the nearest one.
 - **Clock times, not "13 min".** A widget only redraws every so often, and "13 min" goes wrong as
   it ages while "7:33" stays right. The header says when the times were fetched. If a refresh fails,

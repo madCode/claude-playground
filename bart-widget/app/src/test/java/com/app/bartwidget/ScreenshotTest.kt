@@ -81,6 +81,7 @@ class ScreenshotTest {
     @Test
     fun oneStation() {
         starAndFetch("MONT", "DUBL")
+        runBlocking { c.store.toggleLine("MONT:ANTC") }
         ActivityScenario.launch<MainActivity>(android.content.Intent(app, MainActivity::class.java).putExtra(StationParam.name, "MONT"))
         compose.waitFor("SF Airport")
         save("station-mont", compose.onRoot().captureToImage().asAndroidBitmap())

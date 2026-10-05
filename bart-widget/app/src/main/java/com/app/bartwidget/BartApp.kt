@@ -18,7 +18,8 @@ class AppContainer(
 ) {
     val api = BartApi(bartBase)
     val store = Store(dataStore)
-    val refresher = Refresher(store, api, clock) { BartWidget().updateAll(context) }
+    val updateWidgets: suspend () -> Unit = { BartWidget().updateAll(context) }
+    val refresher = Refresher(store, api, clock, updateWidgets)
 }
 
 open class BartApp : Application() {

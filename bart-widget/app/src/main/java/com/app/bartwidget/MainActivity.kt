@@ -106,6 +106,7 @@ private fun App(focused: String?, onFocus: (String?) -> Unit) {
     val c = context.container
     val starred by c.store.starred.collectAsStateWithLifecycle(emptyList())
     val snapshot by c.store.snapshot.collectAsStateWithLifecycle(Snapshot())
+    val lines by c.store.lines.collectAsStateWithLifecycle(emptySet())
     var now by remember { mutableLongStateOf(c.clock()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -115,6 +116,8 @@ private fun App(focused: String?, onFocus: (String?) -> Unit) {
     }
     val refresh: () -> Unit = { scope.launch { c.refresher.refresh(); now = c.clock() } }
     val toggle: (String) -> Unit = { abbr -> scope.launch { c.store.toggle(abbr); c.refresher.refresh() } }
+    // The widget redraws from the store; nothing to fetch.
+    val toggleLine: (String) -> Unit = { key -> scope.launch { c.store.toggleLine(key); c.updateWidgets() } }
     BackHandler(enabled = focused != null) { onFocus(null) }
 
     Scaffold(
@@ -137,12 +140,18 @@ private fun App(focused: String?, onFocus: (String?) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (focused != null) {
-                item { BoardCard(focused, snapshot.boards[focused], now, showName = false, onClick = null) }
-                if (focused !in starred) item { Text("Star this station to keep it on the widget.", style = MaterialTheme.typography.bodyMedium) }
+                item {
+                    Text(
+                        if (focused !in starred) "Star this station to keep it on the widget."
+                        else "Star the lines you take: the widget shows those, and the rest behind \u201cmore\u201d.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                item { BoardCard(focused, snapshot.boards[focused], lines, toggleLine, now, showName = false, onClick = null) }
                 return@LazyColumn
             }
             items(starred, key = { "board-$it" }) { abbr ->
-                BoardCard(abbr, snapshot.boards[abbr], now, showName = true, onClick = { onFocus(abbr) })
+                BoardCard(abbr, snapshot.boards[abbr], lines, toggleLine, now, showName = true, onClick = { onFocus(abbr) })
             }
             item {
                 FilledTonalButton(onClick = { context.startActivity(parkingIntent(context)) }, Modifier.fillMaxWidth()) {
@@ -172,7 +181,15 @@ private fun StarButton(abbr: String, starred: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun BoardCard(abbr: String, board: Board?, now: Long, showName: Boolean, onClick: (() -> Unit)?) {
+private fun BoardCard(
+    abbr: String,
+    board: Board?,
+    lines: Set<String>,
+    onToggleLine: (String) -> Unit,
+    now: Long,
+    showName: Boolean,
+    onClick: (() -> Unit)?,
+) {
     Card(Modifier.fillMaxWidth().testTag("board-$abbr").let { if (onClick != null) it.clickable(onClick = onClick) else it }) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (showName) Text(stationName(abbr), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -183,14 +200,19 @@ private fun BoardCard(abbr: String, board: Board?, now: Long, showName: Boolean,
                 board.error != null -> Text(board.error, color = MaterialTheme.colorScheme.error)
                 else -> Text("Updated ${formatClock(board.fetchedAt)}", color = muted, style = MaterialTheme.typography.bodySmall)
             }
-            val rows = board?.let { destinationRows(it.trains, now) } ?: emptyList()
+            val rows = board?.let { starredFirst(destinationRows(it.trains, now), abbr, lines) } ?: emptyList()
             if (board != null && rows.isEmpty() && board.error == null) Text("No trains right now", color = muted)
             rows.forEach { row ->
                 Column {
+                    val key = lineKey(abbr, row)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(10.dp).background(parseHex(row.hexColor), CircleShape))
                         Spacer(Modifier.width(8.dp))
-                        Text(row.destination, style = MaterialTheme.typography.titleMedium)
+                        Text(row.destination, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                        IconButton(onClick = { onToggleLine(key) }, modifier = Modifier.size(36.dp).testTag("line-$key")) {
+                            if (key in lines) Icon(Icons.Filled.Star, "Unstar ${row.destination} line", tint = Color(0xFFF2B01E))
+                            else Icon(Icons.Outlined.StarBorder, "Star ${row.destination} line", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                     Text(
                         row.trains.joinToString("   ") { t ->

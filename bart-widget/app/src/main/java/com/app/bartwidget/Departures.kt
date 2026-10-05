@@ -21,6 +21,8 @@ data class Train(
     val hexColor: String,
     val cars: Int,
     val delayed: Boolean,
+    /** BART's code for the destination ("ANTC"); with the station, it names a line to star. */
+    val destAbbr: String = "",
 )
 
 @Serializable
@@ -35,7 +37,12 @@ data class Board(
 @Serializable
 data class Snapshot(val boards: Map<String, Board> = emptyMap())
 
-data class DestinationRow(val destination: String, val hexColor: String, val trains: List<Train>)
+data class DestinationRow(val destination: String, val hexColor: String, val trains: List<Train>) {
+    val key: String get() = trains.first().destAbbr.ifEmpty { destination }
+}
+
+/** A line is a destination from a station: Antioch from Montgomery isn't Antioch from 12th St. */
+fun lineKey(station: String, row: DestinationRow) = "$station:${row.key}"
 
 /**
  * Parses an etd.aspx JSON response. BART's JSON is converted from XML, so a list with one entry
@@ -46,6 +53,7 @@ fun parseEtd(json: String, fetchedAt: Long): List<Train> {
     return listOf(root["station"]).flatMap(::items).flatMap { station ->
         items(station.jsonObject["etd"]).flatMap { etd ->
             val dest = etd.jsonObject.string("destination") ?: "?"
+            val destAbbr = etd.jsonObject.string("abbreviation") ?: ""
             items(etd.jsonObject["estimate"]).mapNotNull { e ->
                 val est = e.jsonObject
                 val minutes = est.string("minutes")?.let { if (it.equals("Leaving", true)) 0 else it.toIntOrNull() }
@@ -58,6 +66,7 @@ fun parseEtd(json: String, fetchedAt: Long): List<Train> {
                     hexColor = est.string("hexcolor") ?: "#888888",
                     cars = est.string("length")?.toIntOrNull() ?: 0,
                     delayed = (est.string("delay")?.toIntOrNull() ?: 0) > 0,
+                    destAbbr = destAbbr,
                 )
             }
         }
@@ -79,6 +88,31 @@ fun destinationRows(trains: List<Train>, now: Long): List<DestinationRow> =
         .groupBy { it.destination }
         .map { (dest, ts) -> DestinationRow(dest, ts.first().hexColor, ts) }
         .sortedBy { it.trains.first().departsAt }
+
+/** Starred lines first, then the rest; each group soonest first. */
+fun starredFirst(rows: List<DestinationRow>, station: String, lines: Set<String>): List<DestinationRow> =
+    rows.sortedBy { lineKey(station, it) !in lines }
+
+data class WidgetRows(val shown: List<DestinationRow>, val more: Int, val canCollapse: Boolean)
+
+/**
+ * What a station shows on the widget: its starred lines (none, if none has a train now), or with
+ * no lines starred its next [UNSTARRED_ROWS]; the rest behind "+N more". Expanded, every line.
+ */
+fun widgetRows(rows: List<DestinationRow>, station: String, lines: Set<String>, expanded: Boolean): WidgetRows {
+    val ordered = starredFirst(rows, station, lines)
+    val starredHere = lines.any { it.startsWith("$station:") }
+    val preferred = if (starredHere) ordered.filter { lineKey(station, it) in lines } else ordered.take(UNSTARRED_ROWS)
+    return when {
+        preferred.size == rows.size -> WidgetRows(ordered, 0, false)
+        expanded -> WidgetRows(ordered.take(MAX_ROWS), 0, true)
+        else -> WidgetRows(preferred, rows.size - preferred.size, false)
+    }
+}
+
+const val UNSTARRED_ROWS = 3
+// Glance allows ten children in a column; BART has at most eight destinations at a station.
+const val MAX_ROWS = 10
 
 private val clock = DateTimeFormatter.ofPattern("h:mm")
 

@@ -26,6 +26,14 @@ class StoreTest {
     }
 
     @Test
+    fun linesAreStarredAndUnstarred() = runTest {
+        store.toggleLine("MONT:ANTC")
+        store.toggleLine("12TH:SFIA")
+        store.toggleLine("MONT:ANTC")
+        assertEquals(setOf("12TH:SFIA"), store.lines.first())
+    }
+
+    @Test
     fun boardsSurviveARoundTrip() = runTest {
         val board = Board("MONT", 42, listOf(Train("Antioch", 99, "2", "#ffff33", 10, true)), error = "Couldn't refresh")
         store.saveSnapshot(Snapshot(mapOf("MONT" to board)))

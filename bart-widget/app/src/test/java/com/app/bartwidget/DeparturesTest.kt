@@ -71,6 +71,53 @@ class DeparturesTest {
         assertEquals(1, rows[1].trains.size)
     }
 
+    private val mont get() = destinationRows(parseEtd(FakeBart.fixture("etd-mont.json")!!, t0), t0)
+
+    @Test
+    fun linesAreNamedByStationAndDestinationCode() {
+        assertEquals(listOf("DALY", "SFIA", "BERY", "ANTC", "DUBL", "RICH", "PITT", "MLBR"), mont.map { it.key })
+        assertEquals("MONT:ANTC", lineKey("MONT", mont[3]))
+        // Boards saved before destination codes were kept fall back to the name.
+        assertEquals("Antioch", DestinationRow("Antioch", "#fff", listOf(Train("Antioch", 0, "1", "#fff", 8, false))).key)
+    }
+
+    @Test
+    fun withNoLinesStarredAStationShowsItsNextThree() {
+        val r = widgetRows(mont, "MONT", setOf("12TH:ANTC"), expanded = false)
+        assertEquals(listOf("DALY", "SFIA", "BERY"), r.shown.map { it.key })
+        assertEquals(5, r.more)
+    }
+
+    @Test
+    fun withLinesStarredOnlyThoseShow() {
+        val r = widgetRows(mont, "MONT", setOf("MONT:MLBR", "MONT:ANTC"), expanded = false)
+        assertEquals(listOf("ANTC", "MLBR"), r.shown.map { it.key })
+        assertEquals(6, r.more)
+    }
+
+    @Test
+    fun starredLinesWithoutTrainsShowNothingRatherThanOtherLines() {
+        val r = widgetRows(mont, "MONT", setOf("MONT:WARM"), expanded = false)
+        assertEquals(emptyList<DestinationRow>(), r.shown)
+        assertEquals(8, r.more)
+    }
+
+    @Test
+    fun expandedShowsEveryLineStarredFirstAndCanCollapse() {
+        val r = widgetRows(mont, "MONT", setOf("MONT:MLBR"), expanded = true)
+        assertEquals("MLBR", r.shown.first().key)
+        assertEquals(8, r.shown.size)
+        assertEquals(WidgetRows(r.shown, 0, true), r)
+    }
+
+    @Test
+    fun nothingToExpandWhenEveryLineAlreadyShows() {
+        val few = mont.take(3)
+        assertEquals(WidgetRows(few, 0, false), widgetRows(few, "MONT", emptySet(), expanded = true))
+        val all = mont.map { lineKey("MONT", it) }.toSet()
+        assertEquals(WidgetRows(mont, 0, false), widgetRows(mont, "MONT", all, expanded = false))
+    }
+
     @Test
     fun clockTimesAreLocalWallClock() {
         // 2026-10-05 07:33 in the Bay Area is 14:33 UTC.

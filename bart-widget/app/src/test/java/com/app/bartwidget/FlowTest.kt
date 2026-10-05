@@ -3,6 +3,7 @@ package com.app.bartwidget
 import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -12,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -118,6 +121,24 @@ class FlowTest {
         compose.waitUntil(5_000) {
             compose.onAllNodes(hasText("Star this station", substring = true)).fetchSemanticsNodes().isEmpty()
         }
+    }
+
+    @Test
+    fun starALineFromAStationsPageAndItComesFirst() {
+        star("MONT")
+        launch(station = "MONT")
+        compose.waitFor("Star the lines you take")
+        compose.onNodeWithTag("line-MONT:MLBR").performScrollTo().performClick()
+        compose.waitUntil(5_000) { runBlocking { store.lines.first() } == setOf("MONT:MLBR") }
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasContentDescription("Unstar Millbrae line")).fetchSemanticsNodes().isNotEmpty()
+        }
+        // Millbrae leaves last of Montgomery's lines but is listed first now.
+        val tops = listOf("Millbrae", "Daly City").map { compose.onNodeWithText(it).fetchSemanticsNode().boundsInRoot.top }
+        assertTrue(tops.toString(), tops[0] < tops[1])
+
+        compose.onNodeWithTag("line-MONT:MLBR").performScrollTo().performClick()
+        compose.waitUntil(5_000) { runBlocking { store.lines.first() }.isEmpty() }
     }
 
     @Test

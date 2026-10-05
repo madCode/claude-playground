@@ -11,10 +11,20 @@ out the door at the wrong time by an app that showed the station it thought they
   another station while the app is open switches to that one.
 - The widget lists starred stations in the order they were starred.
 
+## Lines
+
+- A line is a destination from a station: Antioch from Montgomery. Star it on the station's
+  page; it's per station, since the train you want from Montgomery isn't the one you want from
+  12th St. Starred lines are listed first in the app.
+- On the widget a station shows its starred lines only. With none starred, its next three.
+  "+N more" expands that station to every line, starred ones first; "Show less" folds it again.
+  Expanding is per widget and stays until folded.
+- Starred lines with no train right now show "No trains on your lines right now", not other
+  lines in their place.
+
 ## Times
 
-- The widget shows clock times ("7:33"), up to three per destination, five destinations per
-  station. A widget redraws only now and then, and "13 min" goes wrong as it ages while "7:33"
+- The widget shows clock times ("7:33"), up to three per line. A widget redraws only now and then, and "13 min" goes wrong as it ages while "7:33"
   doesn't. Trains that have left are dropped whenever it redraws.
 - The header says when the times were fetched ("Updated 7:20", the oldest of the stations).
 - The app shows clock time and minutes to go, counting down every 15 seconds, with platform,

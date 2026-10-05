@@ -26,6 +26,10 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
+import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.state.getAppWidgetState
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import org.robolectric.annotation.Config
 
 /** The widget's content, drawn by Glance's test host from recorded boards. */
@@ -46,22 +50,74 @@ class WidgetTest {
     fun eachStarredStationWithClockTimesInStarOrder() = runGlanceAppWidgetUnitTest {
         setAppWidgetSize(DpSize(320.dp, 600.dp))
         setContext(app)
-        provideComposable { WidgetContent(listOf("DUBL", "MONT"), snapshot(board("MONT"), board("DUBL")), MORNING, parking) }
+        provideComposable { WidgetContent(listOf("DUBL", "MONT"), emptySet(), emptySet(), snapshot(board("MONT"), board("DUBL")), MORNING, parking) }
 
         onNode(hasText("Updated 7:20")).assertExists()
-        // Once as a station, once as where Montgomery's trains are going.
-        onAllNodes(hasTextEqualTo("Dublin/Pleasanton")).assertCountEquals(2)
+        // The station; Montgomery's trains to Dublin are behind "+5 more".
+        onAllNodes(hasTextEqualTo("Dublin/Pleasanton")).assertCountEquals(1)
         onNode(hasTextEqualTo("Montgomery St.")).assertExists()
         // Dublin's one destination, three trains; never "in N min", which would go stale.
         onNode(hasText("7:20  7:39  7:59")).assertExists()
         onNode(hasText("SF Airport")).assertExists()
         onAllNodes(hasText("min")).assertCountEquals(0)
+        // With no lines starred, Montgomery shows its next three; Dublin has only one.
+        onNode(hasTextEqualTo("+5 more")).assertExists()
+        onAllNodes(hasText("more")).assertCountEquals(1)
+    }
+
+    @Test
+    fun aStationShowsOnlyItsStarredLines() = runGlanceAppWidgetUnitTest {
+        setContext(app)
+        provideComposable { WidgetContent(listOf("MONT"), setOf("MONT:ANTC", "MONT:MLBR", "12TH:SFIA"), emptySet(), snapshot(board("MONT")), MORNING, parking) }
+        onNode(hasTextEqualTo("Antioch")).assertExists()
+        onNode(hasTextEqualTo("Millbrae")).assertExists()
+        onNode(hasTextEqualTo("SF Airport")).assertDoesNotExist()
+        onNode(hasTextEqualTo("+6 more")).assertHasRunCallbackClickAction<ToggleExpandAction>(actionParametersOf(StationParam to "MONT"))
+    }
+
+    @Test
+    fun expandedAStationShowsEveryLineStarredFirst() = runGlanceAppWidgetUnitTest {
+        setAppWidgetSize(DpSize(320.dp, 600.dp))
+        setContext(app)
+        provideComposable { WidgetContent(listOf("MONT"), setOf("MONT:MLBR"), setOf("MONT"), snapshot(board("MONT")), MORNING, parking) }
+        for (dest in listOf("Millbrae", "Daly City", "SF Airport", "Berryessa", "Antioch", "Dublin/Pleasanton", "Richmond", "Pittsburg/Bay Point")) {
+            onNode(hasTextEqualTo(dest)).assertExists()
+        }
+        onNode(hasTextEqualTo("Show less")).assertHasRunCallbackClickAction<ToggleExpandAction>(actionParametersOf(StationParam to "MONT"))
+    }
+
+    @Test
+    fun starredLinesWithNoTrainsSaySoRatherThanShowOthers() = runGlanceAppWidgetUnitTest {
+        setContext(app)
+        provideComposable { WidgetContent(listOf("DUBL"), setOf("DUBL:WARM"), emptySet(), snapshot(board("DUBL")), MORNING, parking) }
+        onNode(hasText("No trains on your lines right now")).assertExists()
+        onNode(hasTextEqualTo("Daly City")).assertDoesNotExist()
+        onNode(hasTextEqualTo("+1 more")).assertExists()
+    }
+
+    @Test
+    fun moreExpandsThatStationOnThatWidgetAndLessCollapsesIt() = runBlocking {
+        val manager = android.appwidget.AppWidgetManager.getInstance(app)
+        shadowOf(manager).addInstalledProvider(
+            android.appwidget.AppWidgetProviderInfo().apply { provider = android.content.ComponentName(app, BartWidgetReceiver::class.java) },
+        )
+        // Bound without the update broadcast createWidget sends, whose goAsync Robolectric can't finish.
+        val id = android.appwidget.AppWidgetHost(app, 1).allocateAppWidgetId()
+        manager.bindAppWidgetIdIfAllowed(id, android.content.ComponentName(app, BartWidgetReceiver::class.java))
+        val glanceId = GlanceAppWidgetManager(app).getGlanceIdBy(id)
+        suspend fun expanded() = getAppWidgetState(app, PreferencesGlanceStateDefinition, glanceId)[ExpandedKey] ?: emptySet()
+
+        ToggleExpandAction().onAction(app, glanceId, actionParametersOf(StationParam to "MONT"))
+        assertEquals(setOf("MONT"), expanded())
+        ToggleExpandAction().onAction(app, glanceId, actionParametersOf(StationParam to "DUBL"))
+        ToggleExpandAction().onAction(app, glanceId, actionParametersOf(StationParam to "MONT"))
+        assertEquals(setOf("DUBL"), expanded())
     }
 
     @Test
     fun tappingAStationOpensThatStation() = runGlanceAppWidgetUnitTest {
         setContext(app)
-        provideComposable { WidgetContent(listOf("MONT", "DUBL"), snapshot(board("MONT"), board("DUBL")), MORNING, parking) }
+        provideComposable { WidgetContent(listOf("MONT", "DUBL"), emptySet(), emptySet(), snapshot(board("MONT"), board("DUBL")), MORNING, parking) }
         for (abbr in listOf("MONT", "DUBL")) {
             onNode(hasStartActivityClickAction<MainActivity>(actionParametersOf(StationParam to abbr))).assertExists()
         }
@@ -70,7 +126,7 @@ class WidgetTest {
     @Test
     fun refreshAndParkingButtons() = runGlanceAppWidgetUnitTest {
         setContext(app)
-        provideComposable { WidgetContent(listOf("MONT"), snapshot(board("MONT")), MORNING, parking) }
+        provideComposable { WidgetContent(listOf("MONT"), emptySet(), emptySet(), snapshot(board("MONT")), MORNING, parking) }
         onNode(hasTextEqualTo("Refresh")).assertHasRunCallbackClickAction<RefreshAction>()
         onNode(hasTextEqualTo("Parking")).assertHasStartActivityClickAction(parking)
     }
@@ -78,7 +134,7 @@ class WidgetTest {
     @Test
     fun trainsThatHaveLeftAreHidden() = runGlanceAppWidgetUnitTest {
         setContext(app)
-        provideComposable { WidgetContent(listOf("DUBL"), snapshot(board("DUBL")), MORNING + 25 * 60_000, parking) }
+        provideComposable { WidgetContent(listOf("DUBL"), emptySet(), emptySet(), snapshot(board("DUBL")), MORNING + 25 * 60_000, parking) }
         onNode(hasTextEqualTo("7:59")).assertExists()
     }
 
@@ -86,7 +142,7 @@ class WidgetTest {
     fun aStaleBoardSaysWhenItsTimesAreFrom() = runGlanceAppWidgetUnitTest {
         setContext(app)
         provideComposable {
-            WidgetContent(listOf("DUBL"), snapshot(board("DUBL", error = Refresher.STALE)), MORNING + 60_000, parking)
+            WidgetContent(listOf("DUBL"), emptySet(), emptySet(), snapshot(board("DUBL", error = Refresher.STALE)), MORNING + 60_000, parking)
         }
         onNode(hasText("Couldn't refresh: times from 7:20")).assertExists()
         onNode(hasText("7:39  7:59")).assertExists()
@@ -97,7 +153,7 @@ class WidgetTest {
         setContext(app)
         val never = Board("MONT", 0, emptyList(), Refresher.STALE)
         val empty = Board("WARM", MORNING, emptyList())
-        provideComposable { WidgetContent(listOf("MONT", "WARM", "12TH"), snapshot(never, empty), MORNING, parking) }
+        provideComposable { WidgetContent(listOf("MONT", "WARM", "12TH"), emptySet(), emptySet(), snapshot(never, empty), MORNING, parking) }
         onNode(hasTextEqualTo("Couldn't refresh")).assertExists()
         onNode(hasTextEqualTo("No trains")).assertExists()
         onNode(hasText("Loading…")).assertExists()
@@ -108,7 +164,7 @@ class WidgetTest {
     @Test
     fun withNoStarsItAsksForSome() = runGlanceAppWidgetUnitTest {
         setContext(app)
-        provideComposable { WidgetContent(emptyList(), Snapshot(), MORNING, parking) }
+        provideComposable { WidgetContent(emptyList(), emptySet(), emptySet(), Snapshot(), MORNING, parking) }
         onNode(hasTextEqualTo("BART")).assertExists()
         onNode(hasText("Tap to star your stations")).assertOpens<MainActivity>()
     }

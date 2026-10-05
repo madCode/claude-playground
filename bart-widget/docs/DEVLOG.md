@@ -7,6 +7,14 @@ What each change shipped and why. Newest first.
 
 ## Mon 5 Oct
 
+### Star lines; the rest behind "+N more"
+- **Why:** eight lines at Montgomery is a lot of widget for the one train you take.
+- **Shipped:** star lines on a station's page; the widget shows just those, or the next three
+  when none are starred, with "+N more" to expand a station and "Show less" to fold it, per
+  widget. Starred lines with no trains say so rather than showing others.
+- **Tests:** the rules in `DeparturesTest`, the widget's rows and toggles in `WidgetTest`
+  (expanding goes through a widget bound in Robolectric), starring a line in `FlowTest`.
+
 ### Tests, end to end, and what they caught
 - **Shipped:** a fake BART server answering with boards recorded from the real API, and tests
   through the real app, the widget, the refresh and the background worker: 46 tests, 98% line

@@ -39,28 +39,44 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.currentState
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import kotlinx.coroutines.flow.first
 
 val StationParam = ActionParameters.Key<String>("station")
 
+/** Stations expanded to show every line, per widget: two widgets can differ. */
+val ExpandedKey = stringSetPreferencesKey("expanded")
+
 class BartWidget : GlanceAppWidget() {
+    override val stateDefinition = PreferencesGlanceStateDefinition
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val c = context.container
-        val starredFlow = c.store.starred
-        val snapshotFlow = c.store.snapshot
-        val firstStarred = starredFlow.first()
-        val firstSnapshot = snapshotFlow.first()
+        val first = Triple(c.store.starred.first(), c.store.lines.first(), c.store.snapshot.first())
         val parking = parkingIntent(context)
         provideContent {
-            val starred by starredFlow.collectAsState(firstStarred)
-            val snapshot by snapshotFlow.collectAsState(firstSnapshot)
-            GlanceTheme { WidgetContent(starred, snapshot, c.clock(), parking) }
+            val starred by c.store.starred.collectAsState(first.first)
+            val lines by c.store.lines.collectAsState(first.second)
+            val snapshot by c.store.snapshot.collectAsState(first.third)
+            val expanded = currentState<Preferences>()[ExpandedKey] ?: emptySet()
+            GlanceTheme { WidgetContent(starred, lines, expanded, snapshot, c.clock(), parking) }
         }
     }
 }
 
 @Composable
-internal fun WidgetContent(starred: List<String>, snapshot: Snapshot, now: Long, parking: android.content.Intent) {
+internal fun WidgetContent(
+    starred: List<String>,
+    lines: Set<String>,
+    expanded: Set<String>,
+    snapshot: Snapshot,
+    now: Long,
+    parking: android.content.Intent,
+) {
     val text = GlanceTheme.colors.onSurface
     val muted = GlanceTheme.colors.onSurfaceVariant
     Column(
@@ -88,39 +104,57 @@ internal fun WidgetContent(starred: List<String>, snapshot: Snapshot, now: Long,
         }
         LazyColumn(GlanceModifier.fillMaxWidth().defaultWeight()) {
             items(starred, itemId = { it.hashCode().toLong() }) { abbr ->
-                StationBlock(abbr, snapshot.boards[abbr], now)
+                StationBlock(abbr, snapshot.boards[abbr], lines, abbr in expanded, now)
             }
         }
     }
 }
 
 @Composable
-private fun StationBlock(abbr: String, board: Board?, now: Long) {
+private fun StationBlock(abbr: String, board: Board?, lines: Set<String>, expanded: Boolean, now: Long) {
     val text = GlanceTheme.colors.onSurface
     val muted = GlanceTheme.colors.onSurfaceVariant
     // Tapping opens this station, always: never the one the phone guesses is nearest.
     val open = actionStartActivity<MainActivity>(actionParametersOf(StationParam to abbr))
-    Column(GlanceModifier.fillMaxWidth().padding(vertical = 4.dp).clickable(open)) {
-        Text(stationName(abbr), style = TextStyle(color = text, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-        val rows = board?.let { destinationRows(it.trains, now) } ?: emptyList()
-        when {
-            board == null -> Text("Loading…", style = TextStyle(color = muted, fontSize = 12.sp))
-            rows.isEmpty() -> Text(board.error ?: "No trains", style = TextStyle(color = muted, fontSize = 12.sp))
-            else -> {
-                if (board.error != null) Text("${board.error}: times from ${formatClock(board.fetchedAt)}", style = TextStyle(color = muted, fontSize = 11.sp))
-                rows.take(5).forEach { row ->
-                    Row(GlanceModifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(GlanceModifier.size(8.dp).cornerRadius(4.dp).background(lineColor(row.hexColor))) {}
-                        Spacer(GlanceModifier.width(6.dp))
-                        Text(row.destination, GlanceModifier.defaultWeight(), style = TextStyle(color = text, fontSize = 13.sp), maxLines = 1)
-                        Text(
-                            row.trains.take(3).joinToString("  ") { formatClock(it.departsAt) },
-                            style = TextStyle(color = text, fontSize = 13.sp, fontWeight = FontWeight.Medium),
-                        )
+    val rows = board?.let { destinationRows(it.trains, now) } ?: emptyList()
+    val show = widgetRows(rows, abbr, lines, expanded)
+    Column(GlanceModifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Column(GlanceModifier.fillMaxWidth().clickable(open)) {
+            Text(stationName(abbr), style = TextStyle(color = text, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            when {
+                board == null -> Text("Loading…", style = TextStyle(color = muted, fontSize = 12.sp))
+                rows.isEmpty() -> Text(board.error ?: "No trains", style = TextStyle(color = muted, fontSize = 12.sp))
+                else -> {
+                    if (board.error != null) Text("${board.error}: times from ${formatClock(board.fetchedAt)}", style = TextStyle(color = muted, fontSize = 11.sp))
+                    if (show.shown.isEmpty()) Text("No trains on your lines right now", style = TextStyle(color = muted, fontSize = 12.sp))
+                    Column(GlanceModifier.fillMaxWidth()) {
+                        show.shown.forEach { row -> TrainRow(row) }
                     }
                 }
             }
         }
+        if (show.more > 0 || show.canCollapse) {
+            val toggle = actionRunCallback<ToggleExpandAction>(actionParametersOf(StationParam to abbr))
+            Text(
+                if (show.canCollapse) "Show less" else "+${show.more} more",
+                GlanceModifier.padding(top = 2.dp, bottom = 2.dp).clickable(toggle),
+                style = TextStyle(color = GlanceTheme.colors.primary, fontSize = 12.sp, fontWeight = FontWeight.Medium),
+            )
+        }
+    }
+}
+
+@Composable
+private fun TrainRow(row: DestinationRow) {
+    val text = GlanceTheme.colors.onSurface
+    Row(GlanceModifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(GlanceModifier.size(8.dp).cornerRadius(4.dp).background(lineColor(row.hexColor))) {}
+        Spacer(GlanceModifier.width(6.dp))
+        Text(row.destination, GlanceModifier.defaultWeight(), style = TextStyle(color = text, fontSize = 13.sp), maxLines = 1)
+        Text(
+            row.trains.take(3).joinToString("  ") { formatClock(it.departsAt) },
+            style = TextStyle(color = text, fontSize = 13.sp, fontWeight = FontWeight.Medium),
+        )
     }
 }
 
@@ -139,6 +173,18 @@ fun lineColor(hex: String): ColorProvider =
 class RefreshAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         context.container.refresher.refresh()
+    }
+}
+
+/** "+N more" and "Show less": expands or collapses one station on the widget that was tapped. */
+class ToggleExpandAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val station = parameters[StationParam] ?: return
+        updateAppWidgetState(context, glanceId) { prefs ->
+            val now = prefs[ExpandedKey] ?: emptySet()
+            prefs[ExpandedKey] = if (station in now) now - station else now + station
+        }
+        BartWidget().update(context, glanceId)
     }
 }
 
