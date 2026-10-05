@@ -203,7 +203,12 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
      */
     suspend fun editPost(post: CachedPost): Long? {
         val account = container.accounts.current() ?: return null
-        container.drafts.openEditOf(post.path, account.blogKey)?.let { return it.id }
+        container.drafts.openEditOf(post.path, account.blogKey)?.let { open ->
+            // One never changed (left when the app closed under it) holds nothing of the writer's,
+            // only an older copy of the post: GitHub's is fetched instead.
+            if (!open.unchangedEdit) return open.id
+            container.drafts.deleteIfUnchangedEdit(open.id)
+        }
         // The text and its sha from the branch now, not the list's cache, which may be older.
         val file = try {
             container.blogs.blog(account).file(post.path)
@@ -220,8 +225,12 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
             status.update { it.copy(error = "This post's front matter isn't valid YAML, so the app can't edit it safely. Fix it on GitHub first.") }
             return null
         }
+        // One clock reading for both: a draft whose times still agree was never changed.
+        val now = System.currentTimeMillis()
         return container.drafts.insert(
             Draft(
+                createdAt = now,
+                updatedAt = now,
                 blog = account.blogKey,
                 title = doc.string("title") ?: post.title,
                 body = doc.text,
@@ -242,7 +251,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 }
 
 /** A new post nothing was written in yet: not shown on the list. */
-private val Draft.untouched: Boolean get() = isEmpty && state == PostState.Draft && editingPath == null
+private val Draft.untouched: Boolean get() = (isEmpty && state == PostState.Draft && editingPath == null) || unchangedEdit
 
 /** A post matches a search by its title, or by one of its categories or tags. */
 private fun CachedPost.matches(query: String): Boolean =

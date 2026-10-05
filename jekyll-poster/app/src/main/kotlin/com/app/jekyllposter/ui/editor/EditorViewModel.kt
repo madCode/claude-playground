@@ -388,6 +388,9 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val mine = text ?: return
         val stored = container.drafts.get(id) ?: return
         if (stored.state != PostState.Draft && stored.state != PostState.Failed) return
+        val saved = stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, extraFrontMatter = mine.extraFrontMatter, noteDate = mine.noteDate)
+        // Nothing changed: no write, so an edit opened and left alone still reads as unchanged.
+        if (saved == stored) return
         container.drafts.update(stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, extraFrontMatter = mine.extraFrontMatter, noteDate = mine.noteDate, updatedAt = System.currentTimeMillis()))
     }
 
@@ -466,6 +469,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             saveJob?.cancel()
             save()
             container.drafts.get(id)?.let { if (it.isEmpty && it.state == PostState.Draft) container.drafts.delete(id) }
+            container.drafts.deleteIfUnchangedEdit(id)
             flags.update { it.copy(closed = true) }
         }
     }

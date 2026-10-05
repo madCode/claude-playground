@@ -104,6 +104,12 @@ data class Draft(
         get() = extraFrontMatter?.takeIf { it != extraFrontMatterOpened }?.let { com.app.jekyllposter.core.jekyll.extraFrontMatterProblem(it) }
 
     val isEmpty: Boolean get() = title.isBlank() && body.isBlank() && extraFrontMatter.isNullOrBlank() && images.isEmpty()
+
+    /**
+     * An edit of a blog post opened and never changed: nothing of the writer's to keep, and listing
+     * it would show the post twice. Saves only happen on a change, so its times still agree.
+     */
+    val unchangedEdit: Boolean get() = editingPath != null && state == PostState.Draft && updatedAt == createdAt
 }
 
 /** A photo added to a post: prepared on the phone, uploaded in the post's commit. */
@@ -147,6 +153,13 @@ interface DraftDao {
 
     @Query("SELECT * FROM drafts WHERE editingPath = :path AND blog = :blog AND state != 'Published' LIMIT 1")
     suspend fun openEditOf(path: String, blog: String): Draft?
+
+    /**
+     * Deletes the draft only if it's still an edit opened and never changed ([Draft.unchangedEdit]),
+     * in one statement: an Update or Delete queued from it in the same moment must not be lost.
+     */
+    @Query("DELETE FROM drafts WHERE id = :id AND editingPath IS NOT NULL AND state = 'Draft' AND updatedAt = createdAt")
+    suspend fun deleteIfUnchangedEdit(id: Long)
 
     /**
      * The phone's published records of the post now at [path] (where publishing put it, whether
