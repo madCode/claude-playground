@@ -65,7 +65,16 @@ class ObsidianNoteTest {
         val note = convert("---\ncategory: thingy\njekyll-tags: personal-philosophy, jumping\nfind: [jekyll-tags]\nreplace: [tags]\n---\nx\n")
         assertEquals(listOf("personal-philosophy", "jumping"), note.tags)
         assertEquals(listOf("thingy"), note.categories)
-        assertEquals(listOf("a", "b", "c"), convert("---\ntags: [a, \"b,c\", '#a']\n---\nx\n").tags)
+        // Commas, not spaces, when there are commas: as Obsidian reads it.
+        assertEquals(listOf("Web Development", "Design"), convert("---\ncategories: Web Development, Design\n---\nx\n").categories)
+        // Without one, Jekyll's spaces.
+        assertEquals(listOf("walking", "weekend"), convert("---\ntags: walking weekend\n---\nx\n").tags)
+    }
+
+    @Test fun aNameWithACommaIsKeptWhereItsWrittenAsOne() {
+        // A list item, quoted, is one name; so is the singular key, which Jekyll takes whole.
+        assertEquals(listOf("Books, Films", "a"), convert("---\ncategories: [\"Books, Films\", '#a']\n---\nx\n").categories)
+        assertEquals(listOf("Books, Films"), convert("---\ncategory: Books, Films\n---\nx\n").categories)
     }
 
     @Test fun aFirstHeadingIsTheTitleWhenThereIsNoOther() {

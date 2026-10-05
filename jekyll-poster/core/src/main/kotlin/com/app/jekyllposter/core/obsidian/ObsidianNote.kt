@@ -87,8 +87,8 @@ object ObsidianNote {
                 body = body.substring(m.range.last + 1).trimStart('\n')
             }
         }
-        val categories = noteTerms(doc.terms("category", "categories"))
-        val tags = noteTerms(doc.terms("tag", "tags"))
+        val categories = noteTerms(doc, "category", "categories")
+        val tags = noteTerms(doc, "tag", "tags")
         val date = doc.string("date")?.trim()?.takeIf { it.isNotEmpty() }
         dropped.forEach { doc.set(it, null) }
         val extra = doc.others(PostWriter.MANAGED).takeIf { it.isNotBlank() }
@@ -100,12 +100,22 @@ object ObsidianNote {
     }
 
     /**
-     * Categories or tags as a note means them. A comma separates them too, as in Obsidian:
-     * `tags: personal-philosophy, jumping` is two tags, where Jekyll alone would keep the comma on
-     * the first. A leading `#`, Obsidian's way of writing a tag, goes.
+     * Categories or tags as a note means them: as Jekyll reads them, except that a plain string
+     * under the plural key with a comma in it is split on commas alone, as Obsidian does
+     * (`tags: personal-philosophy, jumping` is two tags, `Web Development, Design` two categories),
+     * where Jekyll would split on spaces and keep the commas. A YAML list keeps each item whole,
+     * comma or not, and so does the singular key: that's how a name with a comma is written. A
+     * leading `#`, Obsidian's way of writing a tag, goes.
      */
-    private fun noteTerms(terms: List<String>): List<String> =
-        terms.flatMap { it.split(',') }.map { it.trim().removePrefix("#") }.filter { it.isNotEmpty() }.distinct()
+    private fun noteTerms(doc: FrontMatterDocument, singular: String, plural: String): List<String> {
+        val value = doc.values()[plural]
+        val terms = if (!doc.values().containsKey(singular) && value is String && value.contains(',')) {
+            value.split(',')
+        } else {
+            doc.terms(singular, plural)
+        }
+        return terms.map { it.trim().removePrefix("#").trim() }.filter { it.isNotEmpty() }.distinct()
+    }
 
     /** Whether [name] is a file an image embed can name, by its extension. */
     fun isImage(name: String): Boolean = name.substringAfterLast('.', "").lowercase() in imageExtensions
