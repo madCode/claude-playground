@@ -38,6 +38,8 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
         val siteZone: String? = null,
         val phoneZone: String = "",
         val settingZone: Boolean = false,
+        /** The zone being set, while [settingZone]. */
+        val zoneBeingSet: String? = null,
         /** Set here and landed, shown while the blog as last read still has [zoneBefore]. */
         val committedZone: String? = null,
         val zoneBefore: String? = null,
@@ -105,7 +107,7 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
      */
     fun useZone(zone: String) {
         if (local.value.settingZone) return
-        local.update { it.copy(settingZone = true, message = null) }
+        local.update { it.copy(settingZone = true, zoneBeingSet = zone, message = null) }
         viewModelScope.launch {
             val message = try {
                 val blog = container.blogs.blog() ?: error("Sign in to change the blog.")
@@ -133,7 +135,7 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
             } catch (e: Exception) {
                 e.message ?: "Couldn't change the time zone."
             }
-            local.update { it.copy(settingZone = false, message = message) }
+            local.update { it.copy(settingZone = false, zoneBeingSet = null, message = message) }
         }
     }
 

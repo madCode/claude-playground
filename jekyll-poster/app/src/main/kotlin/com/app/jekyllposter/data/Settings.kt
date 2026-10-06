@@ -50,6 +50,8 @@ class Settings(private val store: DataStore<Preferences>) {
                 it[noReplyLoginKey] = login
                 it[noReplyEmailKey] = author.email
             }
+            // Kept by earlier versions, and maybe a real name: not needed any more.
+            it.remove(stringPreferencesKey("no_reply_name"))
         }
     }
 

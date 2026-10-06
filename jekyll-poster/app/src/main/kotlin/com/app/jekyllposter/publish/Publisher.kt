@@ -316,11 +316,12 @@ class Publisher(
         val zone = index.config.timezone
         // A note's own date wins (a post written months ago keeps its day), read here, where the
         // site's zone is known: a bare day is midnight there, as Jekyll reads it.
-        val noted = draft.noteDate?.let { parseJekyllDate(it, zone ?: java.time.ZoneOffset.UTC) }?.let { d -> zone?.let { d.withZoneSameInstant(it) } ?: d }
-        // By the day alone, today is the day where Jekyll builds (UTC without a site zone), so
-        // the post is never in the future there: Jekyll would hide it until that day began.
+        // By the day alone, the day is taken where Jekyll builds (UTC without a site zone), for a
+        // note's own date too: a day ahead of it there is in the future, and Jekyll hides the post.
         val dayOnly = !toDrafts && settings.datesByDayOnly()
-        val date = noted ?: (zone ?: java.time.ZoneOffset.UTC.takeIf { dayOnly })?.let { now().withZoneSameInstant(it) } ?: now()
+        val where = zone ?: java.time.ZoneOffset.UTC.takeIf { dayOnly }
+        val noted = draft.noteDate?.let { parseJekyllDate(it, zone ?: java.time.ZoneOffset.UTC) }?.let { d -> where?.let { d.withZoneSameInstant(it) } ?: d }
+        val date = noted ?: where?.let { now().withZoneSameInstant(it) } ?: now()
         val slug = Slug.of(draft.title).ifEmpty { "post" }
         fun at(s: String) = if (toDrafts) PostPath.newDraft(s).path else PostPath.newPost(date.toLocalDate(), s).path
         val urls = if (toDrafts) emptySet() else index.posts.filterNot { it.path.isDraft }.mapNotNull { post ->

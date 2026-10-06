@@ -37,7 +37,9 @@ class NotifierTest {
     @Test fun aFailedBuildSaysWhereToLook() {
         shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
         Notifier(app).buildFinished(live.copy(buildState = BuildState.Failed))
-        assertTrue(shadowOf(shadowOf(manager).allNotifications.single()).contentText.contains("Actions"))
+        val n = shadowOf(manager).allNotifications.single()
+        assertTrue(shadowOf(n).contentText.contains("Actions"))
+        assertEquals("Your site didn't rebuild", n.publicVersion.extras.getCharSequence(android.app.Notification.EXTRA_TITLE).toString())
     }
 
     @Test fun withoutPermissionNothingIsPosted() {

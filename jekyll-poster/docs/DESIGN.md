@@ -163,7 +163,8 @@ doesn't want to open a laptop and make a commit for every post.
 - A new post becomes `_posts/<date>-<slug>.md`, dated in the site's `timezone` when
   `_config.yml` sets one (`2026-10-04 22:15:00 -0700`): the same day Jekyll will give it, and no
   hint of where the writer is. Without one, the phone's offset, so the site builds it on the day
-  the writer meant. A shared note's own date is used instead of now (see From Obsidian).
+  the writer meant; or, dating by the day only, the day in UTC (see Blog & privacy). A shared
+  note's own date is used instead of now (see From Obsidian).
   `layout: post` is added only when `_config.yml` doesn't default posts to a layout.
 - The name avoids files already on the branch (`-2`) and existing posts' addresses: under
   `/:title/`, two posts of the same title would overwrite each other.
@@ -233,11 +234,16 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
 - **Commit with your no-reply email**, off: commits then name no author, and GitHub uses the
   account's own email setting. On, they're signed `<login> <<id>+<login>@users.noreply.github.com>`:
   the login, never the profile's name, which may be a real one.
-- **Date posts by the day only**, off: new posts get `date: 2026-10-04`, with no time and no
-  offset, so they say neither when they went out nor where the writer is.
-  - The day is the site's (UTC without a site zone), where Jekyll builds: a post is never in its
-    future, hidden until that day.
-  - Fixed on the first try, like the file name: a retry writes the same date.
+- **Date posts by the day only**, off: new posts get the minute and an offset. On, they get
+  `date: 2026-10-04`, so the post's date says neither the time it went out nor the writer's
+  time zone. (The commit that adds it still carries the time on GitHub.)
+  - The day is the site's (UTC without a site zone), where Jekyll builds, for a note's own date
+    too: a post is never in its future, hidden until that day.
+  - Fixed on the first try, like the file name: a retry writes the same date. A site zone set
+    between two tries of the same post can still put that day ahead; rare, and the next push
+    shows the post.
+  - Same-day posts all sit at midnight, so the site lists them by file name, not by the order
+    they went out.
 - **The site's time zone**, from `_config.yml`, with **Use UTC** first ("dates won't say where
   you are") and **Use** the phone's zone second: an IANA name like `Europe/Lisbon` in a public
   `_config.yml` says more than a date's offset does.

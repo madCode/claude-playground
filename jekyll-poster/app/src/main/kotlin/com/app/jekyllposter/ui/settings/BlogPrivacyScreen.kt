@@ -88,9 +88,10 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
             )
             // UTC first: a zone's name in _config.yml (Europe/Lisbon) says more about where you
             // are than any post's date does.
-            for (option in listOf(UTC, state.phoneZone).distinct().filter { it != zone }) {
+            // `Etc/UTC` or `GMT` is UTC already: offering it again would commit a change to nothing.
+            for (option in listOf(UTC, state.phoneZone).distinctBy(::sameZone).filter { sameZone(it) != zone?.let(::sameZone) }) {
                 Row(
-                    if (state.settingZone) "Setting the time zone…" else "Use $option",
+                    if (state.zoneBeingSet == option) "Setting the time zone…" else "Use $option",
                     if (option == UTC) "Dates won't say where you are. Saved in the blog's _config.yml."
                     else "This phone's time zone, saved in the blog's _config.yml, where anyone can read it.",
                     onClick = if (state.settingZone) null else ({ confirmZone = option }),
@@ -147,3 +148,7 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
 }
 
 private const val UTC = "UTC"
+
+/** [id], or [UTC] for any name of it. */
+private fun sameZone(id: String): String =
+    if (runCatching { java.time.ZoneId.of(id).normalized() == java.time.ZoneOffset.UTC }.getOrDefault(false)) UTC else id

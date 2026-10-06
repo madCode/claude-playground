@@ -111,6 +111,34 @@ class PublisherTest {
         assertTrue(github.text("_posts/2026-10-05-late.md")!!.contains("date: 2026-10-05\n"))
     }
 
+    @Test fun byTheDayOnlyANotesOwnDateIsItsDayWhereJekyllBuilds() = runBlocking {
+        github.push("No zone", mapOf("_config.yml" to github.text("_config.yml")!!.lines().filterNot { it.startsWith("timezone:") }.joinToString("\n")))
+        c.blogs.refresh()
+        c.settings.setDatesByDayOnly(true)
+        // Morning of the 5th in Tokyo is still the 4th in UTC: the 5th would be a future day there.
+        publisher.publish(queue(Draft(title = "Tokyo morning", body = "x", noteDate = "2026-10-05T08:00:00+09:00")))
+        assertTrue(github.text("_posts/2026-10-04-tokyo-morning.md")!!.contains("date: 2026-10-04\n"))
+    }
+
+    @Test fun byTheDayOnlyAJekyllDraftIsPublishedWithItsDay() = runBlocking {
+        c.blogs.refresh()
+        c.settings.setDatesByDayOnly(true)
+        val path = "_drafts/garden-plans.md"
+        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        publisher.publish(queue(Draft(title = "Garden plans", body = "Beans.", editingPath = path, baseSha = sha, destination = Destination.Posts)))
+        assertTrue(github.text("_posts/2026-10-04-garden-plans.md")!!.contains("date: 2026-10-04\n"))
+    }
+
+    @Test fun byTheDayOnlyAPostThatLandedUnheardIsNotSentAgain() = runBlocking {
+        c.settings.setDatesByDayOnly(true)
+        val id = queue(Draft(title = "Once", body = "x"))
+        github.loseNextRefAnswer = true
+        assertEquals(Publisher.Outcome.Retry, publisher.publish(id))
+        val landed = github.head
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertEquals(landed, github.head)
+    }
+
     @Test fun aDayFixedOnTheFirstTryIsKeptWhateverTheSwitchSaysLater() = runBlocking {
         c.settings.setDatesByDayOnly(true)
         github.failures["repos/sample/sample-blog/git/refs/heads/main"] = 503
