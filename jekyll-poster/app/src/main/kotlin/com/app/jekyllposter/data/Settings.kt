@@ -63,6 +63,8 @@ class Settings(private val store: DataStore<Preferences>) {
      */
     suspend fun commitAuthor(login: String, lookUp: suspend () -> CommitAuthor?): CommitAuthor? {
         val prefs = store.data.first()
+        // Kept by earlier versions, and maybe a real name; gone at the first commit after them.
+        if (stringPreferencesKey("no_reply_name") in prefs) store.edit { it.remove(stringPreferencesKey("no_reply_name")) }
         if (prefs[noReplyKey] != true) return null
         val email = prefs[noReplyEmailKey]
         if (prefs[noReplyLoginKey] == login && email != null) return CommitAuthor(login, email)

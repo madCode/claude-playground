@@ -114,7 +114,8 @@ doesn't want to open a laptop and make a commit for every post.
   do Obsidian's `aliases:` and `cssclasses:`.
 - A note's `date:` is the post's date, in its file name and front matter. It's kept as written
   and read when publishing, in the site's time zone as it is then: a bare day is midnight there,
-  as Jekyll reads it. The editor shows it, and **Use the publish day** drops it (until a commit
+  as Jekyll reads it. Dating by the day only, it's that moment's day where Jekyll builds (UTC
+  without a site zone), which can be a day before the one the note shows. The editor shows it, and **Use the publish day** drops it (until a commit
   was tried: then the post keeps its name and date, so it can't go out twice). A date the app
   can't read is shown as such, and the post is dated when published.
 - A future date is kept too: Jekyll won't show the post until then, though the app says live.
