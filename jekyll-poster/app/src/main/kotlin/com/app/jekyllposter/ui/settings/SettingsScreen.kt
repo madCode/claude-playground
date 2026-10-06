@@ -153,7 +153,8 @@ internal fun Heading(text: String) {
 @Composable
 internal fun Row(title: String, detail: String, onClick: (() -> Unit)? = null, link: String? = null) {
     Column(
-        Modifier.fillMaxWidth().let { if (onClick != null) it.clickable(role = Role.Button, onClickLabel = link, onClick = onClick) else it }.padding(horizontal = 16.dp, vertical = 12.dp),
+        // Read as one, title and detail, whether or not it does anything.
+        Modifier.fillMaxWidth().let { if (onClick != null) it.clickable(role = Role.Button, onClickLabel = link, onClick = onClick) else it.semantics(mergeDescendants = true) {} }.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(title, style = MaterialTheme.typography.bodyLarge, color = if (onClick != null && title == "Sign out") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)

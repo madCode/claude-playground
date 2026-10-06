@@ -89,11 +89,13 @@ private fun TokenStep(state: ConnectViewModel.State, viewModel: ConnectViewModel
                 "Contents (read and write) to commit posts, and Actions (read) to tell you when the site has rebuilt.",
             style = MaterialTheme.typography.bodyMedium,
         )
+        PrivateTabHint()
         OutlinedButton(
             onClick = { uri.openUri(ConnectViewModel.NEW_TOKEN_URL) },
             border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline),
         ) { Text("Make a token on GitHub") }
-        PrivateTabHint()
+        val clipboard = LocalClipboardManager.current
+        TextButton(onClick = { clipboard.setText(AnnotatedString(ConnectViewModel.NEW_TOKEN_URL)) }) { Text("Copy the link instead") }
         OutlinedTextField(
             value = state.token,
             onValueChange = viewModel::setToken,
@@ -135,10 +137,12 @@ private fun CodeStep(code: DeviceFlow.Code, onCancel: () -> Unit, modifier: Modi
             // Read out letter by letter: as a word it can't be typed back.
             modifier = Modifier.semantics { contentDescription = "Code: " + code.userCode.toList().joinToString(" ") },
         )
+        PrivateTabHint()
         Button(onClick = { clipboard.setText(AnnotatedString(code.userCode)); uri.openUri(code.verificationUri) }, modifier = Modifier.fillMaxWidth()) {
             Text("Copy the code and open GitHub")
         }
-        PrivateTabHint()
+        // For a private tab: the page's address, to paste there; the code is on screen to type.
+        TextButton(onClick = { clipboard.setText(AnnotatedString(code.verificationUri)) }) { Text("Copy the link instead") }
         Row(verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
             Spacer(Modifier.width(12.dp))
@@ -207,7 +211,7 @@ private fun RepoStep(
 @Composable
 private fun PrivateTabHint() {
     Text(
-        "Blogging under another name? Open GitHub in a private tab, signed in only to that account.",
+        "Blogging under another name? Open GitHub in a private tab, signed in only to that account: copy the link below and paste it there.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

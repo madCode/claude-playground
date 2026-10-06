@@ -24,6 +24,12 @@ Times are when each cycle landed, Pacific.
 - **Shipped:** **Set up for writing anonymously**, one confirm for every private switch, and
   **Beyond the app**, what only the writer can do; nothing written goes to the cloud backup;
   more sites' share codes go; sign-in says to use a private tab.
+- **Its review found** (fixed, with tests): a failed address lookup still turned the VPN switch
+  on, after which every retry failed the same way (it now waits for the address, and says when
+  the VPN is the reason); a lagging screen state could skip that lookup; the VPN step could be
+  cut short by leaving the screen; Instagram's `img_index` is the photo, not a share code;
+  `amazon.example.org` counted as Amazon; the private-tab hint came after the buttons that
+  open GitHub, with no link to copy.
 
 ### Cycle 21: privacy for anonymous writers, 2 of 3 (what goes out, and when)
 - **Shipped:** **Send at a random time** (a moment in the next three hours, kept with the post,

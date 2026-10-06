@@ -26,19 +26,20 @@ object Tracking {
         "tiktok.com" to setOf("_t", "_r", "is_from_webapp", "sender_device"),
         "linkedin.com" to setOf("trk", "trackingid", "lipi"),
         "substack.com" to setOf("r", "triedredirect"),
-        "instagram.com" to setOf("img_index"),
     )
 
-    /** Sites named for their country too (amazon.de, google.co.uk), by the name's first part. */
+    /** Sites with a domain in each country (amazon.de, google.co.uk). */
     private val byBrand = mapOf(
-        "amazon" to setOf("tag", "ref", "ref_", "linkcode", "linkid", "psc"),
+        "amazon" to setOf("tag", "ref", "ref_", "linkcode", "linkid"),
         "google" to setOf("ved", "ei", "sca_esv", "sxsrf"),
     )
 
+    /** `www.amazon.co.uk` and the like: the brand, then only a country's endings, not `amazon.example.org`. */
+    private val brandHost = Regex("""^(?:www\.|smile\.)?([a-z]+)\.(?:com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})$""")
+
     private fun siteParams(host: String): Set<String> {
         val site = bySite.entries.firstOrNull { (h, _) -> host == h || host.endsWith(".$h") }?.value.orEmpty()
-        // www.amazon.co.uk → amazon; a brand's own domains only, not any host that mentions it.
-        val brand = host.removePrefix("www.").removePrefix("smile.").substringBefore('.')
+        val brand = brandHost.find(host)?.groupValues?.get(1)
         return site + byBrand[brand].orEmpty()
     }
 

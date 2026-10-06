@@ -52,14 +52,13 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
             Heading("Writing anonymously")
-            if (state.anonymous) {
-                Row("All set for writing anonymously", "Every switch below that keeps your name, place and habits off the blog is on.")
-            } else {
-                Row(
+            when {
+                state.anonymous -> Row("All set for writing anonymously", "Every switch below that keeps your name, place and habits off the blog is on.")
+                state.settingUpAnonymous -> Row("Setting up…", "Turning on the switches below.")
+                else -> Row(
                     "Set up for writing anonymously",
                     "Turns on the switches below that keep your name, place and habits off the blog. See also “Beyond the app”, at the end.",
                     onClick = { confirmAnonymous = true },
-                    link = "Set up",
                 )
             }
 
@@ -181,6 +180,7 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
                         "• Send at a random time\n" +
                         "• Date posts by the day only\n" +
                         "• Remove tracking codes\n\n" +
+                        "It needs a VPN app: without one connected, nothing is sent to GitHub. " +
                         "Each can be turned off again here. The site's time zone is left as it is: choose UTC below if you like.",
                 )
             },

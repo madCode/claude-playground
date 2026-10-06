@@ -34,12 +34,26 @@ class BlogPrivacyViewModelTest {
         val vm = BlogPrivacyViewModel(c) { java.time.ZoneId.of("Asia/Tokyo") }
         idleUntil { vm.state.value.noReplyEmail != null }
         assertFalse(vm.state.value.anonymous)
+        // No VPN yet: the address must be found before the VPN switch goes on, or it couldn't be.
+        app.vpn.up.value = false
         vm.writeAnonymously()
-        idleUntil(10_000) { vm.state.value.anonymous }
-        // The no-reply address was found before the VPN switch went on.
+        idleUntil(10_000) { vm.state.value.anonymous && vm.state.value.waitingForVpn }
         assertEquals(com.app.jekyllposter.core.github.CommitAuthor("sample", "1001+sample@users.noreply.github.com"), runBlocking { c.settings.commitAuthor("sample") { null } })
         // The site's time zone is a commit: left for the writer to choose.
         assertEquals("America/Los_Angeles", vm.state.value.siteZone)
+    }
+
+    @Test fun aFailedLookUpLeavesTheVpnSwitchOffSoTryingAgainCanWork() {
+        val vm = BlogPrivacyViewModel(c) { java.time.ZoneId.of("Asia/Tokyo") }
+        idleUntil { vm.state.value.visibility != Visibility.Loading }
+        app.github.failures["user"] = 503
+        vm.writeAnonymously()
+        idleUntil(10_000) { vm.state.value.message != null && !vm.state.value.settingUpAnonymous }
+        assertFalse(vm.state.value.onlyThroughVpn)
+        assertFalse(vm.state.value.commitAsNoReply)
+        app.github.failures.clear()
+        vm.writeAnonymously()
+        idleUntil(10_000) { vm.state.value.anonymous }
     }
 
     @Test fun itShowsTheNoReplyAddressTheVisibilityAndTheSitesZone() {

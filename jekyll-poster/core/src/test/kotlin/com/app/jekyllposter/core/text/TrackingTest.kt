@@ -31,6 +31,9 @@ class TrackingTest {
         // Elsewhere `t` and `r` may be the page itself: a video's start time, say.
         assertEquals("https://www.youtube.com/watch?v=x&t=42", Tracking.strip("https://www.youtube.com/watch?v=x&t=42"))
         assertEquals("https://example.com/?r=2&tag=news", Tracking.strip("https://example.com/?r=2&tag=news"))
+        // A brand's name at the front of someone else's domain isn't the brand.
+        assertEquals("https://amazon.example.org/?tag=news", Tracking.strip("https://amazon.example.org/?tag=news"))
+        assertEquals("https://www.instagram.com/p/X/?img_index=3", Tracking.strip("https://www.instagram.com/p/X/?img_index=3"))
     }
 
     @Test fun textAroundLinksAndLinksWithoutQueriesAreUntouched() {

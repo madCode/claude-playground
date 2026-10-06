@@ -22,8 +22,9 @@ doesn't want to open a laptop and make a commit for every post.
 - Or a **fine-grained token**, pasted once. The app's link opens GitHub's form with Contents
   (read and write) and Actions (read) filled in; the writer picks the repository there.
 - Then the app lists the repositories the sign-in can write to, Pages sites first.
-- Where it opens GitHub, a line says to use a private tab signed in only to the blog's account,
-  for a writer blogging under another name: the browser is probably signed in to their own.
+- Before it opens GitHub, a line says to use a private tab signed in only to the blog's account,
+  for a writer blogging under another name (the browser is probably signed in to their own),
+  with **Copy the link instead** to paste there.
 - Tokens are sealed with an Android Keystore key and never backed up. Expiring tokens are
   renewed five minutes before they expire.
 
@@ -232,6 +233,9 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
   the writer's name, place and habits off the blog: the VPN, the no-reply address, plain
   messages, the random time, day-only dates and tracking codes. With all of them on it says
   "All set". The site's time zone is a commit, so it's left to the writer.
+  - The VPN switch goes on last, once the no-reply address is kept: with it on and no VPN, the
+    address couldn't be looked up. If the lookup fails, the VPN switch stays off and the row
+    offers to finish.
 
 - **Only connect through a VPN**, off. On, everything the app sends to GitHub and to the blog's
   site (sign-in, reading, publishing, the build watch, the preview's photos) goes through the
@@ -279,8 +283,6 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
 - **Beyond the app**, what no switch can do: an account of its own, made with an email and name
   that aren't the writer's; signing in in a private tab; free sites being public repositories;
   a domain's seller knowing who paid; a theme's analytics seeing the writer on their own posts.
-- Nothing written goes to the phone's cloud backup (drafts, photos, these settings), which
-  would tie it to the writer's Google account. Moving to a new phone brings them.
 
 ## Settings
 - The blog (repository and branch) and the site's address.
@@ -288,6 +290,11 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
 - **Switch blog** lists the repositories the current sign-in can write to.
 - **Sign out** keeps drafts on the phone for when that blog is signed in again.
 - **Obsidian:** the vault folder photos in shared notes come from; choose another or forget it.
+- Nothing written goes to the phone's cloud backup: drafts, photos and the privacy settings
+  would sit in the writer's Google account, beside the blog's. From Android 12, moving to a new
+  phone brings them; on 11 and older, the same rules cover both, so they stay behind. A phone
+  restored from a backup starts with every privacy switch off, the VPN one included: turn them
+  on before signing in.
 - The app's version, with the build's CI run and commit in a debug build. A tap or long press
   copies it, for a bug report.
 
