@@ -399,7 +399,8 @@ private fun NoteDate(written: String, canDrop: Boolean, onDrop: () -> Unit) {
 
 /**
  * Posts to complete a `[[link` with, above the keyboard; none says what happens to the link. At
- * most three rows, so the line being typed isn't covered, and set off by a rule for e-ink.
+ * most three rows tall, scrolling for more, so the line being typed isn't covered, and set off by
+ * a rule for e-ink.
  */
 @Composable
 private fun LinkSuggestions(posts: List<com.app.jekyllposter.data.CachedPost>, query: String, anyPosts: Boolean, onPick: (com.app.jekyllposter.data.CachedPost) -> Unit) {
@@ -416,12 +417,15 @@ private fun LinkSuggestions(posts: List<com.app.jekyllposter.data.CachedPost>, q
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            posts.forEach { post ->
-                Column(
-                    Modifier.fillMaxWidth().clickable(onClickLabel = "Link to this post") { onPick(post) }.padding(horizontal = 16.dp, vertical = 8.dp),
-                ) {
-                    Text(post.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                    post.date?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            // Three rows tall, scrolling for more: taller, it would cover the line being typed.
+            Column(Modifier.heightIn(max = 168.dp).verticalScroll(rememberScrollState())) {
+                posts.forEach { post ->
+                    Column(
+                        Modifier.fillMaxWidth().clickable(onClickLabel = "Link to this post") { onPick(post) }.padding(horizontal = 16.dp, vertical = 8.dp),
+                    ) {
+                        Text(post.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        post.date?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    }
                 }
             }
         }

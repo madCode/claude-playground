@@ -244,10 +244,10 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     val openLink: ObsidianNote.OpenLink?
         get() = text?.body?.takeIf { bodySelection.collapsed }?.let { ObsidianNote.openLink(it, bodySelection.start) }
 
-    /** Of [posts], the few whose title holds [query] and that a link can reach, newest first. */
+    /** Of [posts], those whose title holds [query] and that a link can reach, newest first: 20 at most. */
     fun postsToLink(query: String, posts: List<com.app.jekyllposter.data.CachedPost> = linkable.value): List<com.app.jekyllposter.data.CachedPost> {
         val all = targets(posts)
-        return posts.filter { it.title.contains(query.trim(), ignoreCase = true) && ObsidianNote.linkTarget(ObsidianNote.LinkTarget(it.path, it.title), all) != null }.take(3)
+        return posts.filter { it.title.contains(query.trim(), ignoreCase = true) && ObsidianNote.linkTarget(ObsidianNote.LinkTarget(it.path, it.title), all) != null }.take(20)
     }
 
     /**

@@ -66,7 +66,7 @@ doesn't want to open a laptop and make a commit for every post.
   tracking codes** on (Blog & privacy), links lose `utm_…`, `fbclid`, YouTube's `si` and the
   like before the editor opens, so the writer sees them as they'll be published.
 - **Links to posts:** typing `[[`, or the toolbar's **Link to a post** (which types it, with any
-  selected text as the search), lists the blog's posts above the keyboard (three at most),
+  selected text as the search), lists the blog's posts above the keyboard (three rows tall, scrolling for more),
   narrowing as you type, as Obsidian lists notes; picking one writes `[[Its title]]`, or
   `[[2025-01-12-welcome|Its title]]` when another post shares the title or it holds `#` or `|`.
   Titles with brackets can't be linked and aren't offered. Publish or Update turns each
