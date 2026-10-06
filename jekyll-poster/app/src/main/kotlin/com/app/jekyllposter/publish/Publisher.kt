@@ -1,16 +1,18 @@
 package com.app.jekyllposter.publish
 
+import com.app.jekyllposter.core.blog.Blog
+import com.app.jekyllposter.core.blog.SiteIndex
 import com.app.jekyllposter.core.frontmatter.FrontMatterDocument
 import com.app.jekyllposter.core.github.FileChange
 import com.app.jekyllposter.core.github.GitHubException
+import com.app.jekyllposter.core.github.gitBlobSha
 import com.app.jekyllposter.core.jekyll.Images
 import com.app.jekyllposter.core.jekyll.Permalink
 import com.app.jekyllposter.core.jekyll.PostContent
 import com.app.jekyllposter.core.jekyll.PostPath
 import com.app.jekyllposter.core.jekyll.PostWriter
 import com.app.jekyllposter.core.jekyll.Slug
-import com.app.jekyllposter.core.blog.Blog
-import com.app.jekyllposter.core.blog.SiteIndex
+import com.app.jekyllposter.core.jekyll.parseJekyllDate
 import com.app.jekyllposter.data.AccountStore
 import com.app.jekyllposter.data.BlogRepository
 import com.app.jekyllposter.data.BuildState
@@ -19,12 +21,14 @@ import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.DraftDao
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.data.Settings
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.IOException
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Sends a queued post to GitHub. Kept apart from the worker so its rules are testable directly:
@@ -274,7 +278,7 @@ class Publisher(
         return ready to Photos(changes, changes.associate { it.path to null })
     }
 
-    private fun siteZone(index: SiteIndex) = index.config.timezone ?: java.time.ZoneOffset.UTC
+    private fun siteZone(index: SiteIndex) = index.config.timezone ?: ZoneOffset.UTC
 
     private fun postUrl(index: SiteIndex, path: String, date: ZonedDateTime, draft: Draft): String? {
         val postPath = PostPath(path)
@@ -323,8 +327,8 @@ class Publisher(
         // By the day alone, the day is taken where Jekyll builds (UTC without a site zone), for a
         // note's own date too: a day ahead of it there is in the future, and Jekyll hides the post.
         val dayOnly = !toDrafts && settings.datesByDayOnly()
-        val where = zone ?: java.time.ZoneOffset.UTC.takeIf { dayOnly }
-        val noted = draft.noteDate?.let { parseJekyllDate(it, zone ?: java.time.ZoneOffset.UTC) }?.let { d -> where?.let { d.withZoneSameInstant(it) } ?: d }
+        val where = zone ?: ZoneOffset.UTC.takeIf { dayOnly }
+        val noted = draft.noteDate?.let { parseJekyllDate(it, zone ?: ZoneOffset.UTC) }?.let { d -> where?.let { d.withZoneSameInstant(it) } ?: d }
         val date = noted ?: where?.let { now().withZoneSameInstant(it) } ?: now()
         val slug = Slug.of(draft.title).ifEmpty { "post" }
         fun at(s: String) = if (toDrafts) PostPath.newDraft(s).path else PostPath.newPost(date.toLocalDate(), s).path
@@ -351,39 +355,14 @@ private const val PHOTO_GONE = "A photo in this post is no longer on the phone. 
 
 private const val CHANGED = "This post changed on GitHub since you opened it. Discard your changes to start again from the new version (copy your text first)."
 
-/**
- * A front matter date as Jekyll reads it: `2025-03-02 18:05:00 -0800`; one without an offset, or a
- * bare day, is in the site's time zone [zone].
- */
-internal fun parseJekyllDate(value: String, zone: java.time.ZoneId): ZonedDateTime? {
-    val v = value.trim()
-    val zoned = listOf(
-        "yyyy-MM-dd HH:mm:ss Z", "yyyy-MM-dd HH:mm:ss XXX", "yyyy-MM-dd'T'HH:mm:ssXXX", "yyyy-MM-dd HH:mm Z",
-        "yyyy-MM-dd'T'HH:mm:ss.SSSXXX", "yyyy-MM-dd'T'HH:mmXXX", "yyyy-MM-dd HH:mm:ss.SSS Z",
-    )
-    zoned.forEach { p -> runCatching { return ZonedDateTime.parse(v, DateTimeFormatter.ofPattern(p)) } }
-    listOf("yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd HH:mm", "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss.SSS").forEach { p ->
-        runCatching { return java.time.LocalDateTime.parse(v, DateTimeFormatter.ofPattern(p)).atZone(zone) }
-    }
-    // A bare day only: "2021-06-24 whatever" isn't a date the app should guess at.
-    return runCatching { java.time.LocalDate.parse(v).atStartOfDay(zone) }.getOrNull()
-}
 
 /** Whether [draft]'s date was fixed as a day alone (see [Settings.datesByDayOnly]). */
 private fun dayOnly(draft: Draft) = draft.publishDate?.length == 10
 
 /** [draft]'s fixed date: a moment, or a day alone, which is midnight in the site's zone (UTC without one), as Jekyll reads it. */
 private fun fixedDate(draft: Draft, index: SiteIndex): ZonedDateTime =
-    if (dayOnly(draft)) java.time.LocalDate.parse(draft.publishDate).atStartOfDay(index.config.timezone ?: java.time.ZoneOffset.UTC)
+    if (dayOnly(draft)) LocalDate.parse(draft.publishDate).atStartOfDay(index.config.timezone ?: ZoneOffset.UTC)
     else ZonedDateTime.parse(draft.publishDate)
 
-/** Git's id for a file's content, as GitHub reports it: SHA-1 of `blob <size>\0<bytes>`. */
-internal fun gitBlobSha(text: String): String {
-    val bytes = text.toByteArray(Charsets.UTF_8)
-    val digest = java.security.MessageDigest.getInstance("SHA-1")
-    digest.update("blob ${bytes.size}\u0000".toByteArray())
-    digest.update(bytes)
-    return digest.digest().joinToString("") { "%02x".format(it) }
-}
 
 fun Draft.content() = PostContent(title.trim(), body, categories, tags, extraFrontMatter)

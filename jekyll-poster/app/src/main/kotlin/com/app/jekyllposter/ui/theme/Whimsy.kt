@@ -2,24 +2,30 @@ package com.app.jekyllposter.ui.theme
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
@@ -29,11 +35,10 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
 import kotlin.math.sin
@@ -137,7 +142,7 @@ fun TermPill(term: String, selected: Boolean = false, all: Boolean = false, onCl
         }
     Text(
         term,
-        style = MaterialTheme.typography.labelMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
         color = termInk(),
         modifier = base.padding(horizontal = if (onClick != null) 12.dp else 8.dp, vertical = if (onClick != null) 6.dp else 2.dp),
     )
@@ -180,14 +185,14 @@ fun InkButton(text: String, onClick: () -> Unit) {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val ink = (if (dark) whimsy.stampInkDark else whimsy.stampInk)
     if (ink == null) {
-        androidx.compose.material3.TextButton(onClick = onClick) { Text(text) }
+        TextButton(onClick = onClick) { Text(text) }
         return
     }
-    androidx.compose.material3.Button(
+    Button(
         onClick = onClick,
-        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = ink, contentColor = whimsy.stampText),
+        colors = ButtonDefaults.buttonColors(containerColor = ink, contentColor = whimsy.stampText),
         border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onBackground),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
         modifier = Modifier.padding(end = 4.dp),
-    ) { Text(text, maxLines = 1, style = MaterialTheme.typography.labelLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)) }
+    ) { Text(text, maxLines = 1, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)) }
 }

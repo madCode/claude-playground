@@ -1,36 +1,43 @@
 package com.app.jekyllposter.ui.editor
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.app.jekyllposter.AppContainer
+import android.content.Context
 import android.net.Uri
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
-import com.app.jekyllposter.core.jekyll.Edit
-import com.app.jekyllposter.core.jekyll.Images
-import com.app.jekyllposter.core.jekyll.MarkdownEdits
-import com.app.jekyllposter.core.jekyll.Preview
-import com.app.jekyllposter.core.obsidian.ObsidianNote
-import com.app.jekyllposter.data.Destination
-import com.app.jekyllposter.data.DraftImage
-import com.app.jekyllposter.data.chooseVault
-import java.io.File
-import java.time.LocalDateTime
-import com.app.jekyllposter.core.jekyll.Taxonomy
-import com.app.jekyllposter.core.jekyll.Term
-import com.app.jekyllposter.data.Draft
-import com.app.jekyllposter.data.PostState
+import android.util.Base64
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.core.content.FileProvider
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.app.jekyllposter.AppContainer
+import com.app.jekyllposter.core.jekyll.Edit
+import com.app.jekyllposter.core.jekyll.Images
+import com.app.jekyllposter.core.jekyll.MarkdownEdits
+import com.app.jekyllposter.core.jekyll.PostPath
+import com.app.jekyllposter.core.jekyll.Preview
+import com.app.jekyllposter.core.jekyll.Taxonomy
+import com.app.jekyllposter.core.jekyll.Term
+import com.app.jekyllposter.core.obsidian.ObsidianNote
+import com.app.jekyllposter.data.CachedPost
+import com.app.jekyllposter.data.Destination
+import com.app.jekyllposter.data.Draft
+import com.app.jekyllposter.data.DraftImage
+import com.app.jekyllposter.data.PostState
+import com.app.jekyllposter.data.RANDOM_WINDOW
+import com.app.jekyllposter.data.chooseVault
+import java.io.File
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import kotlin.random.Random
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,6 +47,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 class EditorViewModel(private val container: AppContainer, private val id: Long) : ViewModel() {
     enum class TermKind { Category, Tag }
@@ -131,7 +141,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                     if (file == null) { missing += embed.raw; continue }
                     val prepared = try {
                         container.images.import(file.uri)
-                    } catch (e: kotlinx.coroutines.CancellationException) {
+                    } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         missing += embed.raw
@@ -222,22 +232,22 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     val waitingForVpn: StateFlow<Boolean> = container.waitingForVpn.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /** The blog's posts a `[[link]]` can go to: ones the site builds, newest first. */
-    val linkable: StateFlow<List<com.app.jekyllposter.data.CachedPost>> = container.blogs.cachedPosts
+    val linkable: StateFlow<List<CachedPost>> = container.blogs.cachedPosts
         .map { posts ->
-            val today = java.time.LocalDate.now(container.blogs.config.value.timezone ?: java.time.ZoneOffset.UTC).toString()
-            posts.filter { it.published && !com.app.jekyllposter.core.jekyll.PostPath(it.path).isDraft && (it.date?.let { d -> d <= today } ?: false) }
+            val today = LocalDate.now(container.blogs.config.value.timezone ?: ZoneOffset.UTC).toString()
+            posts.filter { it.published && !PostPath(it.path).isDraft && (it.date?.let { d -> d <= today } ?: false) }
                 .sortedByDescending { it.date }
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    private fun targets(posts: List<com.app.jekyllposter.data.CachedPost>) = posts.map { ObsidianNote.LinkTarget(it.path, it.title) }
+    private fun targets(posts: List<CachedPost>) = posts.map { ObsidianNote.LinkTarget(it.path, it.title) }
 
     /** The `[[link` being typed at the cursor, if any: the screen lists posts to complete it with. */
     val openLink: ObsidianNote.OpenLink?
         get() = text?.body?.takeIf { bodySelection.collapsed }?.let { ObsidianNote.openLink(it, bodySelection.start) }
 
     /** Of [posts], those whose title holds [query] and that a link can reach, newest first: 20 at most. */
-    fun postsToLink(query: String, posts: List<com.app.jekyllposter.data.CachedPost> = linkable.value): List<com.app.jekyllposter.data.CachedPost> {
+    fun postsToLink(query: String, posts: List<CachedPost> = linkable.value): List<CachedPost> {
         val all = targets(posts)
         return posts.filter { it.title.contains(query.trim(), ignoreCase = true) && ObsidianNote.linkTarget(ObsidianNote.LinkTarget(it.path, it.title), all) != null }.take(20)
     }
@@ -246,7 +256,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
      * Completes the `[[link` being typed with [post], written so it finds exactly that post; it
      * becomes a link when the post is published.
      */
-    fun linkTo(post: com.app.jekyllposter.data.CachedPost) {
+    fun linkTo(post: CachedPost) {
         val body = text?.body ?: return
         val link = openLink ?: return
         val target = ObsidianNote.linkTarget(ObsidianNote.LinkTarget(post.path, post.title), targets(linkable.value)) ?: return
@@ -292,7 +302,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     fun cameraTarget(): CameraTarget? = runCatching {
         val dir = cameraDir(container.context).apply { mkdirs() }
         val file = File.createTempFile("photo-", ".jpg", dir)
-        CameraTarget(file.path, androidx.core.content.FileProvider.getUriForFile(container.context, "${container.context.packageName}.camera", file))
+        CameraTarget(file.path, FileProvider.getUriForFile(container.context, "${container.context.packageName}.camera", file))
     }.getOrNull()
 
     /** The camera app came back: adds the photo at [path] if one was taken, then deletes the original. */
@@ -307,7 +317,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             // its draft has loaded.
             try {
                 loading.join()
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 file.delete()
                 throw e
             }
@@ -462,7 +472,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 // A random moment in the next few hours, so commit times don't trace the writer's
                 // day. Deleting a post is never delayed: the writer wants it gone.
                 val sendAfter = if ((destination ?: draft.destination) != Destination.Delete && container.settings.sendAtRandomTime()) {
-                    System.currentTimeMillis() + kotlin.random.Random.nextLong(com.app.jekyllposter.data.RANDOM_WINDOW.inWholeMilliseconds)
+                    System.currentTimeMillis() + Random.nextLong(RANDOM_WINDOW.inWholeMilliseconds)
                 } else {
                     null
                 }
@@ -479,7 +489,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                         sendAfter = sendAfter,
                     ),
                 )
-                container.schedulePublish(id, sendAfter)
+                container.publishQueue.enqueue(id, sendAfter)
                 flags.update { it.copy(closed = true) }
             } finally {
                 publishing = false
@@ -516,7 +526,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 }
             }
             if (!queued) return@launch
-            container.schedulePublish(id, null)
+            container.publishQueue.enqueue(id, null)
             flags.update { it.copy(closed = true) }
         }
     }
@@ -567,19 +577,21 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             // Applied at once, so the screen sees it even if no frame is pending to pick it up.
             Snapshot.withMutableSnapshot { text = loaded }
             loaded?.body?.let { bodySelection = TextRange(it.length) }
-            container.sharedPhotos.remove(id)?.forEach(::addPhoto)
-            container.sharedEmbeds.remove(id)?.let(::addEmbeds)
+            container.pendingShares.remove(id)?.let { share ->
+                share.photos.forEach(::addPhoto)
+                if (share.embeds.isNotEmpty()) addEmbeds(share.embeds)
+            }
         }
     }
 }
 
 private fun dataUri(file: File): String {
     val type = when (file.extension) { "png" -> "image/png"; "gif" -> "image/gif"; else -> "image/jpeg" }
-    return "data:$type;base64," + android.util.Base64.encodeToString(file.readBytes(), android.util.Base64.NO_WRAP)
+    return "data:$type;base64," + Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
 }
 
 /** A file for the camera app to write to: its [path] here, and the [uri] it's offered as. */
 data class CameraTarget(val path: String, val uri: Uri)
 
 /** Where camera photos wait to be prepared: the cache, never backed up. */
-fun cameraDir(context: android.content.Context) = File(context.cacheDir, "camera")
+fun cameraDir(context: Context) = File(context.cacheDir, "camera")

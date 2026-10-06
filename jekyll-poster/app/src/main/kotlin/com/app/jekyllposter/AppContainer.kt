@@ -1,28 +1,53 @@
 package com.app.jekyllposter
 
 import android.content.Context
+import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.room.Room
 import com.app.jekyllposter.core.github.DeviceFlow
 import com.app.jekyllposter.core.github.GitHubClient
+import com.app.jekyllposter.core.obsidian.ObsidianNote
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.AccountStore
 import com.app.jekyllposter.data.AesGcmCipher
+import com.app.jekyllposter.data.AndroidVpn
 import com.app.jekyllposter.data.BlogRepository
+import com.app.jekyllposter.data.Draft
+import com.app.jekyllposter.data.GatedCalls
 import com.app.jekyllposter.data.ImageImporter
+import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.data.PosterDatabase
 import com.app.jekyllposter.data.SecretCipher
+import com.app.jekyllposter.data.Settings
+import com.app.jekyllposter.data.VaultImages
+import com.app.jekyllposter.data.Vpn
+import com.app.jekyllposter.data.VpnGate
 import com.app.jekyllposter.data.accountDataStore
+import com.app.jekyllposter.data.listVault
 import com.app.jekyllposter.data.settingsDataStore
 import com.app.jekyllposter.publish.BuildWatcher
+import com.app.jekyllposter.publish.Notifier
+import com.app.jekyllposter.publish.PublishQueue
 import com.app.jekyllposter.publish.Publisher
+import com.app.jekyllposter.publish.WorkManagerQueue
+import com.app.jekyllposter.ui.editor.PreviewFetcher
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.Cache
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import java.util.concurrent.TimeUnit
 
 /** The app's objects, built once. Tests pass their own GitHub address, cipher and database. */
 class AppContainer(
@@ -36,40 +61,32 @@ class AppContainer(
     cipher: SecretCipher = AesGcmCipher.androidKeystore(),
     accountData: DataStore<Preferences> = context.accountDataStore,
     settingsData: DataStore<Preferences> = context.settingsDataStore,
-    val database: PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db")
-        .addMigrations(com.app.jekyllposter.data.MIGRATION_1_2, com.app.jekyllposter.data.MIGRATION_2_3, com.app.jekyllposter.data.MIGRATION_3_4, com.app.jekyllposter.data.MIGRATION_4_5).build(),
-    /** Starts publishing a queued post; WorkManager in the app, direct calls in tests. */
-    val schedulePublish: (id: Long, sendAfter: Long?) -> Unit = { id, after -> com.app.jekyllposter.publish.PublishWorker.enqueue(context, id, after) },
+    val database: PosterDatabase = PosterDatabase.create(context),
+    /** Where queued posts go to be sent; WorkManager in the app, direct calls in tests. */
+    val publishQueue: PublishQueue = WorkManagerQueue(context),
     /** When the site has (or hasn't) built a published post; a notification in the app. */
-    onBuildFinished: (com.app.jekyllposter.data.Draft) -> Unit = com.app.jekyllposter.publish.Notifier(context)::buildFinished,
+    onBuildFinished: (Draft) -> Unit = Notifier(context)::buildFinished,
     /** The files in an Obsidian vault folder; tests list a plain folder instead. */
-    val vaultFiles: suspend (tree: String) -> com.app.jekyllposter.data.VaultImages = { com.app.jekyllposter.data.listVault(context, it) },
+    val vaultFiles: suspend (tree: String) -> VaultImages = { listVault(context, it) },
     /** The phone's VPN; tests pretend one is up or down. */
-    vpn: com.app.jekyllposter.data.Vpn = com.app.jekyllposter.data.AndroidVpn(context),
-    /** Starts a queued post's publish now, past WorkManager's backoff. */
-    private val retryPublish: (id: Long, sendAfter: Long?) -> Unit = { id, after -> com.app.jekyllposter.publish.PublishWorker.retryNow(context, id, after) },
-    /** Sends a queued post now: the writer's Send now. */
-    private val sendNowWork: (Long) -> Unit = { com.app.jekyllposter.publish.PublishWorker.sendNow(context, it) },
+    vpn: Vpn = AndroidVpn(context),
 ) {
-    /** Photos shared from another app, waiting for the editor of the post they started. */
-    val sharedPhotos = java.util.concurrent.ConcurrentHashMap<Long, List<android.net.Uri>>()
-
-    /** A shared Obsidian note's `![[photo]]` embeds, waiting for the editor to find them in the vault. */
-    val sharedEmbeds = java.util.concurrent.ConcurrentHashMap<Long, List<com.app.jekyllposter.core.obsidian.ObsidianNote.Embed>>()
+    /** What a share brought, waiting for the editor of the post it started. */
+    val pendingShares = ConcurrentHashMap<Long, PendingShare>()
 
     /** For work that must outlive the screen that starts it, like signing out. */
-    val appScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    val settings = com.app.jekyllposter.data.Settings(settingsData)
+    val settings = Settings(settingsData)
 
     /** Every client the app reaches the web with goes through this, so the VPN switch covers them all. */
-    private val vpnGate = com.app.jekyllposter.data.VpnGate(vpn) { kotlinx.coroutines.runBlocking { settings.onlyThroughVpn() } }
+    private val vpnGate = VpnGate(vpn) { runBlocking { settings.onlyThroughVpn() } }
 
     /** Whether nothing can go out now: the writer asked for a VPN and there isn't one. */
-    val waitingForVpn: kotlinx.coroutines.flow.Flow<Boolean> =
-        kotlinx.coroutines.flow.combine(settings.onlyThroughVpn, vpn.up) { only, up -> only && !up }
+    val waitingForVpn: Flow<Boolean> =
+        combine(settings.onlyThroughVpn, vpn.up) { only, up -> only && !up }
 
-    private val http = com.app.jekyllposter.data.GatedCalls(
+    private val http = GatedCalls(
         OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build(),
         vpnGate,
     )
@@ -84,10 +101,10 @@ class AppContainer(
      * switching back to the preview doesn't download them all again.
      */
     private val previewClient = lazy {
-        val cache = okhttp3.Cache(java.io.File(context.cacheDir, "preview"), 20L * 1024 * 1024)
-        com.app.jekyllposter.data.GatedCalls(okhttp3.OkHttpClient.Builder().cache(cache).build(), vpnGate)
+        val cache = Cache(File(context.cacheDir, "preview"), 20L * 1024 * 1024)
+        GatedCalls(OkHttpClient.Builder().cache(cache).build(), vpnGate)
     }
-    val previewFetcher by lazy { com.app.jekyllposter.ui.editor.PreviewFetcher(previewClient.value) }
+    val previewFetcher by lazy { PreviewFetcher(previewClient.value) }
 
     /**
      * Turns the VPN switch on or off. Requests from then on go on new connections: those made
@@ -109,32 +126,44 @@ class AppContainer(
     /** Sends queued post [id] now, not at the random time it was given. */
     suspend fun sendNow(id: Long) {
         // One column, and only while queued: a whole-row write could undo a publish landing now.
-        if (drafts.sendNow(id) > 0) sendNowWork(id)
+        if (drafts.sendNow(id) > 0) publishQueue.sendNow(id)
     }
 
     /**
      * Waits up to [timeout] for the VPN, when one is asked for: true once requests can go out.
      * A queued post waits here rather than in WorkManager's backoff, which can grow to hours.
      */
-    suspend fun awaitVpn(timeout: kotlin.time.Duration): Boolean =
-        kotlinx.coroutines.withTimeoutOrNull(timeout) { waitingForVpn.first { !it } } != null
+    suspend fun awaitVpn(timeout: Duration): Boolean =
+        withTimeoutOrNull(timeout) { waitingForVpn.first { !it } } != null
 
     val accounts = AccountStore(accountData, cipher, deviceFlow?.let { flow -> { refreshToken: String -> flow.refresh(refreshToken) } })
     val drafts = database.drafts()
     val blogs = BlogRepository(accounts, database.posts()) { account: Account -> client(account.token) }
     val publisher = Publisher(drafts, accounts, blogs, settings)
-    val images = ImageImporter(context.contentResolver, java.io.File(context.filesDir, "images"))
+    val images = ImageImporter(context.contentResolver, File(context.filesDir, "images"))
     val buildWatcher = BuildWatcher(drafts, accounts, { client(it.token) }, onBuildFinished)
 
-    // Last, so everything it uses is set.
-    init {
-        // The VPN is back: queued posts go out now, not when WorkManager's backoff comes round.
+    /** Signs out: the account and the blog it read go; drafts stay for when it's signed in again. */
+    suspend fun signOut() {
+        accounts.signOut()
+        blogs.clear()
+    }
+
+    /**
+     * When the VPN is back, queued posts go out now, not when WorkManager's backoff comes round.
+     * Started by the app once the container is built, not from its constructor: a launch there
+     * can run before the properties it uses are set.
+     */
+    fun startVpnRetry() {
         appScope.launch {
             var waiting = false
             waitingForVpn.collect { now ->
-                if (waiting && !now) drafts.list().filter { it.state == com.app.jekyllposter.data.PostState.Queued }.forEach { retryPublish(it.id, it.sendAfter) }
+                if (waiting && !now) drafts.list().filter { it.state == PostState.Queued }.forEach { publishQueue.retryNow(it.id, it.sendAfter) }
                 waiting = now
             }
         }
     }
 }
+
+/** A share's photos, and a shared note's `![[photo]]` embeds to find in the Obsidian vault. */
+data class PendingShare(val photos: List<Uri> = emptyList(), val embeds: List<ObsidianNote.Embed> = emptyList())

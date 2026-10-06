@@ -7,6 +7,9 @@ import com.app.jekyllposter.core.jekyll.PostWriter
 import com.app.jekyllposter.core.jekyll.SiteConfig
 import com.app.jekyllposter.core.jekyll.Slug
 import com.app.jekyllposter.core.obsidian.ObsidianNote
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -17,8 +20,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
-import java.time.ZonedDateTime
-import java.util.concurrent.TimeUnit
 
 /**
  * Publishes a post to a real blog through the real GitHub API, waits for Pages to serve it, then
@@ -50,7 +51,7 @@ class LiveCheckTest {
         // Written as an Obsidian note, so the build checks the converter's output too: a
         // `post_url` to a post that isn't there would fail the whole site's build.
         // A post the site builds, so its post_url resolves: dated today or before, not unpublished.
-        val today = now.withZoneSameInstant(config.timezone ?: java.time.ZoneOffset.UTC).toLocalDate()
+        val today = now.withZoneSameInstant(config.timezone ?: ZoneOffset.UTC).toLocalDate()
         val linked = github.files(owner, name, branch).map { PostPath(it.path) }
             .filter { it.isPost && !it.isDraft && (it.date?.let { d -> d <= today } ?: false) && ObsidianNote.postUrlName(it.path) != null }
             .sortedByDescending { it.date }

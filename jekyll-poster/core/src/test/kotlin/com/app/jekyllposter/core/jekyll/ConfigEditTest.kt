@@ -1,5 +1,6 @@
 package com.app.jekyllposter.core.jekyll
 
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -18,7 +19,7 @@ class ConfigEditTest {
         val config = "plugin:\n  timezone: Asia/Tokyo\ntimezone: UTC\ntimezone: Etc/GMT+1\n"
         assertEquals("plugin:\n  timezone: Asia/Tokyo\ntimezone: UTC\ntimezone: Europe/Paris\n", ConfigEdit.withTimezone(config, "Europe/Paris"))
         // And the reader agrees about which one counts.
-        assertEquals(java.time.ZoneId.of("Europe/Paris"), SiteConfig.parse(ConfigEdit.withTimezone(config, "Europe/Paris")).timezone)
+        assertEquals(ZoneId.of("Europe/Paris"), SiteConfig.parse(ConfigEdit.withTimezone(config, "Europe/Paris")).timezone)
     }
 
     @Test fun windowsLineEndingsStayWindowsLineEndings() {

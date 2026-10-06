@@ -1,16 +1,17 @@
 package com.app.jekyllposter.core.github
 
+import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import okhttp3.Call
 import okhttp3.FormBody
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
-import java.io.IOException
 
 /**
  * "Sign in with GitHub" for an app with no server: GitHub's device flow for a GitHub App. The
@@ -18,7 +19,7 @@ import java.io.IOException
  * hands over a token. Only the app's client ID is needed; it isn't a secret.
  */
 class DeviceFlow(
-    private val http: okhttp3.Call.Factory,
+    private val http: Call.Factory,
     private val clientId: String,
     private val base: HttpUrl = "https://github.com/".toHttpUrl(),
 ) {

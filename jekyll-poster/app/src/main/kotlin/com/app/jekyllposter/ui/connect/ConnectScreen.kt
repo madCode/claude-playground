@@ -1,6 +1,7 @@
 package com.app.jekyllposter.ui.connect
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,17 +33,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import com.app.jekyllposter.core.github.DeviceFlow
 import com.app.jekyllposter.core.github.GitHubRepo
 
@@ -92,7 +93,7 @@ private fun TokenStep(state: ConnectViewModel.State, viewModel: ConnectViewModel
         PrivateTabHint()
         OutlinedButton(
             onClick = { uri.openUri(ConnectViewModel.NEW_TOKEN_URL) },
-            border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline),
+            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline),
         ) { Text("Make a token on GitHub") }
         val clipboard = LocalClipboardManager.current
         TextButton(onClick = { clipboard.setText(AnnotatedString(ConnectViewModel.NEW_TOKEN_URL)) }) { Text("Copy the link instead") }

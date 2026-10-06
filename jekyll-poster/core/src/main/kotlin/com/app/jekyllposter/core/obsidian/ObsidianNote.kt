@@ -3,6 +3,7 @@ package com.app.jekyllposter.core.obsidian
 import com.app.jekyllposter.core.frontmatter.FrontMatterDocument
 import com.app.jekyllposter.core.jekyll.PostPath
 import com.app.jekyllposter.core.jekyll.PostWriter
+import java.time.LocalDate
 
 /**
  * An Obsidian note turned into what a Jekyll post needs, the way obyde does it: `[[links]]` to
@@ -290,7 +291,7 @@ object ObsidianNote {
         if (target.isEmpty()) return null
         return posts.filter { p ->
             p.title.trim().equals(target, ignoreCase = true) || PostPath(p.path).fileName.substringBeforeLast('.') == target
-        }.maxByOrNull { PostPath(it.path).date ?: java.time.LocalDate.MIN }
+        }.maxByOrNull { PostPath(it.path).date ?: LocalDate.MIN }
     }
 
     /**

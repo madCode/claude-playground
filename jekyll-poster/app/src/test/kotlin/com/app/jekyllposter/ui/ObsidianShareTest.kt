@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.app.jekyllposter.PendingShare
 import com.app.jekyllposter.Shared
 import com.app.jekyllposter.core.obsidian.ObsidianNote
 import com.app.jekyllposter.data.Account
@@ -12,6 +13,7 @@ import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
 import com.app.jekyllposter.ui.editor.EditorViewModel
 import com.app.jekyllposter.ui.home.HomeViewModel
+import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -24,7 +26,6 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -48,7 +49,7 @@ class ObsidianShareTest {
     /** A post started from [text], as a share of it, with its embeds handed to the editor. */
     private fun shared(text: String): Long = runBlocking {
         val note = ObsidianNote.convert(text, null, emptyList()) as ObsidianNote.Result.Converted
-        app.container.drafts.insert(Draft(body = note.body)).also { app.container.sharedEmbeds[it] = note.embeds }
+        app.container.drafts.insert(Draft(body = note.body)).also { app.container.pendingShares[it] = PendingShare(embeds = note.embeds) }
     }
 
     @Test fun aNoteSharedAsAFileArrivesReadyForTheBlog() {

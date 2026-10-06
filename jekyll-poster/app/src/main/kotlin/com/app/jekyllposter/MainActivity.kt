@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Parcelable
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -81,10 +82,10 @@ internal fun postToStart(intent: Intent?): Shared? {
     return if (text == null && images.isEmpty()) null else Shared(text.orEmpty(), images)
 }
 
-private inline fun <reified T : android.os.Parcelable> Intent.parcelable(key: String): T? =
+private inline fun <reified T : Parcelable> Intent.parcelable(key: String): T? =
     if (Build.VERSION.SDK_INT >= 33) getParcelableExtra(key, T::class.java) else @Suppress("DEPRECATION") getParcelableExtra(key)
 
-private inline fun <reified T : android.os.Parcelable> Intent.parcelables(key: String): List<T> =
+private inline fun <reified T : Parcelable> Intent.parcelables(key: String): List<T> =
     (if (Build.VERSION.SDK_INT >= 33) getParcelableArrayListExtra(key, T::class.java) else @Suppress("DEPRECATION") getParcelableArrayListExtra(key)).orEmpty()
 
 /**

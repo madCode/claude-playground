@@ -1,45 +1,48 @@
 package com.app.jekyllposter.ui.settings
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.ui.platform.LocalContext
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.net.Uri
 import android.os.Build
 import android.widget.Toast
-import androidx.compose.foundation.layout.size
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.foundation.layout.Row as LayoutRow
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.Switch
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.semantics.Role
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row as LayoutRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.jekyllposter.AppContainer
@@ -77,8 +80,8 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: ()
             val scope = rememberCoroutineScope()
             Heading("Obsidian")
             val vault by container.settings.obsidianVault.collectAsStateWithLifecycle(null)
-            val context = androidx.compose.ui.platform.LocalContext.current
-            val chooseVault = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { tree ->
+            val context = LocalContext.current
+            val chooseVault = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
                 if (tree != null) scope.launch { com.app.jekyllposter.data.chooseVault(context, container.settings, tree) }
             }
             Row(
@@ -175,5 +178,5 @@ internal fun Row(title: String, detail: String, onClick: (() -> Unit)? = null, l
 
 /** A vault folder's own name, from its document tree (`primary:Documents/Notes` → Notes). */
 private fun vaultName(tree: String): String = runCatching {
-    android.provider.DocumentsContract.getTreeDocumentId(android.net.Uri.parse(tree)).substringAfter(':').trimEnd('/').substringAfterLast('/').ifEmpty { "Vault folder" }
+    android.provider.DocumentsContract.getTreeDocumentId(Uri.parse(tree)).substringAfter(':').trimEnd('/').substringAfterLast('/').ifEmpty { "Vault folder" }
 }.getOrDefault("Vault folder")

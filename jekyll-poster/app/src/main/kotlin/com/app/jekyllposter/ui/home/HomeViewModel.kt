@@ -1,32 +1,40 @@
 package com.app.jekyllposter.ui.home
 
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.jekyllposter.AppContainer
+import com.app.jekyllposter.PendingShare
+import com.app.jekyllposter.Shared
 import com.app.jekyllposter.core.frontmatter.FrontMatterDocument
+import com.app.jekyllposter.core.io.readAtMost
+import com.app.jekyllposter.core.jekyll.PostPath
+import com.app.jekyllposter.core.jekyll.PostSummary
+import com.app.jekyllposter.core.jekyll.PostWriter
+import com.app.jekyllposter.core.jekyll.Taxonomy
+import com.app.jekyllposter.core.jekyll.Term
+import com.app.jekyllposter.core.obsidian.ObsidianNote
+import com.app.jekyllposter.core.text.Tracking
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.CachedPost
-import com.app.jekyllposter.core.jekyll.PostPath
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.ui.forWriter
-import com.app.jekyllposter.Shared
-import com.app.jekyllposter.core.obsidian.ObsidianNote
-import com.app.jekyllposter.core.text.Tracking
-import android.net.Uri
-import android.provider.OpenableColumns
+import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 class HomeViewModel(private val container: AppContainer) : ViewModel() {
     data class State(
@@ -57,8 +65,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     val state: StateFlow<State> = combine(container.accounts.account, container.drafts.all(), container.blogs.cachedPosts, withTitle) { account, drafts, posts, s ->
         // Drafts for another blog wait, hidden, until that blog is signed in again.
         val mine = drafts.filter { it.blog == null || it.blog == account?.blogKey }
-        val categories = com.app.jekyllposter.core.jekyll.Taxonomy.of(
-            posts.map { com.app.jekyllposter.core.jekyll.PostSummary(com.app.jekyllposter.core.jekyll.PostPath(it.path), it.sha, it.title, it.categories, it.tags, it.published) },
+        val categories = Taxonomy.of(
+            posts.map { PostSummary(PostPath(it.path), it.sha, it.title, it.categories, it.tags, it.published) },
         ).categories.map { it.name }
         // A category gone since it was chosen (renamed, another blog) filters nothing: show all.
         val category = s.category?.takeIf { c -> categories.any { it.equals(c, ignoreCase = true) } }
@@ -133,7 +141,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         // Fresh, if GitHub can be reached: a link to a post deleted since the last look would fail
         // the site's build. Best effort; the cached list does otherwise. Only for a note with links.
         if (text.contains("[[")) withTimeoutOrNull(10_000) { runCatching { container.blogs.refresh() } }
-        val today = java.time.LocalDate.now(container.blogs.config.value.timezone ?: java.time.ZoneOffset.UTC)
+        val today = LocalDate.now(container.blogs.config.value.timezone ?: ZoneOffset.UTC)
         val posts = container.blogs.cachedPosts.first()
             // Only posts the site builds: GitHub Pages skips future-dated ones, and post_url fails on them.
             .filter { it.published && !PostPath(it.path).isDraft && (PostPath(it.path).date?.let { d -> d <= today } ?: false) }
@@ -151,7 +159,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         val body = if (container.settings.removeTrackingCodes()) Tracking.strip(note.body) else note.body
         val taxonomy = container.blogs.taxonomy.first()
         // The blog's spelling wins, as when a term is picked in the editor.
-        fun spelled(terms: List<String>, known: List<com.app.jekyllposter.core.jekyll.Term>) =
+        fun spelled(terms: List<String>, known: List<Term>) =
             terms.map { t -> known.firstOrNull { it.name.equals(t, ignoreCase = true) }?.name ?: t }.distinctBy { it.lowercase() }
         val id = container.drafts.insert(
             Draft(
@@ -162,8 +170,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 noteDate = note.date,
             ),
         )
-        container.sharedPhotos[id] = shared.images
-        if (note.embeds.isNotEmpty()) container.sharedEmbeds[id] = note.embeds
+        container.pendingShares[id] = PendingShare(shared.images, note.embeds)
         return id
     }
 
@@ -175,16 +182,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
             }.getOrNull() ?: uri.lastPathSegment
             // Read up to one byte past the limit, so a bigger file is told apart without reading it all.
-            val bytes = resolver.openInputStream(uri)?.use { input ->
-                val out = java.io.ByteArrayOutputStream()
-                val chunk = ByteArray(8192)
-                while (out.size() <= MAX_NOTE) {
-                    val n = input.read(chunk)
-                    if (n < 0) break
-                    out.write(chunk, 0, n)
-                }
-                out.toByteArray()
-            } ?: return@runCatching null
+            val bytes = resolver.openInputStream(uri)?.use { it.readAtMost(MAX_NOTE) } ?: return@runCatching null
             if (bytes.size > MAX_NOTE) null else name to bytes.toString(Charsets.UTF_8)
         }.getOrNull()
     }
@@ -237,8 +235,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 body = doc.text,
                 categories = doc.terms("category", "categories"),
                 tags = doc.terms("tag", "tags"),
-                extraFrontMatter = doc.others(com.app.jekyllposter.core.jekyll.PostWriter.MANAGED),
-                extraFrontMatterOpened = doc.others(com.app.jekyllposter.core.jekyll.PostWriter.MANAGED),
+                extraFrontMatter = doc.others(PostWriter.MANAGED),
+                extraFrontMatterOpened = doc.others(PostWriter.MANAGED),
                 editingPath = post.path,
                 baseSha = file.sha,
                 // Updating a Jekyll draft keeps it one; publishing it is a separate choice.

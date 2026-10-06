@@ -3,12 +3,11 @@ package com.app.jekyllposter.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.produceState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -23,6 +22,8 @@ import com.app.jekyllposter.ui.editor.EditorScreen
 import com.app.jekyllposter.ui.editor.EditorViewModel
 import com.app.jekyllposter.ui.home.HomeScreen
 import com.app.jekyllposter.ui.home.HomeViewModel
+import com.app.jekyllposter.ui.settings.BlogPrivacyScreen
+import com.app.jekyllposter.ui.settings.BlogPrivacyViewModel
 import com.app.jekyllposter.ui.settings.SettingsScreen
 import kotlinx.coroutines.launch
 
@@ -60,15 +61,12 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
                     // Navigation first, here on the main thread; the sign-out finishes behind it, in
                     // a scope that outlives this screen.
                     nav.navigate("connect") { popUpTo(0) { inclusive = true } }
-                    container.appScope.launch {
-                        container.accounts.signOut()
-                        container.blogs.clear()
-                    }
+                    container.appScope.launch { container.signOut() }
                 },
             )
         }
         composable("privacy") {
-            com.app.jekyllposter.ui.settings.BlogPrivacyScreen(viewModel { com.app.jekyllposter.ui.settings.BlogPrivacyViewModel(container) }) { nav.popBackStack() }
+            BlogPrivacyScreen(viewModel { BlogPrivacyViewModel(container) }) { nav.popBackStack() }
         }
         composable("home") {
             val vm = viewModel { HomeViewModel(container) }

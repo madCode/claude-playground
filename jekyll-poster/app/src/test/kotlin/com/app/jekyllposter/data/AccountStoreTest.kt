@@ -2,7 +2,11 @@ package com.app.jekyllposter.data
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.app.jekyllposter.core.github.DeviceFlow
 import com.app.jekyllposter.testutil.testCipher
+import javax.crypto.spec.SecretKeySpec
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -12,7 +16,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
-import javax.crypto.spec.SecretKeySpec
 
 @RunWith(AndroidJUnit4::class)
 class AccountStoreTest {
@@ -36,7 +39,7 @@ class AccountStoreTest {
         val renewals = mutableListOf<String>()
         val store = AccountStore(PreferenceDataStoreFactory.create { file }, testCipher(), { refresh ->
             renewals += refresh
-            com.app.jekyllposter.core.github.DeviceFlow.Tokens("ghu_new", 28_800, "ghr_new")
+            DeviceFlow.Tokens("ghu_new", 28_800, "ghr_new")
         }) { now }
         store.save(account.copy(token = "ghu_old", refreshToken = "ghr_old", expiresAt = now + 60 * 60_000))
         assertEquals("ghu_old", store.current()!!.token)
@@ -52,16 +55,16 @@ class AccountStoreTest {
 
     @Test fun aRenewalFinishingAfterSignOutDoesntSignBackIn() = runBlocking {
         val file = tmp.newFile("account.preferences_pb").also { it.delete() }
-        val started = kotlinx.coroutines.CompletableDeferred<Unit>()
-        val release = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
         val store = AccountStore(PreferenceDataStoreFactory.create { file }, testCipher(), { _ ->
             started.complete(Unit); release.await()
-            com.app.jekyllposter.core.github.DeviceFlow.Tokens("ghu_new", 28_800, "ghr_new")
+            DeviceFlow.Tokens("ghu_new", 28_800, "ghr_new")
         }) { 0L }
         store.save(account.copy(refreshToken = "ghr_old", expiresAt = 60_000))
-        val renewing = async(kotlinx.coroutines.Dispatchers.IO) { store.current() }
+        val renewing = async(Dispatchers.IO) { store.current() }
         started.await()
-        val signingOut = async(kotlinx.coroutines.Dispatchers.IO) { store.signOut() }
+        val signingOut = async(Dispatchers.IO) { store.signOut() }
         release.complete(Unit)
         renewing.await(); signingOut.await()
         assertNull(store.current())

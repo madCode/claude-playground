@@ -3,12 +3,13 @@ package com.app.jekyllposter.ui.connect
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.jekyllposter.AppContainer
-import com.app.jekyllposter.core.github.GitHubRepo
 import com.app.jekyllposter.core.github.DeviceFlow
+import com.app.jekyllposter.core.github.GitHubRepo
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.withTokens
-import kotlinx.coroutines.Job
 import com.app.jekyllposter.ui.forWriter
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -51,7 +52,7 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
                 tokensAt = System.currentTimeMillis()
                 _state.update { it.copy(deviceCode = null, busy = true) }
                 listRepos(tokens.accessToken)
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 _state.update { it.copy(busy = false, deviceCode = null, error = e.forWriter()) }

@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -14,8 +15,12 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.app.jekyllposter.PendingShare
+import com.app.jekyllposter.core.obsidian.ObsidianNote
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Draft
@@ -28,7 +33,13 @@ import com.app.jekyllposter.ui.editor.EditorScreen
 import com.app.jekyllposter.ui.editor.EditorViewModel
 import com.app.jekyllposter.ui.home.HomeScreen
 import com.app.jekyllposter.ui.home.HomeViewModel
+import com.app.jekyllposter.ui.settings.BlogPrivacyScreen
+import com.app.jekyllposter.ui.settings.BlogPrivacyViewModel
+import com.app.jekyllposter.ui.settings.SettingsScreen
+import com.app.jekyllposter.ui.settings.Visibility
 import com.app.jekyllposter.ui.theme.PosterTheme
+import java.io.File
+import java.time.ZoneId
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
@@ -37,7 +48,6 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.util.ReflectionHelpers
-import java.io.File
 
 /**
  * Renders each screen with real graphics against the sample blog. It catches screens that crash
@@ -151,7 +161,7 @@ class ScreenshotTest {
 
     @Test fun settings() {
         signIn()
-        shoot("07-settings", ready = { c.blogs.siteUrl.value != null }) { com.app.jekyllposter.ui.settings.SettingsScreen(c, {}, {}, {}, {}) }
+        shoot("07-settings", ready = { c.blogs.siteUrl.value != null }) { SettingsScreen(c, {}, {}, {}, {}) }
     }
 
     @Test fun frontMatter() {
@@ -216,7 +226,7 @@ class ScreenshotTest {
         shoot("12-search", ready = { vm.state.value.onBlog.isNotEmpty() && !vm.state.value.refreshing }, act = {
             compose.onNode(hasContentDescription("Search your posts")).performClick()
             compose.waitForIdle()
-            compose.onNode(androidx.compose.ui.test.hasTestTag("search")).performTextInput("writ")
+            compose.onNode(hasTestTag("search")).performTextInput("writ")
         }) { HomeScreen(vm, onOpenDraft = {}, onSettings = {}) }
     }
 
@@ -225,8 +235,8 @@ class ScreenshotTest {
         shoot("13-tag-just-added", act = {
             compose.onNode(hasContentDescription("Add tag")).performClick()
             compose.waitForIdle()
-            compose.onNode(androidx.compose.ui.test.hasTestTag("termQuery")).performTextInput("rain")
-            compose.onNode(androidx.compose.ui.test.hasTestTag("termQuery")).performImeAction()
+            compose.onNode(hasTestTag("termQuery")).performTextInput("rain")
+            compose.onNode(hasTestTag("termQuery")).performImeAction()
         }) { EditorScreen(vm) {} }
     }
 
@@ -237,9 +247,9 @@ class ScreenshotTest {
 
     @Test fun blogPrivacy() {
         signIn()
-        val vm = com.app.jekyllposter.ui.settings.BlogPrivacyViewModel(c) { java.time.ZoneId.of("Europe/Lisbon") }
-        shoot("15-blog-privacy", ready = { vm.state.value.noReplyEmail != null && vm.state.value.visibility != com.app.jekyllposter.ui.settings.Visibility.Loading }) {
-            com.app.jekyllposter.ui.settings.BlogPrivacyScreen(vm) {}
+        val vm = BlogPrivacyViewModel(c) { ZoneId.of("Europe/Lisbon") }
+        shoot("15-blog-privacy", ready = { vm.state.value.noReplyEmail != null && vm.state.value.visibility != Visibility.Loading }) {
+            BlogPrivacyScreen(vm) {}
         }
     }
 
@@ -247,9 +257,9 @@ class ScreenshotTest {
         signIn()
         runBlocking { c.setOnlyThroughVpn(true) }
         app.vpn.up.value = false
-        val privacy = com.app.jekyllposter.ui.settings.BlogPrivacyViewModel(c) { java.time.ZoneId.of("Europe/Lisbon") }
-        shoot("18-blog-privacy-no-vpn", ready = { privacy.state.value.waitingForVpn && privacy.state.value.visibility != com.app.jekyllposter.ui.settings.Visibility.Loading }) {
-            com.app.jekyllposter.ui.settings.BlogPrivacyScreen(privacy) {}
+        val privacy = BlogPrivacyViewModel(c) { ZoneId.of("Europe/Lisbon") }
+        shoot("18-blog-privacy-no-vpn", ready = { privacy.state.value.waitingForVpn && privacy.state.value.visibility != Visibility.Loading }) {
+            BlogPrivacyScreen(privacy) {}
         }
     }
 
@@ -268,13 +278,13 @@ class ScreenshotTest {
 
     @Test fun noteFromObsidian() {
         signIn()
-        val note = com.app.jekyllposter.core.obsidian.ObsidianNote.convert(
+        val note = ObsidianNote.convert(
             "---\ntags: [walking]\n---\nOut past the harbour wall, as in [[What I read in April]].\n\n![[lighthouse.jpg]]\n\nNext time: [[The second stile]].\n",
             "A walk to the lighthouse.md",
-            listOf(com.app.jekyllposter.core.obsidian.ObsidianNote.LinkTarget("_posts/2025-04-20-reading-list.md", "What I read in April")),
-        ) as com.app.jekyllposter.core.obsidian.ObsidianNote.Result.Converted
+            listOf(ObsidianNote.LinkTarget("_posts/2025-04-20-reading-list.md", "What I read in April")),
+        ) as ObsidianNote.Result.Converted
         val id = runBlocking { c.drafts.insert(Draft(title = note.title, body = note.body, tags = note.tags, noteDate = "2021-06-24")) }
-        c.sharedEmbeds[id] = note.embeds
+        c.pendingShares[id] = PendingShare(embeds = note.embeds)
         val vm = EditorViewModel(c, id)
         shoot("16-note-from-obsidian", ready = { vm.text != null && vm.state.value.vaultPhotos == 1 }) { EditorScreen(vm) {} }
     }
@@ -283,10 +293,10 @@ class ScreenshotTest {
         val vm = editorWithDraft()
         idleUntil { vm.postsToLink("").isNotEmpty() }
         shoot("17-link-to-a-post", act = {
-            compose.onNode(androidx.compose.ui.test.hasTestTag("body")).performClick()
+            compose.onNode(hasTestTag("body")).performClick()
             compose.waitForIdle()
             val body = "Out past the harbour wall, as in [[wh"
-            vm.setBody(androidx.compose.ui.text.input.TextFieldValue(body, androidx.compose.ui.text.TextRange(body.length)))
+            vm.setBody(TextFieldValue(body, TextRange(body.length)))
         }) { EditorScreen(vm) {} }
     }
 }

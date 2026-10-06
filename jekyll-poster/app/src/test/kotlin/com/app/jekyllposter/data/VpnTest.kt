@@ -1,13 +1,19 @@
 package com.app.jekyllposter.data
 
 import android.net.ConnectivityManager
+import android.net.IpPrefix
+import android.net.LinkProperties
 import android.net.NetworkCapabilities
+import android.net.RouteInfo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.publish.Publisher
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.ui.forWriter
 import com.app.jekyllposter.ui.home.status
+import java.net.InetAddress
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -23,8 +29,6 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowNetworkCapabilities
 import org.robolectric.util.ReflectionHelpers
 import org.robolectric.util.ReflectionHelpers.ClassParameter
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 /** "Only connect through a VPN": every request goes through the VPN, or isn't sent at all. */
 @RunWith(AndroidJUnit4::class)
@@ -132,18 +136,18 @@ class VpnTest {
      * Link properties with a route for each prefix, through the interface named, or unreachable
      * without one, as Android adds them. Their constructors are hidden from apps.
      */
-    private fun links(vararg routes: Pair<String, String?>) = android.net.LinkProperties().also { links ->
+    private fun links(vararg routes: Pair<String, String?>) = LinkProperties().also { links ->
         ReflectionHelpers.callInstanceMethod<Any>(links, "setInterfaceName", ClassParameter.from(String::class.java, "tun0"))
         for ((p, iface) in routes) {
-            val prefix = ReflectionHelpers.callConstructor(android.net.IpPrefix::class.java, ClassParameter.from(String::class.java, p))
+            val prefix = ReflectionHelpers.callConstructor(IpPrefix::class.java, ClassParameter.from(String::class.java, p))
             val route = ReflectionHelpers.callConstructor(
-                android.net.RouteInfo::class.java,
-                ClassParameter.from(android.net.IpPrefix::class.java, prefix),
-                ClassParameter.from(java.net.InetAddress::class.java, null),
+                RouteInfo::class.java,
+                ClassParameter.from(IpPrefix::class.java, prefix),
+                ClassParameter.from(InetAddress::class.java, null),
                 ClassParameter.from(String::class.java, iface),
-                ClassParameter.from(Int::class.javaPrimitiveType, if (iface != null) android.net.RouteInfo.RTN_UNICAST else android.net.RouteInfo.RTN_UNREACHABLE),
+                ClassParameter.from(Int::class.javaPrimitiveType, if (iface != null) RouteInfo.RTN_UNICAST else RouteInfo.RTN_UNREACHABLE),
             )
-            ReflectionHelpers.callInstanceMethod<Any>(links, "addRoute", ClassParameter.from(android.net.RouteInfo::class.java, route))
+            ReflectionHelpers.callInstanceMethod<Any>(links, "addRoute", ClassParameter.from(RouteInfo::class.java, route))
         }
     }
 }

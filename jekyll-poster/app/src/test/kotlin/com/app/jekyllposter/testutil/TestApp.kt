@@ -1,5 +1,6 @@
 package com.app.jekyllposter.testutil
 
+import android.net.Uri
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import com.app.jekyllposter.AppContainer
@@ -7,7 +8,14 @@ import com.app.jekyllposter.PosterApp
 import com.app.jekyllposter.core.testing.FakeGitHub
 import com.app.jekyllposter.data.AesGcmCipher
 import com.app.jekyllposter.data.PosterDatabase
+import com.app.jekyllposter.data.VaultFile
+import com.app.jekyllposter.data.VaultImages
+import com.app.jekyllposter.publish.PublishQueue
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import javax.crypto.spec.SecretKeySpec
+import kotlinx.coroutines.runBlocking
 
 fun testCipher() = AesGcmCipher { SecretKeySpec(ByteArray(32) { it.toByte() }, "AES") }
 
@@ -22,13 +30,13 @@ class TestApp : PosterApp() {
     val vpn = FakeVpn()
 
     /** Queued posts the app started again, past WorkManager's backoff. */
-    val retried = java.util.concurrent.CopyOnWriteArrayList<Long>()
+    val retried = CopyOnWriteArrayList<Long>()
 
     /** The random time each queued post was given when it was scheduled or started again. */
-    val sendAfters = java.util.concurrent.ConcurrentHashMap<Long, Long>()
+    val sendAfters = ConcurrentHashMap<Long, Long>()
 
     /** Posts sent at once with Send now. */
-    val sentNow = java.util.concurrent.CopyOnWriteArrayList<Long>()
+    val sentNow = CopyOnWriteArrayList<Long>()
 
     /** When set, a publish request runs the publisher straight away, as the worker would. */
     var publishNow = true
@@ -45,10 +53,10 @@ class TestApp : PosterApp() {
             // A file of its own: the app's DataStore is a process-wide singleton that would carry
             // one test's sign-in into the next.
             accountData = PreferenceDataStoreFactory.create {
-                java.io.File.createTempFile("account", ".preferences_pb").also { it.delete(); it.deleteOnExit() }
+                File.createTempFile("account", ".preferences_pb").also { it.delete(); it.deleteOnExit() }
             },
             settingsData = PreferenceDataStoreFactory.create {
-                java.io.File.createTempFile("settings", ".preferences_pb").also { it.delete(); it.deleteOnExit() }
+                File.createTempFile("settings", ".preferences_pb").also { it.delete(); it.deleteOnExit() }
             },
             // A file, as in the app: an in-memory database has a single connection, and a write
             // can then wait behind the screens' live queries in ways the app never sees.
@@ -56,18 +64,27 @@ class TestApp : PosterApp() {
                 .allowMainThreadQueries().build(),
             // A plain folder stands in for the vault: Robolectric has no document provider to walk.
             vaultFiles = { tree ->
-                val root = java.io.File(android.net.Uri.parse(tree).path!!)
-                com.app.jekyllposter.data.VaultImages(
-                    root.walkTopDown().filter { it.isFile }.map { com.app.jekyllposter.data.VaultFile(it.relativeTo(root).path, android.net.Uri.fromFile(it)) }.toList(),
+                val root = File(Uri.parse(tree).path!!)
+                VaultImages(
+                    root.walkTopDown().filter { it.isFile }.map { VaultFile(it.relativeTo(root).path, Uri.fromFile(it)) }.toList(),
                 )
             },
             vpn = vpn,
-            retryPublish = { id, after -> retried += id; after?.let { sendAfters[id] = it } },
-            sendNowWork = { sentNow += it },
-            schedulePublish = { id, after ->
-                published += id
-                after?.let { sendAfters[id] = it }
-                if (publishNow) kotlinx.coroutines.runBlocking { container.publisher.publish(id) }
+            publishQueue = object : PublishQueue {
+                override fun enqueue(id: Long, sendAfter: Long?) {
+                    published += id
+                    sendAfter?.let { sendAfters[id] = it }
+                    if (publishNow) runBlocking { container.publisher.publish(id) }
+                }
+
+                override fun retryNow(id: Long, sendAfter: Long?) {
+                    retried += id
+                    sendAfter?.let { sendAfters[id] = it }
+                }
+
+                override fun sendNow(id: Long) {
+                    sentNow += id
+                }
             },
         )
         return container

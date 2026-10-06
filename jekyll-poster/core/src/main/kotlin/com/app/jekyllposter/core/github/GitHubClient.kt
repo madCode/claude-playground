@@ -1,8 +1,11 @@
 package com.app.jekyllposter.core.github
 
-import kotlinx.coroutines.suspendCancellableCoroutine
+import java.io.IOException
+import java.net.URLEncoder
+import java.util.Base64
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -15,13 +18,14 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
-import java.util.Base64
+import okhttp3.Response
 
 /**
  * The few GitHub REST and GraphQL calls the app makes, with a token from a fine-grained personal
@@ -29,7 +33,7 @@ import java.util.Base64
  * the calling coroutine is cancelled.
  */
 class GitHubClient(
-    private val http: okhttp3.Call.Factory,
+    private val http: Call.Factory,
     private val token: String,
     private val apiBase: HttpUrl = "https://api.github.com/".toHttpUrl(),
 ) {
@@ -241,18 +245,18 @@ class GitHubClient(
      * The call's response and body. Cancelling the coroutine cancels the call: a blocking
      * `execute()` would hold a timed-out caller until the socket gave up on its own.
      */
-    private suspend fun execute(call: okhttp3.Call): Pair<okhttp3.Response, String> = suspendCancellableCoroutine { cont ->
+    private suspend fun execute(call: Call): Pair<Response, String> = suspendCancellableCoroutine { cont ->
         cont.invokeOnCancellation { call.cancel() }
-        call.enqueue(object : okhttp3.Callback {
-            override fun onFailure(call: okhttp3.Call, e: IOException) = cont.resumeWithException(e)
-            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) = cont.resumeWithException(e)
+            override fun onResponse(call: Call, response: Response) {
                 val read = runCatching { response.use { it to it.body.string() } }
                 read.fold({ cont.resume(it) }, { cont.resumeWithException(it) })
             }
         })
     }
 
-    private fun enc(s: String) = java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20")
+    private fun enc(s: String) = URLEncoder.encode(s, "UTF-8").replace("+", "%20")
 
     /** A branch in a URL path: each segment encoded, the slashes of `site/main` kept. */
     private fun ref(branch: String) = branch.split('/').joinToString("/") { enc(it) }

@@ -2,6 +2,8 @@ package com.app.jekyllposter.publish
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.app.jekyllposter.core.github.CommitAuthor
+import com.app.jekyllposter.core.jekyll.parseJekyllDate
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Destination
@@ -9,6 +11,11 @@ import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.DraftImage
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.testutil.TestApp
+import java.io.File
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -19,8 +26,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.time.ZoneId
-import java.time.ZonedDateTime
 
 @RunWith(AndroidJUnit4::class)
 @Config(application = TestApp::class)
@@ -86,7 +91,7 @@ class PublisherTest {
         // GitHub's default: the account, with whatever email its settings give.
         publisher.publish(queue(Draft(title = "Default", body = "x")))
         assertNull(github.commits.getValue(github.head).authorEmail)
-        c.settings.setCommitAsNoReply("sample", com.app.jekyllposter.core.github.CommitAuthor("Sample Writer", "1001+sample@users.noreply.github.com"))
+        c.settings.setCommitAsNoReply("sample", CommitAuthor("Sample Writer", "1001+sample@users.noreply.github.com"))
         publisher.publish(queue(Draft(title = "Private", body = "x")))
         assertEquals("1001+sample@users.noreply.github.com", github.commits.getValue(github.head).authorEmail)
         // Signed with the login, never the profile's name, even one kept from before.
@@ -171,13 +176,13 @@ class PublisherTest {
 
     @Test fun signedInAsSomeoneElseTheirOwnNoReplyAddressIsLookedUp() = runBlocking {
         // Kept from another account; this one's is found once and kept instead.
-        c.settings.setCommitAsNoReply("someone-else", com.app.jekyllposter.core.github.CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
+        c.settings.setCommitAsNoReply("someone-else", CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
         publisher.publish(queue(Draft(title = "Mine", body = "x")))
         assertEquals("1001+sample@users.noreply.github.com", github.commits.getValue(github.head).authorEmail)
     }
 
     @Test fun aRejectedSignInDuringTheLookUpSaysToSignInAgain() = runBlocking {
-        c.settings.setCommitAsNoReply("someone-else", com.app.jekyllposter.core.github.CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
+        c.settings.setCommitAsNoReply("someone-else", CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
         github.failures["user"] = 401
         val id = queue(Draft(title = "Expired", body = "x"))
         assertTrue(publisher.publish(id) is Publisher.Outcome.Failed)
@@ -185,18 +190,18 @@ class PublisherTest {
     }
 
     @Test fun aLookUpNeverTurnsTheSwitchBackOn() = runBlocking {
-        c.settings.setCommitAsNoReply("someone-else", com.app.jekyllposter.core.github.CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
+        c.settings.setCommitAsNoReply("someone-else", CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
         // The writer turns it off while the address is being looked up.
         c.settings.commitAuthor("sample") {
             c.settings.setCommitAsNoReply("sample", null)
-            com.app.jekyllposter.core.github.CommitAuthor("Sample", "1001+sample@users.noreply.github.com")
+            CommitAuthor("Sample", "1001+sample@users.noreply.github.com")
         }
         assertEquals(false, c.settings.commitAsNoReply())
     }
 
     @Test fun photosTheTextStillUsesGoInThePostsCommit() = runBlocking {
-        val kept = java.io.File.createTempFile("kept", ".jpg").apply { writeBytes(byteArrayOf(1, 2, 3)) }
-        val dropped = java.io.File.createTempFile("dropped", ".jpg").apply { writeBytes(byteArrayOf(9)) }
+        val kept = File.createTempFile("kept", ".jpg").apply { writeBytes(byteArrayOf(1, 2, 3)) }
+        val dropped = File.createTempFile("dropped", ".jpg").apply { writeBytes(byteArrayOf(9)) }
         val id = queue(
             Draft(
                 title = "Lighthouse", body = "Look:\n\n![]({{ '/assets/images/2026/a.jpg' | relative_url }})\n",
@@ -235,9 +240,9 @@ class PublisherTest {
     @Test fun twoPostsWithTheSameTitleBothLand() = runBlocking {
         val a = queue(Draft(title = "Weekly notes", body = "One"))
         val b = queue(Draft(title = "Weekly notes", body = "Two"))
-        kotlinx.coroutines.coroutineScope {
-            launch(kotlinx.coroutines.Dispatchers.IO) { publisher.publish(a) }
-            launch(kotlinx.coroutines.Dispatchers.IO) { publisher.publish(b) }
+        coroutineScope {
+            launch(Dispatchers.IO) { publisher.publish(a) }
+            launch(Dispatchers.IO) { publisher.publish(b) }
         }
         assertTrue(github.text("_posts/2026-10-04-weekly-notes.md")!!.contains("One") xor github.text("_posts/2026-10-04-weekly-notes.md")!!.contains("Two"))
         assertTrue(github.text("_posts/2026-10-04-weekly-notes-2.md") != null)
@@ -300,7 +305,7 @@ class PublisherTest {
 
     @Test fun deletingAPostRemovesItInOneCommitAndForgetsIt() = runBlocking {
         val path = "_posts/2025-01-12-welcome.md"
-        val photo = java.io.File.createTempFile("waiting", ".jpg").apply { writeBytes(byteArrayOf(1)) }
+        val photo = File.createTempFile("waiting", ".jpg").apply { writeBytes(byteArrayOf(1)) }
         val id = queueDelete(path)
         c.drafts.update(c.drafts.get(id)!!.copy(images = listOf(DraftImage("/assets/images/2026/x.jpg", photo.path))))
         val before = github.head
@@ -408,8 +413,8 @@ class PublisherTest {
     }
 
     @Test fun twoRenamedPhotosGetTwoNames() = runBlocking {
-        val a = java.io.File.createTempFile("photo", ".jpg").apply { writeBytes(byteArrayOf(1)) }
-        val b = java.io.File.createTempFile("photo", ".jpg").apply { writeBytes(byteArrayOf(2)) }
+        val a = File.createTempFile("photo", ".jpg").apply { writeBytes(byteArrayOf(1)) }
+        val b = File.createTempFile("photo", ".jpg").apply { writeBytes(byteArrayOf(2)) }
         val pa = "/assets/images/2025/loaf.jpg"
         val pb = "/assets/images/2025/lighthouse.jpg"
         val id = queue(Draft(title = "Two", body = "![]({{ '$pa' | relative_url }}) ![]({{ '$pb' | relative_url }})", images = listOf(DraftImage(pa, a.path), DraftImage(pb, b.path))))
@@ -440,7 +445,7 @@ class PublisherTest {
     }
 
     @Test fun aPhotoWhoseNameWasTakenIsRenamedNotOverwritten() = runBlocking {
-        val photo = java.io.File.createTempFile("photo", ".jpg").apply { writeBytes(byteArrayOf(4, 5)) }
+        val photo = File.createTempFile("photo", ".jpg").apply { writeBytes(byteArrayOf(4, 5)) }
         val taken = "/assets/images/2025/loaf.jpg"
         val id = queue(Draft(title = "Bread", body = "![]({{ '$taken' | relative_url }})", images = listOf(DraftImage(taken, photo.path))))
         val before = github.files().getValue("assets/images/2025/loaf.jpg")

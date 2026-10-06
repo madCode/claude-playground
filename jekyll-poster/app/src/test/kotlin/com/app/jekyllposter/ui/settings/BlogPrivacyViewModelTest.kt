@@ -2,9 +2,11 @@ package com.app.jekyllposter.ui.settings
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.app.jekyllposter.core.github.CommitAuthor
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
+import java.time.ZoneId
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -14,7 +16,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.time.ZoneId
 
 @RunWith(AndroidJUnit4::class)
 @Config(application = TestApp::class)
@@ -31,20 +32,20 @@ class BlogPrivacyViewModelTest {
     @After fun close() = app.github.close()
 
     @Test fun oneStepSetsUpForWritingAnonymously() {
-        val vm = BlogPrivacyViewModel(c) { java.time.ZoneId.of("Asia/Tokyo") }
+        val vm = BlogPrivacyViewModel(c) { ZoneId.of("Asia/Tokyo") }
         idleUntil { vm.state.value.noReplyEmail != null }
         assertFalse(vm.state.value.anonymous)
         // No VPN yet: the address must be found before the VPN switch goes on, or it couldn't be.
         app.vpn.up.value = false
         vm.writeAnonymously()
         idleUntil(10_000) { vm.state.value.anonymous && vm.state.value.waitingForVpn }
-        assertEquals(com.app.jekyllposter.core.github.CommitAuthor("sample", "1001+sample@users.noreply.github.com"), runBlocking { c.settings.commitAuthor("sample") { null } })
+        assertEquals(CommitAuthor("sample", "1001+sample@users.noreply.github.com"), runBlocking { c.settings.commitAuthor("sample") { null } })
         // The site's time zone is a commit: left for the writer to choose.
         assertEquals("America/Los_Angeles", vm.state.value.siteZone)
     }
 
     @Test fun aFailedLookUpLeavesTheVpnSwitchOffSoTryingAgainCanWork() {
-        val vm = BlogPrivacyViewModel(c) { java.time.ZoneId.of("Asia/Tokyo") }
+        val vm = BlogPrivacyViewModel(c) { ZoneId.of("Asia/Tokyo") }
         idleUntil { vm.state.value.visibility != Visibility.Loading }
         app.github.failures["user"] = 503
         vm.writeAnonymously()

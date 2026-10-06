@@ -4,6 +4,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.app.jekyllposter.core.jekyll.MarkdownEdits
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.testutil.TestApp
@@ -66,7 +67,7 @@ class LinkSuggestionsTest {
     @Test fun theToolbarButtonStartsALinkWithTheSelectionAsTheSearch() {
         val editor = editor()
         editor.setBody(TextFieldValue("As in April", TextRange(6, 11)))
-        editor.format(com.app.jekyllposter.core.jekyll.MarkdownEdits::postLink)
+        editor.format(MarkdownEdits::postLink)
         assertEquals("April", editor.openLink!!.query)
         assertEquals(listOf("What I read in April"), editor.postsToLink("April").map { it.title })
     }

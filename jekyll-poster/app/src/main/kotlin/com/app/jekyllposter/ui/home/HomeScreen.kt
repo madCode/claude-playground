@@ -1,32 +1,29 @@
 package com.app.jekyllposter.ui.home
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,37 +36,49 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.produceState
-import androidx.lifecycle.compose.currentStateAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.currentStateAsState
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.CachedPost
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import com.app.jekyllposter.ui.theme.LocalWhimsy
 import com.app.jekyllposter.ui.theme.PosterFab
 import com.app.jekyllposter.ui.theme.RowDivider
 import com.app.jekyllposter.ui.theme.RowFrame
 import com.app.jekyllposter.ui.theme.SectionHeading
 import com.app.jekyllposter.ui.theme.TermPill
-import androidx.compose.ui.semantics.contentDescription
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,7 +155,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
                 items(state.onBlog, key = { "p${it.sha}${it.path}" }) { post ->
                     PostRow(post) { viewModel.edit(post, onOpenDraft) }
                 }
-                item { androidx.compose.foundation.layout.Spacer(Modifier.padding(48.dp)) }
+                item { Spacer(Modifier.padding(48.dp)) }
             }
         }
     }
@@ -178,8 +187,8 @@ fun Draft.status(live: String = "live on the site", waitingForVpn: Boolean = fal
     PostState.Queued -> when {
         waitingForVpn -> "Waiting for your VPN…"
         (sendAfter ?: 0) > now -> "Going out at ${
-            java.time.Instant.ofEpochMilli(sendAfter!!).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
-                .format(java.time.format.DateTimeFormatter.ofLocalizedTime(java.time.format.FormatStyle.SHORT))
+            Instant.ofEpochMilli(sendAfter!!).atZone(ZoneId.systemDefault()).toLocalTime()
+                .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
         }, a random time"
         destination == Destination.Delete -> "Waiting to delete from the blog…"
         else -> "Waiting to publish…"
@@ -243,9 +252,9 @@ private fun PostRow(post: CachedPost, onClick: () -> Unit) {
 /** The blog's categories as pills to filter the list by; the chosen one is outlined. */
 @Composable
 private fun CategoryFilter(categories: List<String>, chosen: String?, onChoose: (String?) -> Unit) {
-    androidx.compose.foundation.lazy.LazyRow(
+    LazyRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
     ) {
         item { TermPill("All", selected = chosen == null, all = true, onClick = { onChoose(null) }) }
         items(categories) { c -> TermPill(c, selected = c.equals(chosen, ignoreCase = true), onClick = { onChoose(c) }) }
@@ -259,12 +268,12 @@ private fun CategoryFilter(categories: List<String>, chosen: String?, onChoose: 
 @Composable
 fun nowUntil(at: Long?): Long {
     // Read again on every return to the screen too: a delay doesn't count time the phone slept.
-    val lifecycle by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
     return produceState(System.currentTimeMillis(), at, lifecycle) {
         value = System.currentTimeMillis()
         val wait = (at ?: return@produceState) - System.currentTimeMillis()
         if (wait > 0) {
-            kotlinx.coroutines.delay(wait)
+            delay(wait)
             value = System.currentTimeMillis()
         }
     }.value

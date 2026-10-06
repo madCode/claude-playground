@@ -1,5 +1,9 @@
 package com.app.jekyllposter.core.testing
 
+import java.io.File
+import java.net.URLDecoder
+import java.security.MessageDigest
+import java.util.Base64
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -16,9 +20,6 @@ import mockwebserver3.Dispatcher
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import mockwebserver3.RecordedRequest
-import java.io.File
-import java.security.MessageDigest
-import java.util.Base64
 
 /**
  * An in-memory GitHub serving one repository, for tests: the REST and GraphQL calls the app makes,
@@ -134,7 +135,7 @@ class FakeGitHub(
             path.startsWith("repos/") && !path.startsWith(base) -> error(404, "Not Found")
             path == "graphql" -> graphql(body!!)
             path.startsWith("$base/git/trees/") && request.method == "GET" -> {
-                val ref = path.removePrefix("$base/git/trees/").let { java.net.URLDecoder.decode(it, "UTF-8") }
+                val ref = path.removePrefix("$base/git/trees/").let { URLDecoder.decode(it, "UTF-8") }
                 val commit = refs[ref] ?: return error(404, "Not Found")
                 val tree = trees.getValue(commits.getValue(commit).tree)
                 ok(buildJsonObject {
@@ -146,7 +147,7 @@ class FakeGitHub(
                 })
             }
             path.startsWith("$base/contents/") -> {
-                val file = java.net.URLDecoder.decode(path.removePrefix("$base/contents/"), "UTF-8")
+                val file = URLDecoder.decode(path.removePrefix("$base/contents/"), "UTF-8")
                 val ref = url.queryParameter("ref") ?: branch
                 val commit = refs[ref] ?: ref.takeIf { it in commits }
                 val sha = commit?.let { trees.getValue(commits.getValue(it).tree)[file] } ?: return error(404, "Not Found")
