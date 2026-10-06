@@ -24,6 +24,12 @@ class TestApp : PosterApp() {
     /** Queued posts the app started again, past WorkManager's backoff. */
     val retried = java.util.concurrent.CopyOnWriteArrayList<Long>()
 
+    /** The random time each queued post was given when it was scheduled or started again. */
+    val sendAfters = java.util.concurrent.ConcurrentHashMap<Long, Long>()
+
+    /** Posts sent at once with Send now. */
+    val sentNow = java.util.concurrent.CopyOnWriteArrayList<Long>()
+
     /** When set, a publish request runs the publisher straight away, as the worker would. */
     var publishNow = true
 
@@ -56,9 +62,11 @@ class TestApp : PosterApp() {
                 )
             },
             vpn = vpn,
-            retryPublish = { retried += it },
-            schedulePublish = { id ->
+            retryPublish = { id, after -> retried += id; after?.let { sendAfters[id] = it } },
+            sendNowWork = { sentNow += it },
+            schedulePublish = { id, after ->
                 published += id
+                after?.let { sendAfters[id] = it }
                 if (publishNow) kotlinx.coroutines.runBlocking { container.publisher.publish(id) }
             },
         )

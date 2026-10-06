@@ -20,6 +20,16 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Cycle 21: privacy for anonymous writers, 2 of 3 (what goes out, and when)
+- **Shipped:** **Send at a random time** (a moment in the next three hours, kept with the post,
+  with **Send now**); **Plain commit messages**; Obsidian comments and the note keys that say
+  when and where it was written stay out of the post.
+- **Its review found** (fixed, with tests): code inside a comment let the comment's words out
+  and ate the text after it (comments now go first, over the whole note); Send now did nothing
+  once the VPN-back restart had queued the post; a double tap on Publish picked a second time
+  that was never scheduled; Send now could overwrite a publish landing that moment; `date
+  created:` and `Created:` stayed; the "Going out at" label and Send now stayed after the time.
+
 ### Cycle 20: privacy for anonymous writers, 1 of 3 (who and when)
 - **Asked:** make it easy to blog anonymously. An audit listed what still ties a post to its
   writer; this cycle takes who signs the commits and what the dates say.

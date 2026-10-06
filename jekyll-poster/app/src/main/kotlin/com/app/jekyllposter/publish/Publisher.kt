@@ -65,6 +65,8 @@ class Publisher(
     private suspend fun attempt(id: Long): Outcome? {
         val draft = drafts.get(id) ?: return Outcome.Done
         if (draft.state != PostState.Queued) return Outcome.Done
+        // Sent at a random time and woken early: not yet. Nothing is read or sent before then.
+        if ((draft.sendAfter ?: 0) > now().toInstant().toEpochMilli()) return Outcome.Retry
         val verb = if (draft.destination == Destination.Delete) "delete" else "publish"
         val account = accounts.current() ?: return fail(draft, "Sign in to $verb.")
         if (draft.blog != null && draft.blog != account.blogKey) {
@@ -89,7 +91,9 @@ class Publisher(
             } catch (e: Settings.NoAddress) {
                 return fail(draft, "GitHub didn't give your account's no-reply address. Turn it off in Blog & privacy to publish.")
             }
-            val sha = blog.commit(plan.message, plan.changes, plan.expect, author)
+            // The title stays in the history after the post is deleted; a plain message names nothing.
+            val message = if (settings.plainCommitMessages()) "Update blog" else plan.message
+            val sha = blog.commit(message, plan.changes, plan.expect, author)
             if (draft.destination == Destination.Delete) return deleted(draft, plan.path)
             published(drafts.get(id) ?: draft, plan.path, sha, plan.date?.let { postUrl(index, plan.path, it, plan.draft) })
         } catch (e: GitHubException) {

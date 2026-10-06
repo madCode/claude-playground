@@ -65,6 +65,20 @@ class MigrationTest {
         }
     }
 
+    @Test fun version4DraftsGainASendTime() {
+        helper.createDatabase(DB, 4).use { db ->
+            db.execSQL("INSERT INTO drafts (id, title, body, categories, tags, state, createdAt, updatedAt) VALUES (6, 'Kept', 'b', '[]', '[]', 'Queued', 0, 0)")
+        }
+        helper.runMigrationsAndValidate(DB, 5, true, MIGRATION_4_5).use { db ->
+            db.query("SELECT title, sendAfter FROM drafts WHERE id = 6").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("Kept", c.getString(0))
+                // Queued before the switch existed: goes out at once.
+                assertTrue(c.isNull(1))
+            }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
     }

@@ -423,48 +423,71 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
 
     /** Sends the post to [destination]: the site's `_posts`, or the blog's `_drafts`. */
     fun publish(destination: Destination? = null) {
+        // Set before anything suspends: a double tap's second call would otherwise read the post
+        // as not yet queued, and pick it a second random time.
+        if (publishing) return
+        publishing = true
         viewModelScope.launch {
-            photoJob?.join()
-            saveJob?.cancel()
-            // `[[Post title]]` made links now, against the posts as they are: the text that's sent
-            // is then fixed, the same on every retry, and the writer sees what went out.
-            if (destination != Destination.Delete) {
-                text?.let { t ->
-                    val linked = ObsidianNote.linkPosts(t.body, targets(linkable.value), container.blogs.postUrlHasBaseurl)
-                    if (linked != t.body) Snapshot.withMutableSnapshot { text = t.copy(body = linked) }
+            try {
+                photoJob?.join()
+                saveJob?.cancel()
+                // `[[Post title]]` made links now, against the posts as they are: the text that's sent
+                // is then fixed, the same on every retry, and the writer sees what went out.
+                if (destination != Destination.Delete) {
+                    text?.let { t ->
+                        val linked = ObsidianNote.linkPosts(t.body, targets(linkable.value), container.blogs.postUrlHasBaseurl)
+                        if (linked != t.body) Snapshot.withMutableSnapshot { text = t.copy(body = linked) }
+                    }
                 }
+                save()
+                val draft = container.drafts.get(id) ?: return@launch
+                // A second tap, or one from another window: it's on its way, at the time already chosen.
+                if (draft.state == PostState.Queued) {
+                    flags.update { it.copy(closed = true) }
+                    return@launch
+                }
+                if (draft.title.isBlank()) {
+                    flags.update { it.copy(titleMissing = true) }
+                    return@launch
+                }
+                // Publishing would write YAML the blog can't read: say why instead.
+                draft.frontMatterProblem?.let { problem ->
+                    flags.update { it.copy(frontMatterBlocked = problem) }
+                    return@launch
+                }
+                // A failed post that never attempted a commit gets a fresh name and date: the old ones
+                // may be days stale. One that did keeps them, so a commit that landed unheard is
+                // recognised rather than published twice.
+                val again = draft.state == PostState.Failed && draft.editingPath == null && draft.sentShas.isEmpty()
+                // A random moment in the next few hours, so commit times don't trace the writer's
+                // day. Deleting a post is never delayed: the writer wants it gone.
+                val sendAfter = if ((destination ?: draft.destination) != Destination.Delete && container.settings.sendAtRandomTime()) {
+                    System.currentTimeMillis() + kotlin.random.Random.nextLong(com.app.jekyllposter.data.RANDOM_WINDOW.inWholeMilliseconds)
+                } else {
+                    null
+                }
+                container.drafts.update(
+                    draft.copy(
+                        state = PostState.Queued, error = null, updatedAt = System.currentTimeMillis(),
+                        destination = destination ?: draft.destination,
+                        blog = draft.blog ?: container.accounts.current()?.blogKey,
+                        // A failed post sent again later gets a fresh name and date: the old ones may
+                        // be days stale, or taken by now.
+                        // A delete's path marker isn't a name to publish under.
+                        targetPath = if (again || draft.destination == Destination.Delete) null else draft.targetPath,
+                        publishDate = if (again) null else draft.publishDate,
+                        sendAfter = sendAfter,
+                    ),
+                )
+                container.schedulePublish(id, sendAfter)
+                flags.update { it.copy(closed = true) }
+            } finally {
+                publishing = false
             }
-            save()
-            val draft = container.drafts.get(id) ?: return@launch
-            if (draft.title.isBlank()) {
-                flags.update { it.copy(titleMissing = true) }
-                return@launch
-            }
-            // Publishing would write YAML the blog can't read: say why instead.
-            draft.frontMatterProblem?.let { problem ->
-                flags.update { it.copy(frontMatterBlocked = problem) }
-                return@launch
-            }
-            // A failed post that never attempted a commit gets a fresh name and date: the old ones
-            // may be days stale. One that did keeps them, so a commit that landed unheard is
-            // recognised rather than published twice.
-            val again = draft.state == PostState.Failed && draft.editingPath == null && draft.sentShas.isEmpty()
-            container.drafts.update(
-                draft.copy(
-                    state = PostState.Queued, error = null, updatedAt = System.currentTimeMillis(),
-                    destination = destination ?: draft.destination,
-                    blog = draft.blog ?: container.accounts.current()?.blogKey,
-                    // A failed post sent again later gets a fresh name and date: the old ones may
-                    // be days stale, or taken by now.
-                    // A delete's path marker isn't a name to publish under.
-                    targetPath = if (again || draft.destination == Destination.Delete) null else draft.targetPath,
-                    publishDate = if (again) null else draft.publishDate,
-                ),
-            )
-            container.schedulePublish(id)
-            flags.update { it.copy(closed = true) }
         }
     }
+
+    private var publishing = false
 
     /**
      * Queues the blog's copy of the post being edited for deletion. The writer's unsent changes
@@ -485,6 +508,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                             state = PostState.Queued, error = null, destination = Destination.Delete,
                             // A delete sent before keeps its marker: its commit may have landed.
                             targetPath = if (draft.destination == Destination.Delete) draft.targetPath else null,
+                            sendAfter = null,
                             updatedAt = System.currentTimeMillis(), blog = draft.blog ?: container.accounts.current()?.blogKey,
                         ),
                     )
@@ -492,9 +516,14 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 }
             }
             if (!queued) return@launch
-            container.schedulePublish(id)
+            container.schedulePublish(id, null)
             flags.update { it.copy(closed = true) }
         }
+    }
+
+    /** Sends a post waiting for its random time now. In the app's scope: Back right after mustn't stop it. */
+    fun sendNow() {
+        container.appScope.launch { container.sendNow(id) }
     }
 
     /** Leaving the editor: saves, and drops a draft that was never written in. */

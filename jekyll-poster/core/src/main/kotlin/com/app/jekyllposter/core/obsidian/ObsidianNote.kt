@@ -37,10 +37,17 @@ object ObsidianNote {
     }
 
     /**
-     * Keys dropped from a note: obyde's rules and Obsidian's own. `date` goes to [Result.Converted.date]
-     * rather than the front matter: the app writes it itself, in the file name too.
+     * Keys dropped from a note: obyde's rules and Obsidian's own, and the ones plugins fill in
+     * that say when and where the writer wrote (Map View's `location`), which a public post
+     * shouldn't. `date` goes to [Result.Converted.date] rather than the front matter: the app
+     * writes it itself, in the file name too.
      */
-    private val dropped = setOf("find", "replace", "aliases", "alias", "cssclasses", "cssclass", "date", "layout")
+    private val dropped = setOf(
+        "find", "replace", "aliases", "alias", "cssclasses", "cssclass", "date", "layout",
+    )
+
+    /** Plugins' keys for when and where a note was written, dropped in any case: they differ (`Created:`). */
+    private val written = setOf("created", "modified", "updated", "date created", "date modified", "date updated", "location", "coordinates")
 
     private val imageExtensions = setOf("png", "jpg", "jpeg", "gif", "webp", "avif", "bmp", "svg", "heic")
 
@@ -68,6 +75,9 @@ object ObsidianNote {
         // Out before the rules run: they hold the very words meant to stay private.
         doc.set("find", null)
         doc.set("replace", null)
+        // Comments are the writer's notes to themselves (Jekyll would show them): out first, so
+        // nothing in them is taken as the title, a photo or a link.
+        doc = doc.withBody(withoutComments(doc.text))
         // Named before the rules run, which may change a file's name in the text too.
         val embedNames = embeds(doc.text).map { it.name }
         if (rules.isNotEmpty()) {
@@ -89,8 +99,12 @@ object ObsidianNote {
         }
         val categories = noteTerms(doc, "category", "categories")
         val tags = noteTerms(doc, "tag", "tags")
-        val date = doc.string("date")?.trim()?.takeIf { it.isNotEmpty() }
+        // `Date:` too: Jekyll would ignore it, and the writer meant the post's date.
+        val dateKey = doc.keys.firstOrNull { it.lowercase() == "date" }
+        val date = dateKey?.let { doc.string(it) }?.trim()?.takeIf { it.isNotEmpty() }
+        dateKey?.let { doc.set(it, null) }
         dropped.forEach { doc.set(it, null) }
+        doc.keys.filter { it.lowercase() in written }.forEach { doc.set(it, null) }
         val extra = doc.others(PostWriter.MANAGED).takeIf { it.isNotBlank() }
         body = outsideCode(body) { segment -> links(segment, posts, if (postUrlHasBaseurl) "" else "{{ site.baseurl }}") }
         val found = embeds(body)
@@ -208,6 +222,55 @@ object ObsidianNote {
     private val heading = Regex("""\A\s*#\s+(.+?)\s*#*\s*(\n|\z)""")
     private val wikilink = Regex("""(!?)\[\[([^\[\]\n]+?)]]""")
     private val fence = Regex("""^\s{0,3}(`{3,}|~{3,})""")
+    private val blankLine = Regex("""\n[ \t]*\n""")
+
+    /**
+     * [text] without its Obsidian comments, `%%…%%`, as Obsidian hides them: all of one, code
+     * inside included, and one left open runs to the end. A `%%` inside code (a fence, or an
+     * inline span outside any comment) is just text.
+     */
+    internal fun withoutComments(text: String): String {
+        val out = StringBuilder()
+        var inComment = false
+        var openFence: String? = null
+        var i = 0
+        while (i < text.length) {
+            if (!inComment && (i == 0 || text[i - 1] == '\n')) {
+                val end = text.indexOf('\n', i).let { if (it < 0) text.length else it + 1 }
+                val line = text.substring(i, end)
+                val marker = fence.find(line)?.groupValues?.get(1)
+                val open = openFence
+                if (open != null || marker != null) {
+                    out.append(line)
+                    openFence = when {
+                        open == null -> marker
+                        marker != null && marker[0] == open[0] && marker.length >= open.length && line.trim() == marker -> null
+                        else -> open
+                    }
+                    i = end
+                    continue
+                }
+            }
+            when {
+                text.startsWith("%%", i) -> { inComment = !inComment; i += 2 }
+                inComment -> i++
+                text[i] == '`' -> {
+                    var n = 0
+                    while (i + n < text.length && text[i + n] == '`') n++
+                    val run = "`".repeat(n)
+                    // A code span ends with its paragraph: a lone backtick (`don`t`) mustn't pair
+                    // with one further on and carry a comment out as "code".
+                    val paragraph = blankLine.find(text, i + n)?.range?.first ?: text.length
+                    val close = text.indexOf(run, i + n).takeIf { it in 0 until paragraph }
+                    val stop = if (close == null) i + n else close + n
+                    out.append(text, i, stop)
+                    i = stop
+                }
+                else -> { out.append(text[i]); i++ }
+            }
+        }
+        return out.toString()
+    }
     private val inlineCode = Regex("""(`+)[\s\S]*?\1""")
 
     private fun links(text: String, posts: List<LinkTarget>, prefix: String): String = wikilink.replace(text) { m ->

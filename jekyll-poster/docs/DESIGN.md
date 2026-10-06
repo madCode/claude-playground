@@ -111,7 +111,12 @@ doesn't want to open a laptop and make a commit for every post.
   commas (`tags: personal-philosophy, jumping`), they're split on the commas, as Obsidian does;
   Jekyll alone would split on spaces and keep the commas. A YAML list, or the singular
   `category:`, keeps a name with a comma whole. `layout:` goes, and so
-  do Obsidian's `aliases:` and `cssclasses:`.
+  do Obsidian's `aliases:` and `cssclasses:`, and the keys that say when and where the note was
+  written (`created:`, `modified:`, `updated:`, `date created:`, `date modified:`, `location:`,
+  `coordinates:`, in any case). `last_modified_at:` stays: themes show it.
+- Obsidian comments, `%%like this%%`, go first, before the title, photos or links are read:
+  they're the writer's notes to themselves, and Jekyll would show them. All of one goes, code
+  inside included; one never closed runs to the end, as in Obsidian. In code, `%%` is text.
 - A note's `date:` is the post's date, in its file name and front matter. It's kept as written
   and read when publishing, in the site's time zone as it is then: a bare day is midnight there,
   as Jekyll reads it. Dating by the day only, it's that moment's day where Jekyll builds (UTC
@@ -160,6 +165,10 @@ doesn't want to open a laptop and make a commit for every post.
 
 - Publish queues the post. It goes when there's a connection, one post at a time, retrying if
   GitHub can't be reached or a connection drops mid-way.
+- With **Send at a random time** (Blog & privacy), Publish picks a moment in the next three
+  hours and the post waits for it, saying "Going out at 18:40, a random time"; nothing about
+  this post is read from or sent to GitHub before then (opening the app still reads the blog). **Send now** in the editor sends it at once. The moment
+  is kept with the post, so a restart doesn't pick again. Deleting is never delayed.
 - The first Publish asks to send notifications; publishing goes ahead either way.
 - A new post becomes `_posts/<date>-<slug>.md`, dated in the site's `timezone` when
   `_config.yml` sets one (`2026-10-04 22:15:00 -0700`): the same day Jekyll will give it, and no
@@ -251,6 +260,10 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
   - One commit changing only the `timezone:` line, titled "Set the site's time zone" without
     naming it, after a warning that posts near midnight (and dated addresses) can move a day.
   - Refused if `_config.yml` changed meanwhile.
+- **Plain commit messages**, off: commits name the post ("Add post: Title"). On, every commit
+  says "Update blog": a title stays in the history even after its post is deleted. The file's
+  name, from the title, and its text are still in the history.
+- **Send at a random time**, off (see Publishing): commit times otherwise trace the writer's day.
 - **Remove tracking codes** from shared links, off.
 - Whether the repository is public (so `_drafts` and earlier versions are readable), and that
   edits and deletes stay in its history, each linking to GitHub.
