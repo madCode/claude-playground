@@ -2,6 +2,7 @@ package com.app.jekyllposter.publish
 
 import android.Manifest
 import android.app.Application
+import android.app.Notification
 import android.app.NotificationManager
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
@@ -27,8 +28,8 @@ class NotifierTest {
         val n = shadowOf(manager).allNotifications.single()
         assertEquals("“Bus notes” is live", shadowOf(n).contentTitle)
         // A locked phone shows no title.
-        assertEquals(android.app.Notification.VISIBILITY_PRIVATE, n.visibility)
-        assertEquals("A post is live", n.publicVersion.extras.getCharSequence(android.app.Notification.EXTRA_TITLE).toString())
+        assertEquals(Notification.VISIBILITY_PRIVATE, n.visibility)
+        assertEquals("A post is live", n.publicVersion.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
         val intent = shadowOf(n.contentIntent).savedIntent
         assertEquals(Intent.ACTION_VIEW, intent.action)
         assertEquals("https://me.github.io/blog/bus-notes/", intent.dataString)
@@ -39,7 +40,7 @@ class NotifierTest {
         Notifier(app).buildFinished(live.copy(buildState = BuildState.Failed))
         val n = shadowOf(manager).allNotifications.single()
         assertTrue(shadowOf(n).contentText.contains("Actions"))
-        assertEquals("Your site didn't rebuild", n.publicVersion.extras.getCharSequence(android.app.Notification.EXTRA_TITLE).toString())
+        assertEquals("Your site didn't rebuild", n.publicVersion.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
     }
 
     @Test fun withoutPermissionNothingIsPosted() {

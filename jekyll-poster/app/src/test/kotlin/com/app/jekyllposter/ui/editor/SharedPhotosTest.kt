@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.app.jekyllposter.PendingShare
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
@@ -35,7 +36,7 @@ class SharedPhotosTest {
 
     @Test fun photosSharedFromTheGalleryGoInInOrderAfterTheText() {
         val id = runBlocking { app.container.drafts.insert(Draft(body = "From the gallery:")) }
-        app.container.sharedPhotos[id] = listOf(photo("a.jpg"), photo("b.jpg"))
+        app.container.pendingShares[id] = PendingShare(photos = listOf(photo("a.jpg"), photo("b.jpg")))
         val editor = EditorViewModel(app.container, id)
         idleUntil(10_000) { editor.text?.images?.size == 2 && !editor.state.value.addingPhoto }
         val body = editor.text!!.body

@@ -3,6 +3,7 @@ package com.app.jekyllposter.ui.editor
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.data.Account
+import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.data.RANDOM_WINDOW
@@ -97,7 +98,7 @@ class SendLaterTest {
         editor.deleteFromBlog()
         idleUntil(10_000) { editor.state.value.closed }
         val draft = runBlocking { c.drafts.get(id)!! }
-        assertEquals(com.app.jekyllposter.data.Destination.Delete, draft.destination)
+        assertEquals(Destination.Delete, draft.destination)
         assertNull(draft.sendAfter)
     }
 }

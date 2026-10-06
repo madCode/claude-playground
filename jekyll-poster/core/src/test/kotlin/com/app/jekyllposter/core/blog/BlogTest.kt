@@ -7,6 +7,7 @@ import com.app.jekyllposter.core.github.TreeEntry
 import com.app.jekyllposter.core.jekyll.Term
 import com.app.jekyllposter.core.testing.FakeGitHub
 import kotlinx.coroutines.test.runTest
+import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -117,7 +118,7 @@ class BlogTest {
     }
 
     @Test fun networkFailureIsRetryable() = runTest {
-        val dead = GitHubClient(OkHttpClient(), "t", okhttp3.HttpUrl.Builder().scheme("http").host("127.0.0.1").port(1).build())
+        val dead = GitHubClient(OkHttpClient(), "t", HttpUrl.Builder().scheme("http").host("127.0.0.1").port(1).build())
         try { dead.user(); fail() } catch (e: GitHubException) { assertEquals(GitHubException.Kind.Network, e.kind); assertTrue(e.retryable) }
     }
 

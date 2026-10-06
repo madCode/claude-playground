@@ -1,5 +1,7 @@
 package com.app.jekyllposter.core.jekyll
 
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -73,11 +75,11 @@ class ImagesTest {
 }
 
 class PermalinkTest {
-    private val evening = java.time.ZonedDateTime.of(2025, 4, 20, 22, 15, 0, 0, java.time.ZoneId.of("America/Los_Angeles"))
+    private val evening = ZonedDateTime.of(2025, 4, 20, 22, 15, 0, 0, ZoneId.of("America/Los_Angeles"))
 
     @Test fun theSampleBlogsLivePermalinks() {
         // As GitHub Pages built them for the sample blog (permalink /:categories/:year/:month/:day/:title/).
-        val config = SiteConfig(permalink = "/:categories/:year/:month/:day/:title/", timezone = java.time.ZoneId.of("America/Los_Angeles"), baseurl = "/sample-blog", url = "https://madcode.github.io")
+        val config = SiteConfig(permalink = "/:categories/:year/:month/:day/:title/", timezone = ZoneId.of("America/Los_Angeles"), baseurl = "/sample-blog", url = "https://madcode.github.io")
         assertEquals("/writing/2025/04/20/reading-list/", Permalink.path(config, evening, "reading-list", listOf("Writing")))
         assertEquals("/cooking/bread/2025/04/20/x/", Permalink.path(config, evening, "x", listOf("cooking", "bread")))
         assertEquals("https://madcode.github.io/sample-blog", Permalink.siteUrl(config, "madCode", "sample-blog", null))

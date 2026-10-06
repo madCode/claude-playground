@@ -4,10 +4,11 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import com.app.jekyllposter.core.github.CommitAuthor
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.app.jekyllposter.core.github.CommitAuthor
+import kotlin.time.Duration
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -136,4 +137,4 @@ class Settings(private val store: DataStore<Preferences>) {
 }
 
 /** How long after Publish a post sent at a random time can go out. */
-val RANDOM_WINDOW: kotlin.time.Duration = kotlin.time.Duration.parse("3h")
+val RANDOM_WINDOW: Duration = Duration.parse("3h")

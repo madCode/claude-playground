@@ -7,6 +7,10 @@ import com.app.jekyllposter.core.github.FileChange
 import com.app.jekyllposter.core.github.GitHubException
 import com.app.jekyllposter.core.jekyll.ConfigEdit
 import com.app.jekyllposter.ui.forWriter
+import java.time.ZoneId
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,9 +18,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
-import java.time.ZoneId
 
 /** What the blog and the app tell GitHub and readers beyond the posts, and the switches for it. */
 enum class Visibility { Loading, Public, Private, Unknown }
@@ -87,7 +89,7 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
      * On, the account's no-reply address is looked up now and kept, so publishing needs no extra
      * call; if it can't be, the switch stays off and says why.
      */
-    private var switching: kotlinx.coroutines.Job? = null
+    private var switching: Job? = null
 
     fun setCommitAsNoReply(on: Boolean) {
         // The last tap wins: an "on" still looking up the address mustn't land after an "off".
@@ -177,7 +179,7 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
                 local.update { it.copy(committedZone = zone, zoneBefore = container.blogs.config.value.timezone?.id) }
                 runCatching { container.blogs.refresh() }
                 "The site's time zone is now $zone. The site rebuilds in a minute or two."
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (e: GitHubException) {
                 if (e.kind == GitHubException.Kind.Changed) "_config.yml changed on GitHub just now. Try again." else e.forWriter()

@@ -20,6 +20,13 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Cycle 23: simpler code, 1 of 3 (wiring, core, imports)
+- **Changed, not behaviour:** AppContainer takes one PublishQueue, builds the database through
+  `PosterDatabase.create`, starts the VPN-back retry from `PosterApp` (a launch from its
+  constructor could run before its properties were set, as one in the editor once did) and signs
+  out in one call; date parsing, Git's blob id, the GIF cleaner and a bounded read moved to core;
+  fully qualified names became imports.
+
 ### Cycle 22: privacy for anonymous writers, 3 of 3 (one setup, and around the app)
 - **Shipped:** **Set up for writing anonymously**, one confirm for every private switch, and
   **Beyond the app**, what only the writer can do; nothing written goes to the cloud backup;

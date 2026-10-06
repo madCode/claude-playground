@@ -26,6 +26,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 /**
  * What the blog shows beyond its posts, and the switches for it. Every default is what GitHub
@@ -208,4 +210,4 @@ private const val UTC = "UTC"
 
 /** [id], or [UTC] for any name of it. */
 private fun sameZone(id: String): String =
-    if (runCatching { java.time.ZoneId.of(id).normalized() == java.time.ZoneOffset.UTC }.getOrDefault(false)) UTC else id
+    if (runCatching { ZoneId.of(id).normalized() == ZoneOffset.UTC }.getOrDefault(false)) UTC else id

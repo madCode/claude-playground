@@ -1,6 +1,7 @@
 package com.app.jekyllposter.data
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import com.app.jekyllposter.core.obsidian.ObsidianNote
@@ -51,8 +52,8 @@ suspend fun chooseVault(context: Context, settings: Settings, tree: Uri?) {
     val resolver = context.contentResolver
     val old = settings.obsidianVault()
     if (old != null && old != tree?.toString()) {
-        runCatching { resolver.releasePersistableUriPermission(Uri.parse(old), android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        runCatching { resolver.releasePersistableUriPermission(Uri.parse(old), Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
-    if (tree != null) runCatching { resolver.takePersistableUriPermission(tree, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+    if (tree != null) runCatching { resolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     settings.setObsidianVault(tree?.toString())
 }

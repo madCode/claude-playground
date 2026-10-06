@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -74,7 +75,7 @@ private fun typography(headings: FontFamily, body: FontFamily): Typography {
  * file's defaults, which for Bricolage are its heaviest weight at headline size: small text then
  * gets shapes drawn for 96pt and reads poorly.
  */
-@OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+@OptIn(ExperimentalTextApi::class)
 private fun variable(res: Int, weight: Int, opsz: Float) = Font(
     res, FontWeight(weight),
     variationSettings = FontVariation.Settings(FontVariation.weight(weight), FontVariation.Setting("opsz", opsz)),

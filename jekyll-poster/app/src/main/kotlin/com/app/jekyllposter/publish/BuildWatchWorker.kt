@@ -11,15 +11,16 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.app.jekyllposter.PosterApp
+import com.app.jekyllposter.core.github.GitHubClient
 import com.app.jekyllposter.core.github.GitHubException
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.AccountStore
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.DraftDao
-import com.app.jekyllposter.core.github.GitHubClient
-import kotlinx.coroutines.flow.first
+import java.io.IOException
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.flow.first
 
 /**
  * Whether the site has a published post yet. Every GitHub Pages site deploys through an Actions run
@@ -56,7 +57,7 @@ class BuildWatcher(
         } catch (e: GitHubException) {
             // A token without Actions: read, or a repo that isn't a Pages site: nothing to watch.
             if (e.retryable) null else BuildState.Unknown
-        } catch (e: java.io.IOException) {
+        } catch (e: IOException) {
             null
         }
         val final = state ?: if (giveUp) BuildState.Unknown else return false

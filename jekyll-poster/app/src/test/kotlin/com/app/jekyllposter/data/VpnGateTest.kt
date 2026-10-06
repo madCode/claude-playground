@@ -2,6 +2,14 @@ package com.app.jekyllposter.data
 
 import com.app.jekyllposter.core.github.NoVpnException
 import com.app.jekyllposter.testutil.FakeVpn
+import java.io.IOException
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.net.ProxySelector
+import java.net.SocketAddress
+import java.net.URI
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
@@ -12,12 +20,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.net.InetSocketAddress
-import java.net.Proxy
-import java.net.ProxySelector
-import java.net.URI
-import java.util.concurrent.TimeUnit
-import kotlin.concurrent.thread
 
 /** The gate itself, below the app: plain JVM. */
 class VpnGateTest {
@@ -43,7 +45,7 @@ class VpnGateTest {
         val before = ProxySelector.getDefault()
         ProxySelector.setDefault(object : ProxySelector() {
             override fun select(uri: URI) = listOf(socks)
-            override fun connectFailed(uri: URI, sa: java.net.SocketAddress, ioe: java.io.IOException) = Unit
+            override fun connectFailed(uri: URI, sa: SocketAddress, ioe: IOException) = Unit
         })
         try {
             assertEquals(listOf(Proxy.NO_PROXY), gate.proxySelector.select(URI("https://api.github.com/")))

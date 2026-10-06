@@ -1,7 +1,10 @@
 package com.app.jekyllposter.ui.editor
 
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.app.jekyllposter.core.jekyll.MarkdownEdits
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
@@ -10,6 +13,8 @@ import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
 import com.app.jekyllposter.ui.editor.EditorViewModel.TermKind
 import com.app.jekyllposter.ui.home.HomeViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -19,6 +24,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLooper
 
 @RunWith(AndroidJUnit4::class)
 @Config(application = TestApp::class)
@@ -113,7 +119,7 @@ class EditorViewModelTest {
         val editor = EditorViewModel(c, id)
         idleUntil { editor.text != null && editor.state.value.draft != null }
         editor.deleteFromBlog()
-        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        ShadowLooper.idleMainLooper()
         assertEquals(PostState.Draft, runBlocking { c.drafts.get(id) }!!.state)
     }
 
@@ -142,10 +148,10 @@ class EditorViewModelTest {
         val id = runBlocking { c.drafts.insert(Draft(title = "T", body = "make this bold")) }
         val editor = EditorViewModel(c, id)
         idleUntil { editor.text != null && editor.state.value.draft != null }
-        editor.setBody(androidx.compose.ui.text.input.TextFieldValue("make this bold", androidx.compose.ui.text.TextRange(10, 14)))
-        editor.format { com.app.jekyllposter.core.jekyll.MarkdownEdits.wrap(it, "**") }
+        editor.setBody(TextFieldValue("make this bold", TextRange(10, 14)))
+        editor.format { MarkdownEdits.wrap(it, "**") }
         assertEquals("make this **bold**", editor.text!!.body)
-        assertEquals(androidx.compose.ui.text.TextRange(12, 16), editor.bodySelection)
+        assertEquals(TextRange(12, 16), editor.bodySelection)
         editor.close()
         idleUntil { editor.state.value.closed }
         assertEquals("make this **bold**", runBlocking { c.drafts.get(id) }!!.body)
@@ -208,7 +214,7 @@ class EditorViewModelTest {
     @Test fun aChosenCategoryThatDisappearsShowsAllPostsAgain() {
         val home = HomeViewModel(c)
         // The list only computes while something watches it, as the screen does.
-        val watching = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch { home.state.collect {} }
+        val watching = CoroutineScope(Dispatchers.Main).launch { home.state.collect {} }
         idleUntil(15_000) { home.state.value.onBlog.size == 6 && !home.state.value.refreshing }
         home.filter("travel")
         idleUntil(15_000) { home.state.value.onBlog.size == 1 }
@@ -221,7 +227,7 @@ class EditorViewModelTest {
     @Test fun searchMatchesTitlesCategoriesAndTagsWithinTheFilter() {
         runBlocking { c.drafts.insert(Draft(title = "Something else", state = PostState.Failed, error = "GitHub said no.")) }
         val home = HomeViewModel(c)
-        val watching = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch { home.state.collect {} }
+        val watching = CoroutineScope(Dispatchers.Main).launch { home.state.collect {} }
         idleUntil(15_000) { home.state.value.onBlog.size == 6 && !home.state.value.refreshing }
         home.startSearch()
         // Opening the search alone hides nothing.

@@ -1,19 +1,22 @@
 package com.app.jekyllposter.data
 
+import android.content.Context
 import androidx.room.ColumnInfo
 import androidx.room.Dao
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.room.Database
 import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import androidx.room.Update
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.app.jekyllposter.core.jekyll.extraFrontMatterProblem
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -106,7 +109,7 @@ data class Draft(
 ) {
     /** Why the "more front matter" can't be published, or null; only checked once it's changed. */
     val frontMatterProblem: String?
-        get() = extraFrontMatter?.takeIf { it != extraFrontMatterOpened }?.let { com.app.jekyllposter.core.jekyll.extraFrontMatterProblem(it) }
+        get() = extraFrontMatter?.takeIf { it != extraFrontMatterOpened }?.let { extraFrontMatterProblem(it) }
 
     val isEmpty: Boolean get() = title.isBlank() && body.isBlank() && extraFrontMatter.isNullOrBlank() && images.isEmpty()
 
@@ -222,6 +225,12 @@ class Converters {
 abstract class PosterDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
     abstract fun posts(): PostDao
+
+    companion object {
+        /** The app's database, brought up to date from any version a debug build has shipped. */
+        fun create(context: Context): PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db")
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
+    }
 }
 
 /**

@@ -1,6 +1,7 @@
 package com.app.jekyllposter
 
 import android.content.Intent
+import android.net.Uri
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -37,7 +38,7 @@ class NewPostShortcutTest {
     }
 
     @Test fun aNoteSharedAsAFileStartsAPostFromIt() {
-        val note = android.net.Uri.parse("content://notes/Bus%20notes.md")
+        val note = Uri.parse("content://notes/Bus%20notes.md")
         val share = Intent(Intent.ACTION_SEND).setType("text/markdown").putExtra(Intent.EXTRA_STREAM, note)
         assertEquals(Shared("", emptyList(), note), postToStart(share))
         // An image is a photo, not a note.
@@ -46,7 +47,7 @@ class NewPostShortcutTest {
     }
 
     @Test fun aNoteOpenedWithTheAppStartsAPostFromIt() {
-        val note = android.net.Uri.parse("content://notes/Bus%20notes.md")
+        val note = Uri.parse("content://notes/Bus%20notes.md")
         assertEquals(Shared("", emptyList(), note), postToStart(Intent(Intent.ACTION_VIEW).setDataAndType(note, "text/markdown")))
         assertNull(postToStart(Intent(Intent.ACTION_VIEW).setDataAndType(note, "text/markdown").addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)))
     }

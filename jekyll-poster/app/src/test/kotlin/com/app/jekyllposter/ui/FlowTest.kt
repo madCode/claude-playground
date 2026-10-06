@@ -1,7 +1,11 @@
 package com.app.jekyllposter.ui
 
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -9,14 +13,17 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.app.jekyllposter.Shared
 import com.app.jekyllposter.data.Account
+import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.ui.theme.PosterTheme
@@ -127,7 +134,7 @@ class FlowTest {
 
     @Test fun aSharedLinkMakesOnePostEvenAfterGoingBack() {
         signIn()
-        compose.setContent { PosterTheme { PosterNavHost(app.container, com.app.jekyllposter.Shared("[A good read](https://example.com/read)\n", emptyList())) } }
+        compose.setContent { PosterTheme { PosterNavHost(app.container, Shared("[A good read](https://example.com/read)\n", emptyList())) } }
         compose.waitForTag("title")
         compose.onNodeWithContentDescription("Back").performClick()
         compose.waitFor("On this phone")
@@ -141,9 +148,9 @@ class FlowTest {
         // Left by editors closed under them, without Back: one a day ago, one a moment ago (maybe
         // still open in another window).
         val old = System.currentTimeMillis() - 25 * 60 * 60 * 1000L
-        val stale = runBlocking { app.container.drafts.insert(com.app.jekyllposter.data.Draft(createdAt = old, updatedAt = old)) }
-        val recent = runBlocking { app.container.drafts.insert(com.app.jekyllposter.data.Draft()) }
-        runBlocking { app.container.drafts.insert(com.app.jekyllposter.data.Draft(title = "Half an idea")) }
+        val stale = runBlocking { app.container.drafts.insert(Draft(createdAt = old, updatedAt = old)) }
+        val recent = runBlocking { app.container.drafts.insert(Draft()) }
+        runBlocking { app.container.drafts.insert(Draft(title = "Half an idea")) }
         start()
         compose.waitFor("Half an idea")
         compose.onNodeWithText("Untitled").assertDoesNotExist()
@@ -160,7 +167,7 @@ class FlowTest {
         compose.waitFor("No posts match “zeppelin”.")
         compose.onNodeWithText("meta").performClick()
         compose.waitFor("No posts in meta match “zeppelin”.")
-        androidx.test.espresso.Espresso.pressBack()
+        Espresso.pressBack()
         compose.waitFor("Welcome to the notebook")
         compose.onNodeWithTag("search").assertDoesNotExist()
     }
@@ -177,7 +184,7 @@ class FlowTest {
         compose.onNodeWithTag("termQuery").performTextInput("rain")
         compose.onNodeWithTag("termQuery").performImeAction()
         // In the sheet itself, not only on the editor behind it.
-        val inSheet = { name: String -> hasContentDescription("Remove $name") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("picked")) }
+        val inSheet = { name: String -> hasContentDescription("Remove $name") and hasAnyAncestor(hasTestTag("picked")) }
         compose.waitUntil(5_000) { compose.onAllNodes(inSheet("rain")).fetchSemanticsNodes().isNotEmpty() }
         // A # is habit, not part of the tag; and the blog's own spelling wins over the typed case.
         compose.onNodeWithTag("termQuery").performTextInput("#Walking")
@@ -189,14 +196,14 @@ class FlowTest {
         compose.onNodeWithTag("termQuery").performTextReplacement("puddles")
         // Closing the sheet, here by swiping it down, adds what's typed rather than dropping it.
         compose.onNodeWithTag("picked").performTouchInput { swipeDown(startY = top, endY = top + 2000f) }
-        compose.waitUntil(5_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("termQuery")).fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("termQuery")).fetchSemanticsNodes().isEmpty() }
         compose.waitUntil(5_000) { compose.onAllNodes(hasContentDescription("Remove puddles")).fetchSemanticsNodes().isNotEmpty() }
     }
 
     @Test fun aSharedLinkIsKeptAsSharedByDefault() {
         signIn()
         val link = "[A good read](https://example.com/read?id=7&utm_source=share&fbclid=abc)\n"
-        compose.setContent { PosterTheme { PosterNavHost(app.container, com.app.jekyllposter.Shared(link, emptyList())) } }
+        compose.setContent { PosterTheme { PosterNavHost(app.container, Shared(link, emptyList())) } }
         compose.waitForTag("title")
         assertEquals(link, runBlocking { app.container.drafts.list() }.single().body)
     }
@@ -205,7 +212,7 @@ class FlowTest {
         signIn()
         runBlocking { app.container.settings.setRemoveTrackingCodes(true) }
         val link = "[A good read](https://example.com/read?id=7&utm_source=share&fbclid=abc)\n"
-        compose.setContent { PosterTheme { PosterNavHost(app.container, com.app.jekyllposter.Shared(link, emptyList())) } }
+        compose.setContent { PosterTheme { PosterNavHost(app.container, Shared(link, emptyList())) } }
         compose.waitForTag("body")
         // Already in the editor, before publishing: what you see is what goes out.
         compose.waitFor("https://example.com/read?id=7)")
@@ -262,9 +269,9 @@ fun ComposeContentTestRule.waitFor(text: String, timeoutMs: Long = 15_000) =
     waitUntil(timeoutMs) { onAllNodes(hasText(text, substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
 
 fun ComposeContentTestRule.waitForTag(tag: String, timeoutMs: Long = 5_000) =
-    waitUntil(timeoutMs) { onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty() }
+    waitUntil(timeoutMs) { onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty() }
 
 /** A node whose click action is labelled [label], as TalkBack announces it. */
-fun clickLabel(label: String) = androidx.compose.ui.test.SemanticsMatcher("click label $label") {
-    it.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsActions.OnClick) { null }?.label == label
+fun clickLabel(label: String) = SemanticsMatcher("click label $label") {
+    it.config.getOrElseNullable(SemanticsActions.OnClick) { null }?.label == label
 }
