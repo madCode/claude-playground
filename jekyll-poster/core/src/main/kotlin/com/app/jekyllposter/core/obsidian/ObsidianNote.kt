@@ -120,6 +120,36 @@ object ObsidianNote {
     /** Whether [name] is a file an image embed can name, by its extension. */
     fun isImage(name: String): Boolean = name.substringAfterLast('.', "").lowercase() in imageExtensions
 
+    /**
+     * [body] with its `[[Post title]]` links to [posts] made `post_url` links, outside code, as a
+     * shared note's are; ones that match no post stay as written. For posts written in the app.
+     */
+    fun linkPosts(body: String, posts: List<LinkTarget>, postUrlHasBaseurl: Boolean = false): String =
+        outsideCode(body) { segment -> links(segment, posts, if (postUrlHasBaseurl) "" else "{{ site.baseurl }}") }
+
+    /** A `[[` being typed: where it starts in the text, and what's typed after it so far. */
+    data class OpenLink(val start: Int, val query: String)
+
+    /**
+     * The `[[link` the cursor is in, still being typed, or null: the `[[` on the same line, not
+     * closed yet, nor `![[` (an embed). What's typed so far narrows the posts to link.
+     */
+    fun openLink(text: String, cursor: Int): OpenLink? {
+        if (cursor < 2 || cursor > text.length) return null
+        val m = Regex("""(?<!!)\[\[([^\[\]\n|#]*)$""").find(text.substring(0, cursor)) ?: return null
+        return OpenLink(m.range.first, m.groupValues[1])
+    }
+
+    /**
+     * [text] with the [link] being typed at [cursor] completed as `[[title]]` (a `]]` already
+     * after the cursor is used, not doubled), and where the cursor goes: after the `]]`.
+     */
+    fun completeLink(text: String, cursor: Int, link: OpenLink, title: String): Pair<String, Int> {
+        val end = if (text.startsWith("]]", cursor)) cursor + 2 else cursor
+        val written = "[[${title.replace("]]", "] ]")}]]"
+        return text.substring(0, link.start) + written + text.substring(end) to link.start + written.length
+    }
+
     /** The image embeds in [body], outside code, in order. Embedded notes and PDFs aren't images. */
     fun embeds(body: String): List<Embed> {
         val out = mutableListOf<Embed>()

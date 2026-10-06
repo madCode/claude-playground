@@ -55,6 +55,16 @@ class PublisherTest {
         assertTrue(c.database.posts().snapshot().any { it.path == "_posts/2026-10-04-late-night-notes.md" })
     }
 
+    @Test fun aPostWrittenHereLinksItsPostTitles() = runBlocking {
+        val id = queue(Draft(title = "More reading", body = "After [[What I read in April]], [[Not written yet]]."))
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertEquals(
+            "---\ntitle: More reading\ndate: 2026-10-04 22:15:00 -0700\n---\n\n" +
+                "After [What I read in April]({{ site.baseurl }}{% post_url 2025-04-20-reading-list %}), [[Not written yet]].\n",
+            github.text("_posts/2026-10-04-more-reading.md"),
+        )
+    }
+
     @Test fun aNoteKeepsItsOwnDateInItsFileNameAndFrontMatter() = runBlocking {
         // A bare day is midnight in the site's zone (Los Angeles), as Jekyll reads it, not UTC.
         val id = queue(Draft(title = "Jumping", body = "From the note.", noteDate = "2021-06-24"))

@@ -200,4 +200,26 @@ class ObsidianNoteTest {
         assertEquals("![[a friend lunch.jpg]]\n", note.body)
         assertEquals(listOf(Embed("![[a friend lunch.jpg]]", "Priya lunch.jpg", "")), note.embeds)
     }
+
+    @Test fun aPostWrittenInTheAppLinksItsTitlesToo() {
+        assertEquals(
+            "See [Welcome]({{ site.baseurl }}{% post_url 2025-01-12-welcome %}), `[[Welcome]]` and [[Not yet]].",
+            ObsidianNote.linkPosts("See [[Welcome]], `[[Welcome]]` and [[Not yet]].", posts),
+        )
+    }
+
+    @Test fun aLinkBeingTypedIsFoundAndCompleted() {
+        val text = "Like ![[cat.jpg]] and [[Wel"
+        val link = ObsidianNote.openLink(text, text.length)!!
+        assertEquals("Wel", link.query)
+        assertEquals("Like ![[cat.jpg]] and [[Welcome]]" to 33, ObsidianNote.completeLink(text, text.length, link, "Welcome"))
+        // A ]] already there, as Obsidian and some keyboards add, isn't doubled.
+        val closed = "[[We]] then"
+        assertEquals("[[Welcome]] then" to 11, ObsidianNote.completeLink(closed, 4, ObsidianNote.openLink(closed, 4)!!, "Welcome"))
+        // Not an embed, not a closed link, not across lines.
+        assertNull(ObsidianNote.openLink("![[ca", 5))
+        assertNull(ObsidianNote.openLink("[[Done]] x", 10))
+        assertNull(ObsidianNote.openLink("[[a\nb", 5))
+        assertEquals("", ObsidianNote.openLink("[[", 2)!!.query)
+    }
 }

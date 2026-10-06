@@ -65,6 +65,10 @@ doesn't want to open a laptop and make a commit for every post.
 - Sharing text, a link or photos to the app starts a post with them, as shared. With **Remove
   tracking codes** on (Blog & privacy), links lose `utm_…`, `fbclid`, YouTube's `si` and the
   like before the editor opens, so the writer sees them as they'll be published.
+- **Links to posts:** typing `[[` lists the blog's posts above the keyboard, narrowing as you
+  type, as Obsidian lists notes; picking one writes `[[Its title]]`. When published, a
+  `[[Post title]]` becomes a `post_url` link by the same rules as a shared note's (an edit's
+  too), and one that matches no post stays as written. The preview shows them as links.
 - Long-pressing the app's icon offers **New post**, straight into the editor.
 - A share starts one post: going back from it returns to the list.
 - A new post with nothing in it is dropped when you leave it. One left when the app closed under

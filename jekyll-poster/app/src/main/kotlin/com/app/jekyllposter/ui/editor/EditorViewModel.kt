@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -224,7 +225,34 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             // A photo not on the site yet is shown from the phone, inline: the preview has no file access.
             local[path]?.let(::File)?.takeIf { it.exists() }?.let(::dataUri) ?: (base + path)
         }
-        return preview.page(draft.title, draft.body, dark)
+        // As it will be published: `[[Post title]]` links made links (they go nowhere in the preview).
+        val linkable = this.linkable.value.map { ObsidianNote.LinkTarget(it.path, it.title) }
+        return preview.page(draft.title, ObsidianNote.linkPosts(draft.body, linkable, container.blogs.postUrlHasBaseurl), dark)
+    }
+
+    /** The blog's posts a `[[link]]` can go to: ones the site builds, newest first. */
+    private val linkable: StateFlow<List<com.app.jekyllposter.data.CachedPost>> = container.blogs.cachedPosts
+        .map { posts ->
+            val today = java.time.LocalDate.now(container.blogs.config.value.timezone ?: java.time.ZoneOffset.UTC).toString()
+            posts.filter { it.published && !com.app.jekyllposter.core.jekyll.PostPath(it.path).isDraft && (it.date?.let { d -> d <= today } ?: false) }
+                .sortedByDescending { it.date }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** The `[[link` being typed at the cursor, if any: the screen lists posts to complete it with. */
+    val openLink: ObsidianNote.OpenLink?
+        get() = text?.body?.takeIf { bodySelection.collapsed }?.let { ObsidianNote.openLink(it, bodySelection.start) }
+
+    /** Posts whose title holds [query], for the `[[link` being typed; a few, newest first. */
+    fun postsToLink(query: String): List<com.app.jekyllposter.data.CachedPost> =
+        linkable.value.filter { it.title.contains(query.trim(), ignoreCase = true) }.take(5)
+
+    /** Completes the `[[link` being typed with [title]; it becomes a link when published. */
+    fun linkTo(title: String) {
+        val body = text?.body ?: return
+        val link = openLink ?: return
+        val (next, cursor) = ObsidianNote.completeLink(body, bodySelection.start, link, title)
+        setBody(TextFieldValue(next, TextRange(cursor)))
     }
 
     /** Prepares a picked photo and adds its link to the end of the post. */

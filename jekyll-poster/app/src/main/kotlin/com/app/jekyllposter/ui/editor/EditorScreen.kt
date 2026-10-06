@@ -247,7 +247,11 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
         },
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
-            if (editable && !state.previewing && text != null) {
+            if (editable && !state.previewing && text != null) Column {
+                // Typing `[[` offers the blog's posts, as Obsidian offers notes.
+                viewModel.openLink?.takeIf { bodyFocused }?.let { link ->
+                    LinkSuggestions(viewModel.postsToLink(link.query), link.query, onPick = viewModel::linkTo)
+                }
                 FormatBar(
                     formatting = bodyFocused,
                     addingPhoto = state.addingPhoto,
@@ -386,6 +390,30 @@ private fun NoteDate(written: String, canDrop: Boolean, onDrop: () -> Unit) {
             Modifier.weight(1f).padding(vertical = 8.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (canDrop && day != null) TextButton(onClick = onDrop) { Text("Use the publish day") }
+    }
+}
+
+/** Posts to complete a `[[link` with, above the keyboard; none says what happens to the link. */
+@Composable
+private fun LinkSuggestions(posts: List<com.app.jekyllposter.data.CachedPost>, query: String, onPick: (String) -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(vertical = 4.dp).semantics { contentDescription = "Posts to link" }) {
+            if (posts.isEmpty()) {
+                Text(
+                    if (query.isBlank()) "Type to find a post to link." else "No post titled like that: it stays as written, [[$query]].",
+                    Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            posts.forEach { post ->
+                Column(
+                    Modifier.fillMaxWidth().clickable(onClickLabel = "Link to this post") { onPick(post.title) }.padding(horizontal = 16.dp, vertical = 10.dp),
+                ) {
+                    Text(post.title, style = MaterialTheme.typography.bodyLarge)
+                    post.date?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+            }
+        }
     }
 }
 

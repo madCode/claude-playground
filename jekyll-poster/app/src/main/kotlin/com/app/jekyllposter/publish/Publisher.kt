@@ -2,6 +2,7 @@ package com.app.jekyllposter.publish
 
 import com.app.jekyllposter.core.frontmatter.FrontMatterDocument
 import com.app.jekyllposter.core.github.FileChange
+import com.app.jekyllposter.core.obsidian.ObsidianNote
 import com.app.jekyllposter.core.github.GitHubException
 import com.app.jekyllposter.core.jekyll.Images
 import com.app.jekyllposter.core.jekyll.Permalink
@@ -123,14 +124,14 @@ class Publisher(
         val current = blog.file(path) ?: return Plan.Finished(fail(draft, "This post isn't on the blog any more."))
         // Checked before the conflict rule: after a crash, the post on GitHub may be this very
         // edit, which no longer has the sha the writer opened.
-        if (current.text == PostWriter.edit(FrontMatterDocument.parse(current.text), draft.content()).render()) {
+        if (current.text == PostWriter.edit(FrontMatterDocument.parse(current.text), draft.content(index)).render()) {
             return Plan.Finished(published(draft, path, null, null))
         }
         if (current.sha != draft.baseSha) return Plan.Finished(fail(draft, CHANGED))
         // The same clock as a new post's date, so a photo lands in the year folder its post would.
         val year = (index.config.timezone?.let { now().withZoneSameInstant(it) } ?: now()).year
         val (ready, photos) = photos(draft, index, ours = emptySet(), PostPath(path).slug, year) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
-        val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content())
+        val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content(index))
         val date = doc.string("date")?.let { parseJekyllDate(it, siteZone(index)) }
             ?: PostPath(path).date?.atStartOfDay(siteZone(index))
         val kind = if (PostPath(path).isDraft) "draft" else "post"
@@ -194,7 +195,7 @@ class Publisher(
         val target = fixed.targetPath!!
         // Named once the post's own name is known.
         val (ready, photos) = photos(fixed, index, ours = emptySet(), PostPath(target).slug, date.year) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
-        val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content())
+        val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content(index))
         doc.setRaw("date", PostWriter.timestamp(date))
         drafts.update(ready.copy(sentShas = (ready.sentShas + gitBlobSha(doc.render())).distinct()))
         return Plan.Commit(
@@ -208,7 +209,7 @@ class Publisher(
     private suspend fun planNew(draft: Draft, index: SiteIndex, blog: Blog): Plan? {
         val toDrafts = draft.destination == Destination.Drafts
         fun render(d: Draft, at: ZonedDateTime) =
-            if (toDrafts) PostWriter.newDraft(d.content(), index.config).render() else PostWriter.newPost(d.content(), at, index.config).render()
+            if (toDrafts) PostWriter.newDraft(d.content(index), index.config).render() else PostWriter.newPost(d.content(index), at, index.config).render()
         var fixed = fixTarget(draft, index)
         var date = ZonedDateTime.parse(fixed.publishDate)
         val there = fixed.targetPath!!.takeIf { it in index.paths }?.let { blog.file(it) }
@@ -268,6 +269,18 @@ class Publisher(
         if (used.any { !File(it.file).exists() }) return null
         val changes = used.map { FileChange(it.sitePath.removePrefix("/"), File(it.file).readBytes()) }
         return ready to Photos(changes, changes.associate { it.path to null })
+    }
+
+    /**
+     * The post as it's written to the blog: its `[[Post title]]` links to posts the site builds
+     * made `post_url` links, as a shared note's are when it arrives. Ones that match none stay.
+     */
+    private fun Draft.content(index: SiteIndex): com.app.jekyllposter.core.jekyll.PostContent {
+        val today = java.time.LocalDate.now(siteZone(index))
+        val linkable = index.posts
+            .filter { it.published && !it.path.isDraft && (it.path.date?.let { d -> d <= today } ?: false) }
+            .map { ObsidianNote.LinkTarget(it.path.path, it.title) }
+        return content().let { it.copy(body = ObsidianNote.linkPosts(it.body, linkable, index.postUrlHasBaseurl)) }
     }
 
     private fun siteZone(index: SiteIndex) = index.config.timezone ?: java.time.ZoneOffset.UTC
