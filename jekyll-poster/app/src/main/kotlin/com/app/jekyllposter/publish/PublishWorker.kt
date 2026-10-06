@@ -50,8 +50,12 @@ class PublishWorker(context: Context, params: WorkerParameters) : CoroutineWorke
          */
         fun retryNow(context: Context, id: Long, sendAfter: Long?) = enqueue(context, id, sendAfter, "publish-now-$id", ExistingWorkPolicy.KEEP)
 
-        /** The writer's Send now: a worker of its own, which no delayed one can hold back. */
-        fun sendNow(context: Context, id: Long) = enqueue(context, id, null, "send-now-$id", ExistingWorkPolicy.KEEP)
+        /**
+         * The writer's Send now: a worker of its own, which no delayed one can hold back, replacing
+         * one left from an earlier Send now (it may sit in a long backoff). Stopped mid-commit,
+         * the next try recognises what landed.
+         */
+        fun sendNow(context: Context, id: Long) = enqueue(context, id, null, "send-now-$id", ExistingWorkPolicy.REPLACE)
 
         private fun enqueue(context: Context, id: Long, sendAfter: Long?, name: String, policy: ExistingWorkPolicy) {
             val delay = ((sendAfter ?: 0) - System.currentTimeMillis()).coerceAtLeast(0)

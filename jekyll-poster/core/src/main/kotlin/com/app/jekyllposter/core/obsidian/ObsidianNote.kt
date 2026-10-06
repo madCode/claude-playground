@@ -44,8 +44,10 @@ object ObsidianNote {
      */
     private val dropped = setOf(
         "find", "replace", "aliases", "alias", "cssclasses", "cssclass", "date", "layout",
-        "created", "modified", "updated", "date created", "date modified", "date updated", "location", "coordinates",
     )
+
+    /** Plugins' keys for when and where a note was written, dropped in any case: they differ (`Created:`). */
+    private val written = setOf("created", "modified", "updated", "date created", "date modified", "date updated", "location", "coordinates")
 
     private val imageExtensions = setOf("png", "jpg", "jpeg", "gif", "webp", "avif", "bmp", "svg", "heic")
 
@@ -97,9 +99,12 @@ object ObsidianNote {
         }
         val categories = noteTerms(doc, "category", "categories")
         val tags = noteTerms(doc, "tag", "tags")
-        val date = doc.string("date")?.trim()?.takeIf { it.isNotEmpty() }
-        // `Created:` and `created:` alike: Obsidian's plugins differ.
-        doc.keys.filter { it.lowercase() in dropped }.forEach { doc.set(it, null) }
+        // `Date:` too: Jekyll would ignore it, and the writer meant the post's date.
+        val dateKey = doc.keys.firstOrNull { it.lowercase() == "date" }
+        val date = dateKey?.let { doc.string(it) }?.trim()?.takeIf { it.isNotEmpty() }
+        dateKey?.let { doc.set(it, null) }
+        dropped.forEach { doc.set(it, null) }
+        doc.keys.filter { it.lowercase() in written }.forEach { doc.set(it, null) }
         val extra = doc.others(PostWriter.MANAGED).takeIf { it.isNotBlank() }
         body = outsideCode(body) { segment -> links(segment, posts, if (postUrlHasBaseurl) "" else "{{ site.baseurl }}") }
         val found = embeds(body)
@@ -217,6 +222,7 @@ object ObsidianNote {
     private val heading = Regex("""\A\s*#\s+(.+?)\s*#*\s*(\n|\z)""")
     private val wikilink = Regex("""(!?)\[\[([^\[\]\n]+?)]]""")
     private val fence = Regex("""^\s{0,3}(`{3,}|~{3,})""")
+    private val blankLine = Regex("""\n[ \t]*\n""")
 
     /**
      * [text] without its Obsidian comments, `%%…%%`, as Obsidian hides them: all of one, code
@@ -252,8 +258,11 @@ object ObsidianNote {
                     var n = 0
                     while (i + n < text.length && text[i + n] == '`') n++
                     val run = "`".repeat(n)
-                    val close = text.indexOf(run, i + n)
-                    val stop = if (close < 0) i + n else close + n
+                    // A code span ends with its paragraph: a lone backtick (`don`t`) mustn't pair
+                    // with one further on and carry a comment out as "code".
+                    val paragraph = blankLine.find(text, i + n)?.range?.first ?: text.length
+                    val close = text.indexOf(run, i + n).takeIf { it in 0 until paragraph }
+                    val stop = if (close == null) i + n else close + n
                     out.append(text, i, stop)
                     i = stop
                 }

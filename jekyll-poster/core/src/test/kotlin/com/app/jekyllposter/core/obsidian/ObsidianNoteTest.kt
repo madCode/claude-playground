@@ -70,6 +70,18 @@ class ObsidianNoteTest {
         assertEquals("```\n%% not a comment\n```\nok", convert("```\n%% not a comment\n```\nok").body)
     }
 
+    @Test fun aLoneBacktickDoesntCarryACommentOutAsCode() {
+        val body = convert("I don`t know. %%Ana's address is 12 Elm St%%\n\nUse `ls` to list.").body
+        assertFalse(body, "Elm" in body)
+        assertEquals("I don`t know. \n\nUse `ls` to list.", body)
+    }
+
+    @Test fun aCapitalisedDateIsStillTheNotesOwn() {
+        val note = convert("---\nDate: 2021-06-24\n---\nx")
+        assertEquals("2021-06-24", note.date)
+        assertNull(note.extra)
+    }
+
     @Test fun aCommentNamesNoPhotoAndHidesNoHeading() {
         val note = convert("%%draft notes, ![[old.jpg]]%%\n# Real title\nText ![[cat.jpg]]")
         assertEquals("Real title", note.title)

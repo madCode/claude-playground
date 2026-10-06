@@ -42,6 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.produceState
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -256,10 +257,15 @@ private fun CategoryFilter(categories: List<String>, chosen: String?, onChoose: 
  * changes then rather than at the next unrelated redraw.
  */
 @Composable
-fun nowUntil(at: Long?): Long = produceState(System.currentTimeMillis(), at) {
-    val wait = (at ?: return@produceState) - System.currentTimeMillis()
-    if (wait > 0) {
-        kotlinx.coroutines.delay(wait)
+fun nowUntil(at: Long?): Long {
+    // Read again on every return to the screen too: a delay doesn't count time the phone slept.
+    val lifecycle by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    return produceState(System.currentTimeMillis(), at, lifecycle) {
         value = System.currentTimeMillis()
-    }
-}.value
+        val wait = (at ?: return@produceState) - System.currentTimeMillis()
+        if (wait > 0) {
+            kotlinx.coroutines.delay(wait)
+            value = System.currentTimeMillis()
+        }
+    }.value
+}
