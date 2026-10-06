@@ -64,7 +64,7 @@ class BlogPrivacyViewModelTest {
         val vm = BlogPrivacyViewModel(c) { ZoneId.of("Asia/Tokyo") }
         // The commit lands; then every read of the blog's files fails.
         app.github.beforeRefUpdate = { app.github.failures["repos/sample/sample-blog/git/trees"] = 500 }
-        vm.useThisPhonesZone()
+        vm.useZone("Asia/Tokyo")
         idleUntil(10_000) { vm.state.value.message != null }
         assertTrue(vm.state.value.message!!.startsWith("The site's time zone is now Asia/Tokyo"))
         assertEquals("Asia/Tokyo", vm.state.value.siteZone)
@@ -73,11 +73,11 @@ class BlogPrivacyViewModelTest {
     @Test fun usingThePhonesZoneChangesOnlyThatLineOfTheConfig() {
         val before = app.github.text("_config.yml")!!
         val vm = BlogPrivacyViewModel(c) { ZoneId.of("Asia/Tokyo") }
-        vm.useThisPhonesZone()
+        vm.useZone("Asia/Tokyo")
         idleUntil(10_000) { vm.state.value.siteZone == "Asia/Tokyo" && !vm.state.value.settingZone }
         val after = app.github.text("_config.yml")!!
         assertEquals(before.replace("timezone: America/Los_Angeles", "timezone: Asia/Tokyo"), after)
-        assertEquals("Set the site's time zone to Asia/Tokyo", app.github.commits.getValue(app.github.head).message)
+        assertEquals("Set the site's time zone", app.github.commits.getValue(app.github.head).message)
         assertTrue(vm.state.value.message!!.startsWith("The site's time zone is now Asia/Tokyo"))
     }
 
@@ -85,7 +85,7 @@ class BlogPrivacyViewModelTest {
         val vm = BlogPrivacyViewModel(c) { ZoneId.of("Asia/Tokyo") }
         // Edited on a laptop after the phone read it, in the moment before the commit.
         app.github.beforeRefUpdate = { app.github.push("Laptop", mapOf("_config.yml" to "title: Changed\n")) }
-        vm.useThisPhonesZone()
+        vm.useZone("Asia/Tokyo")
         idleUntil(10_000) { vm.state.value.message != null }
         assertEquals("title: Changed\n", app.github.text("_config.yml"))
         assertEquals("_config.yml changed on GitHub just now. Try again.", vm.state.value.message)

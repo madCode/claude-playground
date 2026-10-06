@@ -179,8 +179,8 @@ doesn't want to open a laptop and make a commit for every post.
   `baseurl`), else `owner.github.io[/repo]`.
 - Then the app follows the Pages deployment for that commit (an Actions run with Pages in its
   name or file; CI doesn't count) for about eleven minutes: "rebuilding", then "live" or
-  "build failed", with a notification that opens the post. Without Actions access, it just says
-  published.
+  "build failed", with a notification that opens the post. A locked phone shows only "A post is
+  live", not the title. Without Actions access, it just says published.
 
 ## Editing a post on the blog
 
@@ -231,10 +231,19 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
     it shows comes through the app.
   - Links opened in the browser, and the sign-in page, go the browser's own way.
 - **Commit with your no-reply email**, off: commits then name no author, and GitHub uses the
-  account's own email setting. On, they name `<id>+<login>@users.noreply.github.com`.
-- **The site's time zone**, from `_config.yml`, and **Use** the phone's: one commit changing only
-  the `timezone:` line, after a warning that posts near midnight (and dated addresses) can move a
-  day. Refused if `_config.yml` changed meanwhile.
+  account's own email setting. On, they're signed `<login> <<id>+<login>@users.noreply.github.com>`:
+  the login, never the profile's name, which may be a real one.
+- **Date posts by the day only**, off: new posts get `date: 2026-10-04`, with no time and no
+  offset, so they say neither when they went out nor where the writer is.
+  - The day is the site's (UTC without a site zone), where Jekyll builds: a post is never in its
+    future, hidden until that day.
+  - Fixed on the first try, like the file name: a retry writes the same date.
+- **The site's time zone**, from `_config.yml`, with **Use UTC** first ("dates won't say where
+  you are") and **Use** the phone's zone second: an IANA name like `Europe/Lisbon` in a public
+  `_config.yml` says more than a date's offset does.
+  - One commit changing only the `timezone:` line, titled "Set the site's time zone" without
+    naming it, after a warning that posts near midnight (and dated addresses) can move a day.
+  - Refused if `_config.yml` changed meanwhile.
 - **Remove tracking codes** from shared links, off.
 - Whether the repository is public (so `_drafts` and earlier versions are readable), and that
   edits and deletes stay in its history, each linking to GitHub.

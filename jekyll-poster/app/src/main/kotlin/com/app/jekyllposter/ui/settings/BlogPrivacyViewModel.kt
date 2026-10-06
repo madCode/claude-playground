@@ -28,6 +28,9 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
         val noReplyEmail: String? = null,
         val commitAsNoReply: Boolean = false,
         val removeTrackingCodes: Boolean = false,
+        val datesByDayOnly: Boolean = false,
+        /** The account's login, which no-reply commits are signed with. */
+        val login: String? = null,
         val onlyThroughVpn: Boolean = false,
         /** Asked for, and there's no VPN: nothing is going out. */
         val waitingForVpn: Boolean = false,
@@ -49,10 +52,10 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
     ) { s, noReply, removeTracking, config, account ->
         s.copy(
             commitAsNoReply = noReply, removeTrackingCodes = removeTracking, siteZone = s.committedZone?.takeIf { config.timezone?.id == s.zoneBefore } ?: config.timezone?.id,
-            repoName = account?.repoName, branch = account?.branch,
+            repoName = account?.repoName, branch = account?.branch, login = account?.login,
         )
-    }.combine(combine(container.settings.onlyThroughVpn, container.waitingForVpn, ::Pair)) { s, (only, waiting) ->
-        s.copy(onlyThroughVpn = only, waitingForVpn = waiting)
+    }.combine(combine(container.settings.onlyThroughVpn, container.waitingForVpn, container.settings.datesByDayOnly, ::Triple)) { s, (only, waiting, dayOnly) ->
+        s.copy(onlyThroughVpn = only, waitingForVpn = waiting, datesByDayOnly = dayOnly)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, local.value)
 
     init {
@@ -90,19 +93,20 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
 
     fun setRemoveTrackingCodes(on: Boolean) = viewModelScope.launch { container.settings.setRemoveTrackingCodes(on) }
 
+    fun setDatesByDayOnly(on: Boolean) = viewModelScope.launch { container.settings.setDatesByDayOnly(on) }
+
     // In the app's scope: once the switch is on, the connections made without it must close
     // even if the screen is left at once.
     fun setOnlyThroughVpn(on: Boolean) = container.appScope.launch { container.setOnlyThroughVpn(on) }
 
     /**
-     * Sets the site's time zone to the phone's: one commit changing only `_config.yml`'s
-     * `timezone:` line, and only if the file is still as read.
+     * Sets the site's time zone to [zone]: one commit changing only `_config.yml`'s `timezone:`
+     * line, and only if the file is still as read.
      */
-    fun useThisPhonesZone() {
+    fun useZone(zone: String) {
         if (local.value.settingZone) return
         local.update { it.copy(settingZone = true, message = null) }
         viewModelScope.launch {
-            val zone = local.value.phoneZone
             val message = try {
                 val blog = container.blogs.blog() ?: error("Sign in to change the blog.")
                 val account = container.accounts.current() ?: error("Sign in to change the blog.")
@@ -111,7 +115,8 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
                     val current = blog.file(CONFIG)
                     val author = container.settings.commitAuthor(account.login) { blog.user().noReplyAuthor }
                     blog.commit(
-                        "Set the site's time zone to $zone",
+                        // Not naming it: the commit list is read more than _config.yml is.
+                        "Set the site's time zone",
                         listOf(FileChange.text(CONFIG, ConfigEdit.withTimezone(current?.text, zone))),
                         mapOf(CONFIG to current?.sha), author,
                     )

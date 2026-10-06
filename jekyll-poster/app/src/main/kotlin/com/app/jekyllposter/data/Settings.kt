@@ -22,7 +22,6 @@ class Settings(private val store: DataStore<Preferences>) {
     private val removeTrackingKey = booleanPreferencesKey("remove_tracking_codes")
     private val noReplyKey = booleanPreferencesKey("commit_as_no_reply")
     private val noReplyLoginKey = stringPreferencesKey("no_reply_login")
-    private val noReplyNameKey = stringPreferencesKey("no_reply_name")
     private val noReplyEmailKey = stringPreferencesKey("no_reply_email")
 
     /** Links shared into the app lose their tracking codes, in the editor where the writer sees it. */
@@ -49,7 +48,6 @@ class Settings(private val store: DataStore<Preferences>) {
             if (author != null) {
                 // One edit, so the switch and the address it uses never disagree.
                 it[noReplyLoginKey] = login
-                it[noReplyNameKey] = author.name
                 it[noReplyEmailKey] = author.email
             }
         }
@@ -59,24 +57,34 @@ class Settings(private val store: DataStore<Preferences>) {
      * Who [login]'s commits are by: null for GitHub's default. When the switch is on but the kept
      * address is another account's (signed in as someone else since), [lookUp] finds this one's,
      * which is kept without touching the switch: the writer may have turned it off meanwhile.
+     * Named by the login, never the profile's name (an address kept before may have had that).
      */
     suspend fun commitAuthor(login: String, lookUp: suspend () -> CommitAuthor?): CommitAuthor? {
         val prefs = store.data.first()
         if (prefs[noReplyKey] != true) return null
-        val name = prefs[noReplyNameKey]
         val email = prefs[noReplyEmailKey]
-        if (prefs[noReplyLoginKey] == login && name != null && email != null) return CommitAuthor(name, email)
+        if (prefs[noReplyLoginKey] == login && email != null) return CommitAuthor(login, email)
         val found = lookUp() ?: throw NoAddress(login)
         store.edit {
             it[noReplyLoginKey] = login
-            it[noReplyNameKey] = found.name
             it[noReplyEmailKey] = found.email
         }
-        return found
+        return CommitAuthor(login, found.email)
     }
 
     /** GitHub gave no account id to build [login]'s no-reply address from. */
     class NoAddress(login: String) : Exception("No no-reply address for $login")
+
+    private val dayOnlyKey = booleanPreferencesKey("dates_by_day_only")
+
+    /** New posts are dated by the day alone: no time of day, no time zone. */
+    val datesByDayOnly: Flow<Boolean> = store.data.map { it[dayOnlyKey] ?: false }
+
+    suspend fun datesByDayOnly(): Boolean = datesByDayOnly.first()
+
+    suspend fun setDatesByDayOnly(dayOnly: Boolean) {
+        store.edit { it[dayOnlyKey] = dayOnly }
+    }
 
     private val onlyThroughVpnKey = booleanPreferencesKey("only_through_vpn")
 

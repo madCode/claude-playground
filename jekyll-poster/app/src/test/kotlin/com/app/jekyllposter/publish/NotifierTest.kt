@@ -26,6 +26,9 @@ class NotifierTest {
         Notifier(app).buildFinished(live)
         val n = shadowOf(manager).allNotifications.single()
         assertEquals("“Bus notes” is live", shadowOf(n).contentTitle)
+        // A locked phone shows no title.
+        assertEquals(android.app.Notification.VISIBILITY_PRIVATE, n.visibility)
+        assertEquals("A post is live", n.publicVersion.extras.getCharSequence(android.app.Notification.EXTRA_TITLE).toString())
         val intent = shadowOf(n.contentIntent).savedIntent
         assertEquals(Intent.ACTION_VIEW, intent.action)
         assertEquals("https://me.github.io/blog/bus-notes/", intent.dataString)

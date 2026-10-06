@@ -25,6 +25,8 @@ class Notifier(private val context: Context) {
             BuildState.Failed -> "Your site didn't rebuild" to "“${draft.title}” is on GitHub, but the Pages build failed. Check Actions on GitHub."
             else -> return
         }
+        // What a locked phone shows instead: no title, which says what the writer writes about.
+        val public = if (draft.buildState == BuildState.Live) "A post is live" else "Your site didn't rebuild"
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -43,6 +45,13 @@ class Notifier(private val context: Context) {
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(tap)
             .setAutoCancel(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(
+                NotificationCompat.Builder(context, CHANNEL)
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setContentTitle(public)
+                    .build(),
+            )
             .build()
         NotificationManagerCompat.from(context).notify(draft.id.toInt(), notification)
     }

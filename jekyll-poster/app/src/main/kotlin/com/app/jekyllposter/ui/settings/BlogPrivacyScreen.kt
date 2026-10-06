@@ -37,7 +37,7 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val uri = LocalUriHandler.current
     val snackbar = remember { SnackbarHostState() }
-    var confirmZone by remember { mutableStateOf(false) }
+    var confirmZone by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); viewModel.messageShown() } }
     val github = state.repoName?.let { "https://github.com/$it" }
     Scaffold(
@@ -66,24 +66,34 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
             Heading("Your commits")
             Toggle(
                 "Commit with your no-reply email",
-                if (state.commitAsNoReply) "Commits from this app show ${state.noReplyEmail ?: "your GitHub no-reply address"}."
+                if (state.commitAsNoReply) "Commits from this app are signed ${state.login ?: "with your login"} <${state.noReplyEmail ?: "your GitHub no-reply address"}>, never your profile's name."
                 else "Off: GitHub's default for your account, your email, or your no-reply address if GitHub is set to keep your email private.",
                 state.commitAsNoReply,
                 viewModel::setCommitAsNoReply,
             )
 
             Heading("Dates")
+            Toggle(
+                "Date posts by the day only",
+                if (state.datesByDayOnly) "New posts say the day, not the time you posted it or your time zone."
+                else "Off: new posts say the minute they went out, and a time zone.",
+                state.datesByDayOnly,
+                viewModel::setDatesByDayOnly,
+            )
             val zone = state.siteZone
             Row(
                 zone ?: "No time zone set",
                 if (zone != null) "Posts are dated in the site's time zone, wherever you write them."
                 else "Posts carry your phone's time zone, so a post written while travelling says where you were.",
             )
-            if (zone != state.phoneZone) {
+            // UTC first: a zone's name in _config.yml (Europe/Lisbon) says more about where you
+            // are than any post's date does.
+            for (option in listOf(UTC, state.phoneZone).distinct().filter { it != zone }) {
                 Row(
-                    if (state.settingZone) "Setting the time zone…" else "Use ${state.phoneZone}",
-                    "This phone's time zone, saved in the blog's _config.yml",
-                    onClick = if (state.settingZone) null else ({ confirmZone = true }),
+                    if (state.settingZone) "Setting the time zone…" else "Use $option",
+                    if (option == UTC) "Dates won't say where you are. Saved in the blog's _config.yml."
+                    else "This phone's time zone, saved in the blog's _config.yml, where anyone can read it.",
+                    onClick = if (state.settingZone) null else ({ confirmZone = option }),
                 )
             }
 
@@ -120,18 +130,20 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
             )
         }
     }
-    if (confirmZone) {
+    confirmZone?.let { chosen ->
         AlertDialog(
-            onDismissRequest = { confirmZone = false },
-            title = { Text("Set the site's time zone to ${state.phoneZone}?") },
+            onDismissRequest = { confirmZone = null },
+            title = { Text("Set the site's time zone to $chosen?") },
             text = {
                 Text(
                     "Jekyll will date every post in it. A post written near midnight can move to the other day, " +
                         "and so can its address, if your addresses have the date in them. One commit to _config.yml.",
                 )
             },
-            confirmButton = { TextButton(onClick = { confirmZone = false; viewModel.useThisPhonesZone() }) { Text("Set it") } },
-            dismissButton = { TextButton(onClick = { confirmZone = false }) { Text("Keep") } },
+            confirmButton = { TextButton(onClick = { confirmZone = null; viewModel.useZone(chosen) }) { Text("Set it") } },
+            dismissButton = { TextButton(onClick = { confirmZone = null }) { Text("Keep") } },
         )
     }
 }
+
+private const val UTC = "UTC"

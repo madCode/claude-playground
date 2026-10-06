@@ -32,7 +32,7 @@ class FakeGitHub(
     var token: String = "good-token",
 ) : AutoCloseable {
     /** [authorEmail] is null when the commit named no author, and GitHub would use the account's. */
-    data class CommitRecord(val sha: String, val tree: String, val parent: String?, val message: String, val authorEmail: String? = null)
+    data class CommitRecord(val sha: String, val tree: String, val parent: String?, val message: String, val authorEmail: String? = null, val authorName: String? = null)
 
     private val blobs = mutableMapOf<String, ByteArray>()
     private val trees = mutableMapOf<String, Map<String, String>>()
@@ -180,8 +180,8 @@ class FakeGitHub(
                 val tree = obj.getValue("tree").jsonPrimitive.content
                 val message = obj.getValue("message").jsonPrimitive.content
                 val sha = sha("commit", "$tree $parent $message ${System.nanoTime()}")
-                val authorEmail = obj["author"]?.jsonObject?.get("email")?.jsonPrimitive?.content
-                commits[sha] = CommitRecord(sha, tree, parent, message, authorEmail)
+                val author = obj["author"]?.jsonObject
+                commits[sha] = CommitRecord(sha, tree, parent, message, author?.get("email")?.jsonPrimitive?.content, author?.get("name")?.jsonPrimitive?.content)
                 ok(buildJsonObject { put("sha", sha) }, 201)
             }
             path == "$base/git/refs/heads/$branch" && request.method == "PATCH" -> {
