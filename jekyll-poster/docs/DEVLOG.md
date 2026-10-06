@@ -20,6 +20,11 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Cycle 22: privacy for anonymous writers, 3 of 3 (one setup, and around the app)
+- **Shipped:** **Set up for writing anonymously**, one confirm for every private switch, and
+  **Beyond the app**, what only the writer can do; nothing written goes to the cloud backup;
+  more sites' share codes go; sign-in says to use a private tab.
+
 ### Cycle 21: privacy for anonymous writers, 2 of 3 (what goes out, and when)
 - **Shipped:** **Send at a random time** (a moment in the next three hours, kept with the post,
   with **Send now**); **Plain commit messages**; Obsidian comments and the note keys that say

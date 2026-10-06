@@ -93,6 +93,7 @@ private fun TokenStep(state: ConnectViewModel.State, viewModel: ConnectViewModel
             onClick = { uri.openUri(ConnectViewModel.NEW_TOKEN_URL) },
             border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline),
         ) { Text("Make a token on GitHub") }
+        PrivateTabHint()
         OutlinedTextField(
             value = state.token,
             onValueChange = viewModel::setToken,
@@ -137,6 +138,7 @@ private fun CodeStep(code: DeviceFlow.Code, onCancel: () -> Unit, modifier: Modi
         Button(onClick = { clipboard.setText(AnnotatedString(code.userCode)); uri.openUri(code.verificationUri) }, modifier = Modifier.fillMaxWidth()) {
             Text("Copy the code and open GitHub")
         }
+        PrivateTabHint()
         Row(verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
             Spacer(Modifier.width(12.dp))
@@ -196,4 +198,17 @@ private fun RepoStep(
             }
         }
     }
+}
+
+/**
+ * The browser is probably signed in to the writer's own GitHub account: approving there would
+ * use it, and GitHub would see the two accounts side by side.
+ */
+@Composable
+private fun PrivateTabHint() {
+    Text(
+        "Blogging under another name? Open GitHub in a private tab, signed in only to that account.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }

@@ -38,6 +38,7 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
     val uri = LocalUriHandler.current
     val snackbar = remember { SnackbarHostState() }
     var confirmZone by remember { mutableStateOf<String?>(null) }
+    var confirmAnonymous by remember { mutableStateOf(false) }
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); viewModel.messageShown() } }
     val github = state.repoName?.let { "https://github.com/$it" }
     Scaffold(
@@ -50,6 +51,18 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
+            Heading("Writing anonymously")
+            if (state.anonymous) {
+                Row("All set for writing anonymously", "Every switch below that keeps your name, place and habits off the blog is on.")
+            } else {
+                Row(
+                    "Set up for writing anonymously",
+                    "Turns on the switches below that keep your name, place and habits off the blog. See also “Beyond the app”, at the end.",
+                    onClick = { confirmAnonymous = true },
+                    link = "Set up",
+                )
+            }
+
             Heading("Your connection")
             Toggle(
                 "Only connect through a VPN",
@@ -145,7 +158,35 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
                 onClick = github?.let { { uri.openUri("$it/commits/${state.branch ?: ""}") } },
                 link = "Open the history on GitHub",
             )
+
+            // What no switch can do: the writer's own choices around the app.
+            Heading("Beyond the app")
+            Row("A GitHub account of its own", "Made with an email and a name that aren't yours. Its login is in the blog's address and in every commit.")
+            Row("Sign in in a private tab", "When the app opens GitHub, use a private tab signed in only to that account, so GitHub doesn't see it beside your own.")
+            Row("Free sites are public repositories", "Anyone can read their history. A private one needs a paid plan, in your name.")
+            Row("Your own domain", "Whoever sells it knows who paid, and shows it to anyone who asks unless it's kept private.")
+            Row("Your theme", "Analytics or comments in your theme see you when you open your own posts.")
         }
+    }
+    if (confirmAnonymous) {
+        AlertDialog(
+            onDismissRequest = { confirmAnonymous = false },
+            title = { Text("Set up for writing anonymously?") },
+            text = {
+                Text(
+                    "This turns on:\n" +
+                        "• Only connect through a VPN\n" +
+                        "• Commit with your no-reply email\n" +
+                        "• Plain commit messages\n" +
+                        "• Send at a random time\n" +
+                        "• Date posts by the day only\n" +
+                        "• Remove tracking codes\n\n" +
+                        "Each can be turned off again here. The site's time zone is left as it is: choose UTC below if you like.",
+                )
+            },
+            confirmButton = { TextButton(onClick = { confirmAnonymous = false; viewModel.writeAnonymously() }) { Text("Turn them on") } },
+            dismissButton = { TextButton(onClick = { confirmAnonymous = false }) { Text("Not now") } },
+        )
     }
     confirmZone?.let { chosen ->
         AlertDialog(

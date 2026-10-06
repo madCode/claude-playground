@@ -47,7 +47,11 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
         val zoneBefore: String? = null,
         val visibility: Visibility = Visibility.Loading,
         val message: String? = null,
-    )
+    ) {
+        /** Every switch for writing anonymously is on. */
+        val anonymous: Boolean
+            get() = onlyThroughVpn && commitAsNoReply && plainCommitMessages && sendAtRandomTime && datesByDayOnly && removeTrackingCodes
+    }
 
     private val local = MutableStateFlow(State(phoneZone = phoneZone().id))
 
@@ -103,6 +107,26 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
     fun setRemoveTrackingCodes(on: Boolean) = viewModelScope.launch { container.settings.setRemoveTrackingCodes(on) }
 
     fun setDatesByDayOnly(on: Boolean) = viewModelScope.launch { container.settings.setDatesByDayOnly(on) }
+
+    /**
+     * Turns on every switch for writing anonymously. The no-reply address is looked up first:
+     * with the VPN switch on and no VPN yet, it couldn't be.
+     */
+    fun writeAnonymously() {
+        // In the screen's scope, as each switch is: left half way, the row still offers to finish.
+        viewModelScope.launch {
+            with(container.settings) {
+                setPlainCommitMessages(true)
+                setSendAtRandomTime(true)
+                setDatesByDayOnly(true)
+                setRemoveTrackingCodes(true)
+            }
+            switching?.join()
+            if (!state.value.commitAsNoReply) setCommitAsNoReply(true)
+            switching?.join()
+            container.setOnlyThroughVpn(true)
+        }
+    }
 
     fun setSendAtRandomTime(on: Boolean) = viewModelScope.launch { container.settings.setSendAtRandomTime(on) }
 

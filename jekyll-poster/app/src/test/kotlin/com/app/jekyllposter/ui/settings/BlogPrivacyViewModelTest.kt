@@ -8,6 +8,7 @@ import com.app.jekyllposter.testutil.idleUntil
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -28,6 +29,18 @@ class BlogPrivacyViewModelTest {
     }
 
     @After fun close() = app.github.close()
+
+    @Test fun oneStepSetsUpForWritingAnonymously() {
+        val vm = BlogPrivacyViewModel(c) { java.time.ZoneId.of("Asia/Tokyo") }
+        idleUntil { vm.state.value.noReplyEmail != null }
+        assertFalse(vm.state.value.anonymous)
+        vm.writeAnonymously()
+        idleUntil(10_000) { vm.state.value.anonymous }
+        // The no-reply address was found before the VPN switch went on.
+        assertEquals(com.app.jekyllposter.core.github.CommitAuthor("sample", "1001+sample@users.noreply.github.com"), runBlocking { c.settings.commitAuthor("sample") { null } })
+        // The site's time zone is a commit: left for the writer to choose.
+        assertEquals("America/Los_Angeles", vm.state.value.siteZone)
+    }
 
     @Test fun itShowsTheNoReplyAddressTheVisibilityAndTheSitesZone() {
         val vm = BlogPrivacyViewModel(c) { ZoneId.of("Asia/Tokyo") }
