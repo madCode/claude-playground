@@ -50,13 +50,20 @@ object PostWriter {
     fun timestamp(at: ZonedDateTime): String = at.format(timestamp)
 
     /**
+     * The `date:` for a post published [at]: Jekyll's timestamp, or with [dayOnly] just the day,
+     * which says neither the time it went out nor the writer's time zone. Jekyll reads a bare
+     * day as midnight in the site's time zone.
+     */
+    fun date(at: ZonedDateTime, dayOnly: Boolean): String = if (dayOnly) at.toLocalDate().toString() else timestamp(at)
+
+    /**
      * The file for a new post. The date carries the phone's offset, so the post lands on the day
      * the writer sees whatever time zone the site builds in. Without an offset GitHub's build
      * reads it as UTC, and an evening post can be dated tomorrow, which Jekyll then hides as a
      * future post.
      */
-    fun newPost(content: PostContent, at: ZonedDateTime, config: SiteConfig): FrontMatterDocument =
-        create(content, config, date = at.format(timestamp))
+    fun newPost(content: PostContent, at: ZonedDateTime, config: SiteConfig, dayOnly: Boolean = false): FrontMatterDocument =
+        create(content, config, date = date(at, dayOnly))
 
     /** A new draft: no date, since Jekyll dates drafts by their file's modification time. */
     fun newDraft(content: PostContent, config: SiteConfig): FrontMatterDocument =

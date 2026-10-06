@@ -89,6 +89,65 @@ class PublisherTest {
         c.settings.setCommitAsNoReply("sample", com.app.jekyllposter.core.github.CommitAuthor("Sample Writer", "1001+sample@users.noreply.github.com"))
         publisher.publish(queue(Draft(title = "Private", body = "x")))
         assertEquals("1001+sample@users.noreply.github.com", github.commits.getValue(github.head).authorEmail)
+        // Signed with the login, never the profile's name, even one kept from before.
+        assertEquals("sample", github.commits.getValue(github.head).authorName)
+    }
+
+    @Test fun byTheDayOnlyAPostSaysNeitherTimeNorZone() = runBlocking {
+        c.settings.setDatesByDayOnly(true)
+        val id = queue(Draft(title = "Quiet day", body = "x"))
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        // The site's day (Los Angeles), with no time and no offset.
+        assertEquals("---\ntitle: Quiet day\ndate: 2026-10-04\n---\n\nx\n", github.text("_posts/2026-10-04-quiet-day.md"))
+    }
+
+    @Test fun byTheDayOnlyWithoutASiteZoneItIsTheDayInUtc() = runBlocking {
+        github.push("No zone", mapOf("_config.yml" to github.text("_config.yml")!!.lines().filterNot { it.startsWith("timezone:") }.joinToString("\n")))
+        c.blogs.refresh()
+        c.settings.setDatesByDayOnly(true)
+        // 22:15 in Los Angeles is already the 5th in UTC, where GitHub builds: dated the 5th,
+        // so the post is never in the future there and hidden.
+        assertEquals(Publisher.Outcome.Done, publisher.publish(queue(Draft(title = "Late", body = "x"))))
+        assertTrue(github.text("_posts/2026-10-05-late.md")!!.contains("date: 2026-10-05\n"))
+    }
+
+    @Test fun byTheDayOnlyANotesOwnDateIsItsDayWhereJekyllBuilds() = runBlocking {
+        github.push("No zone", mapOf("_config.yml" to github.text("_config.yml")!!.lines().filterNot { it.startsWith("timezone:") }.joinToString("\n")))
+        c.blogs.refresh()
+        c.settings.setDatesByDayOnly(true)
+        // Morning of the 5th in Tokyo is still the 4th in UTC: the 5th would be a future day there.
+        publisher.publish(queue(Draft(title = "Tokyo morning", body = "x", noteDate = "2026-10-05T08:00:00+09:00")))
+        assertTrue(github.text("_posts/2026-10-04-tokyo-morning.md")!!.contains("date: 2026-10-04\n"))
+    }
+
+    @Test fun byTheDayOnlyAJekyllDraftIsPublishedWithItsDay() = runBlocking {
+        c.blogs.refresh()
+        c.settings.setDatesByDayOnly(true)
+        val path = "_drafts/garden-plans.md"
+        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        publisher.publish(queue(Draft(title = "Garden plans", body = "Beans.", editingPath = path, baseSha = sha, destination = Destination.Posts)))
+        assertTrue(github.text("_posts/2026-10-04-garden-plans.md")!!.contains("date: 2026-10-04\n"))
+    }
+
+    @Test fun byTheDayOnlyAPostThatLandedUnheardIsNotSentAgain() = runBlocking {
+        c.settings.setDatesByDayOnly(true)
+        val id = queue(Draft(title = "Once", body = "x"))
+        github.loseNextRefAnswer = true
+        assertEquals(Publisher.Outcome.Retry, publisher.publish(id))
+        val landed = github.head
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertEquals(landed, github.head)
+    }
+
+    @Test fun aDayFixedOnTheFirstTryIsKeptWhateverTheSwitchSaysLater() = runBlocking {
+        c.settings.setDatesByDayOnly(true)
+        github.failures["repos/sample/sample-blog/git/refs/heads/main"] = 503
+        val id = queue(Draft(title = "Retry", body = "x"))
+        assertEquals(Publisher.Outcome.Retry, publisher.publish(id))
+        c.settings.setDatesByDayOnly(false)
+        github.failures.clear()
+        assertEquals(Publisher.Outcome.Done, publisher.publish(id))
+        assertTrue(github.text("_posts/2026-10-04-retry.md")!!.contains("date: 2026-10-04\n"))
     }
 
     @Test fun signedInAsSomeoneElseTheirOwnNoReplyAddressIsLookedUp() = runBlocking {

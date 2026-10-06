@@ -20,6 +20,13 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Cycle 20: privacy for anonymous writers, 1 of 3 (who and when)
+- **Asked:** make it easy to blog anonymously. An audit listed what still ties a post to its
+  writer; this cycle takes who signs the commits and what the dates say.
+- **Shipped:** no-reply commits signed with the login, never the profile's name; **Date posts
+  by the day only**; **Use UTC** offered before the phone's zone, and the zone commit no longer
+  names it; notifications show no title on a locked phone.
+
 ### Cycle 19: only through a VPN
 - **Asked:** make sure the VPN is on before anything goes to GitHub, for privacy.
 - **Shipped:** **Only connect through a VPN** in Blog & privacy. Connections are bound to the

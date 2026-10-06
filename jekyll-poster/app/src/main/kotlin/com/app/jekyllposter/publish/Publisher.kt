@@ -190,12 +190,12 @@ class Publisher(
         // A name picked on an earlier attempt and taken since is picked again.
         val stale = draft.targetPath?.let { it in index.paths } == true
         val fixed = fixTarget(if (stale) draft.copy(targetPath = null, publishDate = null) else draft, index)
-        val date = ZonedDateTime.parse(fixed.publishDate)
+        val date = fixedDate(fixed, index)
         val target = fixed.targetPath!!
         // Named once the post's own name is known.
         val (ready, photos) = photos(fixed, index, ours = emptySet(), PostPath(target).slug, date.year) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
         val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content())
-        doc.setRaw("date", PostWriter.timestamp(date))
+        doc.setRaw("date", PostWriter.date(date, dayOnly(fixed)))
         drafts.update(ready.copy(sentShas = (ready.sentShas + gitBlobSha(doc.render())).distinct()))
         return Plan.Commit(
             ready, target, "Publish draft: ${ready.title}",
@@ -208,9 +208,9 @@ class Publisher(
     private suspend fun planNew(draft: Draft, index: SiteIndex, blog: Blog): Plan? {
         val toDrafts = draft.destination == Destination.Drafts
         fun render(d: Draft, at: ZonedDateTime) =
-            if (toDrafts) PostWriter.newDraft(d.content(), index.config).render() else PostWriter.newPost(d.content(), at, index.config).render()
+            if (toDrafts) PostWriter.newDraft(d.content(), index.config).render() else PostWriter.newPost(d.content(), at, index.config, dayOnly(d)).render()
         var fixed = fixTarget(draft, index)
-        var date = ZonedDateTime.parse(fixed.publishDate)
+        var date = fixedDate(fixed, index)
         val there = fixed.targetPath!!.takeIf { it in index.paths }?.let { blog.file(it) }
         if (there?.text == render(fixed, date)) return Plan.Finished(published(fixed, fixed.targetPath!!, null, postUrl(index, fixed.targetPath!!, date, fixed)))
         // The file is there but different. If it's what this post last sent, an earlier attempt
@@ -219,7 +219,7 @@ class Publisher(
         val ours = there != null && there.sha in fixed.sentShas
         if (there != null && !ours) {
             fixed = fixTarget(fixed.copy(targetPath = null, publishDate = null), index)
-            date = ZonedDateTime.parse(fixed.publishDate)
+            date = fixedDate(fixed, index)
         }
         // Photos already on the branch from that landed attempt are this post's own.
         val sent = if (ours) fixed.images.map { it.sitePath.removePrefix("/") }.filter { it in index.paths }.toSet() else emptySet()
@@ -316,8 +316,12 @@ class Publisher(
         val zone = index.config.timezone
         // A note's own date wins (a post written months ago keeps its day), read here, where the
         // site's zone is known: a bare day is midnight there, as Jekyll reads it.
-        val noted = draft.noteDate?.let { parseJekyllDate(it, zone ?: java.time.ZoneOffset.UTC) }?.let { d -> zone?.let { d.withZoneSameInstant(it) } ?: d }
-        val date = noted ?: zone?.let { now().withZoneSameInstant(it) } ?: now()
+        // By the day alone, the day is taken where Jekyll builds (UTC without a site zone), for a
+        // note's own date too: a day ahead of it there is in the future, and Jekyll hides the post.
+        val dayOnly = !toDrafts && settings.datesByDayOnly()
+        val where = zone ?: java.time.ZoneOffset.UTC.takeIf { dayOnly }
+        val noted = draft.noteDate?.let { parseJekyllDate(it, zone ?: java.time.ZoneOffset.UTC) }?.let { d -> where?.let { d.withZoneSameInstant(it) } ?: d }
+        val date = noted ?: where?.let { now().withZoneSameInstant(it) } ?: now()
         val slug = Slug.of(draft.title).ifEmpty { "post" }
         fun at(s: String) = if (toDrafts) PostPath.newDraft(s).path else PostPath.newPost(date.toLocalDate(), s).path
         val urls = if (toDrafts) emptySet() else index.posts.filterNot { it.path.isDraft }.mapNotNull { post ->
@@ -327,7 +331,8 @@ class Publisher(
         var chosen = slug
         var n = 2
         while (taken(chosen)) chosen = "$slug-${n++}"
-        val fixed = draft.copy(targetPath = at(chosen), publishDate = date.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+        // A bare day, kept that way: every attempt writes the same date, whatever the switch says by then.
+        val fixed = draft.copy(targetPath = at(chosen), publishDate = if (dayOnly) date.toLocalDate().toString() else date.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
         drafts.update(fixed)
         return fixed
     }
@@ -359,6 +364,14 @@ internal fun parseJekyllDate(value: String, zone: java.time.ZoneId): ZonedDateTi
     // A bare day only: "2021-06-24 whatever" isn't a date the app should guess at.
     return runCatching { java.time.LocalDate.parse(v).atStartOfDay(zone) }.getOrNull()
 }
+
+/** Whether [draft]'s date was fixed as a day alone (see [Settings.datesByDayOnly]). */
+private fun dayOnly(draft: Draft) = draft.publishDate?.length == 10
+
+/** [draft]'s fixed date: a moment, or a day alone, which is midnight in the site's zone (UTC without one), as Jekyll reads it. */
+private fun fixedDate(draft: Draft, index: SiteIndex): ZonedDateTime =
+    if (dayOnly(draft)) java.time.LocalDate.parse(draft.publishDate).atStartOfDay(index.config.timezone ?: java.time.ZoneOffset.UTC)
+    else ZonedDateTime.parse(draft.publishDate)
 
 /** Git's id for a file's content, as GitHub reports it: SHA-1 of `blob <size>\0<bytes>`. */
 internal fun gitBlobSha(text: String): String {
