@@ -2,7 +2,6 @@ package com.app.jekyllposter.ui.editor
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
 import com.app.jekyllposter.ui.home.HomeViewModel
@@ -23,7 +22,7 @@ class EditLeftUnchangedTest {
     private val c = app.container
 
     @Before fun signIn() = runBlocking {
-        c.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
+        app.signIn()
         c.blogs.refresh()
         Unit
     }

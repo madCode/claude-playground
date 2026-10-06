@@ -7,7 +7,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.PendingShare
 import com.app.jekyllposter.Shared
 import com.app.jekyllposter.core.obsidian.ObsidianNote
-import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
@@ -37,7 +36,7 @@ class ObsidianShareTest {
     @After fun close() = app.github.close()
 
     private fun signIn() = runBlocking {
-        app.container.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
+        app.signIn()
     }
 
     private fun photo(file: File): File {

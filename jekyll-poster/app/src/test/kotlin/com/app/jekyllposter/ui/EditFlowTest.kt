@@ -6,7 +6,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.ui.theme.PosterTheme
 import kotlinx.coroutines.runBlocking
@@ -33,7 +32,7 @@ class EditFlowTest {
     @After fun close() = github.close()
 
     @Test fun tappingAPostOnTheBlogOpensItsTextToEdit() {
-        runBlocking { app.container.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main")) }
+        runBlocking { app.signIn() }
         compose.setContent { PosterTheme { PosterNavHost(app.container) } }
         compose.waitFor("What I read in April")
         compose.onNodeWithText("What I read in April").performClick()

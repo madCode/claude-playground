@@ -33,7 +33,7 @@ class EditorViewModelTest {
     private val c = app.container
 
     @Before fun signIn() = runBlocking {
-        c.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
+        app.signIn()
         c.blogs.refresh()
         Unit
     }

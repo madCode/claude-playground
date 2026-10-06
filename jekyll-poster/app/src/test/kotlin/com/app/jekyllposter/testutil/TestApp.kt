@@ -6,6 +6,8 @@ import androidx.room.Room
 import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.PosterApp
 import com.app.jekyllposter.core.testing.FakeGitHub
+import com.app.jekyllposter.core.testing.FakeVpn
+import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.AesGcmCipher
 import com.app.jekyllposter.data.PosterDatabase
 import com.app.jekyllposter.data.VaultFile
@@ -37,6 +39,9 @@ class TestApp : PosterApp() {
 
     /** Posts sent at once with Send now. */
     val sentNow = CopyOnWriteArrayList<Long>()
+
+    /** Signs in to the sample blog, as most tests begin. */
+    suspend fun signIn() = container.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
 
     /** When set, a publish request runs the publisher straight away, as the worker would. */
     var publishNow = true

@@ -3,7 +3,6 @@ package com.app.jekyllposter.ui.settings
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.core.github.CommitAuthor
-import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
 import java.time.ZoneId
@@ -24,7 +23,7 @@ class BlogPrivacyViewModelTest {
     private val c = app.container
 
     @Before fun signIn() = runBlocking {
-        c.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
+        app.signIn()
         c.blogs.refresh()
         Unit
     }

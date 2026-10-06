@@ -4,7 +4,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.Shared
-import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.ui.theme.PosterTheme
 import kotlinx.coroutines.runBlocking
@@ -23,7 +22,7 @@ class ObsidianShareFlowTest {
     @After fun close() = app.github.close()
 
     private fun signIn() = runBlocking {
-        app.container.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
+        app.signIn()
     }
 
     @Test fun aNoteWhoseRulesCantBeAppliedStartsNoPostAndSaysWhy() {

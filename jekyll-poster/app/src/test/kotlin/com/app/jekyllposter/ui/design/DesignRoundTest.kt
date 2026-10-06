@@ -13,7 +13,6 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
@@ -61,7 +60,7 @@ class DesignRoundTest(styleName: String, private val dark: Boolean) {
     private fun name(screen: String) = "${style.name}-${if (dark) "dark" else "light"}-$screen"
 
     private fun signIn() = runBlocking {
-        c.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
+        app.signIn()
         c.blogs.refresh()
     }
 

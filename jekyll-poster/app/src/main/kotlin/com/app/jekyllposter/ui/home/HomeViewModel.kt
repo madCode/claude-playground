@@ -21,6 +21,7 @@ import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.data.toSummary
+import com.app.jekyllposter.ui.catching
 import com.app.jekyllposter.ui.forWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,7 +89,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     fun refresh() {
         status.update { it.copy(refreshing = true, error = null) }
         viewModelScope.launch {
-            val error = runCatching { container.blogs.refresh() }.exceptionOrNull()
+            val error = catching { container.blogs.refresh() }.exceptionOrNull()
             status.update { it.copy(refreshing = false, error = error?.forWriter()) }
         }
     }
@@ -142,7 +143,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         val text = fromFile?.second ?: shared.text
         // Fresh, if GitHub can be reached: a link to a post deleted since the last look would fail
         // the site's build. Best effort; the cached list does otherwise. Only for a note with links.
-        if (text.contains("[[")) withTimeoutOrNull(10_000) { runCatching { container.blogs.refresh() } }
+        if (text.contains("[[")) withTimeoutOrNull(10_000) { catching { container.blogs.refresh() } }
         val posts = container.blogs.linkable(container.blogs.cachedPosts.first()).map { ObsidianNote.LinkTarget(it.path, it.title) }
         // Off the main thread: a big note or a slow pattern mustn't freeze the screen.
         val converted = withContext(Dispatchers.Default) { ObsidianNote.convert(text, fromFile?.first, posts, container.blogs.postUrlHasBaseurl) }
@@ -174,13 +175,13 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     /** A shared file's name and text; null when it can't be read, or is too big to be a note. */
     private suspend fun readNote(uri: Uri): Pair<String?, String>? = withContext(Dispatchers.IO) {
-        runCatching {
+        catching {
             val resolver = container.context.contentResolver
             val name = runCatching {
                 resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
             }.getOrNull() ?: uri.lastPathSegment
             // Read up to one byte past the limit, so a bigger file is told apart without reading it all.
-            val bytes = resolver.openInputStream(uri)?.use { it.readAtMost(MAX_NOTE) } ?: return@runCatching null
+            val bytes = resolver.openInputStream(uri)?.use { it.readAtMost(MAX_NOTE) } ?: return@catching null
             if (bytes.size > MAX_NOTE) null else name to bytes.toString(Charsets.UTF_8)
         }.getOrNull()
     }

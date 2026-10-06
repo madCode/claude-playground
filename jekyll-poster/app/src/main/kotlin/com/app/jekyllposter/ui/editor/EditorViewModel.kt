@@ -28,6 +28,7 @@ import com.app.jekyllposter.data.DraftImage
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.data.RANDOM_WINDOW
 import com.app.jekyllposter.data.chooseVault
+import com.app.jekyllposter.ui.catching
 import java.io.File
 import java.time.LocalDateTime
 import kotlin.random.Random
@@ -117,7 +118,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             val tree = container.settings.obsidianVault()
             // Shown while the vault is walked too: on a big one that takes a while, and Back waits for it.
             if (tree != null) flags.update { it.copy(addingPhoto = true) }
-            val vault = tree?.let { runCatching { container.vaultFiles(it) }.getOrNull() }
+            val vault = tree?.let { catching { container.vaultFiles(it) }.getOrNull() }
             val files = vault?.files
             if (files == null) {
                 flags.update {

@@ -6,6 +6,7 @@ import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.core.github.FileChange
 import com.app.jekyllposter.core.github.GitHubException
 import com.app.jekyllposter.core.jekyll.ConfigEdit
+import com.app.jekyllposter.ui.catching
 import com.app.jekyllposter.ui.forWriter
 import java.time.ZoneId
 import kotlinx.coroutines.CancellationException
@@ -78,9 +79,9 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
     init {
         viewModelScope.launch {
             val blog = container.blogs.blog()
-            val user = blog?.let { b -> runCatching { b.user() }.getOrNull() }
+            val user = blog?.let { b -> catching { b.user() }.getOrNull() }
             local.update { it.copy(noReplyEmail = user?.noReplyAuthor?.email) }
-            val repo = blog?.let { b -> runCatching { b.repository() }.getOrNull() }
+            val repo = blog?.let { b -> catching { b.repository() }.getOrNull() }
             local.update { it.copy(visibility = repo?.let { r -> if (r.private) Visibility.Private else Visibility.Public } ?: Visibility.Unknown) }
         }
     }
@@ -97,7 +98,7 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
         switching = viewModelScope.launch {
             val account = container.accounts.current() ?: return@launch
             if (!on) return@launch container.settings.setCommitAsNoReply(account.login, null)
-            val author = runCatching { container.blogs.blog()?.user()?.noReplyAuthor }.getOrNull()
+            val author = catching { container.blogs.blog()?.user()?.noReplyAuthor }.getOrNull()
             ensureActive()
             if (author == null) {
                 // The VPN switch on and no VPN: say so, or "try again" would fail the same way.
@@ -177,7 +178,7 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
                 // On its own: the commit has landed even if reading the blog again fails, and
                 // saying otherwise would invite committing it twice.
                 local.update { it.copy(committedZone = zone, zoneBefore = container.blogs.config.value.timezone?.id) }
-                runCatching { container.blogs.refresh() }
+                catching { container.blogs.refresh() }
                 "The site's time zone is now $zone. The site rebuilds in a minute or two."
             } catch (e: CancellationException) {
                 throw e

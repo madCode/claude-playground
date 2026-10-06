@@ -1,7 +1,7 @@
-package com.app.jekyllposter.data
+package com.app.jekyllposter.core.net
 
 import com.app.jekyllposter.core.github.NoVpnException
-import com.app.jekyllposter.testutil.FakeVpn
+import com.app.jekyllposter.core.testing.FakeVpn
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Proxy
