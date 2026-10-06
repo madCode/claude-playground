@@ -121,6 +121,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Public
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.PostState
+import com.app.jekyllposter.ui.home.nowUntil
 import com.app.jekyllposter.ui.home.status
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -204,7 +205,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                         ) { send(if (jekyllDraft) Destination.Drafts else Destination.Posts) }
                     }
                     // Waiting for its random time: the writer can still send it at once.
-                    if (state.draft?.state == PostState.Queued && (state.draft?.sendAfter ?: 0) > System.currentTimeMillis()) {
+                    if (state.draft?.state == PostState.Queued && (state.draft?.sendAfter ?: 0) > nowUntil(state.draft?.sendAfter)) {
                         InkButton("Send now", onClick = viewModel::sendNow)
                     }
                     // A queued post may be mid-commit; deleting it then would lose the phone's record
@@ -289,7 +290,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
             state.draft?.takeIf { !editable || it.error != null }?.let { draft ->
                 val waitingForVpn by viewModel.waitingForVpn.collectAsStateWithLifecycle()
-                val (label, isError) = draft.status(waitingForVpn = waitingForVpn)
+                val (label, isError) = draft.status(waitingForVpn = waitingForVpn, now = nowUntil(draft.sendAfter))
                 val uri = LocalUriHandler.current
                 Surface(color = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {

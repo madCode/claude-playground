@@ -179,6 +179,10 @@ interface DraftDao {
     @Update
     suspend fun update(draft: Draft)
 
+    /** Clears a queued post's random time, so it goes now; the number of rows changed. */
+    @Query("UPDATE drafts SET sendAfter = NULL WHERE id = :id AND state = 'Queued'")
+    suspend fun sendNow(id: Long): Int
+
     @Query("DELETE FROM drafts WHERE id = :id")
     suspend fun delete(id: Long)
 

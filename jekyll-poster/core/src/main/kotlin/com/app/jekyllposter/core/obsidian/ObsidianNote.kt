@@ -44,11 +44,8 @@ object ObsidianNote {
      */
     private val dropped = setOf(
         "find", "replace", "aliases", "alias", "cssclasses", "cssclass", "date", "layout",
-        "created", "modified", "updated", "location", "coordinates",
+        "created", "modified", "updated", "date created", "date modified", "date updated", "location", "coordinates",
     )
-
-    /** An Obsidian comment, `%%…%%`, hidden in Obsidian's reading view; one left open runs to the end. */
-    private val comment = Regex("""%%[\s\S]*?(%%|\z)""")
 
     private val imageExtensions = setOf("png", "jpg", "jpeg", "gif", "webp", "avif", "bmp", "svg", "heic")
 
@@ -76,6 +73,9 @@ object ObsidianNote {
         // Out before the rules run: they hold the very words meant to stay private.
         doc.set("find", null)
         doc.set("replace", null)
+        // Comments are the writer's notes to themselves (Jekyll would show them): out first, so
+        // nothing in them is taken as the title, a photo or a link.
+        doc = doc.withBody(withoutComments(doc.text))
         // Named before the rules run, which may change a file's name in the text too.
         val embedNames = embeds(doc.text).map { it.name }
         if (rules.isNotEmpty()) {
@@ -98,10 +98,10 @@ object ObsidianNote {
         val categories = noteTerms(doc, "category", "categories")
         val tags = noteTerms(doc, "tag", "tags")
         val date = doc.string("date")?.trim()?.takeIf { it.isNotEmpty() }
-        dropped.forEach { doc.set(it, null) }
+        // `Created:` and `created:` alike: Obsidian's plugins differ.
+        doc.keys.filter { it.lowercase() in dropped }.forEach { doc.set(it, null) }
         val extra = doc.others(PostWriter.MANAGED).takeIf { it.isNotBlank() }
-        // Comments are the writer's notes to themselves: they'd show on the site as plain text.
-        body = outsideCode(body) { segment -> links(segment.replace(comment, ""), posts, if (postUrlHasBaseurl) "" else "{{ site.baseurl }}") }
+        body = outsideCode(body) { segment -> links(segment, posts, if (postUrlHasBaseurl) "" else "{{ site.baseurl }}") }
         val found = embeds(body)
         // The rules may have renamed a file in the text; the vault still has it by its own name.
         val named = if (found.size == embedNames.size) found.mapIndexed { i, e -> e.copy(name = embedNames[i]) } else found
@@ -217,6 +217,51 @@ object ObsidianNote {
     private val heading = Regex("""\A\s*#\s+(.+?)\s*#*\s*(\n|\z)""")
     private val wikilink = Regex("""(!?)\[\[([^\[\]\n]+?)]]""")
     private val fence = Regex("""^\s{0,3}(`{3,}|~{3,})""")
+
+    /**
+     * [text] without its Obsidian comments, `%%…%%`, as Obsidian hides them: all of one, code
+     * inside included, and one left open runs to the end. A `%%` inside code (a fence, or an
+     * inline span outside any comment) is just text.
+     */
+    internal fun withoutComments(text: String): String {
+        val out = StringBuilder()
+        var inComment = false
+        var openFence: String? = null
+        var i = 0
+        while (i < text.length) {
+            if (!inComment && (i == 0 || text[i - 1] == '\n')) {
+                val end = text.indexOf('\n', i).let { if (it < 0) text.length else it + 1 }
+                val line = text.substring(i, end)
+                val marker = fence.find(line)?.groupValues?.get(1)
+                val open = openFence
+                if (open != null || marker != null) {
+                    out.append(line)
+                    openFence = when {
+                        open == null -> marker
+                        marker != null && marker[0] == open[0] && marker.length >= open.length && line.trim() == marker -> null
+                        else -> open
+                    }
+                    i = end
+                    continue
+                }
+            }
+            when {
+                text.startsWith("%%", i) -> { inComment = !inComment; i += 2 }
+                inComment -> i++
+                text[i] == '`' -> {
+                    var n = 0
+                    while (i + n < text.length && text[i + n] == '`') n++
+                    val run = "`".repeat(n)
+                    val close = text.indexOf(run, i + n)
+                    val stop = if (close < 0) i + n else close + n
+                    out.append(text, i, stop)
+                    i = stop
+                }
+                else -> { out.append(text[i]); i++ }
+            }
+        }
+        return out.toString()
+    }
     private val inlineCode = Regex("""(`+)[\s\S]*?\1""")
 
     private fun links(text: String, posts: List<LinkTarget>, prefix: String): String = wikilink.replace(text) { m ->

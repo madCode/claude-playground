@@ -48,9 +48,47 @@ class SendLaterTest {
         assertEquals(head, app.github.head)
         assertTrue(draft.status().first, draft.status().first.startsWith("Going out at "))
 
+        assertEquals(draft.sendAfter, app.sendAfters[id])
+
         runBlocking { c.sendNow(id) }
         assertNull(runBlocking { c.drafts.get(id)!! }.sendAfter)
-        assertEquals(listOf(id), app.retried.toList())
+        assertEquals(listOf(id), app.sentNow.toList())
+    }
+
+    @Test fun aSecondTapKeepsTheTimeAlreadyChosen() {
+        app.publishNow = false
+        val (id, editor) = editor(Draft(title = "Quiet", body = "Hello."))
+        editor.publish()
+        editor.publish()
+        idleUntil(10_000) { editor.state.value.closed }
+        val first = runBlocking { c.drafts.get(id)!! }.sendAfter
+        // Opened again while it waits: Publish there doesn't pick again either.
+        val again = EditorViewModel(c, id).also { e -> idleUntil { e.state.value.draft != null } }
+        again.publish()
+        idleUntil(10_000) { again.state.value.closed }
+        assertEquals(listOf(id), app.published.toList())
+        assertEquals(first, runBlocking { c.drafts.get(id)!! }.sendAfter)
+    }
+
+    @Test fun sendNowDoesNothingOnceThePostHasGone() {
+        val id = runBlocking { c.drafts.insert(Draft(title = "Done", state = PostState.Published, sendAfter = Long.MAX_VALUE)) }
+        runBlocking { c.sendNow(id) }
+        assertTrue(app.sentNow.isEmpty())
+        assertEquals(Long.MAX_VALUE, runBlocking { c.drafts.get(id)!! }.sendAfter)
+    }
+
+    @Test fun theVpnComingBackKeepsThePostsRandomTime() {
+        val at = System.currentTimeMillis() + 3_600_000
+        val id = runBlocking {
+            c.settings.setOnlyThroughVpn(true)
+            c.drafts.insert(Draft(title = "Quiet", body = "x", state = PostState.Queued, sendAfter = at))
+        }
+        app.vpn.up.value = false
+        Thread.sleep(500)
+        app.vpn.up.value = true
+        val deadline = System.currentTimeMillis() + 5_000
+        while (id !in app.retried && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        assertEquals(at, app.sendAfters[id])
     }
 
     @Test fun deletingIsNeverDelayed() {

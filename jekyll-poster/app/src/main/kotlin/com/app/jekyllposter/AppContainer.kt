@@ -48,6 +48,8 @@ class AppContainer(
     vpn: com.app.jekyllposter.data.Vpn = com.app.jekyllposter.data.AndroidVpn(context),
     /** Starts a queued post's publish now, past WorkManager's backoff. */
     private val retryPublish: (id: Long, sendAfter: Long?) -> Unit = { id, after -> com.app.jekyllposter.publish.PublishWorker.retryNow(context, id, after) },
+    /** Sends a queued post now: the writer's Send now. */
+    private val sendNowWork: (Long) -> Unit = { com.app.jekyllposter.publish.PublishWorker.sendNow(context, it) },
 ) {
     /** Photos shared from another app, waiting for the editor of the post they started. */
     val sharedPhotos = java.util.concurrent.ConcurrentHashMap<Long, List<android.net.Uri>>()
@@ -106,9 +108,8 @@ class AppContainer(
 
     /** Sends queued post [id] now, not at the random time it was given. */
     suspend fun sendNow(id: Long) {
-        val draft = drafts.get(id)?.takeIf { it.state == com.app.jekyllposter.data.PostState.Queued } ?: return
-        drafts.update(draft.copy(sendAfter = null))
-        retryPublish(id, null)
+        // One column, and only while queued: a whole-row write could undo a publish landing now.
+        if (drafts.sendNow(id) > 0) sendNowWork(id)
     }
 
     /**

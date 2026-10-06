@@ -63,6 +63,24 @@ class ObsidianNoteTest {
         assertEquals("Seen today. \n\n\nAfter. `%%kept in code%%`\n\nLast. ", note.body)
     }
 
+    @Test fun codeInsideACommentStaysHiddenAndTheTextAfterItStays() {
+        assertEquals("Seen.  Public.", convert("Seen. %%ask `Ana` first%% Public.").body)
+        assertEquals("Before.\n\n\nAfter.", convert("Before.\n%%\n```\nsecret()\n```\n%%\n\nAfter.").body)
+        // In a fence, %% is just text.
+        assertEquals("```\n%% not a comment\n```\nok", convert("```\n%% not a comment\n```\nok").body)
+    }
+
+    @Test fun aCommentNamesNoPhotoAndHidesNoHeading() {
+        val note = convert("%%draft notes, ![[old.jpg]]%%\n# Real title\nText ![[cat.jpg]]")
+        assertEquals("Real title", note.title)
+        assertEquals(listOf("cat.jpg"), note.embeds.map { it.name })
+    }
+
+    @Test fun pluginTimestampsGoWhateverTheyreCalled() {
+        val note = convert("---\nCreated: 2026-03-04\ndate created: 2026-03-04\ndate modified: 2026-03-05\nsubtitle: kept\n---\nx")
+        assertEquals("subtitle: kept", note.extra)
+    }
+
     @Test fun aNotesDateIsKeptForThePostNotLeftInItsFrontMatter() {
         val note = convert("---\ndate: 2021-06-24\nlast_modified_at: 2021-08-24\n---\nx\n")
         assertEquals("2021-06-24", note.date)

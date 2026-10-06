@@ -73,7 +73,7 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
             )
             Toggle(
                 "Plain commit messages",
-                if (state.plainCommitMessages) "Commits say “Update blog”, not the post's title."
+                if (state.plainCommitMessages) "Commits say “Update blog”, not the post's title. The file's name and text still say what it is."
                 else "Off: commits name the post, “Add post: Title”. The title stays in the history, even after the post is deleted.",
                 state.plainCommitMessages,
                 viewModel::setPlainCommitMessages,

@@ -41,6 +41,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -156,7 +157,7 @@ private fun DraftRow(draft: Draft, waitingForVpn: Boolean, onClick: () -> Unit) 
     RowFrame(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(draft.title.ifBlank { "Untitled" }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         val whimsy = LocalWhimsy.current
-        val (label, isError) = draft.status(whimsy.live, waitingForVpn)
+        val (label, isError) = draft.status(whimsy.live, waitingForVpn, nowUntil(draft.sendAfter))
         val shown = if (draft.state == PostState.Published && draft.buildState == BuildState.Live) label + whimsy.liveMark else label
         Text(
             shown, style = MaterialTheme.typography.bodySmall,
@@ -171,11 +172,11 @@ private fun DraftRow(draft: Draft, waitingForVpn: Boolean, onClick: () -> Unit) 
  * A draft's state in a few words, and whether it needs the writer. [waitingForVpn]: the writer
  * asked for a VPN and there's none, so a queued post can't go out yet.
  */
-fun Draft.status(live: String = "live on the site", waitingForVpn: Boolean = false): Pair<String, Boolean> = when (state) {
+fun Draft.status(live: String = "live on the site", waitingForVpn: Boolean = false, now: Long = System.currentTimeMillis()): Pair<String, Boolean> = when (state) {
     PostState.Draft -> (if (editingPath != null) "Editing · not published yet" else "Draft") to false
     PostState.Queued -> when {
         waitingForVpn -> "Waiting for your VPN…"
-        (sendAfter ?: 0) > System.currentTimeMillis() -> "Going out at ${
+        (sendAfter ?: 0) > now -> "Going out at ${
             java.time.Instant.ofEpochMilli(sendAfter!!).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
                 .format(java.time.format.DateTimeFormatter.ofLocalizedTime(java.time.format.FormatStyle.SHORT))
         }, a random time"
@@ -249,3 +250,16 @@ private fun CategoryFilter(categories: List<String>, chosen: String?, onChoose: 
         items(categories) { c -> TermPill(c, selected = c.equals(chosen, ignoreCase = true), onClick = { onChoose(c) }) }
     }
 }
+
+/**
+ * The time now, read again when [at] comes, so what's shown about [at] (a post's random time)
+ * changes then rather than at the next unrelated redraw.
+ */
+@Composable
+fun nowUntil(at: Long?): Long = produceState(System.currentTimeMillis(), at) {
+    val wait = (at ?: return@produceState) - System.currentTimeMillis()
+    if (wait > 0) {
+        kotlinx.coroutines.delay(wait)
+        value = System.currentTimeMillis()
+    }
+}.value
