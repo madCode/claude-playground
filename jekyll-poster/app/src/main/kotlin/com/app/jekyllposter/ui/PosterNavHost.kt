@@ -2,12 +2,12 @@ package com.app.jekyllposter.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -76,10 +76,10 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
                     vm.startShared(shared)
                 }
             }
-            val opened by vm.opened.collectAsState()
+            val opened by vm.opened.collectAsStateWithLifecycle()
             LaunchedEffect(opened) {
                 opened?.let { id ->
-                    vm.opened.value = null
+                    vm.openedHandled()
                     nav.navigate("editor/$id")
                 }
             }

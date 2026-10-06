@@ -118,6 +118,18 @@ data class Draft(
      * it would show the post twice. Saves only happen on a change, so its times still agree.
      */
     val unchangedEdit: Boolean get() = editingPath != null && state == PostState.Draft && updatedAt == createdAt
+
+    /** The writer can change it: published posts and ones on their way are read-only. */
+    val editable: Boolean get() = state == PostState.Draft || state == PostState.Failed
+
+    /**
+     * This row with the writer's text from [mine]: what the editor owns. The rest (publishing
+     * state, names fixed for a commit) stays the stored row's, which the publisher changes.
+     */
+    fun withTextOf(mine: Draft): Draft = copy(
+        title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags,
+        images = mine.images, extraFrontMatter = mine.extraFrontMatter, noteDate = mine.noteDate,
+    )
 }
 
 /** A photo added to a post: prepared on the phone, uploaded in the post's commit. */

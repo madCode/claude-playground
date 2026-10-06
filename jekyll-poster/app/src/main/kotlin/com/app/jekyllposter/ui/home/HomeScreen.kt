@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.currentStateAsState
+import com.app.jekyllposter.core.jekyll.PostPath
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.CachedPost
 import com.app.jekyllposter.data.Destination
@@ -194,7 +195,7 @@ fun Draft.status(live: String = "live on the site", waitingForVpn: Boolean = fal
         else -> "Waiting to publish…"
     } to false
     PostState.Failed -> (if (destination == Destination.Delete) "Didn't delete: " else "Didn't publish: ") + error.orEmpty() to true
-    PostState.Published -> if (targetPath?.startsWith("_drafts/") == true) "Saved to the blog's _drafts" to false else when (buildState) {
+    PostState.Published -> if (targetPath?.let { PostPath(it).isDraft } == true) "Saved to the blog's _drafts" to false else when (buildState) {
         BuildState.Building -> "Published · the site is rebuilding…" to false
         BuildState.Live -> "Published · $live" to false
         BuildState.Failed -> "Published, but the site build failed. Check Actions on GitHub." to true
@@ -238,7 +239,7 @@ private fun PostRow(post: CachedPost, onClick: () -> Unit) {
         Text(post.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         val notes = listOfNotNull(
             post.date,
-            if (post.path.contains("_drafts/")) "Jekyll draft" else null,
+            if (PostPath(post.path).isDraft) "Jekyll draft" else null,
             if (!post.published) "Hidden" else null,
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 4.dp)) {

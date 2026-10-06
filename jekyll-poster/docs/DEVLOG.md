@@ -20,6 +20,16 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Cycle 24: simpler code, 2 of 3 (one rule each, smaller files)
+- **Changed, barely behaviour:** one definition each for when a post can be changed
+  (`Draft.editable`), the writer's text the editor owns (`Draft.withTextOf`, three copies
+  before), which posts a `[[link]]` can reach (two before) and a Jekyll draft's path; the editor
+  screen split from 733 lines into itself and four files; `BuildWatcher` in a file of its own;
+  the share the home screen opens is read-only outside it.
+- **Two labels now agree with the publisher**, which reads `_drafts` as a path segment: a
+  Jekyll draft saved in a subfolder (`blog/_drafts/`) says "Saved to the blog's _drafts", and a
+  post in a folder like `my_drafts/` is no longer labelled a Jekyll draft.
+
 ### Cycle 23: simpler code, 1 of 3 (wiring, core, imports)
 - **Changed, not behaviour:** AppContainer takes one PublishQueue, builds the database through
   `PosterDatabase.create`, starts the VPN-back retry from `PosterApp` (a launch from its

@@ -2,76 +2,40 @@ package com.app.jekyllposter.ui.editor
 
 import android.Manifest
 import android.content.ActivityNotFoundException
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import android.webkit.WebResourceRequest
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AddLink
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Drafts
 import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.FormatBold
-import androidx.compose.material.icons.filled.FormatItalic
-import androidx.compose.material.icons.filled.FormatQuote
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -81,12 +45,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -97,25 +59,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.jekyllposter.core.jekyll.Edit
-import com.app.jekyllposter.core.jekyll.MarkdownEdits
-import com.app.jekyllposter.core.jekyll.parseJekyllDate
-import com.app.jekyllposter.data.CachedPost
+import com.app.jekyllposter.core.jekyll.PostPath
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
@@ -123,13 +76,6 @@ import com.app.jekyllposter.ui.editor.EditorViewModel.TermKind
 import com.app.jekyllposter.ui.home.nowUntil
 import com.app.jekyllposter.ui.home.status
 import com.app.jekyllposter.ui.theme.InkButton
-import com.app.jekyllposter.ui.theme.TermPill
-import com.app.jekyllposter.ui.theme.termColor
-import com.app.jekyllposter.ui.theme.termInk
-import java.time.LocalDate
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -169,7 +115,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
         }
         Unit
     }
-    val jekyllDraft = text?.editingPath?.contains("_drafts/") == true
+    val jekyllDraft = text?.editingPath?.let { PostPath(it).isDraft } == true
     val send = { destination: Destination ->
         // Only a post for the site gets a "live" notification.
         if (destination == Destination.Posts) askForNotifications()
@@ -391,221 +337,6 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     }
 }
 
-/**
- * The date a shared note carries, which the post keeps; dropping it dates the post when published.
- * Not offered once a commit was tried: the post then keeps its name and date, so it can't go twice.
- */
-@Composable
-private fun NoteDate(written: String, canDrop: Boolean, onDrop: () -> Unit) {
-    // The day as written: the site's time zone, which can move it, is applied when publishing.
-    val day = parseJekyllDate(written, ZoneOffset.UTC)?.let {
-        LocalDate.parse(written.trim().take(10)).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG))
-    }
-    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            if (day != null) "Dated $day, from the note" else "The note's date, “$written”, isn't one the app can read: it's dated when published",
-            Modifier.weight(1f).padding(vertical = 8.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (canDrop && day != null) TextButton(onClick = onDrop) { Text("Use the publish day") }
-    }
-}
-
-/**
- * Posts to complete a `[[link` with, above the keyboard; none says what happens to the link. At
- * most three rows tall, scrolling for more, so the line being typed isn't covered, and set off by
- * a rule for e-ink.
- */
-@Composable
-private fun LinkSuggestions(posts: List<CachedPost>, query: String, anyPosts: Boolean, onPick: (CachedPost) -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.semantics { contentDescription = "Posts to link"; liveRegion = LiveRegionMode.Polite }) {
-            HorizontalDivider()
-            if (posts.isEmpty()) {
-                Text(
-                    when {
-                        !anyPosts -> "No posts on the blog to link yet."
-                        else -> "No post titled like that: it stays as written, [[$query]]."
-                    },
-                    Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            // Three rows tall, scrolling for more: taller, it would cover the line being typed.
-            Column(Modifier.heightIn(max = 168.dp).verticalScroll(rememberScrollState())) {
-                posts.forEach { post ->
-                    Column(
-                        Modifier.fillMaxWidth().clickable(onClickLabel = "Link to this post") { onPick(post) }.padding(horizontal = 16.dp, vertical = 8.dp),
-                    ) {
-                        Text(post.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        post.date?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/** Asks for the Obsidian vault folder, once, so a shared note's photos can be found in it. */
-@Composable
-private fun VaultBanner(count: Int, onChoose: () -> Unit, onSkip: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
-            Text(
-                if (count == 1) "This note has a photo from Obsidian. Choose your vault folder, once, and it's added from there."
-                else "This note has $count photos from Obsidian. Choose your vault folder, once, and they're added from there.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Row(Modifier.align(Alignment.End)) {
-                TextButton(onClick = onSkip) { Text("Not now") }
-                TextButton(onClick = onChoose) { Text("Choose folder") }
-            }
-        }
-    }
-}
-
-/**
- * The post's other front matter as YAML, folded to a line naming its keys. For the writer who
- * wants `image:` or `excerpt:` without leaving the phone.
- */
-@Composable
-private fun MoreFrontMatter(
-    yaml: String,
-    problem: String?,
-    editable: Boolean,
-    onChange: (String) -> Unit,
-    forceOpen: Boolean = false,
-    onOpened: () -> Unit = {},
-    note: String? = null,
-) {
-    if (!editable && yaml.isBlank() && note == null) return
-    var open by remember { mutableStateOf(false) }
-    LaunchedEffect(forceOpen) { if (forceOpen) { open = true; onOpened() } }
-    val keys = remember(yaml) {
-        yaml.lines().mapNotNull { Regex("""^([^\s#\-][^:]*):""").find(it)?.groupValues?.get(1) }
-    }
-    Row(
-        Modifier.fillMaxWidth().clickable { open = !open }.padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("Front matter", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 12.dp))
-        Text(
-            if (keys.isEmpty()) "Add image, excerpt…" else keys.joinToString(", "),
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (problem != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-        )
-        Icon(if (open) Icons.Default.ExpandLess else Icons.Default.ExpandMore, if (open) "Fold front matter" else "Show front matter")
-    }
-    if (open) {
-        OutlinedTextField(
-            value = yaml,
-            onValueChange = onChange,
-            readOnly = !editable,
-            placeholder = { Text("image: /assets/images/cover.jpg\nexcerpt: A line for the home page", fontFamily = FontFamily.Monospace) },
-            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-            isError = problem != null,
-            supportingText = { Text(note ?: problem ?: "YAML, as at the top of the post. Title, date, categories and tags have their own places.") },
-            minLines = 3,
-            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("frontMatter"),
-        )
-    }
-}
-
-/** Asks for a just-added photo's alt text: what a screen reader says, and what shows if it won't load. */
-@Composable
-private fun DescribePhoto(sitePath: String, onDone: (String) -> Unit) {
-    var alt by remember(sitePath) { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = { onDone("") },
-        title = { Text("Describe the photo") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("For people using screen readers, and for when it doesn't load.", style = MaterialTheme.typography.bodyMedium)
-                OutlinedTextField(
-                    value = alt, onValueChange = { alt = it }, placeholder = { Text("A loaf of sourdough on a board") },
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { onDone(alt) }),
-                    modifier = Modifier.fillMaxWidth().testTag("altText"),
-                )
-            }
-        },
-        confirmButton = { TextButton(onClick = { onDone(alt) }) { Text("Done") } },
-        dismissButton = { TextButton(onClick = { onDone("") }) { Text("Skip") } },
-    )
-}
-
-/**
- * Markdown at the cursor, above the keyboard; bold, italic, code and the line prefixes undo
- * themselves when pressed again. Formatting needs the body focused; a photo can go in any time.
- */
-@Composable
-private fun FormatBar(formatting: Boolean, addingPhoto: Boolean, onFormat: ((Edit) -> Edit) -> Unit, onPickPhoto: () -> Unit, onTakePhoto: () -> Unit) {
-    var photoMenu by remember { mutableStateOf(false) }
-    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding()) {
-        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
-            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "**") } }) { Icon(Icons.Default.FormatBold, "Bold") }
-            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "_") } }) { Icon(Icons.Default.FormatItalic, "Italic") }
-            IconButton(enabled = formatting, onClick = { onFormat(MarkdownEdits::link) }) { Icon(Icons.Default.Link, "Link") }
-            IconButton(enabled = formatting, onClick = { onFormat(MarkdownEdits::postLink) }) { Icon(Icons.Default.AddLink, "Link to a post") }
-            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "## ") } }) { Icon(Icons.Default.Title, "Heading") }
-            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "- ") } }) { Icon(Icons.AutoMirrored.Filled.FormatListBulleted, "List") }
-            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "> ") } }) { Icon(Icons.Default.FormatQuote, "Quote") }
-            IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "`") } }) { Icon(Icons.Default.Code, "Code") }
-            if (addingPhoto) {
-                CircularProgressIndicator(Modifier.padding(12.dp).size(24.dp).semantics { contentDescription = "Adding the photo" }, strokeWidth = 2.dp)
-            } else {
-                Box {
-                    IconButton(onClick = { photoMenu = true }, modifier = Modifier.semantics { onClick("Choose or take a photo") { photoMenu = true; true } }) {
-                        Icon(Icons.Default.AddPhotoAlternate, "Add a photo")
-                    }
-                    DropdownMenu(expanded = photoMenu, onDismissRequest = { photoMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Choose photos") },
-                            leadingIcon = { Icon(Icons.Default.PhotoLibrary, null) },
-                            onClick = { photoMenu = false; onPickPhoto() },
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Take a photo") },
-                            leadingIcon = { Icon(Icons.Default.PhotoCamera, null) },
-                            onClick = { photoMenu = false; onTakePhoto() },
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PostPreview(viewModel: EditorViewModel, modifier: Modifier) {
-    val dark = isSystemInDarkTheme()
-    val html by produceState("", viewModel.text, dark) { value = viewModel.previewHtml(dark) }
-    AndroidView(
-        factory = { context ->
-            WebView(context).apply {
-                // The writer's own HTML, but still: no scripts, no file access.
-                settings.javaScriptEnabled = false
-                settings.allowFileAccess = false
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                // A tapped link opens in the browser, not in place of the preview.
-                webViewClient = object : WebViewClient() {
-                    // Runs off the main thread, as the WebView calls it.
-                    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest) =
-                        viewModel.previewFetcher.fetch(request.url.toString())
-
-                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
-                        return true
-                    }
-                }
-            }
-        },
-        update = { it.loadDataWithBaseURL(null, html, "text/html", "utf-8", null) },
-        modifier = modifier.semantics { contentDescription = "Preview of the post" },
-    )
-}
-
 private fun deleteLabel(draft: Draft?) = when {
     draft?.state == PostState.Published -> "Remove from this list"
     draft?.editingPath != null -> "Discard changes"
@@ -621,112 +352,3 @@ private fun plainField() = TextFieldDefaults.colors(
     focusedIndicatorColor = Color.Transparent,
     unfocusedIndicatorColor = Color.Transparent,
 )
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun TermRow(label: String, terms: List<String>, editable: Boolean, onAdd: (() -> Unit)?, onRemove: (String) -> Unit) {
-    if (!editable && terms.isEmpty()) return
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 12.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            terms.forEach { term ->
-                InputChip(
-                    selected = false,
-                    enabled = editable,
-                    colors = InputChipDefaults.inputChipColors(
-                        containerColor = termColor(term), disabledContainerColor = termColor(term),
-                        labelColor = termInk(), disabledLabelColor = termInk(), trailingIconColor = termInk(),
-                    ),
-                    onClick = { onRemove(term) },
-                    label = { Text(term) },
-                    trailingIcon = if (editable) ({ Icon(Icons.Default.Close, "Remove $term") }) else null,
-                )
-            }
-            if (editable && onAdd != null) {
-                AssistChip(
-                    onClick = onAdd,
-                    label = { Text(if (terms.isEmpty()) "Add" else "More") },
-                    leadingIcon = { Icon(Icons.Default.Add, null) },
-                    modifier = Modifier.semantics { contentDescription = "Add ${label.lowercase().removeSuffix("s").replace("categorie", "category")}" },
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TermPicker(kind: TermKind, viewModel: EditorViewModel, onDismiss: () -> Unit) {
-    var query by remember { mutableStateOf("") }
-    val noun = if (kind == TermKind.Category) "category" else "tag"
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    // Recomputed on each keystroke and each change to the post's picks.
-    val state by viewModel.state.collectAsStateWithLifecycle()
-    // What was typed, as it would be added: a leading # (habit from elsewhere) isn't part of a tag.
-    val term = query.trim().trimStart('#').trim()
-    val suggestions = remember(term, state) { viewModel.suggestions(kind, term) }
-    val exact = suggestions.any { it.name.equals(term, ignoreCase = true) }
-    val picked = viewModel.text?.let { if (kind == TermKind.Category) it.categories else it.tags }.orEmpty()
-    val already = picked.any { it.equals(term, ignoreCase = true) }
-    val add = { name: String -> viewModel.add(kind, name); query = "" }
-    // The blog's spelling when it has the term already, so "Rain" doesn't sit beside "rain". Reads
-    // the field when called, not when composed: the sheet keeps the first dismiss callback it's given.
-    val addTyped = {
-        val typed = query.trim().trimStart('#').trim()
-        if (typed.isNotEmpty()) add(viewModel.suggestions(kind, typed).firstOrNull { it.name.equals(typed, ignoreCase = true) }?.name ?: typed)
-    }
-    // However the sheet is closed, what's typed and not yet added goes in rather than being dropped.
-    val done = { addTyped(); onDismiss() }
-    ModalBottomSheet(onDismissRequest = done, sheetState = sheet, containerColor = MaterialTheme.colorScheme.background) {
-        // The post's own picks, so one just added is seen landing here rather than vanishing
-        // from the suggestions below. Capped, so many of them can't push the field off a short screen.
-        if (picked.isNotEmpty()) {
-            Box(Modifier.heightIn(max = 112.dp).verticalScroll(rememberScrollState()).testTag("picked")) {
-                TermRow("On this post", picked, editable = true, onAdd = null, onRemove = { viewModel.remove(kind, it) })
-            }
-        }
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                label = { Text(if (kind == TermKind.Category) "Find or add a category" else "Find or add a tag") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { addTyped() }),
-                modifier = Modifier.fillMaxWidth().testTag("termQuery"),
-            )
-        }
-        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
-            if (already) {
-                item {
-                    Text(
-                        "“$term” is already on this post.",
-                        Modifier.padding(horizontal = 16.dp, vertical = 14.dp), color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else if (term.isNotEmpty() && !exact) {
-                item {
-                    Row(Modifier.fillMaxWidth().clickable { add(term) }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Add, null, Modifier.padding(end = 12.dp))
-                        Text("Add “$term” as a new $noun")
-                    }
-                }
-            }
-            if (suggestions.isEmpty() && term.isEmpty()) {
-                item {
-                    Text(
-                        "Your blog has no ${noun}s yet that this post doesn't already have. Type one to add it.",
-                        Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            items(suggestions, key = { it.name }) { term ->
-                Row(Modifier.fillMaxWidth().clickable { add(term.name) }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { TermPill(term.name) }
-                    Text(if (term.count == 1) "1 post" else "${term.count} posts", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        TextButton(onClick = done, modifier = Modifier.align(Alignment.End).padding(8.dp)) { Text("Done") }
-    }
-}
