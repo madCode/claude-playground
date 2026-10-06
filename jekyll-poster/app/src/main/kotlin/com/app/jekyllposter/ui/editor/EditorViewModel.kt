@@ -97,17 +97,6 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     /** The draft read from the database; a camera photo arriving first waits for it. */
     private val loading: Job
 
-    init {
-        loading = viewModelScope.launch {
-            val loaded = container.drafts.get(id)
-            // Applied at once, so the screen sees it even if no frame is pending to pick it up.
-            Snapshot.withMutableSnapshot { text = loaded }
-            loaded?.body?.let { bodySelection = TextRange(it.length) }
-            container.sharedPhotos.remove(id)?.forEach(::addPhoto)
-            container.sharedEmbeds.remove(id)?.let(::addEmbeds)
-        }
-    }
-
     /**
      * Finds a shared note's `![[photo]]` embeds in the Obsidian vault folder, and puts each photo
      * in its place, prepared like any other (no location). Without a folder chosen, they wait for
@@ -535,6 +524,19 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             container.drafts.get(id)?.images?.forEach { File(it.file).delete() }
             container.drafts.delete(id)
             flags.update { it.copy(closed = true) }
+        }
+    }
+
+    // Last in the class, so every property is set first: the launch runs at once on the main
+    // thread, and when the read doesn't suspend it reaches addEmbeds and addPhoto mid-constructor.
+    init {
+        loading = viewModelScope.launch {
+            val loaded = container.drafts.get(id)
+            // Applied at once, so the screen sees it even if no frame is pending to pick it up.
+            Snapshot.withMutableSnapshot { text = loaded }
+            loaded?.body?.let { bodySelection = TextRange(it.length) }
+            container.sharedPhotos.remove(id)?.forEach(::addPhoto)
+            container.sharedEmbeds.remove(id)?.let(::addEmbeds)
         }
     }
 }
