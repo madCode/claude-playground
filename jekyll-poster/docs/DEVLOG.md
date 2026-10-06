@@ -20,6 +20,11 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Cycle 21: privacy for anonymous writers, 2 of 3 (what goes out, and when)
+- **Shipped:** **Send at a random time** (a moment in the next three hours, kept with the post,
+  with **Send now**); **Plain commit messages**; Obsidian comments and the note keys that say
+  when and where it was written stay out of the post.
+
 ### Cycle 20: privacy for anonymous writers, 1 of 3 (who and when)
 - **Asked:** make it easy to blog anonymously. An audit listed what still ties a post to its
   writer; this cycle takes who signs the commits and what the dates say.

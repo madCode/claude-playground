@@ -56,8 +56,8 @@ class TestApp : PosterApp() {
                 )
             },
             vpn = vpn,
-            retryPublish = { retried += it },
-            schedulePublish = { id ->
+            retryPublish = { id, _ -> retried += id },
+            schedulePublish = { id, _ ->
                 published += id
                 if (publishNow) kotlinx.coroutines.runBlocking { container.publisher.publish(id) }
             },

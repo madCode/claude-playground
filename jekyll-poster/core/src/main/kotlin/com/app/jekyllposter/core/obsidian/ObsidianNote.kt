@@ -37,10 +37,18 @@ object ObsidianNote {
     }
 
     /**
-     * Keys dropped from a note: obyde's rules and Obsidian's own. `date` goes to [Result.Converted.date]
-     * rather than the front matter: the app writes it itself, in the file name too.
+     * Keys dropped from a note: obyde's rules and Obsidian's own, and the ones plugins fill in
+     * that say when and where the writer wrote (Map View's `location`), which a public post
+     * shouldn't. `date` goes to [Result.Converted.date] rather than the front matter: the app
+     * writes it itself, in the file name too.
      */
-    private val dropped = setOf("find", "replace", "aliases", "alias", "cssclasses", "cssclass", "date", "layout")
+    private val dropped = setOf(
+        "find", "replace", "aliases", "alias", "cssclasses", "cssclass", "date", "layout",
+        "created", "modified", "updated", "location", "coordinates",
+    )
+
+    /** An Obsidian comment, `%%…%%`, hidden in Obsidian's reading view; one left open runs to the end. */
+    private val comment = Regex("""%%[\s\S]*?(%%|\z)""")
 
     private val imageExtensions = setOf("png", "jpg", "jpeg", "gif", "webp", "avif", "bmp", "svg", "heic")
 
@@ -92,7 +100,8 @@ object ObsidianNote {
         val date = doc.string("date")?.trim()?.takeIf { it.isNotEmpty() }
         dropped.forEach { doc.set(it, null) }
         val extra = doc.others(PostWriter.MANAGED).takeIf { it.isNotBlank() }
-        body = outsideCode(body) { segment -> links(segment, posts, if (postUrlHasBaseurl) "" else "{{ site.baseurl }}") }
+        // Comments are the writer's notes to themselves: they'd show on the site as plain text.
+        body = outsideCode(body) { segment -> links(segment.replace(comment, ""), posts, if (postUrlHasBaseurl) "" else "{{ site.baseurl }}") }
         val found = embeds(body)
         // The rules may have renamed a file in the text; the vault still has it by its own name.
         val named = if (found.size == embedNames.size) found.mapIndexed { i, e -> e.copy(name = embedNames[i]) } else found

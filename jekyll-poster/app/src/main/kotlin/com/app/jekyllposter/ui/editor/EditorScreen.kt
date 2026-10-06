@@ -203,6 +203,10 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                             },
                         ) { send(if (jekyllDraft) Destination.Drafts else Destination.Posts) }
                     }
+                    // Waiting for its random time: the writer can still send it at once.
+                    if (state.draft?.state == PostState.Queued && (state.draft?.sendAfter ?: 0) > System.currentTimeMillis()) {
+                        InkButton("Send now", onClick = viewModel::sendNow)
+                    }
                     // A queued post may be mid-commit; deleting it then would lose the phone's record
                     // of a post that still goes out.
                     if (state.draft?.state != PostState.Queued) {

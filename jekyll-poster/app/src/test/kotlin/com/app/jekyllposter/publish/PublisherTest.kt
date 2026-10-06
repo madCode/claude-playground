@@ -93,6 +93,25 @@ class PublisherTest {
         assertEquals("sample", github.commits.getValue(github.head).authorName)
     }
 
+    @Test fun plainCommitMessagesNameNoPost() = runBlocking {
+        c.settings.setPlainCommitMessages(true)
+        publisher.publish(queue(Draft(title = "Something personal", body = "x")))
+        assertEquals("Update blog", github.commits.getValue(github.head).message)
+    }
+
+    @Test fun aPostSentAtARandomTimeDoesNothingBeforeIt() = runBlocking {
+        val before = github.head
+        github.log.clear()
+        val id = queue(Draft(title = "Later", body = "x", sendAfter = evening.plusMinutes(40).toInstant().toEpochMilli()))
+        assertEquals(Publisher.Outcome.Retry, publisher.publish(id))
+        assertEquals(before, github.head)
+        // Not even read: the time GitHub sees anything from the phone is the time it goes out.
+        assertEquals(emptyList<String>(), github.log)
+        val later = Publisher(c.drafts, c.accounts, c.blogs, c.settings) { evening.plusMinutes(41) }
+        assertEquals(Publisher.Outcome.Done, later.publish(id))
+        assertTrue(github.text("_posts/2026-10-04-later.md")!!.contains("date: 2026-10-04 22:56:00 -0700"))
+    }
+
     @Test fun byTheDayOnlyAPostSaysNeitherTimeNorZone() = runBlocking {
         c.settings.setDatesByDayOnly(true)
         val id = queue(Draft(title = "Quiet day", body = "x"))

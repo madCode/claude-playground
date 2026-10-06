@@ -71,6 +71,22 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
                 state.commitAsNoReply,
                 viewModel::setCommitAsNoReply,
             )
+            Toggle(
+                "Plain commit messages",
+                if (state.plainCommitMessages) "Commits say “Update blog”, not the post's title."
+                else "Off: commits name the post, “Add post: Title”. The title stays in the history, even after the post is deleted.",
+                state.plainCommitMessages,
+                viewModel::setPlainCommitMessages,
+            )
+
+            Heading("When posts go out")
+            Toggle(
+                "Send at a random time",
+                if (state.sendAtRandomTime) "Posts go out at a random moment in the three hours after you tap Publish, so their times don't trace your day. Deleting is never delayed."
+                else "Off: posts go out as soon as you tap Publish, and GitHub shows the minute.",
+                state.sendAtRandomTime,
+                viewModel::setSendAtRandomTime,
+            )
 
             Heading("Dates")
             Toggle(

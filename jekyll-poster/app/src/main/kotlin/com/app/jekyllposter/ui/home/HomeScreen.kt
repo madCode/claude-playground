@@ -173,7 +173,15 @@ private fun DraftRow(draft: Draft, waitingForVpn: Boolean, onClick: () -> Unit) 
  */
 fun Draft.status(live: String = "live on the site", waitingForVpn: Boolean = false): Pair<String, Boolean> = when (state) {
     PostState.Draft -> (if (editingPath != null) "Editing · not published yet" else "Draft") to false
-    PostState.Queued -> if (waitingForVpn) "Waiting for your VPN…" to false else (if (destination == Destination.Delete) "Waiting to delete from the blog…" else "Waiting to publish…") to false
+    PostState.Queued -> when {
+        waitingForVpn -> "Waiting for your VPN…"
+        (sendAfter ?: 0) > System.currentTimeMillis() -> "Going out at ${
+            java.time.Instant.ofEpochMilli(sendAfter!!).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
+                .format(java.time.format.DateTimeFormatter.ofLocalizedTime(java.time.format.FormatStyle.SHORT))
+        }, a random time"
+        destination == Destination.Delete -> "Waiting to delete from the blog…"
+        else -> "Waiting to publish…"
+    } to false
     PostState.Failed -> (if (destination == Destination.Delete) "Didn't delete: " else "Didn't publish: ") + error.orEmpty() to true
     PostState.Published -> if (targetPath?.startsWith("_drafts/") == true) "Saved to the blog's _drafts" to false else when (buildState) {
         BuildState.Building -> "Published · the site is rebuilding…" to false

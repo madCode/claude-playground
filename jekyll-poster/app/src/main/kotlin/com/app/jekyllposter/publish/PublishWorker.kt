@@ -36,18 +36,21 @@ class PublishWorker(context: Context, params: WorkerParameters) : CoroutineWorke
     companion object {
         private const val KEY_ID = "draft"
 
-        fun enqueue(context: Context, id: Long) = enqueue(context, id, "publish-$id")
+        /** Publishes post [id], not before [sendAfter] (epoch millis) when it has one. */
+        fun enqueue(context: Context, id: Long, sendAfter: Long?) = enqueue(context, id, sendAfter, "publish-$id")
 
         /**
          * Starts a queued post's publish now, instead of when WorkManager's backoff would: a
          * second worker beside the waiting one, which it never stops (that could be mid-commit).
          * The publisher runs one publish at a time, and the later one finds the post sent.
          */
-        fun retryNow(context: Context, id: Long) = enqueue(context, id, "publish-now-$id")
+        fun retryNow(context: Context, id: Long, sendAfter: Long?) = enqueue(context, id, sendAfter, "publish-now-$id")
 
-        private fun enqueue(context: Context, id: Long, name: String) {
+        private fun enqueue(context: Context, id: Long, sendAfter: Long?, name: String) {
+            val delay = ((sendAfter ?: 0) - System.currentTimeMillis()).coerceAtLeast(0)
             val request = OneTimeWorkRequestBuilder<PublishWorker>()
                 .setInputData(workDataOf(KEY_ID to id))
+                .setInitialDelay(delay, TimeUnit.MILLISECONDS)
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()

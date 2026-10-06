@@ -449,6 +449,13 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             // may be days stale. One that did keeps them, so a commit that landed unheard is
             // recognised rather than published twice.
             val again = draft.state == PostState.Failed && draft.editingPath == null && draft.sentShas.isEmpty()
+            // A random moment in the next few hours, so commit times don't trace the writer's
+            // day. Deleting a post is never delayed: the writer wants it gone.
+            val sendAfter = if ((destination ?: draft.destination) != Destination.Delete && container.settings.sendAtRandomTime()) {
+                System.currentTimeMillis() + kotlin.random.Random.nextLong(com.app.jekyllposter.data.RANDOM_WINDOW.inWholeMilliseconds)
+            } else {
+                null
+            }
             container.drafts.update(
                 draft.copy(
                     state = PostState.Queued, error = null, updatedAt = System.currentTimeMillis(),
@@ -459,9 +466,10 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                     // A delete's path marker isn't a name to publish under.
                     targetPath = if (again || draft.destination == Destination.Delete) null else draft.targetPath,
                     publishDate = if (again) null else draft.publishDate,
+                    sendAfter = sendAfter,
                 ),
             )
-            container.schedulePublish(id)
+            container.schedulePublish(id, sendAfter)
             flags.update { it.copy(closed = true) }
         }
     }
@@ -485,6 +493,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                             state = PostState.Queued, error = null, destination = Destination.Delete,
                             // A delete sent before keeps its marker: its commit may have landed.
                             targetPath = if (draft.destination == Destination.Delete) draft.targetPath else null,
+                            sendAfter = null,
                             updatedAt = System.currentTimeMillis(), blog = draft.blog ?: container.accounts.current()?.blogKey,
                         ),
                     )
@@ -492,9 +501,14 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 }
             }
             if (!queued) return@launch
-            container.schedulePublish(id)
+            container.schedulePublish(id, null)
             flags.update { it.copy(closed = true) }
         }
+    }
+
+    /** Sends a post waiting for its random time now. In the app's scope: Back right after mustn't stop it. */
+    fun sendNow() {
+        container.appScope.launch { container.sendNow(id) }
     }
 
     /** Leaving the editor: saves, and drops a draft that was never written in. */

@@ -94,6 +94,11 @@ data class Draft(
      * the site's time zone as it is then. Null dates the post when it's published.
      */
     val noteDate: String? = null,
+    /**
+     * When a post sent at a random time may go out (epoch millis); null for at once. Chosen when
+     * the writer taps Publish, so a restart or a retry doesn't choose again.
+     */
+    val sendAfter: Long? = null,
     val buildState: BuildState? = null,
     val error: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
@@ -208,7 +213,7 @@ class Converters {
     @TypeConverter fun toImages(json: String): List<DraftImage> = Json.decodeFromString(json)
 }
 
-@Database(entities = [Draft::class, CachedPost::class], version = 4)
+@Database(entities = [Draft::class, CachedPost::class], version = 5)
 @TypeConverters(Converters::class)
 abstract class PosterDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
@@ -247,5 +252,11 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
 val MIGRATION_3_4 = object : Migration(3, 4) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE drafts ADD COLUMN noteDate TEXT")
+    }
+}
+
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE drafts ADD COLUMN sendAfter INTEGER")
     }
 }

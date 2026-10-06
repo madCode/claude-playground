@@ -79,6 +79,28 @@ class Settings(private val store: DataStore<Preferences>) {
     /** GitHub gave no account id to build [login]'s no-reply address from. */
     class NoAddress(login: String) : Exception("No no-reply address for $login")
 
+    private val randomTimeKey = booleanPreferencesKey("send_at_random_time")
+
+    /** Posts go out at a random moment in the [RANDOM_WINDOW] after Publish, not at once. */
+    val sendAtRandomTime: Flow<Boolean> = store.data.map { it[randomTimeKey] ?: false }
+
+    suspend fun sendAtRandomTime(): Boolean = sendAtRandomTime.first()
+
+    suspend fun setSendAtRandomTime(random: Boolean) {
+        store.edit { it[randomTimeKey] = random }
+    }
+
+    private val plainMessagesKey = booleanPreferencesKey("plain_commit_messages")
+
+    /** Commits say "Update blog", not the post's title, which stays in the history. */
+    val plainCommitMessages: Flow<Boolean> = store.data.map { it[plainMessagesKey] ?: false }
+
+    suspend fun plainCommitMessages(): Boolean = plainCommitMessages.first()
+
+    suspend fun setPlainCommitMessages(plain: Boolean) {
+        store.edit { it[plainMessagesKey] = plain }
+    }
+
     private val dayOnlyKey = booleanPreferencesKey("dates_by_day_only")
 
     /** New posts are dated by the day alone: no time of day, no time zone. */
@@ -112,3 +134,6 @@ class Settings(private val store: DataStore<Preferences>) {
         store.edit { if (tree == null) it.remove(vaultKey) else it[vaultKey] = tree }
     }
 }
+
+/** How long after Publish a post sent at a random time can go out. */
+val RANDOM_WINDOW: kotlin.time.Duration = kotlin.time.Duration.parse("3h")

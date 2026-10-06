@@ -54,6 +54,15 @@ class ObsidianNoteTest {
         assertEquals("On the 22.", note.body)
     }
 
+    @Test fun theWritersCommentsAndWhenAndWhereTheyWroteStayOut() {
+        val note = convert(
+            "---\ncreated: 2026-03-04T14:22\nmodified: 2026-03-05\nlocation: [38.72, -9.14]\nimage: /cover.jpg\n---\n" +
+                "Seen today. %%ask Ana first%%\n\n%%\nTo myself:\nnot this part\n%%\nAfter. `%%kept in code%%`\n\nLast. %%never closed",
+        )
+        assertEquals("image: /cover.jpg", note.extra)
+        assertEquals("Seen today. \n\n\nAfter. `%%kept in code%%`\n\nLast. ", note.body)
+    }
+
     @Test fun aNotesDateIsKeptForThePostNotLeftInItsFrontMatter() {
         val note = convert("---\ndate: 2021-06-24\nlast_modified_at: 2021-08-24\n---\nx\n")
         assertEquals("2021-06-24", note.date)
@@ -127,7 +136,7 @@ class ObsidianNoteTest {
             ---
             title: Lunch with Priya
             tags: [Priya]
-            location: Priya's flat on Elm Street
+            subtitle: Priya's flat on Elm Street
             find:
               - Priya
               - '(\d+) Elm Street'
@@ -140,7 +149,7 @@ class ObsidianNoteTest {
         )
         assertEquals("Lunch with a friend", note.title)
         assertEquals(listOf("a friend"), note.tags)
-        assertEquals("location: a friend's flat on Elm Street", note.extra)
+        assertEquals("subtitle: a friend's flat on Elm Street", note.extra)
         assertEquals("a friend made soup at Elm Street. It cost \$5.\n", note.body)
         val everything = listOf(note.title, note.body, note.extra.orEmpty()) + note.tags
         assertFalse(everything.toString(), everything.any { "Priya" in it || "find" in it || "12" in it })

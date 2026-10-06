@@ -29,6 +29,8 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
         val commitAsNoReply: Boolean = false,
         val removeTrackingCodes: Boolean = false,
         val datesByDayOnly: Boolean = false,
+        val sendAtRandomTime: Boolean = false,
+        val plainCommitMessages: Boolean = false,
         /** The account's login, which no-reply commits are signed with. */
         val login: String? = null,
         val onlyThroughVpn: Boolean = false,
@@ -56,9 +58,14 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
             commitAsNoReply = noReply, removeTrackingCodes = removeTracking, siteZone = s.committedZone?.takeIf { config.timezone?.id == s.zoneBefore } ?: config.timezone?.id,
             repoName = account?.repoName, branch = account?.branch, login = account?.login,
         )
-    }.combine(combine(container.settings.onlyThroughVpn, container.waitingForVpn, container.settings.datesByDayOnly, ::Triple)) { s, (only, waiting, dayOnly) ->
-        s.copy(onlyThroughVpn = only, waitingForVpn = waiting, datesByDayOnly = dayOnly)
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, local.value)
+    }.combine(
+        combine(
+            container.settings.onlyThroughVpn, container.waitingForVpn, container.settings.datesByDayOnly,
+            container.settings.sendAtRandomTime, container.settings.plainCommitMessages,
+        ) { only, waiting, dayOnly, random, plain ->
+            { s: State -> s.copy(onlyThroughVpn = only, waitingForVpn = waiting, datesByDayOnly = dayOnly, sendAtRandomTime = random, plainCommitMessages = plain) }
+        },
+    ) { s, withSwitches -> withSwitches(s) }.stateIn(viewModelScope, SharingStarted.Eagerly, local.value)
 
     init {
         viewModelScope.launch {
@@ -96,6 +103,10 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
     fun setRemoveTrackingCodes(on: Boolean) = viewModelScope.launch { container.settings.setRemoveTrackingCodes(on) }
 
     fun setDatesByDayOnly(on: Boolean) = viewModelScope.launch { container.settings.setDatesByDayOnly(on) }
+
+    fun setSendAtRandomTime(on: Boolean) = viewModelScope.launch { container.settings.setSendAtRandomTime(on) }
+
+    fun setPlainCommitMessages(on: Boolean) = viewModelScope.launch { container.settings.setPlainCommitMessages(on) }
 
     // In the app's scope: once the switch is on, the connections made without it must close
     // even if the screen is left at once.

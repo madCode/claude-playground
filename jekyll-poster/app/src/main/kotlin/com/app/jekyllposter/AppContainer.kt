@@ -37,9 +37,9 @@ class AppContainer(
     accountData: DataStore<Preferences> = context.accountDataStore,
     settingsData: DataStore<Preferences> = context.settingsDataStore,
     val database: PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db")
-        .addMigrations(com.app.jekyllposter.data.MIGRATION_1_2, com.app.jekyllposter.data.MIGRATION_2_3, com.app.jekyllposter.data.MIGRATION_3_4).build(),
+        .addMigrations(com.app.jekyllposter.data.MIGRATION_1_2, com.app.jekyllposter.data.MIGRATION_2_3, com.app.jekyllposter.data.MIGRATION_3_4, com.app.jekyllposter.data.MIGRATION_4_5).build(),
     /** Starts publishing a queued post; WorkManager in the app, direct calls in tests. */
-    val schedulePublish: (Long) -> Unit = { com.app.jekyllposter.publish.PublishWorker.enqueue(context, it) },
+    val schedulePublish: (id: Long, sendAfter: Long?) -> Unit = { id, after -> com.app.jekyllposter.publish.PublishWorker.enqueue(context, id, after) },
     /** When the site has (or hasn't) built a published post; a notification in the app. */
     onBuildFinished: (com.app.jekyllposter.data.Draft) -> Unit = com.app.jekyllposter.publish.Notifier(context)::buildFinished,
     /** The files in an Obsidian vault folder; tests list a plain folder instead. */
@@ -47,7 +47,7 @@ class AppContainer(
     /** The phone's VPN; tests pretend one is up or down. */
     vpn: com.app.jekyllposter.data.Vpn = com.app.jekyllposter.data.AndroidVpn(context),
     /** Starts a queued post's publish now, past WorkManager's backoff. */
-    private val retryPublish: (Long) -> Unit = { com.app.jekyllposter.publish.PublishWorker.retryNow(context, it) },
+    private val retryPublish: (id: Long, sendAfter: Long?) -> Unit = { id, after -> com.app.jekyllposter.publish.PublishWorker.retryNow(context, id, after) },
 ) {
     /** Photos shared from another app, waiting for the editor of the post they started. */
     val sharedPhotos = java.util.concurrent.ConcurrentHashMap<Long, List<android.net.Uri>>()
@@ -104,6 +104,13 @@ class AppContainer(
         if (previewClient.isInitialized()) previewClient.value.renew()
     }
 
+    /** Sends queued post [id] now, not at the random time it was given. */
+    suspend fun sendNow(id: Long) {
+        val draft = drafts.get(id)?.takeIf { it.state == com.app.jekyllposter.data.PostState.Queued } ?: return
+        drafts.update(draft.copy(sendAfter = null))
+        retryPublish(id, null)
+    }
+
     /**
      * Waits up to [timeout] for the VPN, when one is asked for: true once requests can go out.
      * A queued post waits here rather than in WorkManager's backoff, which can grow to hours.
@@ -124,7 +131,7 @@ class AppContainer(
         appScope.launch {
             var waiting = false
             waitingForVpn.collect { now ->
-                if (waiting && !now) drafts.list().filter { it.state == com.app.jekyllposter.data.PostState.Queued }.forEach { retryPublish(it.id) }
+                if (waiting && !now) drafts.list().filter { it.state == com.app.jekyllposter.data.PostState.Queued }.forEach { retryPublish(it.id, it.sendAfter) }
                 waiting = now
             }
         }
