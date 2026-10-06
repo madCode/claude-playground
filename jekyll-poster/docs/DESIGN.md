@@ -213,6 +213,19 @@ doesn't want to open a laptop and make a commit for every post.
 
 Every default is what GitHub and Jekyll do on their own; each switch is one step more private.
 
+- **Only connect through a VPN**, off. On, everything the app sends to GitHub and to the blog's
+  site (sign-in, reading, publishing, the build watch, the preview's photos) goes through the
+  phone's VPN, so they see its address, not the writer's.
+  - Each connection is bound to the VPN, and names are looked up through it: if the VPN drops
+    mid-request, the request fails rather than going out over Wi-Fi.
+  - With no VPN, nothing is sent. Screens say "Your VPN is off"; a queued post shows **Waiting
+    for your VPN…** and goes out once it's back (the worker waits up to eight minutes, then
+    WorkManager retries).
+  - Turning it on stops requests under way and closes open connections; a publish stopped
+    that way is retried, as after any lost connection.
+  - Any VPN counts: Android doesn't say which app it is. One that leaves this app out (split
+    tunneling) counts as none.
+  - Links opened in the browser, and the sign-in page, go the browser's own way.
 - **Commit with your no-reply email**, off: commits then name no author, and GitHub uses the
   account's own email setting. On, they name `<id>+<login>@users.noreply.github.com`.
 - **The site's time zone**, from `_config.yml`, and **Use** the phone's: one commit changing only

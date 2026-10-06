@@ -20,6 +20,20 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Cycle 19: only through a VPN
+- **Asked:** make sure the VPN is on before anything goes to GitHub, for privacy.
+- **Shipped:** **Only connect through a VPN** in Blog & privacy. Connections are bound to the
+  VPN as they're made, not checked first, so a dropped VPN fails a request instead of leaking
+  it; with none, nothing is sent and queued posts say they're waiting for it.
+- **Not possible:** controlling Mullvad from the app. Its connect actions aren't open to other
+  apps, and Android only lets the VPN app or the writer start a VPN.
+
+### Links to posts with `[[`, and a crash opening a shared note
+- **Shipped:** typing `[[` (or the toolbar's Link to a post) lists the blog's posts; picks are
+  linked at Publish.
+- **CI found:** the editor started loading before its own properties were set; with a shared
+  note's photos it could crash. The load now starts last.
+
 ### Fix: the preview crashed on the phone
 - **Found by the writer:** the eye button crashed the app on every post. Android compiles
   regular expressions with ICU, which refuses a `}` that doesn't close a repeat; the JVM the

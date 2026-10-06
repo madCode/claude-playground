@@ -28,6 +28,9 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
         val noReplyEmail: String? = null,
         val commitAsNoReply: Boolean = false,
         val removeTrackingCodes: Boolean = false,
+        val onlyThroughVpn: Boolean = false,
+        /** Asked for, and there's no VPN: nothing is going out. */
+        val waitingForVpn: Boolean = false,
         /** The site's `timezone:` from `_config.yml`; null when it sets none. */
         val siteZone: String? = null,
         val phoneZone: String = "",
@@ -48,6 +51,8 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
             commitAsNoReply = noReply, removeTrackingCodes = removeTracking, siteZone = s.committedZone?.takeIf { config.timezone?.id == s.zoneBefore } ?: config.timezone?.id,
             repoName = account?.repoName, branch = account?.branch,
         )
+    }.combine(combine(container.settings.onlyThroughVpn, container.waitingForVpn, ::Pair)) { s, (only, waiting) ->
+        s.copy(onlyThroughVpn = only, waitingForVpn = waiting)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, local.value)
 
     init {
@@ -84,6 +89,10 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
     }
 
     fun setRemoveTrackingCodes(on: Boolean) = viewModelScope.launch { container.settings.setRemoveTrackingCodes(on) }
+
+    // In the app's scope: once the switch is on, the connections made without it must close
+    // even if the screen is left at once.
+    fun setOnlyThroughVpn(on: Boolean) = container.appScope.launch { container.setOnlyThroughVpn(on) }
 
     /**
      * Sets the site's time zone to the phone's: one commit changing only `_config.yml`'s

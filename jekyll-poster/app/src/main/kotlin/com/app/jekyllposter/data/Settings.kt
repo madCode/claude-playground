@@ -78,6 +78,17 @@ class Settings(private val store: DataStore<Preferences>) {
     /** GitHub gave no account id to build [login]'s no-reply address from. */
     class NoAddress(login: String) : Exception("No no-reply address for $login")
 
+    private val onlyThroughVpnKey = booleanPreferencesKey("only_through_vpn")
+
+    /** Nothing goes to GitHub, or to the blog's site, except through a VPN. */
+    val onlyThroughVpn: Flow<Boolean> = store.data.map { it[onlyThroughVpnKey] ?: false }
+
+    suspend fun onlyThroughVpn(): Boolean = onlyThroughVpn.first()
+
+    suspend fun setOnlyThroughVpn(only: Boolean) {
+        store.edit { it[onlyThroughVpnKey] = only }
+    }
+
     private val vaultKey = stringPreferencesKey("obsidian_vault")
 
     /** The Obsidian vault folder (a document tree URI) photos in shared notes are found in. */

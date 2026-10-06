@@ -12,12 +12,16 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.app.jekyllposter.PosterApp
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.minutes
 
 /** Publishes one queued post once there's a connection, retrying while GitHub can't be reached. */
 class PublishWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val container = (applicationContext as PosterApp).container
         val id = inputData.getLong(KEY_ID, -1)
+        // Asked to go only through a VPN and there's none: wait for it here, so the post goes out
+        // soon after it's turned on. A worker gets ten minutes; after that, WorkManager's backoff.
+        if (!container.awaitVpn(8.minutes)) return Result.retry()
         return when (container.publisher.publish(id)) {
             Publisher.Outcome.Done -> {
                 BuildWatchWorker.enqueue(applicationContext, id)

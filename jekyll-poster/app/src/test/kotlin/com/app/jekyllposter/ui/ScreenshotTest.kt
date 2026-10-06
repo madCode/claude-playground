@@ -243,6 +243,29 @@ class ScreenshotTest {
         }
     }
 
+    @Test fun waitingForTheVpn() {
+        signIn()
+        runBlocking { c.setOnlyThroughVpn(true) }
+        app.vpn.up.value = false
+        val privacy = com.app.jekyllposter.ui.settings.BlogPrivacyViewModel(c) { java.time.ZoneId.of("Europe/Lisbon") }
+        shoot("18-blog-privacy-no-vpn", ready = { privacy.state.value.waitingForVpn && privacy.state.value.visibility != com.app.jekyllposter.ui.settings.Visibility.Loading }) {
+            com.app.jekyllposter.ui.settings.BlogPrivacyScreen(privacy) {}
+        }
+    }
+
+    @Test fun homeWaitingForTheVpn() {
+        signIn()
+        runBlocking {
+            c.setOnlyThroughVpn(true)
+            c.drafts.insert(Draft(title = "Sourdough, round five", state = PostState.Queued))
+        }
+        app.vpn.up.value = false
+        val vm = HomeViewModel(c)
+        shoot("19-home-no-vpn", ready = { vm.state.value.waitingForVpn && vm.state.value.onPhone.isNotEmpty() && !vm.state.value.refreshing }) {
+            HomeScreen(vm, onOpenDraft = {}, onSettings = {})
+        }
+    }
+
     @Test fun noteFromObsidian() {
         signIn()
         val note = com.app.jekyllposter.core.obsidian.ObsidianNote.convert(

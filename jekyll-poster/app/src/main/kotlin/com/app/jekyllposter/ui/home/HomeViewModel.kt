@@ -44,6 +44,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         /** What the writer is searching for; null when not searching. */
         val query: String? = null,
         val blogHasPosts: Boolean = false,
+        val waitingForVpn: Boolean = false,
         val error: String? = null,
     ) {
         val searching: Boolean get() = !query.isNullOrBlank()
@@ -51,7 +52,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     private val status = MutableStateFlow(State())
 
-    private val withTitle = combine(status, container.blogs.config) { s, config -> s.copy(siteTitle = config.title) }
+    private val withTitle = combine(status, container.blogs.config, container.waitingForVpn) { s, config, vpn -> s.copy(siteTitle = config.title, waitingForVpn = vpn) }
 
     val state: StateFlow<State> = combine(container.accounts.account, container.drafts.all(), container.blogs.cachedPosts, withTitle) { account, drafts, posts, s ->
         // Drafts for another blog wait, hidden, until that blog is signed in again.
