@@ -217,14 +217,18 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
   site (sign-in, reading, publishing, the build watch, the preview's photos) goes through the
   phone's VPN, so they see its address, not the writer's.
   - Each connection is bound to the VPN, and names are looked up through it: if the VPN drops
-    mid-request, the request fails rather than going out over Wi-Fi.
-  - With no VPN, nothing is sent. Screens say "Your VPN is off"; a queued post shows **Waiting
-    for your VPN…** and goes out once it's back (the worker waits up to eight minutes, then
-    WorkManager retries).
-  - Turning it on stops requests under way and closes open connections; a publish stopped
-    that way is retried, as after any lost connection.
-  - Any VPN counts: Android doesn't say which app it is. One that leaves this app out (split
-    tunneling) counts as none.
+    mid-request, the request fails rather than going out over Wi-Fi. No SOCKS proxy is used
+    (OkHttp would open it around the VPN); an HTTP proxy is reached through the VPN.
+  - With no VPN, nothing is sent and screens say so. A queued post shows **Waiting for your
+    VPN…**; it goes out as soon as the VPN is back while the app is running, or else at
+    WorkManager's next retry. The "is it live" check keeps waiting too, rather than giving up.
+  - Turning it on (or off) moves requests to new connections; ones made before are never used
+    again. Requests already under way finish as they started.
+  - Any VPN counts: Android doesn't say which app it is. It must be meant for all traffic, and
+    is used only for the addresses it carries. One that leaves this app out (split tunneling),
+    or covers only its own range (Tailscale without an exit node), counts as none.
+  - The preview drops what the WebView would fetch by itself (`<link>`, audio, video), so all
+    it shows comes through the app.
   - Links opened in the browser, and the sign-in page, go the browser's own way.
 - **Commit with your no-reply email**, off: commits then name no author, and GitHub uses the
   account's own email setting. On, they name `<id>+<login>@users.noreply.github.com`.

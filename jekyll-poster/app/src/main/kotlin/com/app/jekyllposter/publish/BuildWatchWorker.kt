@@ -18,6 +18,7 @@ import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.DraftDao
 import com.app.jekyllposter.core.github.GitHubClient
+import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
 /**
@@ -67,7 +68,9 @@ class BuildWatcher(
 class BuildWatchWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val container = (applicationContext as PosterApp).container
-        val done = container.buildWatcher.check(inputData.getLong(KEY_ID, -1), giveUp = runAttemptCount >= MAX_ATTEMPTS)
+        // No giving up while the writer's VPN is off: the answer is only waiting for it.
+        val giveUp = runAttemptCount >= MAX_ATTEMPTS && !container.waitingForVpn.first()
+        val done = container.buildWatcher.check(inputData.getLong(KEY_ID, -1), giveUp = giveUp)
         return if (done) Result.success() else Result.retry()
     }
 

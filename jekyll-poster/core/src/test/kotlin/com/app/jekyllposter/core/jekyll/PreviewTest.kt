@@ -35,6 +35,18 @@ class PreviewTest {
         assertTrue(html.contains("<mark>kept</mark>"))
     }
 
+    @Test fun nothingInThePostLetsThePreviewFetchPastTheApp() {
+        val html = preview.page(
+            "",
+            "<link rel=\"preconnect\" href=\"https://tracker.example\">\n\n" +
+                "<VIDEO src=\"https://cdn.example/v.mp4\"><source src=\"https://cdn.example/v.webm\"></VIDEO>\n\n<audio src=\"https://cdn.example/a.mp3\">\n\nText.",
+            dark = false,
+        )
+        assertFalse(html, html.contains("example"))
+        assertTrue(html, html.contains("(Video: shown on the site, not in the preview.)"))
+        assertTrue(html, html.contains("Text."))
+    }
+
     @Test fun theTitleIsEscapedAndTheThemeFollowsThePhone() {
         val page = preview.page("Fish & <chips>", "Hi", dark = true)
         assertTrue(page.contains("<h1>Fish &amp; &lt;chips&gt;</h1>"))

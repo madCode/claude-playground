@@ -25,6 +25,11 @@ Times are when each cycle landed, Pacific.
 - **Shipped:** **Only connect through a VPN** in Blog & privacy. Connections are bound to the
   VPN as they're made, not checked first, so a dropped VPN fails a request instead of leaking
   it; with none, nothing is sent and queued posts say they're waiting for it.
+- **Its review found** (fixed, with tests): a connection busy when the switch went on was used
+  again afterwards, without the VPN (clients are now remade, and OkHttp never shares
+  connections between them); a VPN routing only some addresses passed as one; a SOCKS proxy
+  went around it; the preview's `<link rel=preconnect>` and media fetched past the app; queued
+  posts could wait hours after the VPN came back; the build watch gave up while waiting for it.
 - **Not possible:** controlling Mullvad from the app. Its connect actions aren't open to other
   apps, and Android only lets the VPN app or the writer start a VPN.
 

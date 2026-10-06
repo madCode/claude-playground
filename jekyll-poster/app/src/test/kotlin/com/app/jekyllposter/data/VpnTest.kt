@@ -21,6 +21,8 @@ import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowNetworkCapabilities
+import org.robolectric.util.ReflectionHelpers
+import org.robolectric.util.ReflectionHelpers.ClassParameter
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -56,7 +58,7 @@ class VpnTest {
         vpn.up.value = false
         app.github.log.clear()
         val error = refresh()
-        assertEquals("Your VPN is off, so nothing was sent to GitHub. Turn it on, then try again.", error!!.forWriter())
+        assertEquals("No VPN connection, so nothing was sent to GitHub. Turn your VPN on, then try again.", error!!.forWriter())
         assertEquals(emptyList<String>(), app.github.log)
     }
 
@@ -85,13 +87,56 @@ class VpnTest {
         assertEquals(Publisher.Outcome.Done, c.publisher.publish(id))
     }
 
+    @Test fun thePreviewsPhotosGoThroughTheVpnToo() {
+        runBlocking { c.setOnlyThroughVpn(true) }
+        vpn.up.value = false
+        app.github.log.clear()
+        c.previewFetcher.fetch(app.github.apiBase.resolve("assets/images/2025/lighthouse.jpg").toString())
+        assertEquals(emptyList<String>(), app.github.log)
+    }
+
+    @Test fun queuedPostsStartAgainWhenTheVpnIsBack() {
+        val id = runBlocking {
+            c.setOnlyThroughVpn(true)
+            c.drafts.insert(Draft(title = "Quiet", body = "Hello.", state = PostState.Queued))
+        }
+        vpn.up.value = false
+        // Long enough for the app to see it's waiting.
+        Thread.sleep(500)
+        assertTrue(app.retried.isEmpty())
+        vpn.up.value = true
+        val deadline = System.currentTimeMillis() + 5_000
+        while (id !in app.retried && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        assertEquals(listOf(id), app.retried.toList())
+    }
+
     @Test fun androidCountsOnlyAVpnTheAppIsRoutedThrough() {
         val connectivity = app.getSystemService(ConnectivityManager::class.java)
         val android = AndroidVpn(app)
         // Robolectric's phone is on an ordinary network.
         assertNull(android.current())
         val vpnCapabilities = ShadowNetworkCapabilities.newInstance().also { shadowOf(it).addTransportType(NetworkCapabilities.TRANSPORT_VPN) }
-        shadowOf(connectivity).setNetworkCapabilities(connectivity.activeNetwork, vpnCapabilities)
+        val network = connectivity.activeNetwork
+        shadowOf(connectivity).setNetworkCapabilities(network, vpnCapabilities)
+        // A VPN for its own range only, as Tailscale without an exit node: GitHub goes around it.
+        shadowOf(connectivity).setLinkProperties(network, links("100.64.0.0/10"))
+        assertNull(android.current())
+        shadowOf(connectivity).setLinkProperties(network, links("0.0.0.0/0"))
         assertNotNull(android.current())
+    }
+
+    /** Link properties with a route for each of [prefixes]; their constructors are hidden from apps. */
+    private fun links(vararg prefixes: String) = android.net.LinkProperties().also { links ->
+        for (p in prefixes) {
+            val prefix = ReflectionHelpers.callConstructor(android.net.IpPrefix::class.java, ClassParameter.from(String::class.java, p))
+            val route = ReflectionHelpers.callConstructor(
+                android.net.RouteInfo::class.java,
+                ClassParameter.from(android.net.IpPrefix::class.java, prefix),
+                ClassParameter.from(java.net.InetAddress::class.java, null),
+                ClassParameter.from(String::class.java, null),
+                ClassParameter.from(Int::class.javaPrimitiveType, android.net.RouteInfo.RTN_UNICAST),
+            )
+            ReflectionHelpers.callInstanceMethod<Any>(links, "addRoute", ClassParameter.from(android.net.RouteInfo::class.java, route))
+        }
     }
 }

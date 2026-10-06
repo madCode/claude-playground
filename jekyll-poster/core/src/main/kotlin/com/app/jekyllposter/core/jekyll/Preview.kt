@@ -44,9 +44,18 @@ class Preview(private val config: SiteConfig, private val resolveUrl: (String) -
         append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
         append("<style>").append(css(dark)).append("</style></head><body><article>")
         if (title.isNotBlank()) append("<h1>").append(escape(title)).append("</h1>")
-        append(body(markdown))
+        append(withoutDirectLoads(body(markdown)))
         append("</article></body></html>")
     }
+
+    /**
+     * [html] without what the WebView would fetch itself, past the app's fetcher (and so past the
+     * VPN switch): `<link>` (preconnect, dns-prefetch) and audio and video. A note stands in for
+     * each audio or video.
+     */
+    internal fun withoutDirectLoads(html: String): String = html
+        .replace(mediaElement) { "<p><em>(${it.groupValues[1].lowercase().replaceFirstChar(Char::uppercase)}: shown on the site, not in the preview.)</em></p>" }
+        .replace(directLoadTag, "")
 
     /** Resolves the Liquid that makes links, so they point where the built site's would. */
     internal fun liquid(markdown: String): String = markdown
@@ -74,6 +83,8 @@ class Preview(private val config: SiteConfig, private val resolveUrl: (String) -
         val filtered = Regex("""\{\{\s*(['"])(.*?)\1\s*\|\s*(relative_url|absolute_url)\s*\}\}""")
         val baseurlTag = Regex("""\{\{\s*site\.baseurl\s*\}\}""")
         val urlTag = Regex("""\{\{\s*site\.url\s*\}\}""")
+        val mediaElement = Regex("""<(video|audio)\b[\s\S]*?</\1\s*>""", RegexOption.IGNORE_CASE)
+        val directLoadTag = Regex("""<(link|video|audio|source|track)\b[^>]*>""", RegexOption.IGNORE_CASE)
         val postUrlTag = Regex("""(\{\{\s*site\.baseurl\s*\}\})?\{%-?\s*post_url\s+\S+\s*-?%\}""")
 
         fun escape(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")

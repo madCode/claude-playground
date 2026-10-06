@@ -21,6 +21,9 @@ class TestApp : PosterApp() {
     val published = mutableListOf<Long>()
     val vpn = FakeVpn()
 
+    /** Queued posts the app started again, past WorkManager's backoff. */
+    val retried = java.util.concurrent.CopyOnWriteArrayList<Long>()
+
     /** When set, a publish request runs the publisher straight away, as the worker would. */
     var publishNow = true
 
@@ -53,6 +56,7 @@ class TestApp : PosterApp() {
                 )
             },
             vpn = vpn,
+            retryPublish = { retried += it },
             schedulePublish = { id ->
                 published += id
                 if (publishNow) kotlinx.coroutines.runBlocking { container.publisher.publish(id) }
