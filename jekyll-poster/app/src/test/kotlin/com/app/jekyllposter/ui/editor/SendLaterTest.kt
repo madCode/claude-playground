@@ -2,7 +2,6 @@ package com.app.jekyllposter.ui.editor
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
@@ -30,7 +29,7 @@ class SendLaterTest {
 
     private fun editor(draft: Draft): Pair<Long, EditorViewModel> {
         val id = runBlocking {
-            c.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
+            app.signIn()
             c.settings.setSendAtRandomTime(true)
             c.drafts.insert(draft)
         }

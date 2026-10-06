@@ -22,7 +22,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.Shared
-import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.testutil.TestApp
@@ -50,7 +49,7 @@ class FlowTest {
     private fun start() = compose.setContent { PosterTheme { PosterNavHost(app.container) } }
 
     private fun signIn() = runBlocking {
-        app.container.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
+        app.signIn()
     }
 
     @Test fun connectWriteWithCategoriesOldAndNewAndPublish() {

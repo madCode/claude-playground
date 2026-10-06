@@ -1,7 +1,7 @@
-package com.app.jekyllposter.testutil
+package com.app.jekyllposter.core.testing
 
-import com.app.jekyllposter.data.Route
-import com.app.jekyllposter.data.Vpn
+import com.app.jekyllposter.core.net.Route
+import com.app.jekyllposter.core.net.Vpn
 import kotlinx.coroutines.flow.MutableStateFlow
 import okhttp3.Dns
 import java.net.InetAddress

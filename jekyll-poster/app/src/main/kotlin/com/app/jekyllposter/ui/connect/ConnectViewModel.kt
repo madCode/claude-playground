@@ -7,6 +7,7 @@ import com.app.jekyllposter.core.github.DeviceFlow
 import com.app.jekyllposter.core.github.GitHubRepo
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.withTokens
+import com.app.jekyllposter.ui.catching
 import com.app.jekyllposter.ui.forWriter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -79,6 +80,8 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             try {
                 listRepos(token)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _state.update { it.copy(busy = false, error = e.forWriter()) }
             }
@@ -111,6 +114,8 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
             }
             try {
                 listRepos(account.token)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Stays on the blog list with the error; no token is put in a field to resubmit.
                 _state.update { it.copy(busy = false, error = e.forWriter()) }
@@ -124,7 +129,7 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
         _state.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
             val client = container.client(s.token.trim())
-            val siteUrl = runCatching { client.pages(repo.owner.login, repo.name)?.htmlUrl }.getOrNull()
+            val siteUrl = catching { client.pages(repo.owner.login, repo.name)?.htmlUrl }.getOrNull()
             container.blogs.clear()
             val stored = if (switching) container.accounts.current() else null
             val account = if (stored != null) {
@@ -137,7 +142,7 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
             }
             container.accounts.save(account)
             // A first read fills the category picker; if it fails, Home tries again.
-            runCatching { container.blogs.refresh() }
+            catching { container.blogs.refresh() }
             _state.update { it.copy(busy = false, done = true) }
         }
     }

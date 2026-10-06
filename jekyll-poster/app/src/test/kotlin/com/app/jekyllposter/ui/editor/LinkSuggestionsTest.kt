@@ -5,7 +5,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.core.jekyll.MarkdownEdits
-import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
@@ -29,7 +28,7 @@ class LinkSuggestionsTest {
 
     private fun editor(): EditorViewModel {
         runBlocking {
-            c.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
+            app.signIn()
             c.blogs.refresh()
         }
         val id = runBlocking { c.drafts.insert(Draft(title = "More reading")) }

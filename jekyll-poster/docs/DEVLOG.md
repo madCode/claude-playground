@@ -20,6 +20,12 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Cycle 25: simpler code, 3 of 3 (VPN in core, cancellation, docs)
+- **Changed:** the VPN gate, its renewable clients and the route maths moved to core, with
+  their tests and `FakeVpn`; view models catch with `catching`, which lets a cancellation
+  through (`runCatching` and `catch (e: Exception)` caught it, so a closed screen's coroutine
+  could finish as if it hadn't been cancelled); tests sign in with `TestApp.signIn()`, fourteen copies before; ARCHITECTURE.md current.
+
 ### Cycle 24: simpler code, 2 of 3 (one rule each, smaller files)
 - **Changed, barely behaviour:** one definition each for when a post can be changed
   (`Draft.editable`), the writer's text the editor owns (`Draft.withTextOf`, three copies

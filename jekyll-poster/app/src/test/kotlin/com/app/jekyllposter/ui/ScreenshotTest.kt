@@ -21,7 +21,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.PendingShare
 import com.app.jekyllposter.core.obsidian.ObsidianNote
-import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
@@ -66,7 +65,7 @@ class ScreenshotTest {
     @After fun close() = app.github.close()
 
     private fun signIn() = runBlocking {
-        c.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
+        app.signIn()
         c.blogs.refresh()
     }
 

@@ -39,7 +39,7 @@ class VpnTest {
     private val vpn = app.vpn
 
     @Before fun signIn() = runBlocking {
-        c.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
+        app.signIn()
     }
 
     @After fun close() = app.github.close()

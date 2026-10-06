@@ -5,7 +5,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
@@ -26,7 +25,7 @@ class PreviewScreenTest {
     @After fun close() = app.github.close()
 
     @Test fun theEyeButtonShowsThePreview() {
-        runBlocking { app.container.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main")) }
+        runBlocking { app.signIn() }
         val id = runBlocking { app.container.drafts.insert(Draft(title = "A walk", body = "Out past the *harbour* wall.\n\n![x]({{ '/assets/images/2025/a.jpg' | relative_url }})\n")) }
         val vm = EditorViewModel(app.container, id)
         idleUntil { vm.text != null }

@@ -4,7 +4,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.core.github.CommitAuthor
 import com.app.jekyllposter.core.jekyll.parseJekyllDate
-import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
@@ -37,7 +36,7 @@ class PublisherTest {
     private val publisher = Publisher(c.drafts, c.accounts, c.blogs, c.settings) { evening }
 
     @Before fun signIn() = runBlocking {
-        c.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
+        app.signIn()
     }
 
     @After fun close() = github.close()
