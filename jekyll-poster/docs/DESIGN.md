@@ -293,8 +293,9 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
 - Nothing written goes to the phone's cloud backup: drafts, photos and the privacy settings
   would sit in the writer's Google account, beside the blog's. From Android 12, moving to a new
   phone brings them; on 11 and older, the same rules cover both, so they stay behind. A phone
-  restored from a backup starts with every privacy switch off, the VPN one included: turn them
-  on before signing in.
+  restored from a backup starts with every privacy switch off, the VPN one included, and its
+  first sign-in goes out before that switch can be turned on: connect a VPN first if that
+  matters.
 - The app's version, with the build's CI run and commit in a debug build. A tap or long press
   copies it, for a bug report.
 
