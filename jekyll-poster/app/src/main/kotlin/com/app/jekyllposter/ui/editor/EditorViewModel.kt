@@ -226,12 +226,11 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             local[path]?.let(::File)?.takeIf { it.exists() }?.let(::dataUri) ?: (base + path)
         }
         // As it will be published: `[[Post title]]` links made links (they go nowhere in the preview).
-        val linkable = this.linkable.value.map { ObsidianNote.LinkTarget(it.path, it.title) }
-        return preview.page(draft.title, ObsidianNote.linkPosts(draft.body, linkable, container.blogs.postUrlHasBaseurl), dark)
+        return preview.page(draft.title, ObsidianNote.linkPosts(draft.body, targets(linkable.value), container.blogs.postUrlHasBaseurl), dark)
     }
 
     /** The blog's posts a `[[link]]` can go to: ones the site builds, newest first. */
-    private val linkable: StateFlow<List<com.app.jekyllposter.data.CachedPost>> = container.blogs.cachedPosts
+    val linkable: StateFlow<List<com.app.jekyllposter.data.CachedPost>> = container.blogs.cachedPosts
         .map { posts ->
             val today = java.time.LocalDate.now(container.blogs.config.value.timezone ?: java.time.ZoneOffset.UTC).toString()
             posts.filter { it.published && !com.app.jekyllposter.core.jekyll.PostPath(it.path).isDraft && (it.date?.let { d -> d <= today } ?: false) }
@@ -239,19 +238,27 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    private fun targets(posts: List<com.app.jekyllposter.data.CachedPost>) = posts.map { ObsidianNote.LinkTarget(it.path, it.title) }
+
     /** The `[[link` being typed at the cursor, if any: the screen lists posts to complete it with. */
     val openLink: ObsidianNote.OpenLink?
         get() = text?.body?.takeIf { bodySelection.collapsed }?.let { ObsidianNote.openLink(it, bodySelection.start) }
 
-    /** Posts whose title holds [query], for the `[[link` being typed; a few, newest first. */
-    fun postsToLink(query: String): List<com.app.jekyllposter.data.CachedPost> =
-        linkable.value.filter { it.title.contains(query.trim(), ignoreCase = true) }.take(5)
+    /** Of [posts], the few whose title holds [query] and that a link can reach, newest first. */
+    fun postsToLink(query: String, posts: List<com.app.jekyllposter.data.CachedPost> = linkable.value): List<com.app.jekyllposter.data.CachedPost> {
+        val all = targets(posts)
+        return posts.filter { it.title.contains(query.trim(), ignoreCase = true) && ObsidianNote.linkTarget(ObsidianNote.LinkTarget(it.path, it.title), all) != null }.take(3)
+    }
 
-    /** Completes the `[[link` being typed with [title]; it becomes a link when published. */
-    fun linkTo(title: String) {
+    /**
+     * Completes the `[[link` being typed with [post], written so it finds exactly that post; it
+     * becomes a link when the post is published.
+     */
+    fun linkTo(post: com.app.jekyllposter.data.CachedPost) {
         val body = text?.body ?: return
         val link = openLink ?: return
-        val (next, cursor) = ObsidianNote.completeLink(body, bodySelection.start, link, title)
+        val target = ObsidianNote.linkTarget(ObsidianNote.LinkTarget(post.path, post.title), targets(linkable.value)) ?: return
+        val (next, cursor) = ObsidianNote.completeLink(body, bodySelection.start, link, target)
         setBody(TextFieldValue(next, TextRange(cursor)))
     }
 
@@ -427,6 +434,14 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         viewModelScope.launch {
             photoJob?.join()
             saveJob?.cancel()
+            // `[[Post title]]` made links now, against the posts as they are: the text that's sent
+            // is then fixed, the same on every retry, and the writer sees what went out.
+            if (destination != Destination.Delete) {
+                text?.let { t ->
+                    val linked = ObsidianNote.linkPosts(t.body, targets(linkable.value), container.blogs.postUrlHasBaseurl)
+                    if (linked != t.body) Snapshot.withMutableSnapshot { text = t.copy(body = linked) }
+                }
+            }
             save()
             val draft = container.drafts.get(id) ?: return@launch
             if (draft.title.isBlank()) {

@@ -127,6 +127,18 @@ object ObsidianNote {
     fun linkPosts(body: String, posts: List<LinkTarget>, postUrlHasBaseurl: Boolean = false): String =
         outsideCode(body) { segment -> links(segment, posts, if (postUrlHasBaseurl) "" else "{{ site.baseurl }}") }
 
+    /**
+     * How a link to [post] is written so it finds exactly that post: `[[Title]]`, or by its file
+     * name, `[[2025-01-12-welcome|Title]]`, when another post shares the title or the title holds
+     * `#` or `|`, which a link reads otherwise. Null for one no link can reach: a title with
+     * brackets, or a path `post_url` can't name.
+     */
+    fun linkTarget(post: LinkTarget, posts: List<LinkTarget>): String? {
+        if (postUrlName(post.path) == null || post.title.any { it in "[]\n" } || post.title.isBlank()) return null
+        val shared = posts.count { it.title.trim().equals(post.title.trim(), ignoreCase = true) } > 1
+        return if (shared || post.title.any { it in "#|" }) "${PostPath(post.path).fileName.substringBeforeLast('.')}|${post.title.trim()}" else post.title.trim()
+    }
+
     /** A `[[` being typed: where it starts in the text, and what's typed after it so far. */
     data class OpenLink(val start: Int, val query: String)
 
@@ -137,16 +149,20 @@ object ObsidianNote {
     fun openLink(text: String, cursor: Int): OpenLink? {
         if (cursor < 2 || cursor > text.length) return null
         val m = Regex("""(?<!!)\[\[([^\[\]\n|#]*)$""").find(text.substring(0, cursor)) ?: return null
+        // Inside a link already closed, with text still after the cursor (fixing a typo in it):
+        // nothing to complete. A `]]` right at the cursor is a keyboard's pair, and is used.
+        val rest = text.substring(cursor).substringBefore('\n')
+        if (!rest.startsWith("]]") && rest.contains("]]") && !rest.substringBefore("]]").contains("[[")) return null
         return OpenLink(m.range.first, m.groupValues[1])
     }
 
     /**
-     * [text] with the [link] being typed at [cursor] completed as `[[title]]` (a `]]` already
+     * [text] with the [link] being typed at [cursor] completed as `[[target]]` (a `]]` already
      * after the cursor is used, not doubled), and where the cursor goes: after the `]]`.
      */
-    fun completeLink(text: String, cursor: Int, link: OpenLink, title: String): Pair<String, Int> {
+    fun completeLink(text: String, cursor: Int, link: OpenLink, target: String): Pair<String, Int> {
         val end = if (text.startsWith("]]", cursor)) cursor + 2 else cursor
-        val written = "[[${title.replace("]]", "] ]")}]]"
+        val written = "[[$target]]"
         return text.substring(0, link.start) + written + text.substring(end) to link.start + written.length
     }
 

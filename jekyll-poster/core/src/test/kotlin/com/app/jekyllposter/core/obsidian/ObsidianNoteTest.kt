@@ -221,5 +221,19 @@ class ObsidianNoteTest {
         assertNull(ObsidianNote.openLink("[[Done]] x", 10))
         assertNull(ObsidianNote.openLink("[[a\nb", 5))
         assertEquals("", ObsidianNote.openLink("[[", 2)!!.query)
+        // Inside a link already written, fixing a typo: nothing to complete.
+        assertNull(ObsidianNote.openLink("[[What I read in April]] x", 6))
+        assertEquals("Wh", ObsidianNote.openLink("[[Wh and [[Done]]", 4)!!.query)
+    }
+
+    @Test fun aLinkIsWrittenSoItFindsExactlyThePostPicked() {
+        val twins = listOf(LinkTarget("_posts/2024-01-01-notes.md", "Notes"), LinkTarget("_posts/2025-01-01-notes.md", "Notes"))
+        assertEquals("2024-01-01-notes|Notes", ObsidianNote.linkTarget(twins[0], twins))
+        // And it does find that one, not the newer twin.
+        assertEquals("[Notes]({{ site.baseurl }}{% post_url 2024-01-01-notes %})", ObsidianNote.linkPosts("[[2024-01-01-notes|Notes]]", twins))
+        assertEquals("Welcome", ObsidianNote.linkTarget(posts[1], posts))
+        assertEquals("2025-02-02-c-tips|C# tips", ObsidianNote.linkTarget(LinkTarget("_posts/2025-02-02-c-tips.md", "C# tips"), posts))
+        assertNull(ObsidianNote.linkTarget(LinkTarget("_posts/2025-02-02-x.md", "Notes [draft]"), posts))
+        assertNull(ObsidianNote.linkTarget(LinkTarget("travel/_posts/2025/2025-01-01-odd.md", "Odd"), posts))
     }
 }

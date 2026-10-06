@@ -40,7 +40,7 @@ class LinkSuggestionsTest {
         editor.setBody(TextFieldValue("After [[read", TextRange(12)))
         assertEquals("read", editor.openLink!!.query)
         assertEquals(listOf("What I read in April"), editor.postsToLink("read").map { it.title })
-        editor.linkTo("What I read in April")
+        editor.linkTo(editor.postsToLink("read").single())
         assertEquals("After [[What I read in April]]", editor.text!!.body)
         assertEquals(TextRange(30), editor.bodySelection)
         // Closed now: nothing more to offer.
@@ -52,5 +52,14 @@ class LinkSuggestionsTest {
         editor.setBody("See [[What I read in April]].")
         val html = runBlocking { editor.previewHtml(dark = false) }
         assertTrue(html, html.contains("<a href=\"#\">What I read in April</a>"))
+    }
+
+    @Test fun publishingLinksTheTitlesThenSoEveryRetrySendsTheSameText() {
+        val editor = editor()
+        editor.setBody("After [[What I read in April]] and [[Not yet]].")
+        editor.publish()
+        idleUntil(10_000) { editor.state.value.closed }
+        val sent = runBlocking { c.drafts.list() }.single()
+        assertEquals("After [What I read in April]({{ site.baseurl }}{% post_url 2025-04-20-reading-list %}) and [[Not yet]].", sent.body)
     }
 }

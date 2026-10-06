@@ -37,6 +37,8 @@ import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -249,8 +251,9 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
         bottomBar = {
             if (editable && !state.previewing && text != null) Column {
                 // Typing `[[` offers the blog's posts, as Obsidian offers notes.
+                val linkable by viewModel.linkable.collectAsStateWithLifecycle()
                 viewModel.openLink?.takeIf { bodyFocused }?.let { link ->
-                    LinkSuggestions(viewModel.postsToLink(link.query), link.query, onPick = viewModel::linkTo)
+                    LinkSuggestions(viewModel.postsToLink(link.query, linkable), link.query, anyPosts = linkable.isNotEmpty(), onPick = viewModel::linkTo)
                 }
                 FormatBar(
                     formatting = bodyFocused,
@@ -393,23 +396,30 @@ private fun NoteDate(written: String, canDrop: Boolean, onDrop: () -> Unit) {
     }
 }
 
-/** Posts to complete a `[[link` with, above the keyboard; none says what happens to the link. */
+/**
+ * Posts to complete a `[[link` with, above the keyboard; none says what happens to the link. At
+ * most three rows, so the line being typed isn't covered, and set off by a rule for e-ink.
+ */
 @Composable
-private fun LinkSuggestions(posts: List<com.app.jekyllposter.data.CachedPost>, query: String, onPick: (String) -> Unit) {
+private fun LinkSuggestions(posts: List<com.app.jekyllposter.data.CachedPost>, query: String, anyPosts: Boolean, onPick: (com.app.jekyllposter.data.CachedPost) -> Unit) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(vertical = 4.dp).semantics { contentDescription = "Posts to link" }) {
+        Column(Modifier.semantics { contentDescription = "Posts to link"; liveRegion = LiveRegionMode.Polite }) {
+            HorizontalDivider()
             if (posts.isEmpty()) {
                 Text(
-                    if (query.isBlank()) "Type to find a post to link." else "No post titled like that: it stays as written, [[$query]].",
+                    when {
+                        !anyPosts -> "No posts on the blog to link yet."
+                        else -> "No post titled like that: it stays as written, [[$query]]."
+                    },
                     Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             posts.forEach { post ->
                 Column(
-                    Modifier.fillMaxWidth().clickable(onClickLabel = "Link to this post") { onPick(post.title) }.padding(horizontal = 16.dp, vertical = 10.dp),
+                    Modifier.fillMaxWidth().clickable(onClickLabel = "Link to this post") { onPick(post) }.padding(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    Text(post.title, style = MaterialTheme.typography.bodyLarge)
+                    Text(post.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     post.date?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
             }
