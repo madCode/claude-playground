@@ -17,7 +17,6 @@ import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.core.jekyll.Edit
 import com.app.jekyllposter.core.jekyll.Images
 import com.app.jekyllposter.core.jekyll.MarkdownEdits
-import com.app.jekyllposter.core.jekyll.PostPath
 import com.app.jekyllposter.core.jekyll.Preview
 import com.app.jekyllposter.core.jekyll.Taxonomy
 import com.app.jekyllposter.core.jekyll.Term
@@ -30,9 +29,7 @@ import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.data.RANDOM_WINDOW
 import com.app.jekyllposter.data.chooseVault
 import java.io.File
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneOffset
 import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -70,7 +67,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val closed: Boolean = false,
     ) {
         /** Published posts and ones on their way are read-only; edit the blog's copy instead. */
-        val editable: Boolean get() = draft?.state == PostState.Draft || draft?.state == PostState.Failed
+        val editable: Boolean get() = draft?.editable == true
     }
 
     /**
@@ -99,7 +96,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val draft = when {
             stored == null -> null
             mine == null -> stored
-            else -> stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, extraFrontMatter = mine.extraFrontMatter, noteDate = mine.noteDate)
+            else -> stored.withTextOf(mine)
         }
         f.copy(draft = draft, taxonomy = taxonomy)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, State())
@@ -233,11 +230,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
 
     /** The blog's posts a `[[link]]` can go to: ones the site builds, newest first. */
     val linkable: StateFlow<List<CachedPost>> = container.blogs.cachedPosts
-        .map { posts ->
-            val today = LocalDate.now(container.blogs.config.value.timezone ?: ZoneOffset.UTC).toString()
-            posts.filter { it.published && !PostPath(it.path).isDraft && (it.date?.let { d -> d <= today } ?: false) }
-                .sortedByDescending { it.date }
-        }
+        .map(container.blogs::linkable)
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private fun targets(posts: List<CachedPost>) = posts.map { ObsidianNote.LinkTarget(it.path, it.title) }
@@ -424,11 +417,11 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     private suspend fun saveNow() {
         val mine = text ?: return
         val stored = container.drafts.get(id) ?: return
-        if (stored.state != PostState.Draft && stored.state != PostState.Failed) return
-        val saved = stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, extraFrontMatter = mine.extraFrontMatter, noteDate = mine.noteDate)
+        if (!stored.editable) return
+        val saved = stored.withTextOf(mine)
         // Nothing changed: no write, so an edit opened and left alone still reads as unchanged.
         if (saved == stored) return
-        container.drafts.update(stored.copy(title = mine.title, body = mine.body, categories = mine.categories, tags = mine.tags, images = mine.images, extraFrontMatter = mine.extraFrontMatter, noteDate = mine.noteDate, updatedAt = System.currentTimeMillis()))
+        container.drafts.update(saved.copy(updatedAt = System.currentTimeMillis()))
     }
 
     /** Sends the post to [destination]: the site's `_posts`, or the blog's `_drafts`. */
@@ -512,7 +505,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             val queued = saving.withLock {
                 withContext(NonCancellable) {
                     val draft = container.drafts.get(id) ?: return@withContext false
-                    if (draft.editingPath == null || (draft.state != PostState.Draft && draft.state != PostState.Failed)) return@withContext false
+                    if (draft.editingPath == null || !draft.editable) return@withContext false
                     container.drafts.update(
                         draft.copy(
                             state = PostState.Queued, error = null, destination = Destination.Delete,

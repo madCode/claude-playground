@@ -10,7 +10,6 @@ import com.app.jekyllposter.Shared
 import com.app.jekyllposter.core.frontmatter.FrontMatterDocument
 import com.app.jekyllposter.core.io.readAtMost
 import com.app.jekyllposter.core.jekyll.PostPath
-import com.app.jekyllposter.core.jekyll.PostSummary
 import com.app.jekyllposter.core.jekyll.PostWriter
 import com.app.jekyllposter.core.jekyll.Taxonomy
 import com.app.jekyllposter.core.jekyll.Term
@@ -21,9 +20,8 @@ import com.app.jekyllposter.data.CachedPost
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
+import com.app.jekyllposter.data.toSummary
 import com.app.jekyllposter.ui.forWriter
-import java.time.LocalDate
-import java.time.ZoneOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -65,9 +63,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     val state: StateFlow<State> = combine(container.accounts.account, container.drafts.all(), container.blogs.cachedPosts, withTitle) { account, drafts, posts, s ->
         // Drafts for another blog wait, hidden, until that blog is signed in again.
         val mine = drafts.filter { it.blog == null || it.blog == account?.blogKey }
-        val categories = Taxonomy.of(
-            posts.map { PostSummary(PostPath(it.path), it.sha, it.title, it.categories, it.tags, it.published) },
-        ).categories.map { it.name }
+        val categories = Taxonomy.of(posts.map { it.toSummary() }).categories.map { it.name }
         // A category gone since it was chosen (renamed, another blog) filters nothing: show all.
         val category = s.category?.takeIf { c -> categories.any { it.equals(c, ignoreCase = true) } }
         val q = s.query?.trim().orEmpty()
@@ -84,7 +80,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         // to drop them). Only stale ones: a recent one may be open in another window, or about to
         // receive the last keystrokes of an editor that's closing.
         viewModelScope.launch {
-            val day = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
+            val day = System.currentTimeMillis() - DAY_MS
             container.drafts.list().filter { it.untouched && it.updatedAt < day }.forEach { container.drafts.delete(it.id) }
         }
     }
@@ -108,8 +104,14 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     fun stopSearch() = status.update { it.copy(query = null) }
 
-    /** A post started from a share, for the screen to open; null once opened. */
-    val opened = MutableStateFlow<Long?>(null)
+    private val _opened = MutableStateFlow<Long?>(null)
+
+    /** A post started from a share, for the screen to open; null once [openedHandled]. */
+    val opened: StateFlow<Long?> = _opened
+
+    fun openedHandled() {
+        _opened.value = null
+    }
 
     /**
      * Starts a post from what another app shared, outside the screen's own coroutine: a rotation
@@ -120,7 +122,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         // The app's scope, not this screen's: Switch blog clears Home, and the share mustn't go with it.
         container.appScope.launch {
             try {
-                createShared(shared)?.let { opened.value = it }
+                createShared(shared)?.let { _opened.value = it }
             } finally {
                 status.update { it.copy(refreshing = false) }
             }
@@ -141,11 +143,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         // Fresh, if GitHub can be reached: a link to a post deleted since the last look would fail
         // the site's build. Best effort; the cached list does otherwise. Only for a note with links.
         if (text.contains("[[")) withTimeoutOrNull(10_000) { runCatching { container.blogs.refresh() } }
-        val today = LocalDate.now(container.blogs.config.value.timezone ?: ZoneOffset.UTC)
-        val posts = container.blogs.cachedPosts.first()
-            // Only posts the site builds: GitHub Pages skips future-dated ones, and post_url fails on them.
-            .filter { it.published && !PostPath(it.path).isDraft && (PostPath(it.path).date?.let { d -> d <= today } ?: false) }
-            .map { ObsidianNote.LinkTarget(it.path, it.title) }
+        val posts = container.blogs.linkable(container.blogs.cachedPosts.first()).map { ObsidianNote.LinkTarget(it.path, it.title) }
         // Off the main thread: a big note or a slow pattern mustn't freeze the screen.
         val converted = withContext(Dispatchers.Default) { ObsidianNote.convert(text, fromFile?.first, posts, container.blogs.postUrlHasBaseurl) }
         val note = when (val result = converted) {
@@ -246,7 +244,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     /** Published posts stay on the phone's list for a day, so the writer sees them go live. */
-    private fun recent(draft: Draft) = System.currentTimeMillis() - draft.updatedAt < 24 * 60 * 60 * 1000L
+    private fun recent(draft: Draft) = System.currentTimeMillis() - draft.updatedAt < DAY_MS
 }
 
 /** A new post nothing was written in yet: not shown on the list. */
@@ -258,3 +256,5 @@ private fun CachedPost.matches(query: String): Boolean =
 
 /** A shared note bigger than this is surely not one: 1 MB of text. */
 private const val MAX_NOTE = 1024 * 1024
+
+private const val DAY_MS = 24 * 60 * 60 * 1000L

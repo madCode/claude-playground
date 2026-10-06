@@ -5,8 +5,10 @@ import com.app.jekyllposter.core.blog.SiteIndex
 import com.app.jekyllposter.core.github.GitHubClient
 import com.app.jekyllposter.core.jekyll.PostPath
 import com.app.jekyllposter.core.jekyll.PostSummary
-import com.app.jekyllposter.core.jekyll.Taxonomy
 import com.app.jekyllposter.core.jekyll.SiteConfig
+import com.app.jekyllposter.core.jekyll.Taxonomy
+import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -78,7 +80,17 @@ class BlogRepository(
         postUrlHasBaseurl = false
     }
 
-    private fun CachedPost.toSummary() = PostSummary(PostPath(path), sha, title, categories, tags, published)
+    /**
+     * Of [posts], those a `[[link]]` can go to, newest first: ones the site builds. GitHub Pages
+     * skips drafts, unpublished and future-dated posts, and `post_url` fails on them.
+     */
+    fun linkable(posts: List<CachedPost>): List<CachedPost> {
+        val today = LocalDate.now(config.value.timezone ?: ZoneOffset.UTC)
+        return posts.filter { post -> post.published && PostPath(post.path).let { !it.isDraft && (it.date?.let { d -> d <= today } ?: false) } }
+            .sortedByDescending { PostPath(it.path).date }
+    }
 
     private fun PostSummary.toCached() = CachedPost(path.path, sha, title, categories, tags, published, path.date?.toString())
 }
+
+fun CachedPost.toSummary() = PostSummary(PostPath(path), sha, title, categories, tags, published)
