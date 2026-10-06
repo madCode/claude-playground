@@ -8,6 +8,7 @@ import java.io.InputStream
  * stream was too big, without reading (or holding) all of it.
  */
 fun InputStream.readAtMost(limit: Int): ByteArray {
+    require(limit in 0 until Int.MAX_VALUE) { "limit must leave room for the byte past it" }
     val out = ByteArrayOutputStream()
     val chunk = ByteArray(64 * 1024)
     while (out.size() <= limit) {

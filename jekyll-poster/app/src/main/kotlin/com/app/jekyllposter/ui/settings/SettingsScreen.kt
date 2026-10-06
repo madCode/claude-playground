@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.net.Uri
 import android.os.Build
+import android.provider.DocumentsContract
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -178,5 +179,5 @@ internal fun Row(title: String, detail: String, onClick: (() -> Unit)? = null, l
 
 /** A vault folder's own name, from its document tree (`primary:Documents/Notes` → Notes). */
 private fun vaultName(tree: String): String = runCatching {
-    android.provider.DocumentsContract.getTreeDocumentId(Uri.parse(tree)).substringAfter(':').trimEnd('/').substringAfterLast('/').ifEmpty { "Vault folder" }
+    DocumentsContract.getTreeDocumentId(Uri.parse(tree)).substringAfter(':').trimEnd('/').substringAfterLast('/').ifEmpty { "Vault folder" }
 }.getOrDefault("Vault folder")

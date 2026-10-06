@@ -154,7 +154,12 @@ class AppContainer(
      * Started by the app once the container is built, not from its constructor: a launch there
      * can run before the properties it uses are set.
      */
+    private var vpnRetryStarted = false
+
     fun startVpnRetry() {
+        // Once: a second collector would start each queued post twice.
+        if (vpnRetryStarted) return
+        vpnRetryStarted = true
         appScope.launch {
             var waiting = false
             waitingForVpn.collect { now ->
