@@ -20,6 +20,28 @@ Times are when each cycle landed, Pacific.
 
 ## Day 1 · Sun 4 Oct
 
+### Cycle 19: only through a VPN
+- **Asked:** make sure the VPN is on before anything goes to GitHub, for privacy.
+- **Shipped:** **Only connect through a VPN** in Blog & privacy. Connections are bound to the
+  VPN as they're made, not checked first, so a dropped VPN fails a request instead of leaking
+  it; with none, nothing is sent and queued posts say they're waiting for it.
+- **Its review found** (fixed, with tests): a connection busy when the switch went on was used
+  again afterwards, without the VPN (clients are now remade, and OkHttp never shares
+  connections between them); a VPN routing only some addresses passed as one; a SOCKS proxy
+  went around it; the preview's `<link rel=preconnect>` and media fetched past the app; queued
+  posts could wait hours after the VPN came back; the build watch gave up while waiting for it.
+- **The second look found** (fixed): before Android 13, the route Android adds to block IPv6
+  made a partial VPN look like a full one; a VPN coming up read as none for a moment; the
+  restart when the VPN is back could stop a publish mid-commit (it now runs beside it).
+- **Not possible:** controlling Mullvad from the app. Its connect actions aren't open to other
+  apps, and Android only lets the VPN app or the writer start a VPN.
+
+### Links to posts with `[[`, and a crash opening a shared note
+- **Shipped:** typing `[[` (or the toolbar's Link to a post) lists the blog's posts; picks are
+  linked at Publish.
+- **CI found:** the editor started loading before its own properties were set; with a shared
+  note's photos it could crash. The load now starts last.
+
 ### Fix: the preview crashed on the phone
 - **Found by the writer:** the eye button crashed the app on every post. Android compiles
   regular expressions with ICU, which refuses a `}` that doesn't close a repeat; the JVM the

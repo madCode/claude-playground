@@ -120,7 +120,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
                 if (state.onPhone.isNotEmpty()) {
                     item { SectionHeading("On this phone") }
                     items(state.onPhone, key = { "d${it.id}" }) { draft ->
-                        DraftRow(draft) { onOpenDraft(draft.id) }
+                        DraftRow(draft, state.waitingForVpn) { onOpenDraft(draft.id) }
                     }
                 }
                 item { SectionHeading("On your blog") }
@@ -152,11 +152,11 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
 
 
 @Composable
-private fun DraftRow(draft: Draft, onClick: () -> Unit) {
+private fun DraftRow(draft: Draft, waitingForVpn: Boolean, onClick: () -> Unit) {
     RowFrame(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(draft.title.ifBlank { "Untitled" }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         val whimsy = LocalWhimsy.current
-        val (label, isError) = draft.status(whimsy.live)
+        val (label, isError) = draft.status(whimsy.live, waitingForVpn)
         val shown = if (draft.state == PostState.Published && draft.buildState == BuildState.Live) label + whimsy.liveMark else label
         Text(
             shown, style = MaterialTheme.typography.bodySmall,
@@ -167,10 +167,13 @@ private fun DraftRow(draft: Draft, onClick: () -> Unit) {
     RowDivider()
 }
 
-/** A draft's state in a few words, and whether it needs the writer. */
-fun Draft.status(live: String = "live on the site"): Pair<String, Boolean> = when (state) {
+/**
+ * A draft's state in a few words, and whether it needs the writer. [waitingForVpn]: the writer
+ * asked for a VPN and there's none, so a queued post can't go out yet.
+ */
+fun Draft.status(live: String = "live on the site", waitingForVpn: Boolean = false): Pair<String, Boolean> = when (state) {
     PostState.Draft -> (if (editingPath != null) "Editing · not published yet" else "Draft") to false
-    PostState.Queued -> (if (destination == Destination.Delete) "Waiting to delete from the blog…" else "Waiting to publish…") to false
+    PostState.Queued -> if (waitingForVpn) "Waiting for your VPN…" to false else (if (destination == Destination.Delete) "Waiting to delete from the blog…" else "Waiting to publish…") to false
     PostState.Failed -> (if (destination == Destination.Delete) "Didn't delete: " else "Didn't publish: ") + error.orEmpty() to true
     PostState.Published -> if (targetPath?.startsWith("_drafts/") == true) "Saved to the blog's _drafts" to false else when (buildState) {
         BuildState.Building -> "Published · the site is rebuilding…" to false

@@ -218,6 +218,9 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         return preview.page(draft.title, ObsidianNote.linkPosts(draft.body, targets(linkable.value), container.blogs.postUrlHasBaseurl), dark)
     }
 
+    /** Asked for a VPN and there's none: a queued post says it waits for it. */
+    val waitingForVpn: StateFlow<Boolean> = container.waitingForVpn.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     /** The blog's posts a `[[link]]` can go to: ones the site builds, newest first. */
     val linkable: StateFlow<List<com.app.jekyllposter.data.CachedPost>> = container.blogs.cachedPosts
         .map { posts ->

@@ -9,7 +9,6 @@ import kotlinx.serialization.json.Json
 import okhttp3.FormBody
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
 
@@ -19,7 +18,7 @@ import java.io.IOException
  * hands over a token. Only the app's client ID is needed; it isn't a secret.
  */
 class DeviceFlow(
-    private val http: OkHttpClient,
+    private val http: okhttp3.Call.Factory,
     private val clientId: String,
     private val base: HttpUrl = "https://github.com/".toHttpUrl(),
 ) {

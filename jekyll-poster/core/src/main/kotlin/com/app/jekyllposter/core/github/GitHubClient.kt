@@ -18,7 +18,6 @@ import kotlinx.serialization.json.putJsonObject
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
@@ -30,7 +29,7 @@ import java.util.Base64
  * the calling coroutine is cancelled.
  */
 class GitHubClient(
-    private val http: OkHttpClient,
+    private val http: okhttp3.Call.Factory,
     private val token: String,
     private val apiBase: HttpUrl = "https://api.github.com/".toHttpUrl(),
 ) {

@@ -284,7 +284,8 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
         }
         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
             state.draft?.takeIf { !editable || it.error != null }?.let { draft ->
-                val (label, isError) = draft.status()
+                val waitingForVpn by viewModel.waitingForVpn.collectAsStateWithLifecycle()
+                val (label, isError) = draft.status(waitingForVpn = waitingForVpn)
                 val uri = LocalUriHandler.current
                 Surface(color = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {

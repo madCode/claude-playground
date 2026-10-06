@@ -23,6 +23,8 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 19: only connect through a VPN
+- [x] Links to posts with `[[`
 - [x] Cycle 18: posts from Obsidian
 - [x] Cycle 17: Blog & privacy, one page for what the blog shows beyond its posts
 - [x] A live check: publishes to and deletes from the sample blog from Actions

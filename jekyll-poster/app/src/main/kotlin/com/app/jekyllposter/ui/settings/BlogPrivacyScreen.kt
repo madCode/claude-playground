@@ -50,6 +50,19 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
+            Heading("Your connection")
+            Toggle(
+                "Only connect through a VPN",
+                when {
+                    !state.onlyThroughVpn -> "Off: the app reaches GitHub over whatever connection the phone has, and GitHub sees where you are."
+                    state.waitingForVpn -> "No VPN connection, so nothing is sent to GitHub. Posts you publish wait for it. " +
+                        "A VPN that leaves this app out (split tunneling), or carries only some addresses, counts as none."
+                    else -> "GitHub and your blog's site see your VPN's address, not yours. If the VPN drops, nothing is sent until it's back."
+                },
+                state.onlyThroughVpn,
+                viewModel::setOnlyThroughVpn,
+            )
+
             Heading("Your commits")
             Toggle(
                 "Commit with your no-reply email",

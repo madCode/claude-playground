@@ -1,7 +1,6 @@
 package com.app.jekyllposter.ui.editor
 
 import android.webkit.WebResourceResponse
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.ByteArrayInputStream
 
@@ -10,7 +9,7 @@ import java.io.ByteArrayInputStream
  * app's own HTTP client. The WebView's own requests carry its user agent, which names the phone's
  * model and Android version, to GitHub and to any site an image is on; these say only "okhttp".
  */
-class PreviewFetcher(private val client: OkHttpClient) {
+class PreviewFetcher(private val client: okhttp3.Call.Factory) {
     private companion object {
         const val MAX_BYTES = 15L * 1024 * 1024
     }

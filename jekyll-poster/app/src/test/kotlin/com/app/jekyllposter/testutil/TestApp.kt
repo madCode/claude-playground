@@ -19,6 +19,10 @@ fun testCipher() = AesGcmCipher { SecretKeySpec(ByteArray(32) { it.toByte() }, "
 class TestApp : PosterApp() {
     val github: FakeGitHub = FakeGitHub.sampleBlog()
     val published = mutableListOf<Long>()
+    val vpn = FakeVpn()
+
+    /** Queued posts the app started again, past WorkManager's backoff. */
+    val retried = java.util.concurrent.CopyOnWriteArrayList<Long>()
 
     /** When set, a publish request runs the publisher straight away, as the worker would. */
     var publishNow = true
@@ -51,6 +55,8 @@ class TestApp : PosterApp() {
                     root.walkTopDown().filter { it.isFile }.map { com.app.jekyllposter.data.VaultFile(it.relativeTo(root).path, android.net.Uri.fromFile(it)) }.toList(),
                 )
             },
+            vpn = vpn,
+            retryPublish = { retried += it },
             schedulePublish = { id ->
                 published += id
                 if (publishNow) kotlinx.coroutines.runBlocking { container.publisher.publish(id) }
