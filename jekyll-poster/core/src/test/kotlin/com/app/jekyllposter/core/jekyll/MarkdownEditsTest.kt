@@ -53,4 +53,11 @@ class MarkdownEditsTest {
         assertEquals("![](x)\n\n|", show(MarkdownEdits.insertBlock(edit("|"), "![](x)")))
         assertEquals("Para.\n\n![](x)\n\n|Next.", show(MarkdownEdits.insertBlock(edit("Para.\n\n|Next."), "![](x)")))
     }
+
+    @Test fun aPostLinkStartsAtTheCursorAndSearchesForTheSelection() {
+        assertEquals(Edit("As in [[", 8, 8), MarkdownEdits.postLink(Edit("As in ", 6, 6)))
+        assertEquals(Edit("As in [[April", 13, 13), MarkdownEdits.postLink(Edit("As in April", 6, 11)))
+        // A selection over lines isn't a title: [[ goes after it.
+        assertEquals(Edit("a\nb[[", 5, 5), MarkdownEdits.postLink(Edit("a\nb", 0, 3)))
+    }
 }

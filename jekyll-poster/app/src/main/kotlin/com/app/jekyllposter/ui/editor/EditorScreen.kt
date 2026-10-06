@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.AddLink
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.ui.text.input.TextFieldValue
 import com.app.jekyllposter.core.jekyll.Edit
@@ -37,6 +38,8 @@ import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -247,7 +250,12 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
         },
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
-            if (editable && !state.previewing && text != null) {
+            if (editable && !state.previewing && text != null) Column {
+                // Typing `[[` offers the blog's posts, as Obsidian offers notes.
+                val linkable by viewModel.linkable.collectAsStateWithLifecycle()
+                viewModel.openLink?.takeIf { bodyFocused }?.let { link ->
+                    LinkSuggestions(viewModel.postsToLink(link.query, linkable), link.query, anyPosts = linkable.isNotEmpty(), onPick = viewModel::linkTo)
+                }
                 FormatBar(
                     formatting = bodyFocused,
                     addingPhoto = state.addingPhoto,
@@ -389,6 +397,41 @@ private fun NoteDate(written: String, canDrop: Boolean, onDrop: () -> Unit) {
     }
 }
 
+/**
+ * Posts to complete a `[[link` with, above the keyboard; none says what happens to the link. At
+ * most three rows tall, scrolling for more, so the line being typed isn't covered, and set off by
+ * a rule for e-ink.
+ */
+@Composable
+private fun LinkSuggestions(posts: List<com.app.jekyllposter.data.CachedPost>, query: String, anyPosts: Boolean, onPick: (com.app.jekyllposter.data.CachedPost) -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.semantics { contentDescription = "Posts to link"; liveRegion = LiveRegionMode.Polite }) {
+            HorizontalDivider()
+            if (posts.isEmpty()) {
+                Text(
+                    when {
+                        !anyPosts -> "No posts on the blog to link yet."
+                        else -> "No post titled like that: it stays as written, [[$query]]."
+                    },
+                    Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            // Three rows tall, scrolling for more: taller, it would cover the line being typed.
+            Column(Modifier.heightIn(max = 168.dp).verticalScroll(rememberScrollState())) {
+                posts.forEach { post ->
+                    Column(
+                        Modifier.fillMaxWidth().clickable(onClickLabel = "Link to this post") { onPick(post) }.padding(horizontal = 16.dp, vertical = 8.dp),
+                    ) {
+                        Text(post.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        post.date?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** Asks for the Obsidian vault folder, once, so a shared note's photos can be found in it. */
 @Composable
 private fun VaultBanner(count: Int, onChoose: () -> Unit, onSkip: () -> Unit) {
@@ -491,6 +534,7 @@ private fun FormatBar(formatting: Boolean, addingPhoto: Boolean, onFormat: ((Edi
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "**") } }) { Icon(Icons.Default.FormatBold, "Bold") }
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "_") } }) { Icon(Icons.Default.FormatItalic, "Italic") }
             IconButton(enabled = formatting, onClick = { onFormat(MarkdownEdits::link) }) { Icon(Icons.Default.Link, "Link") }
+            IconButton(enabled = formatting, onClick = { onFormat(MarkdownEdits::postLink) }) { Icon(Icons.Default.AddLink, "Link to a post") }
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "## ") } }) { Icon(Icons.Default.Title, "Heading") }
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "- ") } }) { Icon(Icons.AutoMirrored.Filled.FormatListBulleted, "List") }
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "> ") } }) { Icon(Icons.Default.FormatQuote, "Quote") }

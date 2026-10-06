@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -95,17 +96,6 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
 
     /** The draft read from the database; a camera photo arriving first waits for it. */
     private val loading: Job
-
-    init {
-        loading = viewModelScope.launch {
-            val loaded = container.drafts.get(id)
-            // Applied at once, so the screen sees it even if no frame is pending to pick it up.
-            Snapshot.withMutableSnapshot { text = loaded }
-            loaded?.body?.let { bodySelection = TextRange(it.length) }
-            container.sharedPhotos.remove(id)?.forEach(::addPhoto)
-            container.sharedEmbeds.remove(id)?.let(::addEmbeds)
-        }
-    }
 
     /**
      * Finds a shared note's `![[photo]]` embeds in the Obsidian vault folder, and puts each photo
@@ -224,7 +214,41 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             // A photo not on the site yet is shown from the phone, inline: the preview has no file access.
             local[path]?.let(::File)?.takeIf { it.exists() }?.let(::dataUri) ?: (base + path)
         }
-        return preview.page(draft.title, draft.body, dark)
+        // As it will be published: `[[Post title]]` links made links (they go nowhere in the preview).
+        return preview.page(draft.title, ObsidianNote.linkPosts(draft.body, targets(linkable.value), container.blogs.postUrlHasBaseurl), dark)
+    }
+
+    /** The blog's posts a `[[link]]` can go to: ones the site builds, newest first. */
+    val linkable: StateFlow<List<com.app.jekyllposter.data.CachedPost>> = container.blogs.cachedPosts
+        .map { posts ->
+            val today = java.time.LocalDate.now(container.blogs.config.value.timezone ?: java.time.ZoneOffset.UTC).toString()
+            posts.filter { it.published && !com.app.jekyllposter.core.jekyll.PostPath(it.path).isDraft && (it.date?.let { d -> d <= today } ?: false) }
+                .sortedByDescending { it.date }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private fun targets(posts: List<com.app.jekyllposter.data.CachedPost>) = posts.map { ObsidianNote.LinkTarget(it.path, it.title) }
+
+    /** The `[[link` being typed at the cursor, if any: the screen lists posts to complete it with. */
+    val openLink: ObsidianNote.OpenLink?
+        get() = text?.body?.takeIf { bodySelection.collapsed }?.let { ObsidianNote.openLink(it, bodySelection.start) }
+
+    /** Of [posts], those whose title holds [query] and that a link can reach, newest first: 20 at most. */
+    fun postsToLink(query: String, posts: List<com.app.jekyllposter.data.CachedPost> = linkable.value): List<com.app.jekyllposter.data.CachedPost> {
+        val all = targets(posts)
+        return posts.filter { it.title.contains(query.trim(), ignoreCase = true) && ObsidianNote.linkTarget(ObsidianNote.LinkTarget(it.path, it.title), all) != null }.take(20)
+    }
+
+    /**
+     * Completes the `[[link` being typed with [post], written so it finds exactly that post; it
+     * becomes a link when the post is published.
+     */
+    fun linkTo(post: com.app.jekyllposter.data.CachedPost) {
+        val body = text?.body ?: return
+        val link = openLink ?: return
+        val target = ObsidianNote.linkTarget(ObsidianNote.LinkTarget(post.path, post.title), targets(linkable.value)) ?: return
+        val (next, cursor) = ObsidianNote.completeLink(body, bodySelection.start, link, target)
+        setBody(TextFieldValue(next, TextRange(cursor)))
     }
 
     /** Prepares a picked photo and adds its link to the end of the post. */
@@ -399,6 +423,14 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         viewModelScope.launch {
             photoJob?.join()
             saveJob?.cancel()
+            // `[[Post title]]` made links now, against the posts as they are: the text that's sent
+            // is then fixed, the same on every retry, and the writer sees what went out.
+            if (destination != Destination.Delete) {
+                text?.let { t ->
+                    val linked = ObsidianNote.linkPosts(t.body, targets(linkable.value), container.blogs.postUrlHasBaseurl)
+                    if (linked != t.body) Snapshot.withMutableSnapshot { text = t.copy(body = linked) }
+                }
+            }
             save()
             val draft = container.drafts.get(id) ?: return@launch
             if (draft.title.isBlank()) {
@@ -492,6 +524,19 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             container.drafts.get(id)?.images?.forEach { File(it.file).delete() }
             container.drafts.delete(id)
             flags.update { it.copy(closed = true) }
+        }
+    }
+
+    // Last in the class, so every property is set first: the launch runs at once on the main
+    // thread, and when the read doesn't suspend it reaches addEmbeds and addPhoto mid-constructor.
+    init {
+        loading = viewModelScope.launch {
+            val loaded = container.drafts.get(id)
+            // Applied at once, so the screen sees it even if no frame is pending to pick it up.
+            Snapshot.withMutableSnapshot { text = loaded }
+            loaded?.body?.let { bodySelection = TextRange(it.length) }
+            container.sharedPhotos.remove(id)?.forEach(::addPhoto)
+            container.sharedEmbeds.remove(id)?.let(::addEmbeds)
         }
     }
 }

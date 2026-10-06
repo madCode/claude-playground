@@ -46,6 +46,18 @@ object MarkdownEdits {
     }
 
     /**
+     * Starts a link to one of the blog's posts: `[[` at the cursor, which opens the list of posts
+     * to pick from. Selected text (on one line) comes after it, to search for.
+     */
+    fun postLink(e: Edit): Edit {
+        val s = e.selected.takeUnless { it.contains('\n') } ?: ""
+        val at = if (s.isEmpty()) e.end else e.start
+        val inserted = "[[" + s.trim()
+        val rest = if (s.isEmpty()) e.text.substring(at) else e.text.substring(e.end)
+        return Edit(e.text.substring(0, at) + inserted + rest, at + inserted.length, at + inserted.length)
+    }
+
+    /**
      * Makes the selection a link. A selected URL becomes the link's address with the cursor in its
      * text; other text becomes the link's text with the cursor where the address goes.
      */

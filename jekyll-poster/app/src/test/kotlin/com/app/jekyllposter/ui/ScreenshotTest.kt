@@ -255,4 +255,15 @@ class ScreenshotTest {
         val vm = EditorViewModel(c, id)
         shoot("16-note-from-obsidian", ready = { vm.text != null && vm.state.value.vaultPhotos == 1 }) { EditorScreen(vm) {} }
     }
+
+    @Test fun linkToAPost() {
+        val vm = editorWithDraft()
+        idleUntil { vm.postsToLink("").isNotEmpty() }
+        shoot("17-link-to-a-post", act = {
+            compose.onNode(androidx.compose.ui.test.hasTestTag("body")).performClick()
+            compose.waitForIdle()
+            val body = "Out past the harbour wall, as in [[wh"
+            vm.setBody(androidx.compose.ui.text.input.TextFieldValue(body, androidx.compose.ui.text.TextRange(body.length)))
+        }) { EditorScreen(vm) {} }
+    }
 }
