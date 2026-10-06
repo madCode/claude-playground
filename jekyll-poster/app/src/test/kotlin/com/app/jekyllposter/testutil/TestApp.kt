@@ -22,7 +22,7 @@ import kotlinx.coroutines.runBlocking
 fun testCipher() = AesGcmCipher { SecretKeySpec(ByteArray(32) { it.toByte() }, "AES") }
 
 /**
- * The app against a [FakeGitHub] serving the sample blog, with an in-memory database, a software
+ * The app against a [FakeGitHub] serving the sample blog, with a database of its own, a software
  * cipher in place of the Android Keystore (Robolectric has none), and publishing run in place of
  * WorkManager: [published] lists the posts the app asked to publish.
  */

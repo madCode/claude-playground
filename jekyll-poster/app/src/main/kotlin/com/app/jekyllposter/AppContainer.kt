@@ -6,6 +6,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.app.jekyllposter.core.github.DeviceFlow
 import com.app.jekyllposter.core.github.GitHubClient
+import com.app.jekyllposter.core.net.GatedCalls
+import com.app.jekyllposter.core.net.Vpn
+import com.app.jekyllposter.core.net.VpnGate
 import com.app.jekyllposter.core.obsidian.ObsidianNote
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.AccountStore
@@ -13,15 +16,12 @@ import com.app.jekyllposter.data.AesGcmCipher
 import com.app.jekyllposter.data.AndroidVpn
 import com.app.jekyllposter.data.BlogRepository
 import com.app.jekyllposter.data.Draft
-import com.app.jekyllposter.core.net.GatedCalls
 import com.app.jekyllposter.data.ImageImporter
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.data.PosterDatabase
 import com.app.jekyllposter.data.SecretCipher
 import com.app.jekyllposter.data.Settings
 import com.app.jekyllposter.data.VaultImages
-import com.app.jekyllposter.core.net.Vpn
-import com.app.jekyllposter.core.net.VpnGate
 import com.app.jekyllposter.data.accountDataStore
 import com.app.jekyllposter.data.listVault
 import com.app.jekyllposter.data.settingsDataStore

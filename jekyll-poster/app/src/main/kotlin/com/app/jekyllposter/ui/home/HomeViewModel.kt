@@ -23,6 +23,7 @@ import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.data.toSummary
 import com.app.jekyllposter.ui.catching
 import com.app.jekyllposter.ui.forWriter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -210,6 +211,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         // The text and its sha from the branch now, not the list's cache, which may be older.
         val file = try {
             container.blogs.blog(account).file(post.path)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             status.update { it.copy(error = e.forWriter()) }
             return null

@@ -36,7 +36,7 @@
 
 - **`:app`** (Android):
   - `data/`: `AccountStore` (DataStore, token sealed by `SecretCipher`), `Settings` (the
-    writer's privacy switches), Room (`Draft` for posts written on the phone, `CachedPost` for
+    writer's privacy switches and the Obsidian vault folder), Room (`Draft` for posts written on the phone, `CachedPost` for
     the blog's posts as last read; `PosterDatabase.create` with its migrations),
     `BlogRepository` (refreshing that cache, the taxonomy, the site's config and address, which
     posts a `[[link]]` can reach). `AndroidVpn` is `Vpn` from the phone's default network.

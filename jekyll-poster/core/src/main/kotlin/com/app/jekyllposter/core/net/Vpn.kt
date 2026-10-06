@@ -59,7 +59,6 @@ fun carriesEverything(routes: List<VpnRouteRule>): Boolean =
     carries(routes, ByteArray(4)) && carries(routes, byteArrayOf(-128, 0, 0, 0)) ||
         carries(routes, ByteArray(16)) && carries(routes, ByteArray(16).also { it[0] = -128 })
 
-
 /**
  * Makes connections through the VPN while [required] says so, and refuses them (with
  * [NoVpnException]) when there's none. Decided as each connection is made, not by checking

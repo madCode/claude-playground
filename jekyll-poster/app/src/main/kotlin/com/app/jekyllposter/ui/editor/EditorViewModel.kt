@@ -279,6 +279,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 edit { it.copy(images = it.images + DraftImage(sitePath, prepared.file.path)) }
                 format { MarkdownEdits.insertBlock(it, link) }
                 flags.update { it.copy(describing = it.describing + sitePath) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 flags.update { it.copy(photoError = "Couldn't add that photo: ${e.message ?: "it couldn't be read"}") }
             } finally {
