@@ -15,8 +15,33 @@ object Tracking {
         "vero_id", "wickedid", "rb_clickid", "s_cid",
     )
 
-    /** Hosts whose `si` parameter is a share id rather than part of the address. */
-    private val shareIdHosts = listOf("youtube.com", "youtu.be", "spotify.com")
+    /**
+     * Parameters that only some sites use to say who shared a link, and that elsewhere may be the
+     * page itself (`t` is a video's start time on YouTube): taken out only on those sites.
+     */
+    private val bySite = mapOf(
+        "youtube.com" to setOf("si"), "youtu.be" to setOf("si"), "spotify.com" to setOf("si"),
+        "x.com" to setOf("s", "t"), "twitter.com" to setOf("s", "t"),
+        "reddit.com" to setOf("share_id", "rdt"),
+        "tiktok.com" to setOf("_t", "_r", "is_from_webapp", "sender_device"),
+        "linkedin.com" to setOf("trk", "trackingid", "lipi"),
+        "substack.com" to setOf("r", "triedredirect"),
+    )
+
+    /** Sites with a domain in each country (amazon.de, google.co.uk). */
+    private val byBrand = mapOf(
+        "amazon" to setOf("tag", "ref", "ref_", "linkcode", "linkid"),
+        "google" to setOf("ved", "ei", "sca_esv", "sxsrf"),
+    )
+
+    /** `www.amazon.co.uk` and the like: the brand, then only a country's endings, not `amazon.example.org`. */
+    private val brandHost = Regex("""^(?:www\.|smile\.)?([a-z]+)\.(?:com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})$""")
+
+    private fun siteParams(host: String): Set<String> {
+        val site = bySite.entries.firstOrNull { (h, _) -> host == h || host.endsWith(".$h") }?.value.orEmpty()
+        val brand = brandHost.find(host)?.groupValues?.get(1)
+        return site + byBrand[brand].orEmpty()
+    }
 
     fun strip(text: String): String = url.replace(text) { match ->
         // Punctuation ending a sentence isn't part of the link before it.
@@ -37,8 +62,7 @@ object Tracking {
         val separator = if ("&amp;" in query) "&amp;" else "&"
         val kept = query.split(separator).filter { pair ->
             val name = pair.substringBefore('=').lowercase()
-            name.isNotEmpty() && !name.startsWith("utm_") && name !in anywhere &&
-                !(name == "si" && shareIdHosts.any { host == it || host.endsWith(".$it") })
+            name.isNotEmpty() && !name.startsWith("utm_") && name !in anywhere && name !in siteParams(host)
         }
         return base + (if (kept.isEmpty()) "" else "?" + kept.joinToString(separator)) + fragment
     }

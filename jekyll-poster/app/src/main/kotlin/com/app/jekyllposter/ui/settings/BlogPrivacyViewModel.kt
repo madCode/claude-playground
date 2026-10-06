@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.ensureActive
@@ -42,12 +43,17 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
         val settingZone: Boolean = false,
         /** The zone being set, while [settingZone]. */
         val zoneBeingSet: String? = null,
+        val settingUpAnonymous: Boolean = false,
         /** Set here and landed, shown while the blog as last read still has [zoneBefore]. */
         val committedZone: String? = null,
         val zoneBefore: String? = null,
         val visibility: Visibility = Visibility.Loading,
         val message: String? = null,
-    )
+    ) {
+        /** Every switch for writing anonymously is on. */
+        val anonymous: Boolean
+            get() = onlyThroughVpn && commitAsNoReply && plainCommitMessages && sendAtRandomTime && datesByDayOnly && removeTrackingCodes
+    }
 
     private val local = MutableStateFlow(State(phoneZone = phoneZone().id))
 
@@ -92,7 +98,10 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
             val author = runCatching { container.blogs.blog()?.user()?.noReplyAuthor }.getOrNull()
             ensureActive()
             if (author == null) {
-                local.update { it.copy(message = "Couldn't find your GitHub no-reply address just now. Try again.") }
+                // The VPN switch on and no VPN: say so, or "try again" would fail the same way.
+                val why = if (container.waitingForVpn.first()) "Connect your VPN, then try again: nothing goes to GitHub without it."
+                else "Try again."
+                local.update { it.copy(message = "Couldn't find your GitHub no-reply address just now. $why") }
                 return@launch
             }
             container.settings.setCommitAsNoReply(account.login, author)
@@ -103,6 +112,35 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
     fun setRemoveTrackingCodes(on: Boolean) = viewModelScope.launch { container.settings.setRemoveTrackingCodes(on) }
 
     fun setDatesByDayOnly(on: Boolean) = viewModelScope.launch { container.settings.setDatesByDayOnly(on) }
+
+    /**
+     * Turns on every switch for writing anonymously. The no-reply address is looked up first:
+     * with the VPN switch on and no VPN yet, it couldn't be.
+     */
+    fun writeAnonymously() {
+        if (local.value.settingUpAnonymous) return
+        local.update { it.copy(settingUpAnonymous = true) }
+        // In the screen's scope, as each switch is: left half way, the row still offers to finish.
+        viewModelScope.launch {
+            try {
+                with(container.settings) {
+                    setPlainCommitMessages(true)
+                    setSendAtRandomTime(true)
+                    setDatesByDayOnly(true)
+                    setRemoveTrackingCodes(true)
+                }
+                switching?.join()
+                // Read from the store, not the screen's state, which can lag a tap just made.
+                if (!container.settings.commitAsNoReply()) setCommitAsNoReply(true)
+                switching?.join()
+                // Only once the address is kept: a lookup can't go out once the VPN is required
+                // and there's none, and a retry would then fail the same way.
+                if (container.settings.commitAsNoReply()) setOnlyThroughVpn(true).join()
+            } finally {
+                local.update { it.copy(settingUpAnonymous = false) }
+            }
+        }
+    }
 
     fun setSendAtRandomTime(on: Boolean) = viewModelScope.launch { container.settings.setSendAtRandomTime(on) }
 

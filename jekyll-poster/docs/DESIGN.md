@@ -22,6 +22,9 @@ doesn't want to open a laptop and make a commit for every post.
 - Or a **fine-grained token**, pasted once. The app's link opens GitHub's form with Contents
   (read and write) and Actions (read) filled in; the writer picks the repository there.
 - Then the app lists the repositories the sign-in can write to, Pages sites first.
+- Before it opens GitHub, a line says to use a private tab signed in only to the blog's account,
+  for a writer blogging under another name (the browser is probably signed in to their own),
+  with **Copy the link instead** to paste there.
 - Tokens are sealed with an Android Keystore key and never backed up. Expiring tokens are
   renewed five minutes before they expire.
 
@@ -64,7 +67,9 @@ doesn't want to open a laptop and make a commit for every post.
   sites see no phone model or Android version.
 - Sharing text, a link or photos to the app starts a post with them, as shared. With **Remove
   tracking codes** on (Blog & privacy), links lose `utm_…`, `fbclid`, YouTube's `si` and the
-  like before the editor opens, so the writer sees them as they'll be published.
+  like before the editor opens, so the writer sees them as they'll be published. Codes only
+  some sites use for who shared (X's `s` and `t`, Reddit's `share_id`, Amazon's `tag`,
+  Google's `ved`) go only on those sites: elsewhere `t` may be a video's start time.
 - **Links to posts:** typing `[[`, or the toolbar's **Link to a post** (which types it, with any
   selected text as the search), lists the blog's posts above the keyboard (three rows tall, scrolling for more),
   narrowing as you type, as Obsidian lists notes; picking one writes `[[Its title]]`, or
@@ -224,6 +229,14 @@ doesn't want to open a laptop and make a commit for every post.
 
 Every default is what GitHub and Jekyll do on their own; each switch is one step more private.
 
+- **Set up for writing anonymously** turns on, after one confirm, every switch below that keeps
+  the writer's name, place and habits off the blog: the VPN, the no-reply address, plain
+  messages, the random time, day-only dates and tracking codes. With all of them on it says
+  "All set". The site's time zone is a commit, so it's left to the writer.
+  - The VPN switch goes on last, once the no-reply address is kept: with it on and no VPN, the
+    address couldn't be looked up. If the lookup fails, the VPN switch stays off and the row
+    offers to finish.
+
 - **Only connect through a VPN**, off. On, everything the app sends to GitHub and to the blog's
   site (sign-in, reading, publishing, the build watch, the preview's photos) goes through the
   phone's VPN, so they see its address, not the writer's.
@@ -267,6 +280,9 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
 - **Remove tracking codes** from shared links, off.
 - Whether the repository is public (so `_drafts` and earlier versions are readable), and that
   edits and deletes stay in its history, each linking to GitHub.
+- **Beyond the app**, what no switch can do: an account of its own, made with an email and name
+  that aren't the writer's; signing in in a private tab; free sites being public repositories;
+  a domain's seller knowing who paid; a theme's analytics seeing the writer on their own posts.
 
 ## Settings
 - The blog (repository and branch) and the site's address.
@@ -274,6 +290,12 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
 - **Switch blog** lists the repositories the current sign-in can write to.
 - **Sign out** keeps drafts on the phone for when that blog is signed in again.
 - **Obsidian:** the vault folder photos in shared notes come from; choose another or forget it.
+- Nothing written goes to the phone's cloud backup: drafts, photos and the privacy settings
+  would sit in the writer's Google account, beside the blog's. From Android 12, moving to a new
+  phone brings them; on 11 and older, the same rules cover both, so they stay behind. A phone
+  restored from a backup starts with every privacy switch off, the VPN one included, and its
+  first sign-in goes out before that switch can be turned on: connect a VPN first if that
+  matters.
 - The app's version, with the build's CI run and commit in a debug build. A tap or long press
   copies it, for a bug report.
 
