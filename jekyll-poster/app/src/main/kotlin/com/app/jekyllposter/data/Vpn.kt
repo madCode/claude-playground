@@ -91,8 +91,10 @@ class AndroidVpn(context: Context) : Vpn {
     private fun rules(network: Network?, capabilities: NetworkCapabilities?, links: LinkProperties?): List<VpnRouteRule>? {
         if (network == null || capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) != true || links == null) return null
         val rules = links.routes.map { route ->
-            // Routes that take traffic out of the VPN (excluded ranges) are told apart from Android 13.
-            val intoVpn = Build.VERSION.SDK_INT < 33 || route.type == RouteInfo.RTN_UNICAST
+            // Into the VPN: through its interface. Android blocks a family the VPN doesn't carry
+            // with an unreachable route that has none; from Android 13 the route also says so,
+            // as it does for excluded ranges.
+            val intoVpn = route.`interface` != null && (Build.VERSION.SDK_INT < 33 || route.type == RouteInfo.RTN_UNICAST)
             VpnRouteRule(route.destination.address.address, route.destination.prefixLength, intoVpn)
         }
         return rules.takeIf(::carriesEverything)
@@ -108,15 +110,17 @@ class AndroidVpn(context: Context) : Vpn {
 
             fun send() = trySend(rules(network, capabilities, links) != null)
 
+            // A new default network's capabilities come before its link properties: the missing
+            // one is asked for, or a VPN coming up would read as none for a moment.
             override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
-                if (network != this.network) links = null
+                if (network != this.network) links = connectivity.getLinkProperties(network)
                 this.network = network
                 this.capabilities = capabilities
                 send()
             }
 
             override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
-                if (network != this.network) capabilities = null
+                if (network != this.network) capabilities = connectivity.getNetworkCapabilities(network)
                 this.network = network
                 links = linkProperties
                 send()

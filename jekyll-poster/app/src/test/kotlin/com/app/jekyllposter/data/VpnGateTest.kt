@@ -62,7 +62,8 @@ class VpnGateTest {
         server.enqueue(MockResponse.Builder().body("slow").bodyDelay(500, TimeUnit.MILLISECONDS).build())
         server.enqueue(MockResponse.Builder().body("next").build())
         val busy = thread { calls.newCall(Request(server.url("/slow"))).execute().use { it.body.string() } }
-        Thread.sleep(200)
+        // Connected and asking, before the switch goes on.
+        server.takeRequest(5, TimeUnit.SECONDS)!!
         required = true
         calls.renew()
         busy.join()

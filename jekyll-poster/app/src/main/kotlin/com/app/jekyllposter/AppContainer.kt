@@ -92,7 +92,14 @@ class AppContainer(
      * before were maybe not through a VPN. Requests already under way finish as they started.
      */
     suspend fun setOnlyThroughVpn(only: Boolean) {
+        // Before and after: a connection made while the setting is being written goes on a
+        // client the second renew retires.
+        renewClients()
         settings.setOnlyThroughVpn(only)
+        renewClients()
+    }
+
+    private fun renewClients() {
         http.renew()
         if (previewClient.isInitialized()) previewClient.value.renew()
     }

@@ -119,22 +119,29 @@ class VpnTest {
         val network = connectivity.activeNetwork
         shadowOf(connectivity).setNetworkCapabilities(network, vpnCapabilities)
         // A VPN for its own range only, as Tailscale without an exit node: GitHub goes around it.
-        shadowOf(connectivity).setLinkProperties(network, links("100.64.0.0/10"))
+        shadowOf(connectivity).setLinkProperties(network, links("100.64.0.0/10" to "tun0"))
         assertNull(android.current())
-        shadowOf(connectivity).setLinkProperties(network, links("0.0.0.0/0"))
+        // Android's unreachable route, blocking the IPv6 the VPN doesn't carry, isn't a way in.
+        shadowOf(connectivity).setLinkProperties(network, links("100.64.0.0/10" to "tun0", "::/0" to null))
+        assertNull(android.current())
+        shadowOf(connectivity).setLinkProperties(network, links("0.0.0.0/0" to "tun0"))
         assertNotNull(android.current())
     }
 
-    /** Link properties with a route for each of [prefixes]; their constructors are hidden from apps. */
-    private fun links(vararg prefixes: String) = android.net.LinkProperties().also { links ->
-        for (p in prefixes) {
+    /**
+     * Link properties with a route for each prefix, through the interface named, or unreachable
+     * without one, as Android adds them. Their constructors are hidden from apps.
+     */
+    private fun links(vararg routes: Pair<String, String?>) = android.net.LinkProperties().also { links ->
+        ReflectionHelpers.callInstanceMethod<Any>(links, "setInterfaceName", ClassParameter.from(String::class.java, "tun0"))
+        for ((p, iface) in routes) {
             val prefix = ReflectionHelpers.callConstructor(android.net.IpPrefix::class.java, ClassParameter.from(String::class.java, p))
             val route = ReflectionHelpers.callConstructor(
                 android.net.RouteInfo::class.java,
                 ClassParameter.from(android.net.IpPrefix::class.java, prefix),
                 ClassParameter.from(java.net.InetAddress::class.java, null),
-                ClassParameter.from(String::class.java, null),
-                ClassParameter.from(Int::class.javaPrimitiveType, android.net.RouteInfo.RTN_UNICAST),
+                ClassParameter.from(String::class.java, iface),
+                ClassParameter.from(Int::class.javaPrimitiveType, if (iface != null) android.net.RouteInfo.RTN_UNICAST else android.net.RouteInfo.RTN_UNREACHABLE),
             )
             ReflectionHelpers.callInstanceMethod<Any>(links, "addRoute", ClassParameter.from(android.net.RouteInfo::class.java, route))
         }

@@ -30,6 +30,9 @@ Times are when each cycle landed, Pacific.
   connections between them); a VPN routing only some addresses passed as one; a SOCKS proxy
   went around it; the preview's `<link rel=preconnect>` and media fetched past the app; queued
   posts could wait hours after the VPN came back; the build watch gave up while waiting for it.
+- **The second look found** (fixed): before Android 13, the route Android adds to block IPv6
+  made a partial VPN look like a full one; a VPN coming up read as none for a moment; the
+  restart when the VPN is back could stop a publish mid-commit (it now runs beside it).
 - **Not possible:** controlling Mullvad from the app. Its connect actions aren't open to other
   apps, and Android only lets the VPN app or the writer start a VPN.
 

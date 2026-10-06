@@ -36,26 +36,23 @@ class PublishWorker(context: Context, params: WorkerParameters) : CoroutineWorke
     companion object {
         private const val KEY_ID = "draft"
 
-        fun enqueue(context: Context, id: Long) = enqueue(context, id, ExistingWorkPolicy.KEEP)
+        fun enqueue(context: Context, id: Long) = enqueue(context, id, "publish-$id")
 
         /**
-         * Starts a queued post's publish now, instead of when WorkManager's backoff would. Not if
-         * it's running: replacing it would stop it mid-commit.
+         * Starts a queued post's publish now, instead of when WorkManager's backoff would: a
+         * second worker beside the waiting one, which it never stops (that could be mid-commit).
+         * The publisher runs one publish at a time, and the later one finds the post sent.
          */
-        fun retryNow(context: Context, id: Long) {
-            val running = WorkManager.getInstance(context).getWorkInfosForUniqueWork("publish-$id").get()
-                .any { it.state == androidx.work.WorkInfo.State.RUNNING }
-            if (!running) enqueue(context, id, ExistingWorkPolicy.REPLACE)
-        }
+        fun retryNow(context: Context, id: Long) = enqueue(context, id, "publish-now-$id")
 
-        private fun enqueue(context: Context, id: Long, policy: ExistingWorkPolicy) {
+        private fun enqueue(context: Context, id: Long, name: String) {
             val request = OneTimeWorkRequestBuilder<PublishWorker>()
                 .setInputData(workDataOf(KEY_ID to id))
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
             // One publish per post at a time: a second tap on Publish doesn't start a second commit.
-            WorkManager.getInstance(context).enqueueUniqueWork("publish-$id", policy, request)
+            WorkManager.getInstance(context).enqueueUniqueWork(name, ExistingWorkPolicy.KEEP, request)
         }
     }
 }
