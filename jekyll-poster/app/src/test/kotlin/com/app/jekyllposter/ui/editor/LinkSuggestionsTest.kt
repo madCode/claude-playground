@@ -62,4 +62,12 @@ class LinkSuggestionsTest {
         val sent = runBlocking { c.drafts.list() }.single()
         assertEquals("After [What I read in April]({{ site.baseurl }}{% post_url 2025-04-20-reading-list %}) and [[Not yet]].", sent.body)
     }
+
+    @Test fun theToolbarButtonStartsALinkWithTheSelectionAsTheSearch() {
+        val editor = editor()
+        editor.setBody(TextFieldValue("As in April", TextRange(6, 11)))
+        editor.format(com.app.jekyllposter.core.jekyll.MarkdownEdits::postLink)
+        assertEquals("April", editor.openLink!!.query)
+        assertEquals(listOf("What I read in April"), editor.postsToLink("April").map { it.title })
+    }
 }

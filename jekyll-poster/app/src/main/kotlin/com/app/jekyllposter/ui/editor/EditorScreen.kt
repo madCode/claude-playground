@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.AddLink
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.ui.text.input.TextFieldValue
 import com.app.jekyllposter.core.jekyll.Edit
@@ -529,6 +530,7 @@ private fun FormatBar(formatting: Boolean, addingPhoto: Boolean, onFormat: ((Edi
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "**") } }) { Icon(Icons.Default.FormatBold, "Bold") }
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.wrap(it, "_") } }) { Icon(Icons.Default.FormatItalic, "Italic") }
             IconButton(enabled = formatting, onClick = { onFormat(MarkdownEdits::link) }) { Icon(Icons.Default.Link, "Link") }
+            IconButton(enabled = formatting, onClick = { onFormat(MarkdownEdits::postLink) }) { Icon(Icons.Default.AddLink, "Link to a post") }
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "## ") } }) { Icon(Icons.Default.Title, "Heading") }
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "- ") } }) { Icon(Icons.AutoMirrored.Filled.FormatListBulleted, "List") }
             IconButton(enabled = formatting, onClick = { onFormat { MarkdownEdits.linePrefix(it, "> ") } }) { Icon(Icons.Default.FormatQuote, "Quote") }
