@@ -251,6 +251,10 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                         if (draft.state == PostState.Published && draft.postUrl != null) {
                             TextButton(onClick = { uri.openUri(draft.postUrl) }) { Text("Open on the site") }
                         }
+                        // Not yet gone: back to a draft, so the writer can change it before it goes.
+                        if (draft.state == PostState.Queued && draft.destination != Destination.Delete) {
+                            TextButton(onClick = viewModel::takeBack) { Text("Edit") }
+                        }
                     }
                 }
             }

@@ -23,6 +23,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Edit a post that hasn't gone out yet
 - [x] Cycles 20–25: privacy for anonymous writers (3), simpler code (3)
 - [x] Cycle 19: only connect through a VPN
 - [x] Links to posts with `[[`

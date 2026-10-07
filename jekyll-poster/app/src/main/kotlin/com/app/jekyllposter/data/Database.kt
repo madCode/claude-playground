@@ -194,6 +194,14 @@ interface DraftDao {
     @Update
     suspend fun update(draft: Draft)
 
+    /**
+     * Takes a queued post back to a draft, if it's still queued and isn't a delete; the number of
+     * rows changed. Its name, date and the texts it sent stay, so a commit that landed unheard is
+     * still recognised when it's published again.
+     */
+    @Query("UPDATE drafts SET state = 'Draft', sendAfter = NULL, updatedAt = :now WHERE id = :id AND state = 'Queued' AND destination != 'Delete'")
+    suspend fun takeBack(id: Long, now: Long = System.currentTimeMillis()): Int
+
     /** Clears a queued post's random time, so it goes now; the number of rows changed. */
     @Query("UPDATE drafts SET sendAfter = NULL WHERE id = :id AND state = 'Queued'")
     suspend fun sendNow(id: Long): Int

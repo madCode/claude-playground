@@ -57,6 +57,12 @@ class PublishWorker(context: Context, params: WorkerParameters) : CoroutineWorke
          */
         fun sendNow(context: Context, id: Long) = enqueue(context, id, null, "send-now-$id", ExistingWorkPolicy.REPLACE)
 
+        /** Stops every publish waiting for post [id]. */
+        fun cancel(context: Context, id: Long) {
+            val work = WorkManager.getInstance(context)
+            listOf("publish-$id", "publish-now-$id", "send-now-$id").forEach(work::cancelUniqueWork)
+        }
+
         private fun enqueue(context: Context, id: Long, sendAfter: Long?, name: String, policy: ExistingWorkPolicy) {
             val delay = ((sendAfter ?: 0) - System.currentTimeMillis()).coerceAtLeast(0)
             val request = OneTimeWorkRequestBuilder<PublishWorker>()

@@ -461,10 +461,10 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                     flags.update { it.copy(frontMatterBlocked = problem) }
                     return@launch
                 }
-                // A failed post that never attempted a commit gets a fresh name and date: the old ones
-                // may be days stale. One that did keeps them, so a commit that landed unheard is
-                // recognised rather than published twice.
-                val again = draft.state == PostState.Failed && draft.editingPath == null && draft.sentShas.isEmpty()
+                // A failed or taken-back post that never attempted a commit gets a fresh name and
+                // date: the old ones may be days stale. One that did keeps them, so a commit that
+                // landed unheard is recognised rather than published twice.
+                val again = draft.editable && draft.editingPath == null && draft.sentShas.isEmpty()
                 // A random moment in the next few hours, so commit times don't trace the writer's
                 // day. Deleting a post is never delayed: the writer wants it gone.
                 val sendAfter = if ((destination ?: draft.destination) != Destination.Delete && container.settings.sendAtRandomTime()) {
@@ -477,8 +477,6 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                         state = PostState.Queued, error = null, updatedAt = System.currentTimeMillis(),
                         destination = destination ?: draft.destination,
                         blog = draft.blog ?: container.accounts.current()?.blogKey,
-                        // A failed post sent again later gets a fresh name and date: the old ones may
-                        // be days stale, or taken by now.
                         // A delete's path marker isn't a name to publish under.
                         targetPath = if (again || draft.destination == Destination.Delete) null else draft.targetPath,
                         publishDate = if (again) null else draft.publishDate,
@@ -525,6 +523,11 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             container.publishQueue.enqueue(id, null)
             flags.update { it.copy(closed = true) }
         }
+    }
+
+    /** Takes a post that hasn't gone out yet back to a draft, to edit before publishing again. */
+    fun takeBack() {
+        viewModelScope.launch { container.takeBack(id) }
     }
 
     /** Sends a post waiting for its random time now. In the app's scope: Back right after mustn't stop it. */
