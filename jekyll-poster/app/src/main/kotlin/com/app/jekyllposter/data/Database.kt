@@ -122,6 +122,9 @@ data class Draft(
     /** The writer can change it: published posts and ones on their way are read-only. */
     val editable: Boolean get() = state == PostState.Draft || state == PostState.Failed
 
+    /** Queued, and nothing sent yet: the writer can take it back to edit ([DraftDao.takeBack]). */
+    val canTakeBack: Boolean get() = state == PostState.Queued && destination != Destination.Delete && sentShas.isEmpty()
+
     /**
      * This row with the writer's text from [mine]: what the editor owns. The rest (publishing
      * state, names fixed for a commit) stays the stored row's, which the publisher changes.
@@ -195,11 +198,11 @@ interface DraftDao {
     suspend fun update(draft: Draft)
 
     /**
-     * Takes a queued post back to a draft, if it's still queued and isn't a delete; the number of
-     * rows changed. Its name, date and the texts it sent stay, so a commit that landed unheard is
-     * still recognised when it's published again.
+     * Takes a queued post back to a draft, if it's still queued, isn't a delete, and no commit was
+     * tried for it ([Draft.canTakeBack]); the number of rows changed. A tried commit may have
+     * landed unheard, and the post be live already.
      */
-    @Query("UPDATE drafts SET state = 'Draft', sendAfter = NULL, updatedAt = :now WHERE id = :id AND state = 'Queued' AND destination != 'Delete'")
+    @Query("UPDATE drafts SET state = 'Draft', sendAfter = NULL, updatedAt = :now WHERE id = :id AND state = 'Queued' AND destination != 'Delete' AND sentShas = '[]'")
     suspend fun takeBack(id: Long, now: Long = System.currentTimeMillis()): Int
 
     /** Clears a queued post's random time, so it goes now; the number of rows changed. */

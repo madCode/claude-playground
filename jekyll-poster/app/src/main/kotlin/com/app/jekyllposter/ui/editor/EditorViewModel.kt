@@ -66,9 +66,14 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         /** Photos in a shared Obsidian note, waiting for the writer to choose the vault folder. */
         val vaultPhotos: Int = 0,
         val closed: Boolean = false,
+        /** Edit was tapped on a queued post; it waits for any publish under way. */
+        val takingBack: Boolean = false,
     ) {
-        /** Published posts and ones on their way are read-only; edit the blog's copy instead. */
-        val editable: Boolean get() = draft?.editable == true
+        /**
+         * Published posts and ones on their way are read-only; edit the blog's copy instead. Still
+         * read-only while a take-back finishes, until the text is reloaded.
+         */
+        val editable: Boolean get() = draft?.editable == true && !takingBack
     }
 
     /**
@@ -527,7 +532,17 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
 
     /** Takes a post that hasn't gone out yet back to a draft, to edit before publishing again. */
     fun takeBack() {
-        viewModelScope.launch { container.takeBack(id) }
+        if (state.value.takingBack) return
+        flags.update { it.copy(takingBack = true) }
+        viewModelScope.launch {
+            try {
+                // From the stored row: a try that didn't get as far as a commit may have renamed
+                // its photos there, and this screen's copy would write the old names back.
+                container.takeBack(id)?.let { text = it }
+            } finally {
+                flags.update { it.copy(takingBack = false) }
+            }
+        }
     }
 
     /** Sends a post waiting for its random time now. In the app's scope: Back right after mustn't stop it. */

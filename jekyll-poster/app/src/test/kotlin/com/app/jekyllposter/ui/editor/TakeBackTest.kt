@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
+import com.app.jekyllposter.publish.Publisher
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
 import kotlinx.coroutines.Dispatchers
@@ -69,7 +70,7 @@ class TakeBackTest {
                 back
             }.await()
         }
-        assertFalse(taken)
+        assertNull(taken)
         assertEquals(PostState.Published, runBlocking { c.drafts.get(id)!! }.state)
         assertTrue(app.cancelled.isEmpty())
     }
@@ -78,31 +79,39 @@ class TakeBackTest {
         val id = runBlocking {
             c.drafts.insert(Draft(title = "Garden plans", editingPath = "_posts/2025-04-20-garden.md", state = PostState.Queued, destination = Destination.Delete))
         }
-        assertFalse(runBlocking { c.takeBack(id) })
+        assertNull(runBlocking { c.takeBack(id) })
         assertEquals(PostState.Queued, runBlocking { c.drafts.get(id)!! }.state)
     }
 
-    @Test fun aPostThatTriedToCommitKeepsItsNameWhenPublishedAgain() {
-        // An attempt that may have landed unheard: publishing again must update that file, not add one.
-        app.publishNow = false
-        val id = runBlocking {
-            app.signIn()
-            c.drafts.insert(
-                Draft(
-                    title = "Quiet", body = "Hello.", state = PostState.Queued,
-                    targetPath = "_posts/2026-10-04-quiet.md", publishDate = "2026-10-04T09:00:00-07:00", sentShas = listOf("abc"),
-                ),
-            )
-        }
+    @Test fun aNewPostWhoseCommitMayHaveLandedIsNotTakenBack() = runBlocking {
+        app.signIn()
+        val id = c.drafts.insert(Draft(title = "Once", body = "x", state = PostState.Queued))
+        // The commit lands, but its answer is lost: the post is live, and still queued here.
+        app.github.loseNextRefAnswer = true
+        assertEquals(Publisher.Outcome.Retry, c.publisher.publish(id))
+        assertFalse(c.drafts.get(id)!!.canTakeBack)
+        assertNull(c.takeBack(id))
+        assertEquals(PostState.Queued, c.drafts.get(id)!!.state)
+    }
+
+    @Test fun anEditWhoseCommitMayHaveLandedIsNotTakenBack() = runBlocking {
+        app.signIn()
+        c.blogs.refresh()
+        val path = "_drafts/garden-plans.md"
+        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        val id = c.drafts.insert(Draft(title = "Garden plans", body = "Beans.", editingPath = path, baseSha = sha, state = PostState.Queued, destination = Destination.Drafts))
+        app.github.loseNextRefAnswer = true
+        assertEquals(Publisher.Outcome.Retry, c.publisher.publish(id))
+        assertNull(c.takeBack(id))
+    }
+
+    @Test fun theTextIsReloadedFromTheStoredRow() {
+        // A try that stopped before its commit can have renamed the post's photos in the stored row.
+        val id = runBlocking { c.drafts.insert(Draft(title = "Quiet", body = "Old.", state = PostState.Queued)) }
         val editor = open(id)
+        runBlocking { c.drafts.update(c.drafts.get(id)!!.copy(body = "Renamed.")) }
         editor.takeBack()
         idleUntil { editor.state.value.editable }
-        editor.setBody(androidx.compose.ui.text.input.TextFieldValue("Hello again."))
-        editor.publish()
-        idleUntil(10_000) { editor.state.value.closed }
-        val draft = runBlocking { c.drafts.get(id)!! }
-        assertEquals(PostState.Queued, draft.state)
-        assertEquals("_posts/2026-10-04-quiet.md", draft.targetPath)
-        assertEquals("2026-10-04T09:00:00-07:00", draft.publishDate)
+        assertEquals("Renamed.", editor.text!!.body)
     }
 }

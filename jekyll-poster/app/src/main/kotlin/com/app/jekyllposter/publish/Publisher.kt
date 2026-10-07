@@ -142,6 +142,9 @@ class Publisher(
         val date = doc.string("date")?.let { parseJekyllDate(it, siteZone(index)) }
             ?: PostPath(path).date?.atStartOfDay(siteZone(index))
         val kind = if (PostPath(path).isDraft) "draft" else "post"
+        // Recorded before the commit, as for a new post: it marks that one was tried, which may
+        // have landed, so the post can't be taken back to edit.
+        drafts.update(ready.copy(sentShas = (ready.sentShas + gitBlobSha(doc.render())).distinct()))
         return Plan.Commit(
             ready, path, "Update $kind: ${ready.title}",
             listOf(FileChange.text(path, doc.render())) + photos.changes,

@@ -175,10 +175,12 @@ doesn't want to open a laptop and make a commit for every post.
   this post is read from or sent to GitHub before then (opening the app still reads the blog). **Send now** in the editor sends it at once. The moment
   is kept with the post, so a restart doesn't pick again. Deleting is never delayed.
 - A post that hasn't gone out yet (waiting for its time, a connection or the VPN) opens
-  read-only with **Edit**, which takes it back to a draft: change it, then Publish again (with
-  a new random time, if that's on). Taking back waits for a publish already under way, so it
-  never stops one mid-commit; if the post went out meanwhile, it stays published. A queued
-  delete can't be taken back.
+  read-only with **Stop and edit**, which takes it back to a draft: change it, then Publish
+  again (with a new random time, if that's on).
+  - It waits for a publish already under way, so it never stops one mid-commit; a post that
+    went out meanwhile stays published.
+  - Once a commit has been tried, the button goes: that try may have landed unheard, and the
+    post be live already. So does a queued delete's.
 - The first Publish asks to send notifications; publishing goes ahead either way.
 - A new post becomes `_posts/<date>-<slug>.md`, dated in the site's `timezone` when
   `_config.yml` sets one (`2026-10-04 22:15:00 -0700`): the same day Jekyll will give it, and no
