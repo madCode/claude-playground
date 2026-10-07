@@ -423,6 +423,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     private suspend fun save() = saving.withLock { withContext(NonCancellable) { saveNow() } }
 
     private suspend fun saveNow() {
+        // This screen's text may be older than the row a take-back is reloading it from.
+        if (state.value.takingBack) return
         val mine = text ?: return
         val stored = container.drafts.get(id) ?: return
         if (!stored.editable) return
@@ -537,8 +539,10 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         viewModelScope.launch {
             try {
                 // From the stored row: a try that didn't get as far as a commit may have renamed
-                // its photos there, and this screen's copy would write the old names back.
-                container.takeBack(id)?.let { text = it }
+                // its photos there, and this screen's copy would write the old names back. Also
+                // when the post failed meanwhile, which makes it editable too.
+                val row = container.takeBack(id) ?: container.drafts.get(id)
+                if (row?.editable == true) text = row
             } finally {
                 flags.update { it.copy(takingBack = false) }
             }

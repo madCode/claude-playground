@@ -32,7 +32,7 @@ Times are when each cycle landed, Pacific.
   without its edits, and an edit failed as "changed on GitHub". Now only a post with no commit
   tried can be taken back; edits record what they send, as new posts did. Also: the editor's
   copy of the text could be older than the stored row (photos renamed by a try), so it's
-  reloaded; and the button is disabled while it waits.
+  reloaded, and nothing is saved until it is; and the button is disabled while it waits.
 - **Left:** a Send now or VPN-back retry racing a take-back can start a worker that finds a
   draft and does nothing.
 
