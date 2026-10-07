@@ -4,7 +4,8 @@ An Android app for writing posts on your phone and publishing them to a Jekyll b
 Pages, without making commits by hand. Read `docs/DESIGN.md` before changing behaviour and
 `docs/ARCHITECTURE.md` for how the code fits together; `docs/BACKLOG.md` is the running plan
 and `docs/DEVLOG.md` the log of what changed and why. It lives in `jekyll-poster/` of the
-claude-playground repository; run commands from this folder.
+claude-playground repository; run commands from this folder. The rules every project shares
+(comments, tests, docs, PRs and their review) are in the root CLAUDE.md.
 
 ## Layout
 
@@ -40,8 +41,3 @@ version, adding a Migration with a `MigrationTest` case, and committing the new 
 
 The repository is public. Never commit anyone's own data: no tokens, blog contents or accounts.
 Tests and screenshots use the sample blog only.
-
-## Comments, tests and docs
-
-As in newspaperss: comments say why, not what; tests catch plausible regressions and test
-behaviour; a behaviour change updates DESIGN.md in the same change; docs stay short and plain.
