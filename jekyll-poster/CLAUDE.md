@@ -9,10 +9,12 @@ claude-playground repository; run commands from this folder.
 ## Layout
 
 - `:core`: pure Kotlin/JVM, no Android. Front matter, Jekyll's conventions (paths, slugs,
-  categories), the GitHub client and the blog index. Test with plain JUnit. Its test fixtures
-  hold `FakeGitHub`, an in-memory GitHub the app's tests use too.
+  categories, the preview), the GitHub client, the VPN gate (`net/`), Obsidian notes, tracking
+  codes and the blog index. Test with plain JUnit. Its test fixtures hold `FakeGitHub`, a
+  MockWebServer serving one repository, and `FakeVpn`; the app's tests use both.
 - `:app`: Android, Jetpack Compose, Room, WorkManager, DataStore. Manual DI through
-  `AppContainer`. Test with Robolectric against `TestApp` (fake GitHub, in-memory database).
+  `AppContainer`. Test with Robolectric against `TestApp` (fake GitHub and VPN, a database file
+  of its own, publishing at once); `TestApp.signIn()` signs in.
 - `sample-blog/`: a small Jekyll blog with every front matter shape the app reads. It is the
   tests' fixture and the blog to try the app on.
 
