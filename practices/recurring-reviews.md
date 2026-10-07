@@ -12,7 +12,12 @@ diff shows. Each goes the same way:
 
 ## Security and supply chain
 
-Before a project's first release, then before each release or every 20–30 cycles.
+Before a project's first release, then before each release or every 20–30 cycles. Use OWASP's
+mobile checklist ([MASVS](https://mas.owasp.org/MASVS/)) as the list of areas, so nothing is
+skipped: storage, crypto, network, platform, code, privacy. Two tools do part of it on every
+push and are worth adding to CI: [OpenSSF Scorecard](https://github.com/ossf/scorecard) (its
+code review and branch protection checks will score low for a solo owner; that's expected) and
+[zizmor](https://github.com/zizmorcore/zizmor) for the workflows.
 
 - Hostile input: documents that expand (XML entities), regexes that slow down badly, huge
   files and images, links and intents that leave the app.
@@ -20,6 +25,8 @@ Before a project's first release, then before each release or every 20–30 cycl
 - CI: what each job can write, whether checkouts keep a token, actions pinned to a commit.
 - Signing: keys in the repository, and who can sign a build that installs over a tester's.
 - Dependencies: unused ones, and how updates arrive.
+- Android: cleartext traffic off, components not exported unless they must be, `content://`
+  not `file://`, as few permissions as will do.
 
 ## Architecture and test health
 
@@ -32,4 +39,4 @@ tidying ([#163–#166](https://github.com/madCode/newspaperss/pulls?q=is%3Apr+au
 - Platform lifecycle: rotation, the app killed and restored, work that outlives a screen.
 - Tests that can never fail, waits that flake under load, copied test helpers, coverage that
   counts generated code.
-- Docs checked against the code.
+- Docs and the CLAUDE.md files checked against the code: stale, contradictory or long rules cut.
