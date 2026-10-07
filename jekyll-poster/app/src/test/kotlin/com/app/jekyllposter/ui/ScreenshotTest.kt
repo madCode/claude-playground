@@ -275,6 +275,20 @@ class ScreenshotTest {
         }
     }
 
+    @Test fun queuedPost() {
+        signIn()
+        val id = runBlocking {
+            c.drafts.insert(
+                Draft(
+                    title = "Sourdough, round five", body = "The starter finally doubled overnight.", tags = listOf("baking"),
+                    state = PostState.Queued, sendAfter = System.currentTimeMillis() + 7_200_000,
+                ),
+            )
+        }
+        val vm = EditorViewModel(c, id)
+        shoot("20-queued-post", ready = { vm.text != null && vm.state.value.draft != null }) { EditorScreen(vm) {} }
+    }
+
     @Test fun noteFromObsidian() {
         signIn()
         val note = ObsidianNote.convert(

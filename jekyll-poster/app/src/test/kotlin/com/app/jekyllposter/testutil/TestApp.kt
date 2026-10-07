@@ -40,6 +40,9 @@ class TestApp : PosterApp() {
     /** Posts sent at once with Send now. */
     val sentNow = CopyOnWriteArrayList<Long>()
 
+    /** Posts whose waiting publishes were stopped. */
+    val cancelled = CopyOnWriteArrayList<Long>()
+
     /** Signs in to the sample blog, as most tests begin. */
     suspend fun signIn() = container.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
 
@@ -89,6 +92,10 @@ class TestApp : PosterApp() {
 
                 override fun sendNow(id: Long) {
                     sentNow += id
+                }
+
+                override fun cancel(id: Long) {
+                    cancelled += id
                 }
             },
         )

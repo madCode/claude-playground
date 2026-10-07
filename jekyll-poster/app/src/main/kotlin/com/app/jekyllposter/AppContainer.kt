@@ -123,6 +123,18 @@ class AppContainer(
         if (previewClient.isInitialized()) previewClient.value.renew()
     }
 
+    /**
+     * Takes queued post [id] back to a draft to edit, if no commit was tried for it: the row
+     * taken back, or null. Between publishes, so it can't be taken back mid-commit and land anyway.
+     */
+    suspend fun takeBack(id: Long): Draft? = publisher.betweenPublishes {
+        if (drafts.takeBack(id) == 0) return@betweenPublishes null
+        // Cancelled under the lock too: a Publish tapped right after queues work that must stay.
+        // A worker already started finds a draft and sends nothing.
+        publishQueue.cancel(id)
+        drafts.get(id)
+    }
+
     /** Sends queued post [id] now, not at the random time it was given. */
     suspend fun sendNow(id: Long) {
         // One column, and only while queued: a whole-row write could undo a publish landing now.

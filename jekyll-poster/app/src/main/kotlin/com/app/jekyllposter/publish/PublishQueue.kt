@@ -12,10 +12,14 @@ interface PublishQueue {
 
     /** The writer's Send now. */
     fun sendNow(id: Long)
+
+    /** Stops [id]'s waiting publishes: the writer took it back to edit. */
+    fun cancel(id: Long)
 }
 
 class WorkManagerQueue(private val context: Context) : PublishQueue {
     override fun enqueue(id: Long, sendAfter: Long?) = PublishWorker.enqueue(context, id, sendAfter)
     override fun retryNow(id: Long, sendAfter: Long?) = PublishWorker.retryNow(context, id, sendAfter)
     override fun sendNow(id: Long) = PublishWorker.sendNow(context, id)
+    override fun cancel(id: Long) = PublishWorker.cancel(context, id)
 }

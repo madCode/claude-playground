@@ -19,6 +19,23 @@ Times are when each cycle landed, Pacific.
 - **Waiting on you:** the GitHub App for Sign in with GitHub ([how](GITHUB_APP.md)); the
   Android SDK in the environment's setup script.
 
+## Tue 6 Oct
+
+### Edit a post that hasn't gone out yet
+- **Asked for:** a post waiting for its random time opened read-only, with no way to change it
+  before it went out.
+- **Changed:** a queued post's banner has **Stop and edit**, which takes it back to a draft. It
+  waits for any publish under way, under the publisher's lock, so it can't stop one mid-commit;
+  a post that went out meanwhile stays published. Publishing again picks a new random time.
+- **The review caught:** a post whose commit landed unheard (still queued, already live) could
+  be taken back and called a draft; republished, a moved Jekyll draft was marked published
+  without its edits, and an edit failed as "changed on GitHub". Now only a post with no commit
+  tried can be taken back; edits record what they send, as new posts did. Also: the editor's
+  copy of the text could be older than the stored row (photos renamed by a try), so it's
+  reloaded, and nothing is saved until it is; and the button is disabled while it waits.
+- **Left:** a Send now or VPN-back retry racing a take-back can start a worker that finds a
+  draft and does nothing.
+
 ## Day 1 · Sun 4 Oct
 
 ### Cycle 25: simpler code, 3 of 3 (VPN in core, cancellation, docs)

@@ -66,9 +66,14 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         /** Photos in a shared Obsidian note, waiting for the writer to choose the vault folder. */
         val vaultPhotos: Int = 0,
         val closed: Boolean = false,
+        /** Edit was tapped on a queued post; it waits for any publish under way. */
+        val takingBack: Boolean = false,
     ) {
-        /** Published posts and ones on their way are read-only; edit the blog's copy instead. */
-        val editable: Boolean get() = draft?.editable == true
+        /**
+         * Published posts and ones on their way are read-only; edit the blog's copy instead. Still
+         * read-only while a take-back finishes, until the text is reloaded.
+         */
+        val editable: Boolean get() = draft?.editable == true && !takingBack
     }
 
     /**
@@ -418,6 +423,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     private suspend fun save() = saving.withLock { withContext(NonCancellable) { saveNow() } }
 
     private suspend fun saveNow() {
+        // This screen's text may be older than the row a take-back is reloading it from.
+        if (state.value.takingBack) return
         val mine = text ?: return
         val stored = container.drafts.get(id) ?: return
         if (!stored.editable) return
@@ -461,10 +468,10 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                     flags.update { it.copy(frontMatterBlocked = problem) }
                     return@launch
                 }
-                // A failed post that never attempted a commit gets a fresh name and date: the old ones
-                // may be days stale. One that did keeps them, so a commit that landed unheard is
-                // recognised rather than published twice.
-                val again = draft.state == PostState.Failed && draft.editingPath == null && draft.sentShas.isEmpty()
+                // A failed or taken-back post that never attempted a commit gets a fresh name and
+                // date: the old ones may be days stale. One that did keeps them, so a commit that
+                // landed unheard is recognised rather than published twice.
+                val again = draft.editable && draft.editingPath == null && draft.sentShas.isEmpty()
                 // A random moment in the next few hours, so commit times don't trace the writer's
                 // day. Deleting a post is never delayed: the writer wants it gone.
                 val sendAfter = if ((destination ?: draft.destination) != Destination.Delete && container.settings.sendAtRandomTime()) {
@@ -477,8 +484,6 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                         state = PostState.Queued, error = null, updatedAt = System.currentTimeMillis(),
                         destination = destination ?: draft.destination,
                         blog = draft.blog ?: container.accounts.current()?.blogKey,
-                        // A failed post sent again later gets a fresh name and date: the old ones may
-                        // be days stale, or taken by now.
                         // A delete's path marker isn't a name to publish under.
                         targetPath = if (again || draft.destination == Destination.Delete) null else draft.targetPath,
                         publishDate = if (again) null else draft.publishDate,
@@ -524,6 +529,23 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             if (!queued) return@launch
             container.publishQueue.enqueue(id, null)
             flags.update { it.copy(closed = true) }
+        }
+    }
+
+    /** Takes a post that hasn't gone out yet back to a draft, to edit before publishing again. */
+    fun takeBack() {
+        if (state.value.takingBack) return
+        flags.update { it.copy(takingBack = true) }
+        viewModelScope.launch {
+            try {
+                // From the stored row: a try that didn't get as far as a commit may have renamed
+                // its photos there, and this screen's copy would write the old names back. Also
+                // when the post failed meanwhile, which makes it editable too.
+                val row = container.takeBack(id) ?: container.drafts.get(id)
+                if (row?.editable == true) text = row
+            } finally {
+                flags.update { it.copy(takingBack = false) }
+            }
         }
     }
 
