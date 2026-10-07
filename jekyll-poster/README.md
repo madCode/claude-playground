@@ -16,9 +16,14 @@ tells you when GitHub Pages has rebuilt the site.
 - **Front matter when you want it.** `image:`, `excerpt:` and the rest as YAML, checked before
   it's published.
 - **Private by design.** Photos (picked, shared or taken) are stripped of EXIF and named for
-  the post, and dates use the site's time zone. One page sets the rest: a no-reply commit email,
-  the site's time zone, tracking codes off shared links. No analytics:
-  the app talks to GitHub, and the preview to the sites a post's images come from.
+  the post, and dates use the site's time zone. No analytics: the app talks to GitHub, and the
+  preview to the sites a post's images come from.
+- **Easy to write anonymously.** One page, Blog & privacy, has a switch for each of: only
+  connecting through a VPN, a no-reply commit email, plain commit messages, dates by the day,
+  sending at a random time and tracking codes off shared links. One button turns them all on.
+  It also sets the site's time zone, and says what no switch can do.
+- **From Obsidian.** Share a note and it becomes a post: comments and private keys left out,
+  `[[links]]` to other posts, embedded photos from the vault. Type `[[` to link a post.
 - **A bit of fun.** It looks like a risograph zine: cream paper, fluoro inks, a stamp of a
   New post button, and every category in its own colour.
 - **Preview, and a nudge when it's live.** See the post as a page before publishing; get a

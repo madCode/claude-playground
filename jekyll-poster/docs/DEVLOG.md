@@ -7,16 +7,17 @@ Times are when each cycle landed, Pacific.
 
 ## Status
 
-- **Last night:** night 1 built the app from nothing: sign-in two ways, the blog's own
-  categories, writing with a toolbar, photos without their location (picked, shared or taken),
-  publishing exactly once, following the Pages build, safe edits and deletes, front matter,
-  `_drafts`, a New post shortcut, and a zine look picked over four design rounds. Every code PR
-  had a fresh-eyes review; 90 findings, all but one fixed.
-- **Tried on a real blog:** a post from the phone landed on the sample blog
-  ([madCode/sample-blog](https://github.com/madCode/sample-blog), live on Pages). A live check
+- **Built so far:** night 1 built the app from nothing: sign-in two ways, the blog's own
+  categories, writing with a toolbar, photos without their location, publishing exactly once,
+  following the Pages build, safe edits and deletes, front matter, `_drafts`, a New post
+  shortcut, search and a zine look. Day 1 added the tag picker, Blog & privacy, posts from
+  Obsidian, `[[` links to posts, only connecting through a VPN, a one-tap setup for writing
+  anonymously, and three passes simplifying the code. Every code PR had a fresh-eyes review.
+- **Tried on a real blog:** posts from the phone land on the sample blog
+  ([madCode/sample-blog](https://github.com/madCode/sample-blog), live on Pages). The live check
   workflow publishes and deletes one there through the app's own GitHub client.
-- **Waiting on you:** a `SAMPLE_BLOG_TOKEN` Actions secret for the live check; the GitHub App for Sign in with GitHub
-  ([how](GITHUB_APP.md)); the Android SDK in the environment's setup script.
+- **Waiting on you:** the GitHub App for Sign in with GitHub ([how](GITHUB_APP.md)); the
+  Android SDK in the environment's setup script.
 
 ## Day 1 · Sun 4 Oct
 
