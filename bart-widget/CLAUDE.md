@@ -2,7 +2,9 @@
 
 An Android widget with BART departures for starred stations. Read `docs/DESIGN.md` before
 changing behaviour; `docs/DEVLOG.md` is the log of what changed and why. It lives in
-`bart-widget/` of the claude-playground repository; run commands from this folder.
+`bart-widget/` of the claude-playground repository; run commands from this folder. The rules
+every project shares (comments, tests, docs, privacy, PRs and their review) are in the root
+CLAUDE.md.
 
 The point of the app is that it never guesses a station: no location, and a tap on a station
 opens that station. Keep it that way. The widget shows wall-clock times, since it redraws rarely.
@@ -29,9 +31,3 @@ RemoteViewsService, which Robolectric can't bind, so the widget PNG shows only i
 JDK 21 and the Android SDK (compileSdk 37) are required; `../jekyll-poster/tools/install-android-sdk.sh`
 installs the SDK for a cloud session. CI publishes main's debug APK to the `bart-widget-debug`
 release.
-
-## Comments, tests and docs
-
-Comments say why, not what; tests catch plausible regressions and test behaviour, end to end
-where they can; a behaviour change updates DESIGN.md in the same change; docs stay short and plain.
-The repository is public: no one's own data in commits.
