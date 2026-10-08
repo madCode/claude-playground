@@ -28,6 +28,12 @@ class BartApiTest {
     }
 
     @Test
+    fun aTimeoutOrAnUnreadableReplySaySo() {
+        assertEquals("BART didn't answer", whyFailed(java.net.SocketTimeoutException("Read timed out")))
+        assertEquals("Couldn't read BART's times", whyFailed(runCatching { parseEtd("<html>Down for maintenance</html>", 0) }.exceptionOrNull()!!))
+    }
+
+    @Test
     fun anUnreachableServerFails() = runTest {
         val dead = BartApi("http://127.0.0.1:1")
         assertEquals("No connection", whyFailed(runCatching { dead.departures("MONT", 0) }.exceptionOrNull()!!))

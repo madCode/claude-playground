@@ -19,7 +19,8 @@ import kotlinx.coroutines.launch
  * The widget's Refresh, run as a foreground service. A widget tap reaches the app in the
  * background, where Data Saver, battery restrictions and power saving can cut off its network;
  * a foreground service keeps network access. Android lets an app start one from a widget tap.
- * Android holds back the notification for the first few seconds, so a normal refresh shows none.
+ * From Android 12 the notification waits a few seconds, so a normal refresh shows none; before
+ * that it flashes in the status bar.
  */
 class RefreshService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -28,7 +29,12 @@ class RefreshService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, notification(), type)
+        try {
+            ServiceCompat.startForeground(this, NOTIFICATION_ID, notification(), type)
+        } catch (e: RuntimeException) {
+            // Refused here rather than at start (Android 15's daily dataSync allowance, say):
+            // refresh anyway, in the background, rather than crash.
+        }
         scope.launch {
             try {
                 container.refresher.refresh()
@@ -39,6 +45,9 @@ class RefreshService : Service() {
         }
         return START_NOT_STICKY
     }
+
+    // Android 15+ calls this if dataSync runs past its daily allowance; not stopping crashes the app.
+    override fun onTimeout(startId: Int, fgsType: Int) = stopSelf()
 
     override fun onDestroy() {
         scope.cancel()
@@ -62,12 +71,14 @@ class RefreshService : Service() {
 
         /** Refreshes from a widget tap; if Android won't start the service, refreshes here instead. */
         suspend fun start(context: Context) {
-            try {
-                context.startForegroundService(Intent(context, RefreshService::class.java))
+            // Android 12+ refuses with ForegroundServiceStartNotAllowedException, an
+            // IllegalStateException; an app with battery set to Restricted is refused with null.
+            val started = try {
+                context.startForegroundService(Intent(context, RefreshService::class.java)) != null
             } catch (e: IllegalStateException) {
-                // ForegroundServiceStartNotAllowedException, an IllegalStateException, on Android 12+.
-                context.container.refresher.refresh()
+                false
             }
+            if (!started) context.container.refresher.refresh()
         }
     }
 }

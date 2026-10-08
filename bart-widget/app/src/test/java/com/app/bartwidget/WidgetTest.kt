@@ -190,13 +190,32 @@ class WidgetTest {
     }
 
     @Test
-    fun ifAndroidWontStartTheServiceRefreshStillFetches() = runBlocking {
+    fun ifAndroidRefusesTheServiceRefreshStillFetches() = runBlocking {
         app.container.store.toggle("DUBL")
         val refused = object : ContextWrapper(app) {
             override fun startForegroundService(service: Intent): ComponentName = throw IllegalStateException("not allowed")
         }
         RefreshAction().onAction(refused, object : GlanceId {}, actionParametersOf())
         assertEquals(listOf("DUBL"), app.bart.requests)
+    }
+
+    @Test
+    fun ifAndroidSilentlyDropsTheServiceRefreshStillFetches() = runBlocking {
+        app.container.store.toggle("DUBL")
+        val dropped = object : ContextWrapper(app) {
+            override fun startForegroundService(service: Intent): ComponentName? = null
+        }
+        RefreshAction().onAction(dropped, object : GlanceId {}, actionParametersOf())
+        assertEquals(listOf("DUBL"), app.bart.requests)
+    }
+
+    // Android 14+ crashes the app at startForeground without these; Robolectric doesn't check.
+    @Test
+    fun theServiceIsDeclaredAsDataSyncWithItsPermissions() {
+        val info = app.packageManager.getServiceInfo(ComponentName(app, RefreshService::class.java), 0)
+        assertEquals(android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC, info.foregroundServiceType)
+        val requested = app.packageManager.getPackageInfo(app.packageName, android.content.pm.PackageManager.GET_PERMISSIONS).requestedPermissions!!.toSet()
+        assertTrue(requested.containsAll(setOf("android.permission.FOREGROUND_SERVICE", "android.permission.FOREGROUND_SERVICE_DATA_SYNC")))
     }
 
     @Test

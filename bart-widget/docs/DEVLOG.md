@@ -15,8 +15,9 @@ What each change shipped and why. Newest first.
   access, falling back to the old way if Android refuses to start it. A failed background
   refresh retries up to three times within a few minutes. Stale times say why: no connection,
   BART not answering, or BART's error code.
-- **Tests:** the button starts the service and the service fetches and stops (`WidgetTest`), the
-  fallback, the worker's retries, and each reason (`RefresherTest`, `BartApiTest`). Not tried on
+- **Tests:** the button starts the service and the service fetches and stops, the fallback when
+  Android refuses or silently drops the service, its manifest declaration (`WidgetTest`), the
+  worker's retries, and each reason (`RefresherTest`, `BartApiTest`). Not tried on
   a phone with Data Saver on: Robolectric doesn't model Android's network blocking.
 
 ## Mon 5 Oct
