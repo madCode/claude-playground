@@ -6,7 +6,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
@@ -35,23 +37,23 @@ class RefresherTest {
     }
 
     @Test
-    fun aStationThatFailsKeepsItsLastBoardMarkedStale() = runTest {
+    fun aStationThatFailsKeepsItsLastBoardMarkedWithWhy() = runTest {
         store.toggle("MONT")
         store.toggle("DUBL")
-        refresher.refresh()
+        assertTrue(refresher.refresh())
         val earlier = now
         now += 5 * 60_000
         bart.failing += "DUBL"
-        refresher.refresh()
+        assertFalse(refresher.refresh())
         val boards = store.snapshot.first().boards
         assertNull(boards.getValue("MONT").error)
         assertEquals(now, boards.getValue("MONT").fetchedAt)
-        assertEquals(Refresher.STALE, boards.getValue("DUBL").error)
+        assertEquals("BART error 500", boards.getValue("DUBL").error)
         assertEquals(earlier, boards.getValue("DUBL").fetchedAt)
         assertEquals(3, boards.getValue("DUBL").trains.size)
 
         bart.failing.clear()
-        refresher.refresh()
+        assertTrue(refresher.refresh())
         assertNull(store.snapshot.first().boards.getValue("DUBL").error)
     }
 
@@ -60,7 +62,15 @@ class RefresherTest {
         store.toggle("MONT")
         bart.failing += "MONT"
         refresher.refresh()
-        assertEquals(Board("MONT", 0, emptyList(), Refresher.STALE), store.snapshot.first().boards["MONT"])
+        assertEquals(Board("MONT", 0, emptyList(), "BART error 500"), store.snapshot.first().boards["MONT"])
+    }
+
+    @Test
+    fun withoutAConnectionItSaysSo() = runTest {
+        val offline = Refresher(store, BartApi("http://127.0.0.1:1"), { now }) {}
+        store.toggle("MONT")
+        assertFalse(offline.refresh())
+        assertEquals("No connection", store.snapshot.first().boards.getValue("MONT").error)
     }
 
     @Test

@@ -12,7 +12,7 @@ wrong board and leave at the wrong time. This app never asks where you are.
 - **Tapping a station opens that station.** Not the nearest one.
 - **Clock times, not "13 min".** A widget only redraws every so often, and "13 min" goes wrong as
   it ages while "7:33" stays right. The header says when the times were fetched. If a refresh fails,
-  the widget says so and shows how old the times are.
+  the widget says why (no connection, or BART not answering) and how old the times are.
 - **Refresh** on the widget fetches now. Otherwise it refreshes every 15 minutes (Android's floor for
   background work), and whenever you open the app.
 - **Parking** opens the official BART app, where Parking is one tap away. The BART app has no public

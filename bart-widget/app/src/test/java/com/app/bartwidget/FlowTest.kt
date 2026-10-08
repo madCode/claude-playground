@@ -149,7 +149,7 @@ class FlowTest {
         app.now += 5 * 60_000
         app.bart.failing += "MONT"
         compose.onNodeWithContentDescription("Refresh").performClick()
-        compose.waitFor("Couldn't refresh. Times are from 7:20.")
+        compose.waitFor("BART error 500. Times are from 7:20.")
         // Trains that left while we couldn't refresh are gone; the rest count down from now.
         compose.onNodeWithText("7:20\u00A0(now)   7:27\u00A0(7\u00A0min)   7:38\u00A0(18\u00A0min)").assertDoesNotExist()
         compose.waitFor("7:27\u00A0(2\u00A0min)")
@@ -160,7 +160,7 @@ class FlowTest {
         star("DUBL")
         app.bart.failing += "DUBL"
         launch()
-        compose.waitFor("Couldn't refresh")
+        compose.waitFor("BART error 500")
     }
 
     @Test
