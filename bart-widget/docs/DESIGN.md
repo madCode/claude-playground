@@ -35,10 +35,15 @@ out the door at the wrong time by an app that showed the station it thought they
 ## Refreshing
 
 - Refresh on the widget, opening the app, starring a station: each fetches every starred station.
+- The widget's Refresh runs as a short foreground service. A widget tap reaches the app in the
+  background, where Data Saver, battery restrictions and power saving can block its network;
+  a foreground service keeps it. If Android won't start the service, it refreshes as before.
 - In the background every 15 minutes (Android's floor), from when the app is opened or a widget
-  placed until the last widget is removed.
-- A station that fails keeps its last times, marked "Couldn't refresh: times from 7:20"; one
-  that has never loaded says "Couldn't refresh". Unstarring drops a station's times.
+  placed until the last widget is removed. A failed run tries again up to three times within a
+  few minutes, then waits for the next.
+- A station that fails keeps its last times, marked with why: "No connection: times from 7:20",
+  "BART didn't answer" (a timeout), "BART error 503", or "Couldn't read BART's times". One that
+  has never loaded shows just the reason. Unstarring drops a station's times.
 
 ## Parking
 

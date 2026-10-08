@@ -172,7 +172,7 @@ fun lineColor(hex: String): ColorProvider =
 
 class RefreshAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        context.container.refresher.refresh()
+        RefreshService.start(context)
     }
 }
 

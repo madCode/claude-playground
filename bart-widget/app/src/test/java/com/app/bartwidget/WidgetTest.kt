@@ -1,5 +1,7 @@
 package com.app.bartwidget
 
+import android.content.ComponentName
+import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.unit.DpSize
@@ -20,13 +22,16 @@ import androidx.work.WorkManager
 import com.app.bartwidget.testutil.FakeBart
 import com.app.bartwidget.testutil.MORNING
 import com.app.bartwidget.testutil.TestApp
+import com.app.bartwidget.testutil.idleUntil
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.getAppWidgetState
@@ -143,19 +148,19 @@ class WidgetTest {
     fun aStaleBoardSaysWhenItsTimesAreFrom() = runGlanceAppWidgetUnitTest {
         setContext(app)
         provideComposable {
-            WidgetContent(listOf("DUBL"), emptySet(), emptySet(), snapshot(board("DUBL", error = Refresher.STALE)), MORNING + 60_000, parking)
+            WidgetContent(listOf("DUBL"), emptySet(), emptySet(), snapshot(board("DUBL", error = "No connection")), MORNING + 60_000, parking)
         }
-        onNode(hasText("Couldn't refresh: times from 7:20")).assertExists()
+        onNode(hasText("No connection: times from 7:20")).assertExists()
         onNode(hasText("7:39  7:59")).assertExists()
     }
 
     @Test
     fun aStationWithNothingToShow() = runGlanceAppWidgetUnitTest {
         setContext(app)
-        val never = Board("MONT", 0, emptyList(), Refresher.STALE)
+        val never = Board("MONT", 0, emptyList(), "BART didn't answer")
         val empty = Board("WARM", MORNING, emptyList())
         provideComposable { WidgetContent(listOf("MONT", "WARM", "12TH"), emptySet(), emptySet(), snapshot(never, empty), MORNING, parking) }
-        onNode(hasTextEqualTo("Couldn't refresh")).assertExists()
+        onNode(hasTextEqualTo("BART didn't answer")).assertExists()
         onNode(hasTextEqualTo("No trains")).assertExists()
         onNode(hasText("Loading…")).assertExists()
         // Only Warm Springs was ever fetched, so it sets "Updated".
@@ -171,11 +176,27 @@ class WidgetTest {
     }
 
     @Test
-    fun theRefreshButtonFetchesTheStarredStations() = runBlocking {
+    fun theRefreshButtonFetchesInAForegroundService() = runBlocking {
         app.container.store.toggle("DUBL")
         RefreshAction().onAction(app, object : GlanceId {}, actionParametersOf())
+        val started = shadowOf(app).nextStartedService
+        assertEquals(RefreshService::class.java.name, started.component?.className)
+
+        val service = Robolectric.buildService(RefreshService::class.java, started).create().startCommand(0, 1).get()
+        assertNotNull(shadowOf(service).lastForegroundNotification)
+        idleUntil { shadowOf(service).isStoppedBySelf }
         assertEquals(listOf("DUBL"), app.bart.requests)
         assertEquals(3, app.container.store.snapshot.first().boards.getValue("DUBL").trains.size)
+    }
+
+    @Test
+    fun ifAndroidWontStartTheServiceRefreshStillFetches() = runBlocking {
+        app.container.store.toggle("DUBL")
+        val refused = object : ContextWrapper(app) {
+            override fun startForegroundService(service: Intent): ComponentName = throw IllegalStateException("not allowed")
+        }
+        RefreshAction().onAction(refused, object : GlanceId {}, actionParametersOf())
+        assertEquals(listOf("DUBL"), app.bart.requests)
     }
 
     @Test
@@ -194,6 +215,15 @@ class WidgetTest {
         val worker = androidx.work.testing.TestListenableWorkerBuilder<RefreshWorker>(app).build()
         assertEquals(androidx.work.ListenableWorker.Result.success(), worker.doWork())
         assertEquals(listOf("MONT"), app.bart.requests)
+    }
+
+    @Test
+    fun aFailedBackgroundRefreshRetriesAFewTimesThenWaitsForTheNext() = runBlocking {
+        app.container.store.toggle("MONT")
+        app.bart.failing += "MONT"
+        fun worker(attempt: Int) = androidx.work.testing.TestListenableWorkerBuilder<RefreshWorker>(app).setRunAttemptCount(attempt).build()
+        assertEquals(androidx.work.ListenableWorker.Result.retry(), worker(0).doWork())
+        assertEquals(androidx.work.ListenableWorker.Result.success(), worker(RefreshWorker.MAX_RETRIES).doWork())
     }
 
     private fun refreshWork() = WorkManager.getInstance(app).getWorkInfosForUniqueWork("refresh").get().single().state

@@ -22,26 +22,30 @@ class Refresher(
 ) {
     private val lock = Mutex()
 
-    /** Fetches every starred station; a station that fails keeps its last board, marked stale. */
-    suspend fun refresh() = lock.withLock {
+    /**
+     * Fetches every starred station; a station that fails keeps its last board, marked with why.
+     * Returns whether every station was fetched.
+     */
+    suspend fun refresh(): Boolean = lock.withLock {
         val starred = store.starred.first()
         val old = store.snapshot.first().boards
         val now = clock()
         val boards = coroutineScope {
             starred.map { abbr ->
                 async {
-                    runCatching { Board(abbr, now, api.departures(abbr, now)) }.getOrElse {
-                        old[abbr]?.copy(error = STALE) ?: Board(abbr, 0, emptyList(), STALE)
+                    runCatching { Board(abbr, now, api.departures(abbr, now)) }.getOrElse { e ->
+                        val why = whyFailed(e)
+                        old[abbr]?.copy(error = why) ?: Board(abbr, 0, emptyList(), why)
                     }
                 }
             }.awaitAll()
         }
         store.saveSnapshot(Snapshot(boards.associateBy { it.abbr }))
         updateWidgets()
+        boards.none { it.error != null }
     }
 
     companion object {
-        const val STALE = "Couldn't refresh"
         private const val WORK = "refresh"
 
         /** Every 15 minutes, Android's floor for background work; tap Refresh for a fresh board. */
@@ -60,8 +64,16 @@ class Refresher(
 }
 
 class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
-    override suspend fun doWork(): Result {
-        applicationContext.container.refresher.refresh()
-        return Result.success()
+    // A failed run tries again within a few minutes rather than waiting out the 15. Capped,
+    // because WorkManager's backoff doubles each time: after an hour offline, the next try
+    // would be hours away.
+    override suspend fun doWork(): Result = when {
+        applicationContext.container.refresher.refresh() -> Result.success()
+        runAttemptCount < MAX_RETRIES -> Result.retry()
+        else -> Result.success()
+    }
+
+    companion object {
+        const val MAX_RETRIES = 3
     }
 }

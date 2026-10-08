@@ -5,6 +5,20 @@ What each change shipped and why. Newest first.
 **Latest debug build:** [bart-widget-debug.apk](https://github.com/madCode/claude-playground/releases/download/bart-widget-debug/bart-widget-debug.apk)
 (published once this is on main).
 
+## Thu 8 Oct
+
+### Refresh that works in the background, and says why it didn't
+- **Why:** after a BART outage, the widget's Refresh kept showing "Couldn't refresh" while
+  opening the app fetched at once. A widget tap runs in the background, where Android can block
+  the network; the app on screen is never blocked. "Couldn't refresh" didn't say which it was.
+- **Shipped:** the widget's Refresh runs as a short foreground service, which keeps network
+  access, falling back to the old way if Android refuses to start it. A failed background
+  refresh retries up to three times within a few minutes. Stale times say why: no connection,
+  BART not answering, or BART's error code.
+- **Tests:** the button starts the service and the service fetches and stops (`WidgetTest`), the
+  fallback, the worker's retries, and each reason (`RefresherTest`, `BartApiTest`). Not tried on
+  a phone with Data Saver on: Robolectric doesn't model Android's network blocking.
+
 ## Mon 5 Oct
 
 ### Star lines; the rest behind "+N more"
