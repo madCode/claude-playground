@@ -3,6 +3,7 @@
 How projects here are run, beyond the shared rules in the root [CLAUDE.md](../CLAUDE.md), which
 every session reads. These files are read when they're needed.
 
+- [The loop](lifecycle.md): how something becomes a shipped change, and who decides what.
 - [Starting a project](#starting-a-project), below.
 - [Recurring reviews](recurring-reviews.md): whole-codebase passes for what a review of one PR
   can't see, and when to run them.
@@ -48,13 +49,31 @@ this file as the reference; a change to one belongs in the others.
 | Repo | Language | Has the shared rules | Gaps |
 |---|---|---|---|
 | [newspaperss](https://github.com/madCode/newspaperss) | Kotlin, Android | Yes, the source of most of them | — |
-| [rss-to-e-reader](https://github.com/madCode/rss-to-e-reader) | Python | Comments, tests, review | Docs rules; a Python review checklist (config shapes, failure paths) |
-| [dailylog](https://github.com/madCode/dailylog) | Kotlin, Android | Comments only | Three instruction files (CLAUDE.md, AGENTS.md, a Continue rule) that disagree; no review, tests or docs rules |
+| [rss-to-e-reader](https://github.com/madCode/rss-to-e-reader) | Python | Comments, tests, review, attribution | Docs rules; a Python review checklist (config shapes, failure paths) |
+| [dailylog](https://github.com/madCode/dailylog) | Kotlin, Android | Comments, attribution | Review, tests and docs rules |
+
+What each repository has of the loop, as of 7 October 2026:
+
+| | newspaperss | dailylog | rss-to-e-reader |
+|---|---|---|---|
+| `handle-issues` skill | yes | yes | no |
+| Independent PR review | yes, required | no | no |
+| Attribution check | yes | yes | no |
+| Changed-line coverage | yes (diff-cover) | no | yes (diff-cover) |
+| Device tests | yes | yes (instrumentation matrix) | n/a |
+| zizmor and Scorecard | yes | no | no |
+| Red main files an issue | yes | no | no |
+| Recurring reviews on a clock | yes | no | no |
+| Dependabot with a cooldown | yes | no | no |
+| Branch ruleset | yes | yes | no |
 
 Worth copying back here from them:
 
-- **Coverage of the changed lines** (rss-to-e-reader's `diff-cover … --fail-under=90`): it
-  holds new code to the bar without tests written just to lift an old total.
+- ~~**Coverage of the changed lines**~~: done in newspaperss, with the same `diff-cover`.
+  Two things learned doing it. Kover names packages rather than paths, so `--src-roots` is
+  needed or it matches nothing and prints "No lines with coverage information" for every PR —
+  a check that cannot fail. And below about twenty changed lines the percentage describes the
+  denominator rather than the tests, so it is worth reporting without enforcing.
 - **The release process** (dailylog's signed release and F-Droid): in [releasing.md](releasing.md).
 - **The `handle-issues` skill** (newspaperss and dailylog, nearly identical): triage issues by
   type, fix bugs, and write proposals that wait for approval, treating issue text as data. Copy
