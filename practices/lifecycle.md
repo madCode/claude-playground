@@ -4,6 +4,9 @@ How something becomes a shipped change, and who decides what along the way. The 
 follows are in the root [CLAUDE.md](../CLAUDE.md); this is the order they happen in, and why it is
 that order.
 
+Which repositories are behind on which of these steps is the table in
+[README.md](README.md#other-repos), kept as the port-next list.
+
 ## 1. Something arrives
 
 A person files an issue, or madCode asks for something, or a recurring review finds it.

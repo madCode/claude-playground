@@ -52,24 +52,33 @@ this file as the reference; a change to one belongs in the others.
 | [rss-to-e-reader](https://github.com/madCode/rss-to-e-reader) | Python | Comments, tests, review | Attribution; docs rules; a Python review checklist (config shapes, failure paths) |
 | [dailylog](https://github.com/madCode/dailylog) | Kotlin, Android | Yes | The screenshots rule for a PR that changes a screen |
 
-What each repository has of the loop, as of 10 October 2026:
+Which repos are behind on [the loop](lifecycle.md), as of 10 October 2026 — the port-next list,
+by the step each thing serves:
 
-| | newspaperss | dailylog | rss-to-e-reader |
-|---|---|---|---|
-| `handle-issues` skill | yes | yes | no |
-| Independent PR review | yes, required | yes, not required | no |
-| Attribution check | yes | yes | no |
-| Changed-line coverage | yes (diff-cover) | yes (diff-cover) | yes (diff-cover) |
-| Device tests | yes | yes (instrumentation matrix) | n/a |
-| zizmor and Scorecard | yes | yes (zizmor required) | no |
-| Red main files an issue | yes | yes | no |
-| Recurring reviews on a clock | yes | yes | no |
-| Dependabot with a cooldown | yes | yes | no |
-| Branch ruleset | yes | yes | no |
+| The loop's step | What it takes | Missing in |
+|---|---|---|
+| [2. Sorted before it is built](lifecycle.md#2-it-is-sorted-before-it-is-built) | the `handle-issues` skill, on a daily routine | rss-to-e-reader |
+| [4. The author reviews their own work](lifecycle.md#4-it-is-built-and-the-author-reviews-their-own-work-first) | review rules in the project's CLAUDE.md | — |
+| [5. CI says what a person shouldn't have to](lifecycle.md#5-ci-says-what-a-person-shouldnt-have-to) | coverage of the changed lines (diff-cover) | — |
+| | a review by something with no memory of writing the diff | rss-to-e-reader |
+| | the attribution check | rss-to-e-reader |
+| | device tests | — (n/a for rss-to-e-reader) |
+| | zizmor and Scorecard | rss-to-e-reader |
+| [6. It merges itself when it's clean](lifecycle.md#6-it-merges-itself-when-its-clean) | a branch ruleset naming the required checks | rss-to-e-reader |
+| [7. A failure that heals itself is written down](lifecycle.md#7-a-failure-that-heals-itself-still-gets-written-down) | the red-main watcher | rss-to-e-reader |
+| [8. Whole-codebase passes on a clock](lifecycle.md#8-whole-codebase-passes-on-a-clock) | a scheduled recurring review | rss-to-e-reader |
+| Supply chain, between changes | Dependabot with a cooldown | rss-to-e-reader |
+| [Screenshots](../CLAUDE.md#screenshots) | before/after images on a PR that changes a screen | dailylog |
 
-dailylog closed the rest of its column on 7-8 October 2026, which is why the gap left is
-rss-to-e-reader: it has the comments, tests and review rules and changed-line coverage, and
-nothing else of the loop.
+So: **newspaperss and dailylog run the whole loop**; dailylog's independent review is present but
+not a required check, which is the one difference left between them. **rss-to-e-reader has none of
+the loop beyond the rules themselves and changed-line coverage** — in port order, the attribution
+check and an independent review first (they are two workflow files and cost nothing), then a branch
+ruleset, then the scanners, the skill, the watcher and the clock.
+
+Checked against each repo's workflows, Dependabot config, branch ruleset and CLAUDE.md rather than
+from memory, because this table went stale within a day of being written the first time: dailylog
+gained six of these on 7-8 October 2026, while the PR adding the table was open.
 
 Worth copying back here from them:
 
