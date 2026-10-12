@@ -65,6 +65,9 @@ fun LogScreen(
     onEditAdded: (Int, AddedSet) -> Unit,
     onSave: () -> Unit,
     saving: SaveState,
+    /** The file changed under numbers that have not been saved. */
+    fileMoved: Boolean = false,
+    onDiscard: () -> Unit = {},
     modifier: Modifier = Modifier,
     /** Changes when a different session is loaded, so the text boxes reset
      *  with it rather than keeping the last workout's keystrokes. */
@@ -83,6 +86,25 @@ fun LogScreen(
             color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
             modifier = Modifier.padding(top = 3.dp, bottom = 10.dp),
         )
+        if (fileMoved) {
+            Text(
+                "\u26a0 The coach rewrote this session while you were filling it in. Your numbers are still here; check they line up before saving.",
+                color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+            // Without this the owner is stuck: if the rows no longer line
+            // up the save refuses, every refresh re-raises the warning, and
+            // the only exits were clearing app data or swiping the app
+            // away -- which also destroys the numbers.
+            Text(
+                "Use the new sheet instead",
+                color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                modifier = Modifier
+                    .border(1.dp, Look.RuleStrong, RoundedCornerShape(4.dp))
+                    .clickable(onClick = onDiscard)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+            )
+        }
         LazyColumn(Modifier.weight(1f)) {
             // No key: a file with two rows sharing a ref is real enough
             // that SessionPatch refuses it by name, and LazyColumn throws

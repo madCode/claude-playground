@@ -82,6 +82,20 @@ last good session through an empty or unreadable refresh, because a sync
 replaces a file rather than editing it and there is a window where it is
 absent or half written. Briefly stale beats vanishing while being read.
 
+### What a person typed is the only irreplaceable thing here
+
+Everything else on screen can be re-derived from the session file. The
+numbers someone just entered cannot, so they get the protection:
+
+- **Kept across process death**, in a draft rewritten on every keystroke.
+- **Never wiped by a newer file arriving.** Tomorrow's sheet, or the day's
+  second class, keeps what was typed and says the file moved.
+- **Never written blind.** `ref` is only an index, so a runner that re-runs
+  and renumbers its rows would turn an edit meant for a deadlift into one
+  against a lateral raise. The draft keeps the bytes the numbers were typed
+  against, and a save compares each edited row's identity between then and
+  now, refusing if they differ.
+
 ## Rules worth keeping
 
 - **A blank row is blank.** Never silently "skipped". The old survey logged

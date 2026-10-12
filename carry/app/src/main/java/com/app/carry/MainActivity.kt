@@ -56,6 +56,8 @@ class MainActivity : ComponentActivity() {
                         entries = model.edits.value,
                         added = model.added.value,
                         saving = model.saving.value,
+                        fileMoved = model.fileMovedUnderEdits.value,
+                        onDiscard = model::discardEdits,
                         onEdit = model::edit,
                         onAdd = model::addRow,
                         onEditAdded = model::editAdded,
