@@ -4,6 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 
 /**
  * The session file, as the companion script defines it.
@@ -27,7 +28,6 @@ data class Session(
     @SerialName("class") val classTag: String? = null,
     @SerialName("borrowed_from") val borrowedFrom: String? = null,
     val sets: List<ExerciseSet> = emptyList(),
-    val added: List<AddedSet> = emptyList(),
 ) {
     companion object {
         const val SCHEMA = "gym-session/1"
@@ -100,14 +100,43 @@ internal fun String.readable(): String = filter { c ->
         c.code != 0x200B && c.code != 0x200E && c.code != 0x200F && c.code != 0xFEFF
 }
 
-/** Something the sheet never listed. On a day with no intel for the owner's
- *  class, these are the session rather than an afterthought. */
+/**
+ * Something the sheet never listed. On a day with no intel for the owner's
+ * class, these are the session rather than an afterthought.
+ *
+ * Deliberately NOT part of [Session]. The file's `added` array is read and
+ * written only by [SessionPatch], against the raw JSON. Decoding it here
+ * as well made the whole day unreadable over one odd row -- a row with no
+ * `name` key threw `MissingFieldException`, the loader turned that into
+ * "Can't read that session", and the owner lost the sheet along with it.
+ */
 @Serializable
 data class AddedSet(
-    val name: String,
+    val name: String = "",
     val weight: Double? = null,
     val reps: Int? = null,
     val easy: Boolean = false,
     val hurt: Boolean = false,
     val note: String? = null,
-)
+    /**
+     * The row exactly as the file held it, carried so that a key this
+     * build has never heard of is handed back rather than dropped.
+     *
+     * The `sets` path copies unknown keys through already; this one did
+     * not, and the whole `added` array is replaced on every save, so a
+     * field a newer Carry wrote would be deleted by an older one. It also
+     * made a no-op save rewrite the file: the re-encoded row never
+     * compared equal to the row in the file, so "has anything changed"
+     * was always yes.
+     *
+     * Opaque on purpose. This build cannot know what those keys mean, so
+     * it never reads them -- the same bargain as [ExerciseSet.variant].
+     */
+    @SerialName("as_read") val asRead: JsonObject? = null,
+) {
+    /** A row the owner added and never filled in. Nothing to save, and
+     *  nothing lost by leaving it out of the file. */
+    val blank: Boolean get() =
+        name.isBlank() && weight == null && reps == null &&
+            !easy && !hurt && note.isNullOrBlank()
+}

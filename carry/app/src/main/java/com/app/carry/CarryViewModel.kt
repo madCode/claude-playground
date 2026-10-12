@@ -198,15 +198,22 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     private fun rememberTyping() {
         val ready = _state.value as? CarryState.Ready ?: return
         val existing = savedDraft()?.takeIf { it.sheetId == ready.session.sheetId }
-        handle[DRAFT] = Session.json.encodeToString(
-            Draft(
-                sheetId = ready.session.sheetId,
-                fromFingerprint = existing?.fromFingerprint ?: ready.raw.hashCode(),
-                fromIdentities = existing?.fromIdentities ?: SessionPatch.identitiesOf(ready.raw),
-                edits = _edits.value,
-                added = _added.value,
+        // This runs on the main thread on EVERY keystroke, so a throw
+        // here costs the typing immediately -- the opposite of the
+        // point. It guards the ENCODE only: a draft too big for the
+        // transaction fails later, when the system writes saved
+        // instance state, and nothing here can catch that.
+        runCatching {
+            handle[DRAFT] = Session.json.encodeToString(
+                Draft(
+                    sheetId = ready.session.sheetId,
+                    fromFingerprint = existing?.fromFingerprint ?: ready.raw.hashCode(),
+                    fromIdentities = existing?.fromIdentities ?: SessionPatch.identitiesOf(ready.raw),
+                    edits = _edits.value,
+                    added = _added.value,
+                )
             )
-        )
+        }
     }
 
     private fun touched() {
@@ -248,10 +255,14 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         }
         _saving.value = SaveState.Saving
         viewModelScope.launch {
-            // A row the owner started and left nameless is not an answer.
-            val rows = _added.value.filter { it.name.isNotBlank() }
+            // Every row goes down, nameless ones included. This used to
+            // filter them out here, which meant a row the owner typed a
+            // weight into but never named was dropped on save -- silently,
+            // under a "Saved" message, with no way to tell afterwards. The
+            // patch decides instead: an untouched row is left out, and one
+            // holding numbers is refused with something to do about it.
             val outcome = withContext(kotlinx.coroutines.Dispatchers.Default) {
-                SessionPatch.apply(ready.raw, _edits.value, rows)
+                SessionPatch.apply(ready.raw, _edits.value, _added.value)
             }
             when (outcome) {
                 is SessionPatch.Outcome.Refused ->

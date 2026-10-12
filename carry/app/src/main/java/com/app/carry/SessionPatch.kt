@@ -103,10 +103,32 @@ object SessionPatch {
             return Outcome.Refused("Carry couldn't find ${unplaceable.size} of those exercises in the file any more. It may have been replaced while you were filling it in.")
         }
 
+        // An added row with numbers but no name cannot be read back --
+        // nothing downstream can match it to an exercise. Rather than lose
+        // the typing, say so: the row IS on screen, so naming it or
+        // clearing it is one tap away. A row with nothing in it at all is
+        // simply left out.
+        val keep = added.filterNot { it.blank }
+        val unnamed = keep.count { it.name.isBlank() }
+        if (unnamed > 0) {
+            return Outcome.Refused(
+                "Name the ${if (unnamed == 1) "exercise" else "$unnamed exercises"} you added, " +
+                    "or clear ${if (unnamed == 1) "its" else "their"} numbers, before saving."
+            )
+        }
+
         val current = entriesIn(original)
         val changed = edits.filter { (ref, entry) -> entry != (current[ref] ?: Entry()) }
         val addedNow = (doc["added"] as? JsonArray).orEmptyList()
-        val addedChanged = added.map(::encode) != addedNow
+        // Whatever the screen never saw goes back untouched, at the end.
+        // An earlier version REFUSED the save instead, which looked like
+        // the right kind of caution and was a trap: the offending row is
+        // by definition one the owner cannot see, so there was nothing
+        // they could do about it and the day's real numbers could never
+        // be written. Carrying loses nothing and blocks nothing.
+        val (_, carried) = (doc["added"] as? JsonArray).splitAdded()
+        val writtenAdded = keep.map(::encode) + carried
+        val addedChanged = writtenAdded != addedNow
         if (changed.isEmpty() && !addedChanged) return Outcome.Patched(null)
 
         val sets = setsIn.map { set ->
@@ -122,7 +144,7 @@ object SessionPatch {
         val patched = buildJsonObject {
             doc.forEach { (key, value) -> put(key, value) }
             put("sets", JsonArray(sets))
-            put("added", JsonArray(added.map(::encode)))
+            put("added", JsonArray(writtenAdded))
         }
         return runCatching {
             Outcome.Patched(Session.json.encodeToString(JsonObject.serializer(), patched))
@@ -131,13 +153,25 @@ object SessionPatch {
 
     private fun JsonArray?.orEmptyList(): List<JsonElement> = this?.toList() ?: emptyList()
 
-    private fun encode(row: AddedSet): JsonObject = buildJsonObject {
-        put("name", JsonPrimitive(row.name))
-        put("weight", row.weight?.let(::number) ?: JsonNull)
-        put("reps", row.reps?.let(::JsonPrimitive) ?: JsonNull)
-        put("easy", JsonPrimitive(row.easy))
-        put("hurt", JsonPrimitive(row.hurt))
-        put("note", row.note?.let(::JsonPrimitive) ?: JsonNull)
+    private fun encode(row: AddedSet): JsonObject {
+        val asRead = row.asRead
+        // Untouched? Hand back the bytes that came in. Re-encoding is
+        // lossy in both directions: it normalises `45.0` to `45`, so a
+        // save that changed nothing would rewrite a file a sync is
+        // watching, and it flattens anything this build cannot parse --
+        // a `reps` of `12.5` becomes null -- on a row nobody edited.
+        if (asRead != null && asRead.decodeAdded() == row) return asRead
+        return buildJsonObject {
+            // Copy FIRST, then overwrite, as the `sets` path does: a key a
+            // newer Carry wrote on this row survives an edit by this one.
+            asRead?.forEach { (key, value) -> put(key, value) }
+            put("name", JsonPrimitive(row.name))
+            put("weight", row.weight?.let(::number) ?: JsonNull)
+            put("reps", row.reps?.let(::JsonPrimitive) ?: JsonNull)
+            put("easy", JsonPrimitive(row.easy))
+            put("hurt", JsonPrimitive(row.hurt))
+            put("note", row.note?.let(::JsonPrimitive) ?: JsonNull)
+        }
     }
 
     /**
@@ -225,24 +259,115 @@ object SessionPatch {
 
     /** The rows the owner added, so a second save neither duplicates nor
      *  forgets them. */
-    fun addedIn(original: String): List<AddedSet> {
-        val rows = runCatching {
-            (Session.json.parseToJsonElement(original) as? JsonObject)?.get("added") as? JsonArray
-        }.getOrNull() ?: return emptyList()
-        return rows.mapNotNull { element ->
-            runCatching {
-                val row = element as? JsonObject ?: return@runCatching null
-                val name = (row["name"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
-                    ?: return@runCatching null
-                AddedSet(
-                    name = name,
-                    weight = (row["weight"] as? JsonPrimitive)?.content?.toDoubleOrNull(),
-                    reps = (row["reps"] as? JsonPrimitive)?.content?.toIntOrNull(),
-                    easy = (row["easy"] as? JsonPrimitive)?.content.toBoolean(),
-                    hurt = (row["hurt"] as? JsonPrimitive)?.content.toBoolean(),
-                    note = (row["note"] as? JsonPrimitive)?.takeIf { it != JsonNull }?.content,
-                )
-            }.getOrNull()
+    fun addedIn(original: String): List<AddedSet> = runCatching {
+        (Session.json.parseToJsonElement(original) as? JsonObject)?.get("added") as? JsonArray
+    }.getOrNull().splitAdded().first
+
+    /**
+     * The file's `added` array, split into the rows the screen gets and
+     * the elements carried back out untouched.
+     *
+     * Both halves come from here so they cannot drift: anything not shown
+     * is carried, and the save writes shown + carried. That is the whole
+     * safety property -- the array is replaced wholesale, so a row this
+     * build does not hand back is a row it has deleted.
+     */
+    private fun JsonArray?.splitAdded(): Pair<List<AddedSet>, List<JsonElement>> {
+        val shown = mutableListOf<AddedSet>()
+        val carried = mutableListOf<JsonElement>()
+        for (element in orEmptyList()) {
+            val decoded = runCatching { element.decodeAdded() }.getOrNull()
+            when {
+                // Kept on "holds something", not on "has a name". A row
+                // with a weight and no name has to come BACK to the
+                // screen: the save refuses it, and a row the owner cannot
+                // see is a refusal they cannot act on.
+                decoded != null && !decoded.blank &&
+                    shown.size < MAX_ADDED_ROWS && element.bulk() <= MAX_ROW_BYTES -> shown += decoded
+                element.holdsNothing() -> Unit
+                else -> carried += element
+            }
+        }
+        return shown to carried
+    }
+
+    private fun JsonElement.decodeAdded(): AddedSet? {
+        val row = this as? JsonObject ?: return null
+        return AddedSet(
+            // takeIf, as `note` does: `JsonNull.content` is the string
+            // "null", so `{"name": null}` used to reach the screen as an
+            // exercise called null and be WRITTEN back as one. Carry
+            // inventing an identity is the one thing it must never do.
+            name = (row["name"] as? JsonPrimitive)?.takeIf { it != JsonNull }?.content.orEmpty(),
+            weight = (row["weight"] as? JsonPrimitive)?.content?.toDoubleOrNull(),
+            reps = (row["reps"] as? JsonPrimitive)?.content?.toIntOrNull(),
+            easy = (row["easy"] as? JsonPrimitive)?.content.toBoolean(),
+            hurt = (row["hurt"] as? JsonPrimitive)?.content.toBoolean(),
+            note = (row["note"] as? JsonPrimitive)?.takeIf { it != JsonNull }?.content,
+            asRead = row,
+        )
+    }
+
+    /** Provably empty, so dropping it rather than carrying it loses
+     *  nothing. Every key is one [encode] writes and every value is one
+     *  an empty row is written with. It is not enough to check the key
+     *  NAMES: `{"name": "", "weight": "45 lb"}` decodes blank, because
+     *  "45 lb" is not a number, and used to be deleted on that basis. */
+    private fun JsonElement.holdsNothing(): Boolean {
+        val row = this as? JsonObject ?: return false
+        return row.all { (key, value) ->
+            key in WRITTEN_KEYS && value is JsonPrimitive && value.empty()
         }
     }
+
+    /** What [encode] writes for a field nobody filled in. Anything else
+     *  is content, whether or not this build can parse it. */
+    private fun JsonPrimitive.empty(): Boolean =
+        this == JsonNull || content.isBlank() || (!isString && content == "false")
+
+    /** The keys [encode] writes, so [holdsNothing] can tell an empty row
+     *  from one carrying something this build cannot read. */
+    private val WRITTEN_KEYS = setOf("name", "weight", "reps", "easy", "hurt", "note")
+
+    /**
+     * Roughly how many bytes a row would cost to hold, without building
+     * the string to find out.
+     *
+     * [AddedSet.asRead] keeps each shown row verbatim, and shown rows live
+     * in the draft -- re-encoded into saved instance state on EVERY
+     * keystroke, across a Binder transaction. The draft once held the
+     * whole file text and died of exactly that past about half a
+     * megabyte, destroying the typing it exists to protect.
+     *
+     * Depth-capped, and that is not belt-and-braces: `toString()` on a
+     * two-thousand-deep object overflows the stack, and this runs inside
+     * the read on every resume, where the throw would be a crash loop on
+     * a file the phone cannot edit. A row too big or too deep is carried
+     * rather than shown, so nothing is lost by refusing to hold it.
+     */
+    private fun JsonElement.bulk(depth: Int = 0): Int {
+        if (depth > MAX_DEPTH) return TOO_BIG
+        var n = 2
+        when (this) {
+            is JsonObject -> for ((key, value) in this) {
+                n += key.length + 3 + value.bulk(depth + 1)
+                if (n >= TOO_BIG) return TOO_BIG
+            }
+            is JsonArray -> for (value in this) {
+                n += 1 + value.bulk(depth + 1)
+                if (n >= TOO_BIG) return TOO_BIG
+            }
+            else -> n += toString().length
+        }
+        return n
+    }
+
+    /** Big enough that nothing Carry wrote comes close -- a real added row
+     *  is a hundred-odd bytes -- and small enough that forty of them do
+     *  not threaten the transaction the draft crosses. [MAX_DEPTH] is
+     *  borrowed from [normalise]; a legitimately deeper added row is
+     *  carried rather than shown, which no writer has yet produced. */
+    private const val MAX_ROW_BYTES = 2048
+    private const val MAX_ADDED_ROWS = 40
+    private const val TOO_BIG = Int.MAX_VALUE / 4
 }

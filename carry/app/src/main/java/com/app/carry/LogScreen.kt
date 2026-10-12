@@ -73,8 +73,15 @@ fun LogScreen(
      *  with it rather than keeping the last workout's keystrokes. */
     sessionKey: String = session.sheetId,
 ) {
-    val filled = entries.count { !it.value.blank } + added.count { it.name.isNotBlank() }
-    val total = session.sets.size + added.size
+    // An added row counts once it holds anything, the same test the sets
+    // use. Counting only named ones meant typing a weight into a row you
+    // had not named yet left the tally reading "0 of 11 filled".
+    val filled = entries.count { !it.value.blank } + added.count { !it.blank }
+    // Blank added rows are left out of the file, so they are left out of
+    // the count too: tapping "+ Add" used to make the tally read worse
+    // ("1 of 12"), then quietly improve again after a save that wrote
+    // nothing new.
+    val total = session.sets.size + added.count { !it.blank }
 
     Column(modifier.fillMaxSize().background(Look.Slate).padding(horizontal = 14.dp)) {
         Text(
@@ -197,8 +204,21 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
             textStyle = TextStyle(color = Look.Chalk, fontFamily = Look.Name, fontSize = 13.5.sp),
             cursorBrush = SolidColor(Look.Amber),
             decorationBox = { inner ->
-                if (row.name.isEmpty()) {
-                    Text("what was it?", color = Look.ChalkFaint, fontFamily = Look.Name, fontSize = 13.5.sp)
+                // isBlank, not isEmpty: the save refuses on isBlank, so a
+                // name of one space showed neither hint while still
+                // blocking the save -- told to name a row that looked
+                // named, with no way to tell which.
+                if (row.name.isBlank()) {
+                    // Once there are numbers in the row, the missing name
+                    // is the thing that will refuse the save -- so it asks
+                    // here, in the box that fixes it, rather than letting
+                    // the owner find out at the save button.
+                    val asking = !row.blank
+                    Text(
+                        if (asking) "name this" else "what was it?",
+                        color = if (asking) Look.BrickInk else Look.ChalkFaint,
+                        fontFamily = Look.Name, fontSize = 13.5.sp,
+                    )
                 }
                 inner()
             },

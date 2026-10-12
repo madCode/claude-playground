@@ -164,7 +164,7 @@ only the six a person can edit are replaced.
 Two consequences worth keeping:
 
 - **Saving a session nobody edited returns the file unchanged** — byte for
-  byte. A sync watches this folder, and a file that rewrites itself on
+  byte, for every file Carry itself has written. A sync watches this folder, and a file that rewrites itself on
   every save looks like a change that isn't one.
 - **It refuses rather than guesses.** A file whose exercise list is not a
   list, two rows sharing an id, an edit that no longer matches any row — all
@@ -173,16 +173,53 @@ Two consequences worth keeping:
   exercises, and dropped unplaceable edits while reporting success. A
   training history survives a missing number; it cannot survive a wrong
   one, because nothing downstream can tell.
-- **An answer can be unmade.** The edits are the desired state of the rows
-  they name, not a list of changes, so clearing a mistyped weight clears it.
-  Filtering blanks out meant a wrong number could never be taken back.
-- **The write is verify-and-restore, not atomic.** Opening a document for
-  writing truncates it, so a failure after that point destroys the owner's
-  numbers *and* the runner's intel. Carry writes, reads back, and puts the
-  old content back if what landed is not what was sent — then reports which
-  of three things happened: saved, not saved and the file is fine, or the
-  file needs rescuing. SAF offers no atomic replace, so a process killed
-  mid-write still leaves damage and nothing here can prevent it.
+
+### The rows you added
+
+`sets` comes from the runner; `added` is the owner's own, and Carry is the
+only thing that writes it. That array is **replaced whole** on every save,
+which makes it a different kind of risk from `sets`: a row Carry does not
+hand back is not skipped, it is deleted.
+
+So the array is split in two on every read — the rows the screen gets, and
+everything else, **carried back out untouched**. Both halves come from one
+function so they cannot drift, and the save writes shown + carried.
+Refusing the save instead was tried first and is a trap worth recording:
+the offending row is by definition one the owner cannot see, so there is
+nothing they can do about it, and the day's real numbers could never be
+written either.
+
+One case still blocks, and it is not carrying's to fix: a row nested two
+thousand deep overflows the stack inside `encodeToString`, which runs over
+the whole document, so no version of this app can write that file. It
+refuses and says the file is unchanged, which is true.
+
+A shown row keeps the object the file held, verbatim, and an **untouched
+row goes back as those same bytes**. That is what makes a save that
+changed nothing write nothing — re-encoding would turn `45.0` into `45` —
+and it is also what stops a value this build cannot parse, a `reps` of
+`12.5`, from being flattened to null on a row nobody edited.
+
+A row holding numbers but no name is **refused**, with the row on screen
+and its name box asking in brick. That refusal is safe where the other one
+was not, precisely because the owner can see the row.
+
+Only two things are dropped rather than carried: a row holding nothing at
+all, and a blank row the owner added and never filled. Neither loses
+anything.
+
+Rows are held in the draft, which is re-encoded into saved instance state
+on **every keystroke** and crosses a Binder transaction to get there; the
+draft once held the whole file text and died of exactly that, destroying
+the typing it exists to protect. So a row too big or too deep to hold is
+carried instead of shown. The depth cap is not decoration: `toString()` on
+a two-thousand-deep object overflows the stack, and the read runs on every
+resume, where a throw is a crash loop on a file the phone cannot edit.
+
+`added` is deliberately **not** part of the `Session` model. Decoding it
+there as well made one odd row cost the whole day: a row with no `name`
+key threw during deserialization, the loader turned that into "Can't read
+that session", and the sheet went with it.
 
 ## The session file
 

@@ -468,3 +468,107 @@ Also merged tonight: Gradle 9.8, Kotlin 2.4.20, Kover 0.9.11 and AGP
 9.4.1, from the Dependabot config added in cycle 8. The AGP bump failed
 until the Gradle one landed — it needs 9.6+ and the wrapper was on 9.3,
 which Dependabot had raised as a separate PR.
+
+## 2026-10-12 — cycle 12: the added-rows round trip
+
+**From you.** Nothing; this was the item left open at the top of the
+backlog after cycle 5's review.
+
+**Shipped.** The `added` array — the rows you add for something the sheet
+missed — is replaced whole on every save. That makes it a different kind
+of risk from `sets`: a row Carry can't read isn't skipped, it's deleted.
+Three ways that lost your own typing.
+
+The live one wasn't in the patch code at all. `save()` ran
+`_added.value.filter { it.name.isNotBlank() }` before handing anything to
+the patch, so a row you typed a weight into and hadn't named yet was
+thrown away — silently, under a "Saved" message, with nothing afterwards
+to tell you it had happened. No test covered that line. The comment above
+it said "a row the owner started and left nameless is not an answer",
+which is true right up until there's a number in it.
+
+So the patch decides now, not the ViewModel. A row holding nothing is
+left out. A row holding numbers with no name is **refused**, and because a
+refusal about a row you can't see is a dead end, unnamed rows now reach
+the screen too — and the row's own name box asks for it in brick before
+you ever get to the save button.
+
+The second was `encode` not copying unknown keys through, which the `sets`
+path has done since cycle 1. Added rows now carry the object the file held,
+verbatim. Two things fall out of that: a key a newer Carry wrote survives
+an edit by an older one, and a save that changed nothing finally compares
+equal — before this, a file with any extra key on an added row rewrote
+itself on every save, which to a folder being watched by a sync looks like
+a change that isn't one.
+
+The third is the new one: those verbatim rows live in the draft, which is
+re-encoded into saved instance state on **every keystroke** and crosses a
+Binder transaction to get there. The draft used to hold the whole file
+text and died of exactly that past about half a megabyte, destroying the
+typing it exists to protect. The file is synced from another machine, so
+its size is not ours to assume: an added list bigger than Carry would ever
+write refuses the save rather than deleting it.
+
+**Also**: the tally read "0 of 11 filled" with 20 lb typed into an added
+row, because it counted added rows by whether they had a name. The
+screenshot of the new state is what showed it — which is the argument for
+cycle 11 in one line.
+
+**Review caught** (fresh-eyes subagent, eleven findings; it verified the
+kotlinx-JSON behaviour empirically rather than from memory, which is how
+three of these were pinned down):
+
+- **The first fix was a dead end.** Refusing to save over an added row
+  Carry couldn't read sounded like the cautious choice and wasn't: that
+  row is *by definition* one the owner can't see, so there was nothing to
+  do about it, and the day's real numbers could never be written either.
+  The same shape the file already guards against in two other places. The
+  answer is to **carry** anything the screen never saw straight back out —
+  nothing lost, nothing blocked.
+- **A whole class of row was still being deleted silently.** The guard
+  checked key *names*, so `{"name": {"canonical": "goblet squat"}}`
+  decoded to an empty name, looked like an empty row, and was written out
+  of existence under "Saved". Carrying fixes this too.
+- **`added` should never have been in the `Session` model.** `name` had no
+  default, so a row with no `name` key threw during deserialization and
+  the loader reported "Can't read that session" — the whole day lost over
+  one odd row. Worse, it made the new behaviour unreachable: the test
+  fixture for "an unnamed row reaches the screen" was a file the app
+  cannot load, and the test passed only because it called the patch
+  directly. A green test with no reachable behaviour, which is the exact
+  trap written up at the top of this log.
+- **A crash loop I had just introduced.** The size cap measured rows with
+  `toString()`, which recurses: 12 KB of two-thousand-deep JSON overflows
+  the stack, and that ran inside the read on every resume. Now measured
+  with a depth-capped walk, the same lesson `normalise()` already carried.
+- **Re-encoding destroyed values on rows nobody edited** — `reps: 12.5`
+  to null, `easy: "yes"` to false — while reporting success, and made
+  no-op saves rewrite the file (`45.0` → `45`). An untouched row now goes
+  back as the bytes that came in.
+- **A one-space name refused the save with both hints suppressed.** The
+  refusal tests `isBlank`, the placeholder tested `isEmpty`: told to name
+  a row, with every row on screen looking named.
+- The draft encode wasn't guarded, so a throw there crashed on a
+  keystroke — destroying the typing the draft exists to protect.
+
+A second look at the fixes found two more real losses, both now fixed:
+`{"name": "", "weight": "45 lb"}` counted as an empty row and was
+deleted, because the check looked at key names rather than values; and
+`{"name": null}` reached the screen as an exercise called `null`, because
+`JsonNull.content` is the string "null" — Carry inventing an identity,
+which is the one thing it must never do.
+
+It also caught two claims I had written that were too strong. Carrying
+does not block *nothing*: a row nested two thousand deep still can't be
+written, because the whole document is re-encoded and the nesting is in
+the document. And the `runCatching` around the draft encode cannot catch
+the oversized-transaction failure that motivated it — that is thrown
+later, by the system. Both corrected where they were claimed.
+
+Four findings are logged in the backlog with repros rather than fixed
+here: index-keyed text boxes after the list shrinks, a carried key
+resurrected from a stale draft, a row written twice when the file is
+rewritten underneath and a row changes category, and the forty-first
+added row vanishing from the screen. The first two predate this change;
+the last two need a file no writer produces today, and in every one of
+them what shipped before deleted the row outright.

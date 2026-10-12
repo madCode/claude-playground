@@ -2,10 +2,44 @@
 
 ## Next
 
-**Smaller, still open from cycle 5's review:** `addedIn` silently drops
-rows it can't parse and the next save deletes them; `encode` doesn't copy
-unknown keys through on added rows, unlike the `sets` path, so a save with
-no edits can still rewrite the file.
+**From cycle 12's review, with repros:**
+
+- **Added-row boxes are keyed by list index**, so they show the previous
+  occupant's text after the list shrinks. Tap "+ Add" twice, fill only
+  the second (`plank`, 30), save: the blank row is dropped, `plank` moves
+  to index 0, and the weight box next to it renders empty while the file
+  holds 30. The screen says "Saved" and shows a number that isn't there —
+  the re-enter-from-memory failure. Needs a stable id per added row
+  rather than its position.
+- **A carried key can be resurrected from a stale draft.** `asRead` is
+  pinned to the bytes of the first keystroke; if the file is rewritten
+  underneath and the writer removed a key, saving puts it back. Narrow —
+  it needs the rewritten-file path and a key that was deleted remotely —
+  but the copied-through value should come from the row as it is on disk
+  now.
+
+**From the second look, both needing more than forty added rows or a
+file rewritten underneath — and both better than what shipped before,
+which deleted the row outright:**
+
+- **A row can be written twice.** The owner's rows may come from a draft
+  pinned to older bytes while the carried elements are recomputed from
+  the current file. If the coach rewrites the file and a row changes
+  category — gains a key over 2 KB, or is pushed past the fortieth — it
+  is both kept (the owner's copy) and carried (this file's copy), so the
+  importer sees two. Nothing is lost, but the duplicate is invisible on
+  the next read. Wants a stable id per added row, which would also fix
+  the index-keyed boxes above.
+- **The forty-first row you add disappears from the screen.** With forty
+  readable rows already in the file, a row you add is written, then the
+  re-seed after a successful save shows only the first forty — so it is
+  in the file, uneditable, and nothing says so.
+
+Otherwise nothing outstanding from a review. What is left either needs the phone
+(see "Owed on a device"), needs a decision that is yours (below), or is
+a new feature from "Later" — the notification on a new session file is
+the one that pays for itself soonest, because the lobby glance currently
+depends on remembering to open the app.
 
 
 ## From the security pass
