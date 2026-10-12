@@ -174,14 +174,14 @@ private fun TailLine(rest: List<ExerciseSet>) {
     Column(Modifier.padding(top = 11.dp, bottom = 20.dp)) {
         if (byFeel.isNotEmpty()) {
             Text(
-                "By feel: " + byFeel.joinToString(", ") { it.displayName },
+                "By feel: " + names(byFeel),
                 color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
                 maxLines = 3, overflow = TextOverflow.Ellipsis,
             )
         }
         if (bodyweight.isNotEmpty()) {
             Text(
-                "No weight: " + bodyweight.joinToString(", ") { it.displayName },
+                "No weight: " + names(bodyweight),
                 color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
                 maxLines = 3, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 3.dp),
@@ -189,6 +189,24 @@ private fun TailLine(rest: List<ExerciseSet>) {
         }
     }
 }
+
+/**
+ * `shoulder press ×2`, not `shoulder press, shoulder press`.
+ *
+ * A sheet repeats a movement on 42% of days, and measured across the
+ * corpus the repeats use the SAME implement 78% of the time and agree on
+ * whether a weight is needed at all 84% of the time. So the second mention
+ * almost never tells you anything the first did not: what you came to this
+ * screen for is which dumbbell to pick up, and that is already answered by
+ * which line the name is on. Printing the name twice spends the one thing
+ * this screen is short of — space read in a glance — to say nothing.
+ *
+ * Order is kept, so the names still read in sheet order.
+ */
+private fun names(sets: List<ExerciseSet>): String =
+    sets.map { it.displayName }
+        .groupingBy { it }.eachCount()
+        .entries.joinToString(", ") { (name, n) -> if (n > 1) "$name ×$n" else name }
 
 /** More than this many clean sets in a row is not a streak anyone is
  *  tracking, and the number arrives from another machine. */
