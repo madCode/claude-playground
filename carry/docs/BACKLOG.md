@@ -92,9 +92,13 @@ Things a JVM cannot answer honestly, to check on a real phone:
   depend on remembering to open the app.
 - Read the class from the phone's own calendar, which is what finally frees
   the companion script from needing a calendar config of its own.
-- Compose the 3G intel post for Reddit and hand it over to paste — the only
-  path that gets a 3G session into history at all, and it helps the people
-  in the later classes.
+- **The intel post — built, reviewed three times, and parked as PR #60.**
+  Three rounds of severe findings, each of my fixes wrong one level
+  further down. The root of it: Carry does not know what your class's
+  block was, only which rows you put numbers against on a sheet that may
+  be another class's. Three decisions are yours before it ships, written
+  out in the PR; a short cycle once they are made. The branch keeps the
+  guards all three reviews agreed on.
 
 ## The endpoint
 
