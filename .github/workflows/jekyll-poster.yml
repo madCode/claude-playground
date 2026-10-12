@@ -34,14 +34,14 @@ jobs:
           APP_SLUG: ${{ vars.JEKYLL_POSTER_APP_SLUG }}
         run: ./gradlew build koverXmlReport koverHtmlReport koverVerify "-PgithubClientId=$CLIENT_ID" "-PgithubAppSlug=$APP_SLUG"
       - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: jekyll-poster-debug-apk
           path: jekyll-poster/app/build/outputs/apk/debug/*.apk
           retention-days: 14
       - name: Upload test and coverage reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: jekyll-poster-reports
           path: |
