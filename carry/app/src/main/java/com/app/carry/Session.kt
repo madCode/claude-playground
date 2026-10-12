@@ -62,6 +62,25 @@ data class ExerciseSet(
     @SerialName("streak_done") val streakDone: Int? = null,
     @SerialName("streak_needed") val streakNeeded: Int? = null,
 
+    /**
+     * The nearest thing the owner HAS lifted, when this exact movement is
+     * new: "hip hinge swing 40 lb, 1 DB, both legs, 9/13".
+     *
+     * On this owner's training this is the coaching that actually fires.
+     * Replayed against their real history, 1 of 23 weighted sets would
+     * have had a suggested weight and 6 had one of these — the studio
+     * varies the exact movement nearly every session, so the streak rule
+     * rarely has a same-key history to stand on. Carry dropped this field
+     * at first and looked like it knew nothing about its owner.
+     */
+    val related: String? = null,
+    /** What the coach can say about a movement it has no history for at
+     *  all, from the muscle groups it shares with ones it does. */
+    val claims: List<String>? = null,
+    /** A movement-level warning that outranks the rest of the row — a
+     *  back-off after a hard session, say. At most one per block. */
+    @SerialName("pattern_note") val patternNote: String? = null,
+
     // --- what Carry fills in ---
     val weight: Double? = null,
     val reps: Int? = null,

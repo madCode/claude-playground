@@ -10,12 +10,12 @@ object SampleSession {
     private fun set(
         ref: Int, name: String, family: String?, weight: Double?,
         previous: Double? = null, done: Int? = null, needed: Int? = null,
-        suggested: String? = null,
+        suggested: String? = null, related: String? = null, note: String? = null,
     ) = ExerciseSet(
         ref = ref, line = "10 x $name", canonical = name, variant = JsonNull,
         prescribedReps = 10, family = family, suggestedWeight = weight,
         previousWeight = previous, streakDone = done, streakNeeded = needed,
-        suggested = suggested,
+        suggested = suggested, related = related, patternNote = note,
     )
 
     val today = Session(
@@ -29,8 +29,8 @@ object SampleSession {
             set(3, "goblet squat · harder", "legs", 25.0),
             set(4, "deadlift", "legs", 25.0, done = 2, needed = 3),
             set(5, "bicep curl · seated", "combo", 15.0),
-            set(6, "lateral raise", "push", null),
-            set(7, "tricep extension · bench", "push", null),
+            set(6, "lateral raise", "push", null, related = "shoulder press 15 lb, 2 DB, Tue"),
+            set(7, "tricep extension · bench", "push", null, note = "back off a little \u2014 three hard sessions in a row"),
             set(8, "squat", "legs", null, suggested = "no weight needed"),
             set(9, "sit-up", "core", null, suggested = "no weight needed"),
         ),

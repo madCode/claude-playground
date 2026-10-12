@@ -63,8 +63,14 @@ class TodayScreenTest {
         compose.onNodeWithText("45 lb").assertIsDisplayed()
         compose.onNodeWithText("15 lb").assertIsDisplayed()
 
-        // Everything with no number is one tail line, not six rows.
-        compose.onNodeWithText("By feel: lateral raise, tricep extension · bench").assertIsDisplayed()
+        // A movement with no figure but a nearest-thing line is a ROW:
+        // on this owner's real history that is almost all the coaching
+        // there is, and folding it into the tail threw it away.
+        compose.onNodeWithText("nearest: shoulder press 15 lb, 2 DB, Tue").assertIsDisplayed()
+        // A note outranks it, and is the only thing shown on that row.
+        compose.onNodeWithText("back off a little", substring = true).assertIsDisplayed()
+
+        // Only what is genuinely blank is folded away.
         compose.onNodeWithText("No weight: squat, sit-up").assertIsDisplayed()
 
         shoot("01-today")
@@ -90,7 +96,10 @@ class TodayScreenTest {
         // line borrows the borrowed-block warning's voice, so devaluing
         // it costs more than itself.
         val session = SampleSession.today     // dated 2026-10-17
-        val warning = hasText("\u26a0 ", substring = true)
+        // The DAY warning specifically. A bare "⚠" also matches a
+        // pattern note on a row, which is a different thing entirely and
+        // is supposed to show on a sheet dated today.
+        val warning = hasText("not today's", substring = true)
 
         compose.setContent { TodayScreen(session, java.time.LocalDate.of(2026, 10, 17)) }
         compose.onNode(warning).assertDoesNotExist()

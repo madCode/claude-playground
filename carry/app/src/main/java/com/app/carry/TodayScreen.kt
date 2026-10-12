@@ -33,7 +33,15 @@ import androidx.compose.ui.unit.sp
  *
  *  1. weights that CHANGED, with what they were
  *  2. the other history-backed numbers
- *  3. everything with no number, folded into one tail line
+ *  3. movements with no number but a NEAREST THING you have lifted
+ *  4. everything genuinely blank, folded into one tail line
+ *
+ * Three exists because of what the owner's real history does. Replayed
+ * against it, 1 of 23 weighted sets would have had a suggested weight and
+ * 6 had a related line — the studio varies the exact movement nearly every
+ * session, so the streak rule rarely has a same-key history to stand on.
+ * Folding those into the tail with the bodyweight lines threw away almost
+ * all the coaching this owner's history can actually produce.
  */
 @Composable
 fun TodayScreen(
@@ -47,7 +55,11 @@ fun TodayScreen(
     val weighted = session.sets.filter { it.suggestedWeight != null }
     val changed = weighted.filter { it.change != null }
     val held = weighted.filter { it.change == null }
-    val noNumber = session.sets.filter { it.suggestedWeight == null }
+    // A row with no figure but a nearest-thing line is NOT nothing to
+    // carry; it is the only thing to carry on most of this owner's days.
+    val (hinted, noNumber) = session.sets
+        .filter { it.suggestedWeight == null }
+        .partition { it.related != null || it.patternNote != null }
 
     Column(modifier.fillMaxSize().background(Look.Slate).padding(horizontal = 14.dp)) {
         Text(
@@ -86,9 +98,47 @@ fun TodayScreen(
             // renders first -- so the app would crash on every launch with
             // no way to fix it from the phone.
             items(changed + held) { SheetRow(it) }
+            items(hinted) { HintRow(it) }
             if (noNumber.isNotEmpty()) item { TailLine(noNumber) }
         }
     }
+}
+
+/**
+ * A movement with no weight of its own, and the nearest one the owner has
+ * lifted. No figure on the right: there is no number for THIS movement,
+ * and putting one there would read as one.
+ */
+@Composable
+private fun HintRow(set: ExerciseSet) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Look.family(set.family)?.let { hue ->
+                Box(Modifier.width(3.dp).height(22.dp).clip(RoundedCornerShape(2.dp)).background(hue))
+            }
+            Text(
+                set.displayName, color = Look.Chalk, fontFamily = Look.Name,
+                fontSize = Look.NameSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+        }
+        // The note outranks the nearest-thing line when both are present:
+        // one says "ease off", the other says "here is a number", and
+        // showing both invites splitting the difference.
+        set.patternNote?.let {
+            Text(
+                "\u26a0 $it", color = Look.BrickInk, fontFamily = Look.Name,
+                fontSize = Look.SmallSize, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 11.dp, top = 3.dp),
+            )
+        } ?: set.related?.let {
+            Text(
+                "nearest: $it", color = Look.ChalkDim, fontFamily = Look.Name,
+                fontSize = Look.SmallSize, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 11.dp, top = 3.dp),
+            )
+        }
+    }
+    Box(Modifier.fillMaxWidth().height(1.dp).background(Look.Rule))
 }
 
 @Composable
