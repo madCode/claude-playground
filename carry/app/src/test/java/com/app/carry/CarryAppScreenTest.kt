@@ -30,8 +30,14 @@ class CarryAppScreenTest {
 
     private fun shoot(name: String) {
         compose.waitForIdle()
+        val shot = compose.onRoot().captureToImage().asAndroidBitmap()
+        // A capture that came back as one flat colour is not evidence. It
+        // happens silently -- the test stays green and CI uploads the blank
+        // as an artifact -- and it fooled me twice on this project, once
+        // into thinking the fonts had broken rendering entirely.
+        check(!shot.isFlat()) { "$name captured a blank image, so it proves nothing" }
         File(out, "$name.png").outputStream().use {
-            compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
+            shot.compress(Bitmap.CompressFormat.PNG, 100, it)
         }
     }
 
@@ -40,7 +46,10 @@ class CarryAppScreenTest {
         compose.setContent { CarryApp(CarryState.NeedsFolder(), onChooseFolder = {}) }
         compose.onNodeWithText("Pick your folder").assertIsDisplayed()
         compose.onNodeWithText("Choose folder").assertIsDisplayed()
-        shoot("04-first-run")
+        // No shoot() here: Robolectric's capture comes back flat for this
+        // screen and the blank check would fail. The assertions above are
+        // the test; the picture was never the evidence. Tracked in
+        // docs/BACKLOG.md.
     }
 
     @Test
@@ -54,7 +63,10 @@ class CarryAppScreenTest {
     fun `an empty folder says the session has not arrived`() {
         compose.setContent { CarryApp(CarryState.NoSession, onChooseFolder = {}) }
         compose.onNodeWithText("Nothing to carry").assertIsDisplayed()
-        shoot("06-no-session")
+        // No shoot() here: Robolectric's capture comes back flat for this
+        // screen and the blank check would fail. The assertions above are
+        // the test; the picture was never the evidence. Tracked in
+        // docs/BACKLOG.md.
     }
 
     @Test
@@ -69,7 +81,10 @@ class CarryAppScreenTest {
     fun `the first read says what it is doing rather than showing nothing`() {
         compose.setContent { CarryApp(CarryState.Loading, onChooseFolder = {}) }
         compose.onNodeWithText("Reading").assertIsDisplayed()
-        shoot("07-loading")
+        // No shoot() here: Robolectric's capture comes back flat for this
+        // screen and the blank check would fail. The assertions above are
+        // the test; the picture was never the evidence. Tracked in
+        // docs/BACKLOG.md.
     }
 
     @Test
@@ -105,7 +120,10 @@ class CarryAppScreenTest {
         }
         compose.onNodeWithText("That's your whole phone").assertIsDisplayed()
         compose.onNodeWithText("not everything on the phone", substring = true).assertIsDisplayed()
-        shoot("14-too-wide")
+        // No shoot() here: Robolectric's capture comes back flat for this
+        // screen and the blank check would fail. The assertions above are
+        // the test; the picture was never the evidence. Tracked in
+        // docs/BACKLOG.md.
     }
 
     @Test

@@ -28,6 +28,21 @@ no edits can still rewrite the file.
   stays inside the project's privacy rule, but it should be a choice
   rather than a surprise.
 
+## Five screens that cannot be screenshotted
+
+`captureToImage` comes back as one flat colour for `03-empty`,
+`04-first-run`, `06-no-session`, `07-loading` and `14-too-wide` — all
+simple centred screens — while `05-lost-grant`, rendered by the same
+composable in the same class, captures fine. `forkEvery(1)` fixed seven of
+twelve; advancing a frame before capturing changed nothing; the root cause
+is unfound.
+
+Those tests keep their assertions, which were always the real test, and no
+longer claim a picture. `isFlat()` now fails any capture that comes back
+blank, so the suite can never again upload nothing as evidence — which it
+did for seven of twelve screenshots, and which fooled me twice, once into
+believing the bundled fonts had broken rendering entirely.
+
 ## Owed on a device
 
 Things a JVM cannot answer honestly, to check on a real phone:

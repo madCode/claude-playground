@@ -440,3 +440,31 @@ bumps, which are repo-wide because workflows are, and four Gradle and
 Kotlin bumps for Carry. None are merged. The toolchain ones (Kotlin 2.3 to
 2.4, AGP 9.1 to 9.4) are real upgrades that deserve a cycle rather than a
 rubber stamp, and the action ones touch the other two projects.
+
+## 2026-10-12 — cycle 11: screenshots that are actually of something
+
+**From you.** Nothing; the repo had no picture of what this is.
+
+**Shipped.** Three screenshots in the README — and, far more usefully, the
+discovery that most of them were blank.
+
+Running the whole suite in one JVM produced **seven of twelve screenshots
+as the same blank image**. Not an error: `captureToImage` returns a flat
+bitmap, the tests stay green, and CI uploads the blanks as artifacts.
+Twice during this project I read one and drew a conclusion from it — once
+believing the newly bundled fonts had broken rendering entirely.
+
+`forkEvery(1)` fixed seven of them. Five remain, all simple centred
+screens, and the cause is unfound — one screen rendered by the same
+composable in the same class captures fine. Rather than keep guessing at
+00:30, those five stop claiming a picture and keep their assertions, which
+were always the real test.
+
+The part worth keeping is `isFlat()`: every capture is now checked, and a
+blank one fails loudly. A green test that produced no picture is worse
+than a red one, because the picture is what gets reviewed.
+
+Also merged tonight: Gradle 9.8, Kotlin 2.4.20, Kover 0.9.11 and AGP
+9.4.1, from the Dependabot config added in cycle 8. The AGP bump failed
+until the Gradle one landed — it needs 9.6+ and the wrapper was on 9.3,
+which Dependabot had raised as a separate PR.
