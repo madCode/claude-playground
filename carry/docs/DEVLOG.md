@@ -394,3 +394,29 @@ data in the repo, no network dependency.
 
 **Left, with reasons, in BACKLOG.md** — including three things that are
 yours to decide rather than mine.
+
+## 2026-10-11 — cycle 9: stop carrying the file around
+
+**From you.** Nothing new; two findings the security pass recorded rather
+than fixed.
+
+**Shipped.** The draft keeps a fingerprint and the per-ref identities
+instead of the whole file text. That is all it was ever asked: has this
+file been rewritten, and does each edited row still describe the same
+exercise. Carrying the document meant a JSON escape of the entire thing on
+every keystroke, through saved instance state — which past about half a
+megabyte is a `TransactionTooLargeException` that destroys exactly the
+typing the draft exists to protect.
+
+Parsing also moved off the main thread: seeding was two full parses on
+every resume, and a save was several more, all in the click handler.
+
+**Caught while building.** My own test asserted the draft was "smaller
+than the file" and failed — on a two-row fixture the JSON escaping
+dominates, so the claim was false while the design was right. The saving
+is in the fields *not* kept, which is what the structural assertions pin.
+Replaced the claim rather than the fixture, because a test that only holds
+on a flattering input is not evidence.
+
+**Next.** What is left is in BACKLOG.md, including three things that are
+the owner's call rather than mine.

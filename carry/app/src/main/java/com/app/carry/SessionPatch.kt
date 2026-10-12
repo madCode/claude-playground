@@ -178,10 +178,12 @@ object SessionPatch {
      * raise. [apply] refuses a ref that has gone missing but cannot see a
      * renumbering, which is the quieter and worse case.
      */
-    fun identityHolds(before: String, after: String, refs: Set<Int>): Boolean {
-        val a = identities(before)
+    fun identityHolds(before: String, after: String, refs: Set<Int>): Boolean =
+        identityHolds(identities(before), after, refs)
+
+    fun identityHolds(before: Map<Int, String>, after: String, refs: Set<Int>): Boolean {
         val b = identities(after)
-        return refs.all { a[it] != null && a[it] == b[it] }
+        return refs.all { before[it] != null && before[it] == b[it] }
     }
 
     /** Key order must not matter: `variant` is an opaque object the runner
@@ -202,6 +204,10 @@ object SessionPatch {
 
     /** A variant is a flat bag of words; anything deeper is not meaningful. */
     private const val MAX_DEPTH = 12
+
+    /** The identities a draft needs to remember, which is far less than
+     *  the whole file it used to keep. */
+    fun identitiesOf(text: String): Map<Int, String> = identities(text)
 
     private fun identities(text: String): Map<Int, String> = runCatching {
         ((Session.json.parseToJsonElement(text) as JsonObject)["sets"] as JsonArray)

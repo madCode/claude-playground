@@ -42,7 +42,15 @@ import kotlinx.coroutines.withTimeoutOrNull
 @kotlinx.serialization.Serializable
 data class Draft(
     val sheetId: String,
-    val fromRaw: String,
+    /** A fingerprint of the file as it was when the FIRST of these numbers
+     *  was typed, and the identities of its rows. The whole file text used
+     *  to live here, which meant a per-keystroke JSON escape of the entire
+     *  document through saved instance state -- and past about half a
+     *  megabyte, a TransactionTooLargeException that destroyed exactly the
+     *  typing this exists to protect. A hash and the identities answer both
+     *  questions it was ever asked. */
+    val fromFingerprint: Int,
+    val fromIdentities: Map<Int, String>,
     val edits: Map<Int, SessionPatch.Entry>,
     val added: List<AddedSet>,
 )
@@ -101,7 +109,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
             // two sittings opens showing the first sitting's numbers rather
             // than blank boxes the owner would fill in from memory. Only on
             // a NEW file: re-seeding would throw away edits in progress.
-            (_state.value as? CarryState.Ready)?.let(::reconcile)
+            (_state.value as? CarryState.Ready)?.let { reconcile(it) }
         }
     }
 
@@ -114,19 +122,25 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      * was indistinguishable from one being filled in, and every later file
      * triggered the keep-and-warn path with nothing actually typed.
      */
-    private fun reconcile(ready: CarryState.Ready) {
+    private suspend fun reconcile(ready: CarryState.Ready) {
         val draft = savedDraft()
         when {
             // Not ours. A draft for another session must never be shown
             // against this one, let alone written into it.
             draft == null || draft.sheetId != ready.session.sheetId -> {
-                _edits.value = SessionPatch.entriesIn(ready.raw)
-                _added.value = SessionPatch.addedIn(ready.raw)
+                // Two full parses of the document. Small for a real sheet,
+                // but this runs on every resume and the file comes from
+                // somewhere else -- so it goes where the read already is.
+                val (entries, added) = withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    SessionPatch.entriesIn(ready.raw) to SessionPatch.addedIn(ready.raw)
+                }
+                _edits.value = entries
+                _added.value = added
                 _fileMovedUnderEdits.value = false
             }
             // Same session, same bytes: the draft is the truth, and a fresh
             // ViewModel after process death starts empty.
-            draft.fromRaw == ready.raw -> {
+            draft.fromFingerprint == ready.raw.hashCode() -> {
                 _edits.value = draft.edits
                 _added.value = draft.added
                 _fileMovedUnderEdits.value = false
@@ -187,7 +201,8 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         handle[DRAFT] = Session.json.encodeToString(
             Draft(
                 sheetId = ready.session.sheetId,
-                fromRaw = existing?.fromRaw ?: ready.raw,
+                fromFingerprint = existing?.fromFingerprint ?: ready.raw.hashCode(),
+                fromIdentities = existing?.fromIdentities ?: SessionPatch.identitiesOf(ready.raw),
                 edits = _edits.value,
                 added = _added.value,
             )
@@ -221,9 +236,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         // document, which could undo each other: the composable captured
         // `enabled` before this ever ran.
         if (_saving.value == SaveState.Saving) return
-        val typedAgainst = savedDraft()?.takeIf { it.sheetId == ready.session.sheetId }?.fromRaw
-        if (typedAgainst != null && typedAgainst != ready.raw &&
-            !SessionPatch.identityHolds(typedAgainst, ready.raw, _edits.value.keys)
+        val typedAgainst = savedDraft()?.takeIf { it.sheetId == ready.session.sheetId }
+        if (typedAgainst != null && typedAgainst.fromFingerprint != ready.raw.hashCode() &&
+            !SessionPatch.identityHolds(typedAgainst.fromIdentities, ready.raw, _edits.value.keys)
         ) {
             _saving.value = SaveState.Failed(
                 "The session file changed while you were filling this in, and the exercises no longer line up. Nothing was written.",
@@ -235,7 +250,10 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         viewModelScope.launch {
             // A row the owner started and left nameless is not an answer.
             val rows = _added.value.filter { it.name.isNotBlank() }
-            when (val outcome = SessionPatch.apply(ready.raw, _edits.value, rows)) {
+            val outcome = withContext(kotlinx.coroutines.Dispatchers.Default) {
+                SessionPatch.apply(ready.raw, _edits.value, rows)
+            }
+            when (outcome) {
                 is SessionPatch.Outcome.Refused ->
                     _saving.value = SaveState.Failed(outcome.why, damaged = false)
                 is SessionPatch.Outcome.Patched -> {
