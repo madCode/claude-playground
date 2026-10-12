@@ -7,8 +7,12 @@ rows it can't parse and the next save deletes them; `encode` doesn't copy
 unknown keys through on added rows, unlike the `sets` path, so a save with
 no edits can still rewrite the file.
 
-- Bundle Barlow Condensed and IBM Plex Mono; names are less compact than the
-  approved mock until then.
+
+## Before this is called a release
+
+- **Security pass**, per `practices/recurring-reviews.md`: MASVS areas,
+  zizmor on the workflow, OpenSSF Scorecard. A debug APK is already
+  installable, which is a release in everything but name.
 
 ## Owed on a device
 
