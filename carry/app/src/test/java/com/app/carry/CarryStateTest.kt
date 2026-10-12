@@ -87,7 +87,7 @@ class CarryStateTest {
     fun `a sheet on screen survives a refresh that comes back empty`() {
         // Syncthing replaces a file rather than editing it. Resuming inside
         // that window used to discard a sheet that was fine a second ago.
-        val good = CarryState.Ready(SampleSession.today)
+        val good = readyFor()
         assertEquals(good, keepLastGood(good, CarryState.NoSession))
         assertEquals(good, keepLastGood(good, CarryState.Unreadable("x.json", false)))
         // ...but a folder that is genuinely gone must still be reported.

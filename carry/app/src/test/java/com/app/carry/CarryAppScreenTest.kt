@@ -98,7 +98,7 @@ class CarryAppScreenTest {
 
     @Test
     fun `a ready session shows the sheet`() {
-        compose.setContent { CarryApp(CarryState.Ready(SampleSession.today), onChooseFolder = {}) }
+        compose.setContent { CarryApp(readyFor(), onChooseFolder = {}) }
         compose.onNodeWithText("Carry these in").assertIsDisplayed()
     }
 }

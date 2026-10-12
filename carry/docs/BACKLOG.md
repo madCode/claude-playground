@@ -2,11 +2,32 @@
 
 ## Next
 
-- **Log** screen: weight, reps, easy, hurt, add-a-row; save back. The write
-  path must **patch the original JSON**, not re-serialise the model: two
-  tests in `SessionTest` show re-encoding is lossy (an unknown field from a
-  newer runner is dropped, and `45` comes back as `45.0`). CLAUDE.md says
-  unfilled rows survive a round trip untouched, and only patching can.
+**Cycle 6 — don't lose the owner's typing.** Four findings from cycle 5's
+review, all the same shape: the only thing in this app that cannot be
+re-derived is what a person typed, and it is the least protected.
+
+- **Process death loses the whole form.** Edits live in a ViewModel with no
+  `SavedStateHandle`. Fill ten rows in the car, switch to Spotify, Android
+  reclaims the process — all gone, and the tab is `rememberSaveable` so you
+  land back on *After* looking at empty boxes. The likeliest real loss of
+  the lot.
+- **A newer file silently wipes the form.** Reseeding is keyed on document
+  id, so tomorrow's sheet (or the day's second class) arriving mid-fill
+  blanks everything typed, with no prompt.
+- **A changed file under in-flight edits can write a number against the
+  wrong exercise.** Same document id, new bytes: the edits were made
+  against v1 and get patched into v2. `SessionPatch` refuses a *missing*
+  ref but cannot see a renumbering. Needs a fingerprint of the bytes the
+  edits were taken from.
+- **Save races.** A save completing after a refresh overwrites the newer
+  state; two taps in one frame start two writes that can undo each other.
+
+**Also from that review, smaller:** `addedIn` silently drops rows it can't
+parse and the next save deletes them; `encode` doesn't copy unknown keys
+through on added rows, unlike the `sets` path, so a save with no edits can
+rewrite the file.
+
+
 - Bundle Barlow Condensed and IBM Plex Mono; names are less compact than the
   approved mock until then.
 
