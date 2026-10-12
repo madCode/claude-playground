@@ -254,7 +254,7 @@ object SessionPatch {
     /** Key order must not matter: `variant` is an opaque object the runner
      *  may re-emit in any order, and comparing its printed form would
      *  refuse saves for a file that had not meaningfully changed. */
-    private fun normalise(element: JsonElement?, depth: Int = 0): String = when {
+    internal fun normalise(element: JsonElement?, depth: Int = 0): String = when {
         element == null -> "\u0001absent"
         // The file is written elsewhere and `variant` is deliberately
         // opaque, so its nesting is not ours to trust. Overflowing the

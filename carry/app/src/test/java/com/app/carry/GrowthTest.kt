@@ -1,0 +1,224 @@
+package com.app.carry
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * The folder is the history, so this is the only thing that decides what
+ * "since you started" means. Two properties matter more than the shape of
+ * the screen: it counts only what actually happened, and it never works
+ * out coaching the runner didn't state.
+ */
+class GrowthTest {
+
+    private fun file(
+        date: String, cls: String = "3G", backfilled: Boolean = false, sets: String,
+    ) = """
+        {"schema":"gym-session/1","sheet_id":"$date:$cls","date":"$date","class":"$cls",
+         ${if (backfilled) "\"backfilled\":true," else ""}
+         "sets":[$sets],"added":[]}
+    """.trimIndent()
+
+    private fun set(
+        ref: Int, name: String, family: String? = null, weight: String = "null",
+        reps: String = "null", skipped: Boolean = false, variant: String = "null",
+        done: String = "null", needed: String = "null", suggested: String = "null",
+        key: String? = name,
+    ) = """{"ref":$ref,"line":"10 x $name","canonical":"$name",
+            ${key?.let { "\"key\":\"$it\"," } ?: ""}
+            "family":${family?.let { "\"$it\"" } ?: "null"},"variant":$variant,
+            "streak_done":$done,"streak_needed":$needed,"suggested_weight":$suggested,
+            "weight":$weight,"reps":$reps,"skipped":$skipped}"""
+
+    @Test
+    fun `every session is listed, newest first, named by its heaviest lift`() {
+        // "What did I do on the 27th" is a question about a DAY, and every
+        // other band on that screen is cut across days.
+        val since = Growth.of(
+            listOf(
+                file("2026-09-13", cls = "2G", sets = listOf(
+                    set(0, "hip hinge swing", "legs", weight = "40"),
+                    set(1, "bicep curl", "pull", weight = "15"),
+                ).joinToString(",")),
+                file("2026-09-27", sets = set(0, "sumo squat", "legs", weight = "50")),
+            )
+        )
+        assertEquals(listOf("2026-09-27", "2026-09-13"), since.days.map { it.date })
+        assertEquals("sumo squat", since.days[0].best?.name)
+        assertEquals(2, since.days[1].lifts)
+        assertEquals("hip hinge swing", since.days[1].best?.name)
+        assertEquals("2G", since.days[1].classTag)
+    }
+
+    @Test
+    fun `a day of nothing but bodyweight is listed with no weight against it`() {
+        val since = Growth.of(
+            listOf(
+                file("2026-09-27", sets = set(0, "plank", "core", reps = "60")),
+                file("2026-09-28", sets = set(0, "squat", "legs", weight = "25")),
+            )
+        )
+        val bodyweight = since.days.single { it.date == "2026-09-27" }
+        assertEquals(0, bodyweight.lifts)
+        assertEquals(null, bodyweight.best)
+    }
+
+    @Test
+    fun `an empty folder adds up to nothing, and says so`() {
+        val since = Growth.of(emptyList())
+        assertTrue(since.empty)
+        assertEquals(0, since.sessions)
+        assertEquals(null, since.from)
+    }
+
+    @Test
+    fun `one unreadable file does not cost the whole picture`() {
+        // A half-synced file is normal in a shared folder, not exceptional.
+        val since = Growth.of(
+            listOf(
+                "{ this is not json",
+                file("2026-09-27", sets = set(0, "deadlift", "legs", weight = "40", reps = "8")),
+            )
+        )
+        assertEquals(1, since.sessions)
+        assertEquals(1, since.sets)
+    }
+
+    @Test
+    fun `only a set with a real weight counts as a lift`() {
+        // A blank row is not a zero, and `weight: 0` in the oldest records
+        // meant both "bodyweight" and "skipped". Neither is a lift.
+        val since = Growth.of(
+            listOf(
+                file(
+                    "2026-09-27",
+                    sets = listOf(
+                        set(0, "deadlift", "legs", weight = "40", reps = "8"),
+                        set(1, "plank", "core", weight = "0"),
+                        set(2, "sit-up", "core"),
+                        set(3, "squat", "legs", weight = "25", skipped = true),
+                    ).joinToString(","),
+                )
+            )
+        )
+        assertEquals(1, since.sets)
+        assertEquals("deadlift", since.peaks.single().best.name)
+    }
+
+    @Test
+    fun `the heaviest in each family, heaviest family first`() {
+        val since = Growth.of(
+            listOf(
+                file("2026-09-13", sets = listOf(
+                    set(0, "hip hinge swing", "legs", weight = "40"),
+                    set(1, "bicep curl", "pull", weight = "15"),
+                ).joinToString(",")),
+                file("2026-09-27", sets = listOf(
+                    set(0, "goblet squat", "legs", weight = "25"),
+                    set(1, "row", "pull", weight = "30"),
+                ).joinToString(",")),
+            )
+        )
+        assertEquals(listOf("legs", "pull"), since.peaks.map { it.family })
+        assertEquals(40.0, since.peaks[0].best.weight, 0.0)
+        assertEquals("row", since.peaks[1].best.name)
+        // Oldest to newest, so the bar on the right is the latest.
+        assertEquals(listOf(40.0, 25.0), since.peaks[0].trail)
+    }
+
+    @Test
+    fun `near-a-bump comes from the newest sheet and nowhere else`() {
+        // A streak is a statement about where the owner stands TODAY; an
+        // older file's is a fact about a day that has been and gone.
+        val since = Growth.of(
+            listOf(
+                file("2026-09-13", sets = set(0, "deadlift", "legs", weight = "25", done = "2", needed = "3", suggested = "25")),
+                file("2026-10-11", sets = set(0, "row", "pull", weight = "30", done = "1", needed = "3", suggested = "30")),
+            )
+        )
+        assertEquals(1, since.nearBump.size)
+        assertEquals("row", since.nearBump.single().name)
+    }
+
+    @Test
+    fun `a streak that is finished or not started is not close to anything`() {
+        val since = Growth.of(
+            listOf(
+                file("2026-10-11", sets = listOf(
+                    set(0, "a", "legs", done = "0", needed = "3", suggested = "20"),
+                    set(1, "b", "legs", done = "3", needed = "3", suggested = "20"),
+                    set(2, "c", "legs", done = "2", needed = "3", suggested = "20"),
+                ).joinToString(",")),
+            )
+        )
+        assertEquals(listOf("c"), since.nearBump.map { it.name })
+    }
+
+    @Test
+    fun `nothing is invented when the runner said nothing`() {
+        // A back-filled day has no sheet behind it, so it has no streaks.
+        // Working them out here would be a second implementation of a rule
+        // that lives in the runner, and the two would drift.
+        val since = Growth.of(
+            listOf(file("2026-09-27", backfilled = true, sets = listOf(
+                set(0, "goblet squat", "legs", weight = "25", reps = "10"),
+                set(1, "goblet squat", "legs", weight = "25", reps = "10"),
+            ).joinToString(",")))
+        )
+        assertEquals(emptyList<Growth.Bump>(), since.nearBump)
+        assertEquals(2, since.sets)
+    }
+
+    @Test
+    fun `two rows are the same movement only if the file says they are`() {
+        // By the runner's key, not by anything worked out here. The same
+        // movement at two implements is two movements; the same key twice
+        // is one done twice -- and Carry is told which, never deciding.
+        val since = Growth.of(
+            listOf(
+                file("2026-09-13", sets = listOf(
+                    set(0, "goblet squat", "legs", weight = "25", key = "squat-1db"),
+                    set(1, "goblet squat", "legs", weight = "25", key = "squat-2db"),
+                ).joinToString(",")),
+                file("2026-09-27", sets =
+                    set(0, "goblet squat", "legs", weight = "30", key = "squat-1db")),
+            )
+        )
+        // Three sets, two distinct identities, one of them done twice --
+        // which is the fact that explains why the coach is usually quiet.
+        assertEquals(3, since.sets)
+        assertEquals(2, since.movements)
+        assertEquals(1, since.repeated)
+    }
+
+    @Test
+    fun `a count is withheld when the file never said what the same movement is`() {
+        // Files written before the runner carried a key. Guessing an
+        // identity here would put a confident wrong number on the one
+        // band whose job is to explain why the numbers are thin.
+        val since = Growth.of(
+            listOf(file("2026-09-13", sets = listOf(
+                set(0, "goblet squat", "legs", weight = "25", key = null),
+                set(1, "deadlift", "legs", weight = "40", key = null),
+            ).joinToString(",")))
+        )
+        assertEquals(2, since.sets)
+        assertEquals(null, since.movements)
+        assertEquals(null, since.repeated)
+    }
+
+    @Test
+    fun `the span runs from the first session to the last`() {
+        val since = Growth.of(
+            listOf(
+                file("2026-09-27", sets = set(0, "a", "legs", weight = "10")),
+                file("2026-09-13", sets = set(0, "b", "legs", weight = "10")),
+                file("2026-10-11", sets = set(0, "c", "legs", weight = "10")),
+            )
+        )
+        assertEquals("2026-09-13", since.from)
+        assertEquals("2026-10-11", since.to)
+        assertEquals(3, since.sessions)
+    }
+}
