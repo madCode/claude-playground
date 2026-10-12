@@ -1,0 +1,24 @@
+# Keeps the pinned action SHAs fresh. Pinning without this just rots: the
+# point of a pin is that an upgrade is a reviewed commit rather than a tag
+# moving under you, which only works if something proposes the upgrades.
+#
+# The cooldown is the other half. A poisoned release is usually caught and
+# yanked within days, so waiting a week before being offered an upgrade
+# means most of them never reach a pull request here at all.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: gradle
+    directory: /carry
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5

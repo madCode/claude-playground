@@ -54,7 +54,8 @@ fun TodayScreen(
             listOfNotNull(session.classTag, SessionFiles.formatDate(session.date))
                 .joinToString(" · "),
             color = Look.Chalk, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
-            fontSize = 19.sp, modifier = Modifier.padding(top = 16.dp),
+            fontSize = 19.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 16.dp),
         )
         Text(
             "Carry these in", color = Look.ChalkDim, fontFamily = Look.Name,
@@ -74,11 +75,17 @@ fun TodayScreen(
             Text(
                 "⚠ No ${session.classTag} intel. This is the $it floor block — check the board.",
                 color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                maxLines = 3, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
         }
         LazyColumn(Modifier.weight(1f)) {
-            items(changed + held, key = { it.ref }) { SheetRow(it) }
+            // No key. LogScreen already learned this: two rows sharing a
+            // ref throw out of LazyColumn, and SessionPatch's refusal for
+            // exactly that file could never be shown because THIS screen
+            // renders first -- so the app would crash on every launch with
+            // no way to fix it from the phone.
+            items(changed + held) { SheetRow(it) }
             if (noNumber.isNotEmpty()) item { TailLine(noNumber) }
         }
     }
@@ -139,8 +146,13 @@ private fun ChangeChip(change: Double) {
 /** "hold 40 lb, 1 more clean time before going up", as a picture. */
 @Composable
 private fun StreakPips(set: ExerciseSet) {
-    val needed = set.streakNeeded ?: return
-    val done = set.streakDone ?: 0
+    // Clamped, because this number comes from a file written on another
+    // machine. "streak_needed": 2000000000 is sixty bytes of valid JSON
+    // and would emit two billion nodes during the first composition of
+    // the default tab -- hanging the app on every launch, unfixable from
+    // the phone, in the one moment it exists for.
+    val needed = (set.streakNeeded ?: return).coerceIn(0, MAX_PIPS)
+    val done = (set.streakDone ?: 0).coerceIn(0, needed)
     Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
         repeat(needed) { i ->
             Box(
@@ -153,23 +165,37 @@ private fun StreakPips(set: ExerciseSet) {
 
 @Composable
 private fun TailLine(rest: List<ExerciseSet>) {
-    val (bodyweight, byFeel) = rest.partition { it.suggested == "no weight needed" }
+    // Capped: these names are concatenated into single Text nodes, and the
+    // file comes from another machine. A thousand rows, or one name a
+    // megabyte long, would otherwise be laid out as one paragraph on the
+    // main thread.
+    val (bodyweight, byFeel) = rest.take(MAX_TAIL_NAMES)
+        .partition { it.suggested == "no weight needed" }
     Column(Modifier.padding(top = 11.dp, bottom = 20.dp)) {
         if (byFeel.isNotEmpty()) {
             Text(
                 "By feel: " + byFeel.joinToString(", ") { it.displayName },
                 color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                maxLines = 3, overflow = TextOverflow.Ellipsis,
             )
         }
         if (bodyweight.isNotEmpty()) {
             Text(
                 "No weight: " + bodyweight.joinToString(", ") { it.displayName },
                 color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                maxLines = 3, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 3.dp),
             )
         }
     }
 }
+
+/** More than this many clean sets in a row is not a streak anyone is
+ *  tracking, and the number arrives from another machine. */
+private const val MAX_PIPS = 10
+
+/** Names folded into the tail line; past this nobody is reading them. */
+private const val MAX_TAIL_NAMES = 40
 
 /** 45.0 reads as "45"; 12.5 keeps its half. Dumbbells come in halves. */
 internal fun Double?.asWeight(): String {

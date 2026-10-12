@@ -8,11 +8,39 @@ unknown keys through on added rows, unlike the `sets` path, so a save with
 no edits can still rewrite the file.
 
 
-## Before this is called a release
+## From the security pass, not fixed
 
-- **Security pass**, per `practices/recurring-reviews.md`: MASVS areas,
-  zizmor on the workflow, OpenSSF Scorecard. A debug APK is already
-  installable, which is a release in everything but name.
+Left deliberately, with the reason:
+
+- **Full-file JSON parsing on the main thread** — twice per resume
+  (`entriesIn` + `addedIn`) and several times per save. Bounded now by the
+  1 MB read cap, so it is a responsiveness problem rather than an ANR, but
+  it wants moving off the main thread. Its own cycle.
+- **The draft still holds the whole file text.** It only needs a hash (to
+  spot a rewrite) and the per-ref identities (to compare them), both far
+  smaller. Same cycle as the above.
+- **`chosen` checks only the read permission** although the grant takes
+  read and write, so a read-only tree looks usable and fails at save time.
+- **Bidi and zero-width characters in exercise names** are rendered as
+  they arrive. Row names are single-line so the damage is contained, and
+  the tail is capped now, but a stray RLO can still reverse a line.
+
+**For you to decide, not for me:**
+
+- **The other two projects' workflows are unpinned** — 11 zizmor findings
+  each, the same as Carry had. Fixing them is a repo-wide pass on someone
+  else's projects.
+- **The debug keystore is committed**, which is the documented convention
+  here and genuinely low risk: `release` has no signing config, so it
+  cannot ship a release. But the debug APK *is* the real install, and
+  anyone can build an APK with that key, so a sideloaded "update" would be
+  accepted as the same package. If that install is to be trusted, it wants
+  its own untracked key.
+- **`docs/DESIGN.md` publishes aggregate facts about your real training**
+  — classes per week, that three `fail` markers exist, that one `knees`
+  entry exists — in a public repo. No weights, dates or identity, so it
+  stays inside the project's privacy rule, but it should be a choice
+  rather than a surprise.
 
 ## Owed on a device
 

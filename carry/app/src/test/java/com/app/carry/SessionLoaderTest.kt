@@ -11,6 +11,7 @@ import java.util.concurrent.Executors
 /** Records which thread the folder was actually read on. */
 private class ThreadRecordingFolder : Folder {
     var readOn: String? = null
+    override val label = "Sync/gym"
     override val chosen = true
     override val grantLost = false
     override fun list(): List<Pair<String, String>> {

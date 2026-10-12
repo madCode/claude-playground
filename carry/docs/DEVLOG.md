@@ -342,3 +342,55 @@ the truth. Screenshot evidence needs the run to have finished — the same
 class of silent wrongness as everything else in that medium.
 
 **Next.** The security pass.
+
+## 2026-10-11 — cycle 8: the security pass
+
+**From you.** "Make sure we're doing architecture and code cleanliness and
+design and security passes."
+
+Run the way `practices/recurring-reviews.md` describes: zizmor on the
+workflow, and two fresh-eyes reviewers on separate MASVS areas — storage
+and privacy, platform and hostile input.
+
+**Two crash loops, both from a file written on another machine.** These
+are the ones worth remembering, because each made the app unusable with no
+fix available from the phone — `onResume` re-reads the same file, so every
+relaunch wedged again.
+
+- `"streak_needed": 2000000000` is sixty bytes of valid, correctly-shaped
+  JSON, and was rendered literally: two billion nodes emitted during the
+  first composition of the default tab. Clamped.
+- Two rows sharing a `ref` threw out of `LazyColumn` on the Today screen.
+  The Log screen had been guarded against exactly this a cycle earlier,
+  with a comment explaining why — and Today, which renders *first*, was
+  missed. So `SessionPatch`'s careful refusal for such a file could never
+  have been seen.
+
+**Scope, which is this app's whole reason for existing.** A SAF tree grant
+is recursive and survives reboots, and "Internal storage" sits one row
+above the folder in the picker. Carry now refuses a whole volume outright,
+names the folder it holds on every screen that offers the picker, and
+offers to hand it back — a grant nobody can see is a grant nobody can
+audit, and the predecessor's failure was precisely a handle wider than its
+job.
+
+**Also fixed:** a 1 MB ceiling on what will be read at all (the text is
+held three times over — string, parse tree, draft — so an oversized file
+was an OOM that took the typed numbers with it); `dataExtractionRules`,
+because `allowBackup="false"` stopped covering device-to-device transfer
+at Android 12; a depth cap in the identity comparison, where a deeply
+nested `variant` would have overflowed the stack and been swallowed into a
+permanent "the exercises no longer line up"; caps on the strings rendered
+from the file; and an unused DataStore dependency dropped.
+
+**Supply chain:** actions pinned to commit SHAs and `dependabot.yml` added
+with the 7-day cooldown. I argued against pinning in cycle 0 because pins
+rot without something to bump them — which was an argument for adding
+Dependabot, not for leaving tags.
+
+**Clean, explicitly:** no logging anywhere, no permissions declared at all
+(so nothing can leave the device), one exported component, no personal
+data in the repo, no network dependency.
+
+**Left, with reasons, in BACKLOG.md** — including three things that are
+yours to decide rather than mine.

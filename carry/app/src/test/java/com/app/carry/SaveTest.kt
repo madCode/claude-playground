@@ -13,6 +13,7 @@ private class FlakyFolder(
 
     var content: String? = start
     var attempts = 0
+    override val label = "Sync/gym"
     override val chosen = true
     override val grantLost = false
     override fun list() = listOf("d" to "session-2026-10-17-2G.json")
@@ -73,6 +74,7 @@ class SaveTest {
     fun `a write that claims success but changed nothing is caught, and the file is fine`() {
         val folder = object : Folder {
             var content = "something else entirely"
+            override val label = "Sync/gym"
             override val chosen = true
             override val grantLost = false
             override fun list() = emptyList<Pair<String, String>>()

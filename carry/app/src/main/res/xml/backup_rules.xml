@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  allowBackup="false" governs cloud backup only from Android 12 on;
+  device-to-device transfer needs these rules as well, and the project's
+  own lint says so. Nothing here should travel: the only app-private
+  thing stored is the Uri of the folder the owner picked, which is a path
+  into their own filesystem and belongs to the device it was picked on.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>
