@@ -96,6 +96,23 @@ fun carryState(folder: Folder): CarryState {
 }
 
 /**
+ * What the whole folder adds up to.
+ *
+ * Beside [carryState] and taking the same [Folder], because the pairs that
+ * listing returns are **(document id, display name)** and reading them the
+ * other way round is an easy, silent mistake: the first version filtered
+ * the ids against the filename pattern, matched nothing, and showed
+ * "0 sessions" over a folder holding nine of them. Every test passed,
+ * because they all handed file TEXT straight to [Growth] and never went
+ * through a folder at all.
+ */
+fun growthOf(folder: Folder): Growth.Since = Growth.of(
+    folder.list()
+        .filter { (_, name) -> SessionFiles.isSessionFile(name) }
+        .mapNotNull { (id, _) -> folder.read(id) }
+)
+
+/**
  * Keeps the last session on screen when a refresh comes back empty.
  *
  * Syncthing replaces a file rather than editing it, so there is a window

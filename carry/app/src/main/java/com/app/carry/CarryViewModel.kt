@@ -225,11 +225,8 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      * is a cache keyed on the folder's own listing, not a second copy of
      * the history that could disagree with the files.
      */
-    private fun readFolder(): Growth.Since = Growth.of(
-        folder.list()
-            .filter { (name, _) -> SessionFiles.isSessionFile(name) }
-            .mapNotNull { (_, id) -> runCatching { folder.read(id) }.getOrNull() }
-    )
+    private fun readFolder(): Growth.Since = runCatching { growthOf(folder) }
+        .getOrDefault(Growth.of(emptyList()))
 
     private fun savedDraft(): Draft? = handle.get<String>(DRAFT)?.let {
         runCatching { Session.json.decodeFromString<Draft>(it) }.getOrNull()

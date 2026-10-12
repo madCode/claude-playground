@@ -712,3 +712,16 @@ would have:
 
 Both substantive tests were checked by breaking the code and watching them
 fail before being kept.
+
+**And the device found a fourth, as it did last time.** The tab opened on
+"0 sessions" over a folder holding nine. `Folder.list()` returns
+**(document id, display name)** — it says so in its own doc comment — and
+this read them the other way round, filtering ids against the filename
+pattern and matching nothing. Every test passed, because every one of them
+handed file TEXT straight to `Growth` and never went through a folder at
+all. There is a test through a real listing now, with the junk a shared
+folder really holds in it, and it was checked by flipping the pair back.
+
+Two device checks, two integration bugs invisible to a green suite. The
+pattern is the same both times: the tests covered each half and nothing
+covered the seam.

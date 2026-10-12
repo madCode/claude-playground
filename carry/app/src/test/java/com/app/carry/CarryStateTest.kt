@@ -22,6 +22,51 @@ private val VALID = """
      "class":"2G","sets":[{"ref":0,"line":"10 x deadlift","canonical":"deadlift"}]}
 """.trimIndent()
 
+class GrowthFromFolderTest {
+
+    @Test
+    fun `the folder's whole history is read, through a real listing`() {
+        // The listing gives (document id, display name) and reading those
+        // the other way round is silent: the first version filtered the
+        // IDS against the filename pattern, matched nothing, and showed
+        // "0 sessions" over a folder holding nine. Every unit test passed,
+        // because they all handed file TEXT straight to Growth and never
+        // went through a folder — so this one does.
+        val lifted = """
+            {"schema":"gym-session/1","sheet_id":"2026-09-27:3G","date":"2026-09-27","class":"3G",
+             "sets":[{"ref":0,"line":"10 x squat","canonical":"squat","family":"legs",
+                      "key":"squat","weight":40,"reps":8}]}
+        """.trimIndent()
+        val folder = FakeFolder(
+            files = listOf(
+                "doc-a" to "session-2026-09-27-3G.json",
+                // Things a shared folder really holds, and must be ignored.
+                "doc-b" to "notes.txt",
+                "doc-c" to ".stfolder",
+            ),
+            contents = mapOf("doc-a" to lifted, "doc-b" to "not json at all"),
+        )
+        val since = growthOf(folder)
+        assertEquals(1, since.sessions)
+        assertEquals(1, since.sets)
+        assertEquals("squat", since.peaks.single().best.name)
+    }
+
+    @Test
+    fun `a folder with nothing in it is not an error`() {
+        assertEquals(0, growthOf(FakeFolder()).sessions)
+    }
+
+    @Test
+    fun `a file the provider will not hand over is skipped, not fatal`() {
+        val folder = FakeFolder(
+            files = listOf("gone" to "session-2026-09-27-3G.json"),
+            contents = emptyMap(),
+        )
+        assertEquals(0, growthOf(folder).sessions)
+    }
+}
+
 class CarryStateTest {
 
     @Test
