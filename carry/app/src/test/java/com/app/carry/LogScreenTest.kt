@@ -281,6 +281,33 @@ class LogScreenTest {
         assertEquals(SessionPatch.Entry(easier = true, hard = true), edits.value[0])
     }
 
+    @Test
+    fun `on a borrowed day the add-row leads, because it is the session`() {
+        // Intel for this class is posted on a small minority of days, so
+        // the sheet is usually another class's block and whatever the
+        // owner adds by hand IS the workout. That button used to sit
+        // under eleven rows of the wrong exercises.
+        val borrowed = SampleSession.today.copy(borrowedFrom = "3G")
+        compose.setContent {
+            LogScreen(
+                session = borrowed, entries = emptyMap(), added = emptyList(),
+                onEdit = { _, _ -> }, onAdd = { added.value = added.value + AddedSet(id = "x") },
+                onEditAdded = { _, _ -> }, onSave = {}, saving = SaveState.Idle,
+            )
+        }
+        compose.onNodeWithText("+ Add what you did").assertIsDisplayed()
+        compose.onNodeWithText("No 2G intel", substring = true).assertIsDisplayed()
+        shoot("20-borrowed-log")
+    }
+
+    @Test
+    fun `on a normal day it stays where it was, and only appears once`() {
+        show()
+        compose.onNodeWithText("+ Add what you did").assertDoesNotExist()
+        reach("+ Add something the sheet missed")
+        compose.onNodeWithText("+ Add something the sheet missed").assertIsDisplayed()
+    }
+
     private fun shoot(name: String) {
         compose.waitForIdle()
         val shot = compose.onRoot().captureToImage().asAndroidBitmap()

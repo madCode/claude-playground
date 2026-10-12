@@ -122,7 +122,26 @@ fun LogScreen(
                     .padding(horizontal = 10.dp, vertical = 8.dp),
             )
         }
+        // On a borrowed day the eleven rows below are ANOTHER class's
+        // block, and the session is whatever the owner adds by hand. Intel
+        // for their class is posted on a small minority of days, so this is
+        // the common case rather than the edge one -- and the button that
+        // matters most on those days was at the bottom, under eleven rows
+        // of the wrong workout.
+        val borrowed = session.borrowedFrom
         LazyColumn(Modifier.weight(1f)) {
+            if (borrowed != null) {
+                item {
+                    Text(
+                        "\u26a0 No ${session.classTag ?: "intel"} intel \u2014 these are the " +
+                            "$borrowed rows. Add what you actually did.",
+                        color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                }
+                item { AddRow(onAdd, loud = true) }
+                itemsIndexed(added, sessionKey, onEditAdded)
+            }
             // No key: a file with two rows sharing a ref is real enough
             // that SessionPatch refuses it by name, and LazyColumn throws
             // on a duplicate key -- which would crash this tab before the
@@ -136,22 +155,32 @@ fun LogScreen(
                     onChange = { onEdit(set.ref, it) },
                 )
             }
-            itemsIndexed(added, sessionKey, onEditAdded)
-            item {
-                Text(
-                    "+ Add something the sheet missed",
-                    color = Look.ChalkDim, fontFamily = Look.Name, fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth().padding(top = 12.dp)
-                        .border(1.dp, Look.RuleStrong, RoundedCornerShape(4.dp))
-                        .clickable(onClick = onAdd)
-                        .padding(vertical = 10.dp),
-                )
+            // Only once, and at whichever end is the useful one: on a
+            // borrowed day the added rows ARE the session and lead, on a
+            // normal day they are the afterthought the name suggests.
+            if (borrowed == null) {
+                itemsIndexed(added, sessionKey, onEditAdded)
+                item { AddRow(onAdd, loud = false) }
             }
             item { SaveButton(saving, onSave) }
         }
     }
+}
+
+@Composable
+private fun AddRow(onAdd: () -> Unit, loud: Boolean) {
+    Text(
+        if (loud) "+ Add what you did" else "+ Add something the sheet missed",
+        color = if (loud) Look.Slate else Look.ChalkDim,
+        fontFamily = Look.Name, fontWeight = if (loud) FontWeight.Bold else FontWeight.Medium,
+        fontSize = Look.SmallSize, textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth().padding(top = if (loud) 0.dp else 12.dp, bottom = if (loud) 10.dp else 0.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .then(if (loud) Modifier.background(Look.Amber) else Modifier.border(1.dp, Look.RuleStrong, RoundedCornerShape(4.dp)))
+            .clickable(onClick = onAdd)
+            .padding(vertical = 11.dp),
+    )
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexed(
