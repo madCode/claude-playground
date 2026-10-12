@@ -334,6 +334,18 @@ class SessionPatchTest {
         assertEquals("45.0", saved["weight"]!!.jsonPrimitive.content)
     }
 
+    @Test
+    fun `a file with a carried row does not churn on every save`() {
+        // The carried elements go back at the END, so a file that
+        // interleaved them could be reordered once. It must settle: a
+        // sync watches this folder, and a file that rewrites itself on
+        // every save looks like a change that isn't one.
+        val file = withAdded("""{"name": "plank"}, "nonsense"""")
+        val once = patched(file, mapOf(0 to SessionPatch.Entry(weight = 45.0)))
+        val again = SessionPatch.apply(once, emptyMap(), SessionPatch.addedIn(once))
+        assertEquals(null, (again as SessionPatch.Outcome.Patched).text)
+    }
+
     /** The fixture with a different `added` array, so each case states only
      *  the rows it is about. */
     private fun withAdded(rows: String): String {
