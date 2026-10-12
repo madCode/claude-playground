@@ -1,7 +1,9 @@
 package com.app.carry
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 /**
@@ -50,10 +52,25 @@ object Look {
         "legs" to Legs, "push" to Push, "pull" to Pull, "core" to CoreC, "combo" to Combo,
     )
 
-    // Condensed for names, which get long ("single-arm row · split stance")
-    // and must not wrap; monospace for figures so a digit never shifts width.
-    val Name = FontFamily.SansSerif
-    val Figure = FontFamily.Monospace
+    // Bundled rather than system faces, and rather than downloadable ones:
+    // this app is opened in a lobby with the phone possibly offline, and a
+    // font that has not arrived yet would reflow the one screen whose whole
+    // job is to be read in a glance.
+    //
+    // Barlow Condensed for names, because they get long -- "single-arm row
+    // · split stance" -- and must not wrap. IBM Plex Mono for figures, for
+    // tabular digits that keep their width as they change. Both OFL; the
+    // licences are in licenses/.
+    val Name = FontFamily(
+        Font(R.font.barlow_condensed_medium, FontWeight.Medium),
+        Font(R.font.barlow_condensed_semibold, FontWeight.SemiBold),
+        Font(R.font.barlow_condensed_bold, FontWeight.Bold),
+    )
+    val Figure = FontFamily(
+        Font(R.font.ibm_plex_mono_regular, FontWeight.Normal),
+        Font(R.font.ibm_plex_mono_semibold, FontWeight.SemiBold),
+        Font(R.font.ibm_plex_mono_bold, FontWeight.Bold),
+    )
 
     val NameSize = 15.sp
     val FigureSize = 18.sp

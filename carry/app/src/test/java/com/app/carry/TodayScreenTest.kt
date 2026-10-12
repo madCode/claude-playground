@@ -40,7 +40,10 @@ class TodayScreenTest {
 
     @Test
     fun `today shows the change, the held weights and the tail`() {
-        compose.setContent { TodayScreen(SampleSession.today) }
+        // Dated to match the sample, so the canonical screenshot shows the
+        // ordinary case rather than carrying a staleness warning that is
+        // only an artefact of when the suite happens to run.
+        compose.setContent { TodayScreen(SampleSession.today, java.time.LocalDate.of(2026, 10, 17)) }
 
         // Asserting the PROPERTY, not the string. Building the expectation
         // from formatDate would move with the bug it is meant to catch --

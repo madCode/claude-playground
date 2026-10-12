@@ -314,3 +314,31 @@ from the scenario rather than from the code.
 
 **Next.** Bundled fonts, then a security pass before anything is called a
 release.
+
+## 2026-10-11 — cycle 7: the real typefaces
+
+**From you.** The look you picked depended on them.
+
+**Shipped.** Barlow Condensed and IBM Plex Mono bundled (732K, OFL, with
+the licences in `licenses/`). Bundled rather than downloadable: this app
+is opened in a lobby with the phone possibly offline, and a font that has
+not arrived yet would reflow the one screen whose whole job is to be read
+in a glance.
+
+Names are properly compact now — "single-arm row · split stance" fits
+without truncating — and the figures are tabular, so a digit keeps its
+width as it changes.
+
+**Caught by looking.** The canonical screenshot was carrying a "dated
+ahead of today" warning, because the sample session is dated the 17th and
+the suite runs whenever it runs. True, but an artefact: the headline
+picture should show the ordinary case. It passes an explicit date now, and
+the other three day-states keep their own tests.
+
+Also worth recording: a screenshot read while the suite was still writing
+it came back blank, and for a moment that looked like the fonts having
+broken rendering entirely. A clean directory and a targeted re-run showed
+the truth. Screenshot evidence needs the run to have finished — the same
+class of silent wrongness as everything else in that medium.
+
+**Next.** The security pass.
