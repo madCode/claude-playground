@@ -8,15 +8,8 @@ unknown keys through on added rows, unlike the `sets` path, so a save with
 no edits can still rewrite the file.
 
 
-## From the security pass, not fixed
+## From the security pass
 
-Left deliberately, with the reason:
-
-- **`chosen` checks only the read permission** although the grant takes
-  read and write, so a read-only tree looks usable and fails at save time.
-- **Bidi and zero-width characters in exercise names** are rendered as
-  they arrive. Row names are single-line so the damage is contained, and
-  the tail is capped now, but a stray RLO can still reverse a line.
 
 **For you to decide, not for me:**
 
