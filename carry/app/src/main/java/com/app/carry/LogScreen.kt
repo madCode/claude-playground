@@ -90,7 +90,7 @@ fun LogScreen(
     Column(modifier.fillMaxSize().background(Look.Slate).padding(horizontal = 14.dp)) {
         Text(
             "How did it go?", color = Look.Chalk, fontFamily = Look.Name,
-            fontWeight = FontWeight.Bold, fontSize = 19.sp, modifier = Modifier.padding(top = 16.dp),
+            fontWeight = FontWeight.Bold, fontSize = Look.TitleSize, modifier = Modifier.padding(top = 16.dp),
         )
         Text(
             listOfNotNull(
@@ -177,52 +177,57 @@ private fun LogRow(
     key: String,
     onChange: (SessionPatch.Entry) -> Unit,
 ) {
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Look.family(family)?.let { hue ->
-            Box(Modifier.width(3.dp).height(20.dp).clip(RoundedCornerShape(2.dp)).background(hue))
-        }
-        Text(
-            name, color = if (entry.skipped) Look.ChalkFaint else Look.Chalk,
-            fontFamily = Look.Name, fontSize = 13.5.sp,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-        )
-        // A skipped row offers no boxes. There is no number to put in them
-        // -- that is what skipped means -- and taking them away gives the
-        // name back the width the third chip cost it, on exactly the rows
-        // that no longer need it.
-        if (!entry.skipped) {
-            NumberField(entry.weight.asWeightField(), "$key-w", "$name weight in pounds") { text ->
-                onChange(entry.copy(weight = text.toDoubleOrNull()))
+    // Two lines, not one. On one line the name shared ~400dp with two
+    // number boxes and three 44dp chips, and the owner's own sheet
+    // truncated: "bicep curl + lateral lu...". Everything here is read at
+    // arm's length or tapped with cold hands, so neither the name nor the
+    // targets can give up room to the other — the row gets taller instead,
+    // which costs only scrolling on the screen where scrolling is fine.
+    Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Look.family(family)?.let { hue ->
+                Box(Modifier.width(3.dp).height(18.dp).clip(RoundedCornerShape(2.dp)).background(hue))
             }
-            NumberField(entry.reps?.toString() ?: "", "$key-r", "$name reps") { text ->
-                // "8." is mid-typing, not a mistake: keep the last whole
-                // number rather than blanking what they already entered.
-                onChange(entry.copy(reps = text.trimEnd('.').toIntOrNull()))
-            }
-        }
-        if (!entry.skipped) {
-            Chip("easy", entry.easy, Look.Amber) { onChange(entry.copy(easy = !entry.easy)) }
-            Chip("hurt", entry.hurt, Look.Brick) { onChange(entry.copy(hurt = !entry.hurt)) }
-        }
-        // Saying "I didn't do this" and leaving it blank are different
-        // facts, and only one of them was sayable. `skipped` has been in
-        // the schema, in the patch and in the importer -- which logs those
-        // so the coach stops re-asking -- since before this screen
-        // existed, with no way to set it. A movement deliberately skipped
-        // was indistinguishable from one not got to, so the coach kept
-        // suggesting it for ever.
-        //
-        // Clearing it clears the row with it: a weight against a set you
-        // did not do is the wrong number this app exists to avoid.
-        Chip("skip", entry.skipped, Look.ChalkDim) {
-            onChange(
-                if (entry.skipped) entry.copy(skipped = false)
-                else SessionPatch.Entry(skipped = true)
+            Text(
+                name, color = if (entry.skipped) Look.ChalkFaint else Look.Chalk,
+                fontFamily = Look.Name, fontSize = Look.NameSize,
+                maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
             )
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(start = 9.dp, top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // A skipped row offers no boxes and no feel chips. There is no
+            // number to put in them, and no set to have found easy.
+            if (!entry.skipped) {
+                NumberField(entry.weight.asWeightField(), "$key-w", "$name weight in pounds") { text ->
+                    onChange(entry.copy(weight = text.toDoubleOrNull()))
+                }
+                NumberField(entry.reps?.toString() ?: "", "$key-r", "$name reps") { text ->
+                    // "8." is mid-typing, not a mistake: keep the last whole
+                    // number rather than blanking what they already entered.
+                    onChange(entry.copy(reps = text.trimEnd('.').toIntOrNull()))
+                }
+                Chip("easy", entry.easy, Look.Amber) { onChange(entry.copy(easy = !entry.easy)) }
+                Chip("hurt", entry.hurt, Look.Brick) { onChange(entry.copy(hurt = !entry.hurt)) }
+            }
+            // Saying "I didn't do this" and leaving it blank are different
+            // facts, and only one of them was sayable. `skipped` has been
+            // in the schema, in the patch and in the importer -- which logs
+            // those so the coach stops re-asking -- since before this
+            // screen existed, with no way to set it.
+            //
+            // Clearing it clears the row with it: a weight against a set
+            // you did not do is the wrong number this app exists to avoid.
+            Chip("skip", entry.skipped, Look.ChalkDim) {
+                onChange(
+                    if (entry.skipped) entry.copy(skipped = false)
+                    else SessionPatch.Entry(skipped = true)
+                )
+            }
         }
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Look.Rule))
@@ -230,47 +235,54 @@ private fun LogRow(
 
 @Composable
 private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Box(Modifier.width(3.dp).height(20.dp).clip(RoundedCornerShape(2.dp)).background(Look.ChalkFaint))
-        BasicTextField(
-            value = row.name,
-            onValueChange = { onChange(row.copy(name = it)) },
-            singleLine = true,
-            textStyle = TextStyle(color = Look.Chalk, fontFamily = Look.Name, fontSize = 13.5.sp),
-            cursorBrush = SolidColor(Look.Amber),
-            decorationBox = { inner ->
-                // isBlank, not isEmpty: the save refuses on isBlank, so a
-                // name of one space showed neither hint while still
-                // blocking the save -- told to name a row that looked
-                // named, with no way to tell which.
-                if (row.name.isBlank()) {
-                    // Once there are numbers in the row, the missing name
-                    // is the thing that will refuse the save -- so it asks
-                    // here, in the box that fixes it, rather than letting
-                    // the owner find out at the save button.
-                    val asking = !row.blank
-                    Text(
-                        if (asking) "name this" else "what was it?",
-                        color = if (asking) Look.BrickInk else Look.ChalkFaint,
-                        fontFamily = Look.Name, fontSize = 13.5.sp,
-                    )
-                }
-                inner()
-            },
-            modifier = Modifier.weight(1f).semantics { contentDescription = "added exercise name" },
-        )
-        NumberField(row.weight.asWeightField(), "$key-w", "added exercise weight in pounds") {
-            onChange(row.copy(weight = it.toDoubleOrNull()))
+    // Same two-line shape as a sheet row, for the same reason: a name the
+    // owner types needs the width more than a one-line row needs the
+    // height, and the two kinds of row sitting differently on the same
+    // screen read as a mistake.
+    Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.width(3.dp).height(18.dp).clip(RoundedCornerShape(2.dp)).background(Look.ChalkFaint))
+            BasicTextField(
+                value = row.name,
+                onValueChange = { onChange(row.copy(name = it)) },
+                singleLine = true,
+                textStyle = TextStyle(color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.NameSize),
+                cursorBrush = SolidColor(Look.Amber),
+                decorationBox = { inner ->
+                    if (row.name.isBlank()) {
+                        // Once there are numbers in the row, the missing
+                        // name is what will refuse the save -- so it asks
+                        // here, in the box that fixes it, rather than
+                        // letting the owner find out at the save button.
+                        val asking = !row.blank
+                        Text(
+                            if (asking) "name this" else "what was it?",
+                            color = if (asking) Look.BrickInk else Look.ChalkFaint,
+                            fontFamily = Look.Name, fontSize = Look.NameSize,
+                        )
+                    }
+                    inner()
+                },
+                modifier = Modifier.weight(1f).semantics { contentDescription = "added exercise name" },
+            )
         }
-        NumberField(row.reps?.toString() ?: "", "$key-r", "added exercise reps") {
-            onChange(row.copy(reps = it.trimEnd('.').toIntOrNull()))
+        Row(
+            Modifier.fillMaxWidth().padding(start = 9.dp, top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            NumberField(row.weight.asWeightField(), "$key-w", "added exercise weight in pounds") {
+                onChange(row.copy(weight = it.toDoubleOrNull()))
+            }
+            NumberField(row.reps?.toString() ?: "", "$key-r", "added exercise reps") {
+                onChange(row.copy(reps = it.trimEnd('.').toIntOrNull()))
+            }
+            Chip("easy", row.easy, Look.Amber) { onChange(row.copy(easy = !row.easy)) }
+            Chip("hurt", row.hurt, Look.Brick) { onChange(row.copy(hurt = !row.hurt)) }
+            // No skip: a row you added is one you did. Skipping it is
+            // clearing it, which the owner does by emptying the name.
         }
-        Chip("easy", row.easy, Look.Amber) { onChange(row.copy(easy = !row.easy)) }
-        Chip("hurt", row.hurt, Look.Brick) { onChange(row.copy(hurt = !row.hurt)) }
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Look.Rule))
 }

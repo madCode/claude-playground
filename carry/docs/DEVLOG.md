@@ -777,3 +777,44 @@ thing the glance screen is short of to repeat itself.
 The scheme that got dropped would have been a schema key, a per-sheet
 computation in the runner and a new field on the client, to restate
 something two existing fields already said.
+
+## 2026-10-12 — cycle 19: legible, on a real phone
+
+**From you**, with screenshots from your own device: *"This font is WAY too
+small."* It was. `SmallSize` was 11sp where Android's default body text is
+14, and the section labels were 9.5sp. These screens are read at arm's
+length in a lobby and filled in in a car; that is not caption territory.
+
+The whole scale went up — names 15→16.5, figures 18→20, small 11→13.5,
+labels 9.5→11.5, titles 19→21 — and the two sizes that were literals in
+three different files are tokens now.
+
+**Which forced a layout change rather than allowing one.** Your own
+screenshot already showed `bicep curl + lateral lu…` truncating at the OLD
+size: the name was sharing ~400dp with two number boxes and three 44dp
+chips. Bigger type would have made that worse. Neither side can give up
+room — a name you cannot read is useless, and the 44dp targets exist
+because this is filled with cold hands — so the row got taller instead.
+Name on its own line, controls beneath it. Added rows match.
+
+The cost is real and visible: about nine rows fit where eleven did, so
+there is more scrolling on a screen that already had some. That is the
+right trade on the tab you sit and fill in, and it would be the wrong one
+on the glance screen, which is why only this one changed.
+
+**It also showed up in the tests.** Five failed, all because a
+`LazyColumn` does not compose what is off-screen — so there was no node to
+scroll *to*, and the list had to be scrolled to it instead. Worth knowing:
+making rows taller silently moved half the screen out of every test's
+reach, and the failures said "could not find node", not "your layout
+changed".
+
+**Also, the quiet band now retires itself.** You asked whether "why the
+coach is often quiet" is a long-term thing or wants reframing, and whether
+I would update it on a cadence. It needs no cadence — it is computed from
+the files every time — but it should not be permanent: it earns its place
+only while almost nothing repeats. Once a quarter of movements have come
+round again the quiet explains itself, and a band still saying it would be
+telling you off for variety the studio chose. It now disappears on its
+own at that point, and stays away below eight movements, where there is
+too little training to say anything about its shape.

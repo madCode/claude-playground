@@ -54,7 +54,7 @@ fun TodayScreen(
             listOfNotNull(session.classTag, SessionFiles.formatDate(session.date))
                 .joinToString(" · "),
             color = Look.Chalk, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
-            fontSize = 19.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            fontSize = Look.TitleSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 16.dp),
         )
         Text(
@@ -122,7 +122,7 @@ private fun SheetRow(set: ExerciseSet) {
             // the first build and "lb" competed with the number it qualifies.
             buildAnnotatedString {
                 append(set.suggestedWeight.asWeight())
-                withStyle(SpanStyle(fontSize = 10.sp, color = Look.ChalkDim)) { append(" lb") }
+                withStyle(SpanStyle(fontSize = 11.5.sp, color = Look.ChalkDim)) { append(" lb") }
             },
             color = if (change != null) Look.Amber else Look.Chalk,
             fontFamily = Look.Figure, fontWeight = FontWeight.SemiBold, fontSize = Look.FigureSize,
@@ -136,7 +136,7 @@ private fun SheetRow(set: ExerciseSet) {
 private fun ChangeChip(change: Double) {
     Text(
         (if (change > 0) "+" else "") + change.asWeight(),
-        color = Look.Slate, fontFamily = Look.Figure, fontWeight = FontWeight.Bold, fontSize = 9.sp,
+        color = Look.Slate, fontFamily = Look.Figure, fontWeight = FontWeight.Bold, fontSize = 10.5.sp,
         modifier = Modifier
             .clip(RoundedCornerShape(3.dp)).background(Look.Amber)
             .padding(horizontal = 5.dp, vertical = 2.dp),
