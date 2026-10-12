@@ -158,3 +158,54 @@ would blunt the signal. In DESIGN.md as a known limit.
 
 **Next.** The Log screen — the write path, which must patch the original
 JSON rather than re-serialise.
+
+## 2026-10-11 — cycle 4: writing back without disturbing anything
+
+**From you.** Nothing new; the write path, which cycle 1 had already
+designed by accident.
+
+**Shipped.** `SessionPatch`, which writes the owner's numbers into the
+runner's own JSON rather than re-serialising `Session`, and
+`SessionFolder.write`. No UI yet — the patching is the risky half and gets
+its own cycle, so the screen can be built against something already proven.
+
+The rule it enforces falls out of the approach rather than needing care:
+identity is copied, never rebuilt, so there is no code path that could
+invent it. Saving an unedited session returns the original text untouched,
+which matters because a sync watching the folder would otherwise see a
+change that isn't one. A blank row stays blank and only an explicit skip is
+recorded as one.
+
+**Review caught — the first version could destroy a day's data.** Easily
+the most valuable review so far:
+
+- `openOutputStream(doc, "wt")` **truncates on open**. Any failure after
+  that — a provider error, a sync replacing the file, no space — left a
+  zero-length document, taking the owner's numbers and the runner's intel
+  with it, while the method returned `false`, which the interface defined
+  as "the write did not happen". Now `save()` writes, reads back, restores
+  the old content if what landed is wrong, and reports which of three
+  things happened. Still not atomic: SAF has nothing that is.
+- A `sets` key that was not an array became `[]` — one edit would have
+  deleted the whole workout. Refused now.
+- Two rows sharing a `ref` got the same weight written to **both**. One
+  number typed once, against two different exercises, in a training
+  history. Refused.
+- An edit whose `ref` was not in the file was dropped silently while the
+  save reported success. The likeliest cause is the file having been
+  replaced by a sync mid-fill, so the rows on screen are not the rows on
+  disk — the whole save is refused.
+- A blank entry could never clear a mistyped weight, because blanks were
+  filtered out. Edits are now the desired state of the rows they name.
+- Added rows were appended, so a second save duplicated every one of them,
+  and there was no way to read them back. They are replaced, with an
+  `addedIn` to match `entriesIn`.
+- `entriesIn` had one guard around the whole loop, so a single junk element
+  erased every other row's recorded answers and the owner would re-enter
+  from memory. Guarded per row.
+- A NaN weight reached the encoder and threw. Four of my tests asserted
+  less than their names claimed, including one that could not fail by
+  construction.
+
+**Next.** The Log screen itself, against a write path that is now genuinely
+tested.

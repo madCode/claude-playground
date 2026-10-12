@@ -17,7 +17,42 @@ interface Folder {
 
     fun list(): List<Pair<String, String>>
     fun read(documentId: String): String?
+
+    /** Raw write. Prefer [save], which checks the result. */
+    fun write(documentId: String, text: String): Boolean
+
+    /**
+     * Writes, reads back, and puts the old content back if what landed is
+     * not what was sent.
+     *
+     * Opening a document for writing TRUNCATES it, so a provider error, a
+     * sync replacing the file, or a full disk leaves a zero-length or half
+     * written document -- destroying the owner's numbers AND the runner's
+     * intel for that day. The first version of this returned `false` for
+     * that, which the interface defined as "the write did not happen", and
+     * it was the most dangerous thing in the app.
+     *
+     * SAF offers no atomic replace, so this is verify-and-restore rather
+     * than a guarantee: a process killed mid-write still leaves a damaged
+     * file, and nothing here can prevent that. What it does give is an
+     * honest answer about which of the three things happened.
+     */
+    fun save(documentId: String, text: String): Saved {
+        val before = read(documentId)
+        val wrote = write(documentId, text)
+        if (wrote && read(documentId) == text) return Saved.YES
+        // Something went wrong. Is the file still what it was?
+        if (read(documentId) == before) return Saved.NO_FILE_INTACT
+        if (before != null && write(documentId, before) && read(documentId) == before) {
+            return Saved.NO_FILE_INTACT
+        }
+        return Saved.NO_FILE_DAMAGED
+    }
 }
+
+/** Three outcomes, because the owner needs to be told apart "try again"
+ *  from "your file needs rescuing". */
+enum class Saved { YES, NO_FILE_INTACT, NO_FILE_DAMAGED }
 
 /**
  * The folder the owner picked, and the files in it.
@@ -100,6 +135,23 @@ class SessionFolder(private val context: Context) : Folder {
             }
         } ?: emptyList()
     }.getOrDefault(emptyList())
+
+    /**
+     * "wt" truncates before writing, so a shorter document cannot leave the
+     * tail of a longer one behind. The write is still not atomic -- SAF
+     * offers nothing that is -- so a sync watching this folder can in
+     * principle copy a half-written file. The reader is built for that:
+     * an unparseable session is reported as unreadable rather than as an
+     * empty day, and keepLastGood holds the last good sheet through it.
+     */
+    override fun write(documentId: String, text: String): Boolean = runCatching {
+        val tree = uri ?: return false
+        val doc = DocumentsContract.buildDocumentUriUsingTree(tree, documentId)
+        context.contentResolver.openOutputStream(doc, "wt")?.use {
+            it.write(text.encodeToByteArray())
+            true
+        } ?: false
+    }.getOrDefault(false)
 
     override fun read(documentId: String): String? = runCatching {
         val tree = uri ?: return null
