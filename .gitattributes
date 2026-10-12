@@ -1,0 +1,4 @@
+# A devlog is append-only and every branch adds an entry at the end, so
+# two branches in flight always collide there. `union` keeps both sides
+# rather than asking -- which is the resolution every time anyway.
+*/docs/DEVLOG.md merge=union
