@@ -76,6 +76,11 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     private val _added = mutableStateOf<List<AddedSet>>(emptyList())
     val added: State<List<AddedSet>> = _added
 
+    /** What the whole folder adds up to. Null until it has been read once;
+     *  the tab is not offered before then, rather than offered empty. */
+    private val _since = mutableStateOf<Growth.Since?>(null)
+    val since: State<Growth.Since?> = _since
+
     private val _saving = mutableStateOf<SaveState>(SaveState.Idle)
     val saving: State<SaveState> = _saving
 
@@ -110,6 +115,10 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
             // than blank boxes the owner would fill in from memory. Only on
             // a NEW file: re-seeding would throw away edits in progress.
             (_state.value as? CarryState.Ready)?.let { reconcile(it) }
+            // The folder is the history, so this is every file in it. Off
+            // the main thread and after the sheet: the lobby screen must
+            // not wait on a year of sessions to show today's three numbers.
+            _since.value = withContext(kotlinx.coroutines.Dispatchers.IO) { readFolder() }
         }
     }
 
@@ -206,6 +215,21 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      */
     private fun named(rows: List<AddedSet>): List<AddedSet> =
         rows.map { if (SessionPatch.isStandIn(it.id)) it.copy(id = AddedSet.newId()) else it }
+
+    /**
+     * Every session file in the folder, as text.
+     *
+     * One read per file, deliberately: there is no index and no cache to
+     * go stale, and a sync that drops a file in is picked up on the next
+     * resume with nothing to invalidate. If this ever gets slow the answer
+     * is a cache keyed on the folder's own listing, not a second copy of
+     * the history that could disagree with the files.
+     */
+    private fun readFolder(): Growth.Since = Growth.of(
+        folder.list()
+            .filter { (name, _) -> SessionFiles.isSessionFile(name) }
+            .mapNotNull { (_, id) -> runCatching { folder.read(id) }.getOrNull() }
+    )
 
     private fun savedDraft(): Draft? = handle.get<String>(DRAFT)?.let {
         runCatching { Session.json.decodeFromString<Draft>(it) }.getOrNull()

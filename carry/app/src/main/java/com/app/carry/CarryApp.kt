@@ -123,6 +123,9 @@ data class LogBinding(
     val onAdd: () -> Unit,
     val onEditAdded: (Int, AddedSet) -> Unit,
     val onSave: () -> Unit,
+    /** What the whole folder adds up to, or null while it is still being
+     *  read — the tab is not offered until there is something behind it. */
+    val since: Growth.Since? = null,
 )
 
 @Composable
@@ -196,20 +199,26 @@ fun CarryApp(
         is CarryState.Ready -> if (log == null) {
             TodayScreen(state.session, modifier = modifier)
         } else {
-            var onLog by rememberSaveable { mutableStateOf(false) }
+            // Saved, because the tab you were on is part of where you
+            // were -- and the third one is read at home, where being
+            // bounced back to the lobby screen on every rotation is an
+            // irritation the other two never see.
+            var tab by rememberSaveable { mutableStateOf(0) }
             Column(modifier.fillMaxSize().background(Look.Slate)) {
                 Row(Modifier.fillMaxWidth()) {
-                    Tab("Before", !onLog, Modifier.weight(1f)) { onLog = false }
-                    Tab("After", onLog, Modifier.weight(1f)) { onLog = true }
+                    Tab("Before", tab == 0, Modifier.weight(1f)) { tab = 0 }
+                    Tab("After", tab == 1, Modifier.weight(1f)) { tab = 1 }
+                    if (log.since != null) Tab("Since", tab == 2, Modifier.weight(1f)) { tab = 2 }
                 }
-                if (onLog) {
-                    LogScreen(
+                when (tab) {
+                    1 -> LogScreen(
                         session = state.session, entries = log.entries, added = log.added,
                         onEdit = log.onEdit, onAdd = log.onAdd, onEditAdded = log.onEditAdded,
-                        onSave = log.onSave, saving = log.saving, fileMoved = log.fileMoved, onDiscard = log.onDiscard,
+                        onSave = log.onSave, saving = log.saving, fileMoved = log.fileMoved,
+                        onDiscard = log.onDiscard,
                     )
-                } else {
-                    TodayScreen(state.session)
+                    2 -> log.since?.let { SinceScreen(it) } ?: TodayScreen(state.session)
+                    else -> TodayScreen(state.session)
                 }
             }
         }

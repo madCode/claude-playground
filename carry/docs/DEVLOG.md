@@ -676,3 +676,39 @@ Real history → runner → session file → folder → phone → SAF → form �
 save → importer. Every link, with the owner's own data, none of it
 invented. That is the thing the rebuild was for, and until tonight no
 part of it had been run against another part.
+
+## 2026-10-12 — cycle 16: looking back
+
+**From you.** The three user stories, and then the architecture: "copy past
+data to the synced folder yourself, the app ingests from there, and writes
+to it with its own data." That is better than either option I had put in
+the proposal, and it dissolved the problem I was stuck on — if every
+session is one file, written once and completed once, there is no shared
+mutable history for two parties to disagree about.
+
+**Shipped.** A third tab. The folder is read whole, and what it adds up to
+is shown: what is nearly earned, the heaviest in each family, every session
+newest first, and why the coach is so often quiet. Your 32 past sets are
+back-filled into the folder as session files, marked so the importer
+refuses them — they are already in `history.jsonl`, and the duplicate guard
+keys on a field the Signal-era rows never carried.
+
+**What running it against your real data found**, none of which any fixture
+would have:
+
+- **It counted rows on sheets, not movements done.** An unfilled test sheet
+  sitting in the folder was being counted as a session and contributing
+  eleven movements to the very figure that explains why the coach is quiet.
+- **It had its own idea of "the same exercise".** Hashing the whole variant
+  made 20 of 20 lifts look distinct, when the engine says 19 — because the
+  engine's key deliberately leaves out intensity, grip and reps. This is
+  exactly the two-implementations-drift failure I had warned about in the
+  proposal one hour earlier, and then walked into. The runner writes the
+  key now; the app groups by it and computes nothing. Where a file has no
+  key the count is withheld.
+- **It had no answer to "what did I do on the 27th."** Every band was cut
+  across days. There is a session list now, each named by its heaviest lift,
+  because that is what a person remembers a session by.
+
+Both substantive tests were checked by breaking the code and watching them
+fail before being kept.

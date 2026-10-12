@@ -46,6 +46,18 @@ data class Session(
 @Serializable
 data class ExerciseSet(
     val ref: Int,
+    /**
+     * What "the same exercise" means, decided by the runner and carried
+     * here as one opaque string.
+     *
+     * Carry must not work this out for itself. The key is a deliberately
+     * chosen subset of the variant — the runner leaves out intensity, grip
+     * and reps — and a version of [Growth] that hashed the whole variant
+     * instead made 20 of the owner's 20 lifts look distinct when one pair
+     * was the same movement, which silently doubled the figure the growth
+     * screen uses to explain itself. Compared, never read.
+     */
+    val key: String? = null,
     val line: String,
     val canonical: String? = null,
     val components: List<String>? = null,

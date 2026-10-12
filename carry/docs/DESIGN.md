@@ -152,6 +152,39 @@ Rejected: a session hero header. It looked good and cost a third of the
 first screen to restate what the rows already said, on a screen whose
 measured job is three numbers in one glance.
 
+## Looking back
+
+A third screen, read at home and not in a hurry — the opposite of the other
+two, which is why it may spend space on context they cannot.
+
+**The folder is the history.** One file per session, written once by the
+runner and completed once here, plus back-filled records for the days
+logged before this app existed. Nothing keeps a rolling total, so there is
+no second copy to drift from the first; the sum is computed from the files
+every time it is asked for.
+
+**It does not open with a chart.** Measured against the owner's real
+history: 20 weighted lifts, 19 of them distinct movements, exactly one done
+twice at the same variant. A weight-over-time line would be a row of
+disconnected dots and would read as "you are not progressing", when the
+truth is that the studio almost never repeats a movement. So the bands are:
+what is nearly earned, the heaviest in each family (the axis the data is
+dense on, because the same muscle groups come round constantly even when
+the movements do not), every session newest first, and a plain statement of
+why there is not more. That last one is load-bearing: without it, every
+empty row on the other screens looks like a broken app.
+
+**It derives, it never coaches.** Totals, maxima and counts are facts about
+rows already in the files. A streak is not — it comes from a rule about
+what earns a bump, that rule lives in the runner, and a second
+implementation here would eventually disagree with it about someone's
+training. So "close to a bump" carries the runner's own numbers through,
+and what counts as *the same exercise* is a key the runner writes. A first
+version that worked that out locally, by hashing the whole variant, made 20
+of 20 lifts look distinct when one pair was the same movement — it was
+including the fields the runner deliberately leaves out of the key. Where
+a file carries no key, the count is withheld rather than guessed.
+
 ## Writing it back
 
 Carry **patches the original JSON**; it never re-serialises its own model.

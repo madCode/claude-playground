@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity() {
                         onAdd = model::addRow,
                         onEditAdded = model::editAdded,
                         onSave = model::save,
+                        since = model.since.value,
                     ),
                 )
             }
