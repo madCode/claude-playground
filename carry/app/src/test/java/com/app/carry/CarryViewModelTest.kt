@@ -176,6 +176,32 @@ class CarryViewModelTest {
     }
 
     @Test
+    fun `the draft does not carry the file around with it`() = runTest(dispatcher) {
+        // It used to hold the entire document, JSON-escaped, rewritten on
+        // every keystroke and carried through saved instance state -- which
+        // past about half a megabyte is a TransactionTooLargeException that
+        // destroys exactly the typing the draft exists to protect.
+        val handle = SavedStateHandle()
+        val model = CarryViewModel(app, handle)
+        model.read = { ready() }
+        model.refresh(); advanceUntilIdle()
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+        val stored = handle.get<String>("draft")!!
+        // It keeps the row identities -- that is what a renumbering is
+        // detected against -- but not the document: no schema, no
+        // suggestions, no fields it never compares.
+        assertFalse("the document must not be in here", stored.contains("\"schema\""))
+        assertFalse(stored.contains("suggested_weight"))
+        assertTrue("the identities must be", stored.contains("deadlift"))
+        // Not asserting "smaller than the file": on a two-row fixture the
+        // JSON escaping dominates and the claim is false while the design
+        // is right. What is saved is the FIELDS not kept, which is what
+        // the two assertions above pin — on a real sheet those are most of
+        // the document.
+    }
+
+    @Test
     fun `the folder can be handed back, and that clears everything with it`() {
         // A recursive grant that survives reboots needs a way out that is
         // not "uninstall the app".

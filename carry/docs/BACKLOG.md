@@ -12,13 +12,6 @@ no edits can still rewrite the file.
 
 Left deliberately, with the reason:
 
-- **Full-file JSON parsing on the main thread** — twice per resume
-  (`entriesIn` + `addedIn`) and several times per save. Bounded now by the
-  1 MB read cap, so it is a responsiveness problem rather than an ANR, but
-  it wants moving off the main thread. Its own cycle.
-- **The draft still holds the whole file text.** It only needs a hash (to
-  spot a rewrite) and the per-ref identities (to compare them), both far
-  smaller. Same cycle as the above.
 - **`chosen` checks only the read permission** although the grant takes
   read and write, so a read-only tree looks usable and fails at save time.
 - **Bidi and zero-width characters in exercise names** are rendered as
