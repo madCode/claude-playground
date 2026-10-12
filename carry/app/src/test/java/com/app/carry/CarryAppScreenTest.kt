@@ -2,7 +2,11 @@ package com.app.carry
 
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -59,6 +63,37 @@ class CarryAppScreenTest {
         compose.setContent { CarryApp(CarryState.NeedsFolder(), onChooseFolder = { asked++ }) }
         compose.onNodeWithText("Choose folder").performClick()
         assertEquals(1, asked)
+    }
+
+    @Test
+    fun `the first read says what it is doing rather than showing nothing`() {
+        compose.setContent { CarryApp(CarryState.Loading, onChooseFolder = {}) }
+        compose.onNodeWithText("Reading").assertIsDisplayed()
+        shoot("07-loading")
+    }
+
+    @Test
+    fun `wait, update and absent each say something different`() {
+        // Rendering only one of these could not catch them being conflated,
+        // which is the whole point of having four: wait for the sync, update
+        // the app, nothing has arrived, the folder stopped answering.
+        val state = mutableStateOf<CarryState>(CarryState.NoSession)
+        compose.setContent { CarryApp(state.value, onChooseFolder = {}) }
+
+        val titles = mutableSetOf<String>()
+        fun titleFor(next: CarryState, shot: String? = null) {
+            state.value = next
+            compose.waitForIdle()
+            titles += compose.onAllNodes(hasText("", substring = true))
+                .fetchSemanticsNodes()
+                .firstNotNullOf { it.config.getOrNull(SemanticsProperties.Text)?.firstOrNull()?.text }
+            shot?.let { shoot(it) }
+        }
+        titleFor(CarryState.Unreadable("session-2026-10-17-2G.json", wrongSchema = true), "08-wrong-schema")
+        titleFor(CarryState.Unreadable("session-2026-10-17-2G.json", wrongSchema = false))
+        titleFor(CarryState.NoSession)
+        titleFor(CarryState.Stalled, "09-stalled")
+        assertEquals("each state needs its own words", 4, titles.size)
     }
 
     @Test

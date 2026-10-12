@@ -2,11 +2,6 @@
 
 ## Next
 
-- **Move the folder read off the main thread.** `carryState` does a
-  `ContentResolver.query` and a whole-file read synchronously in `onResume`
-  and on every rotation. A sync-backed provider can be slow or blocked, and
-  this is the resume path -- an ANR at exactly the "glance before class"
-  moment. Top of the list.
 - **Log** screen: weight, reps, easy, hurt, add-a-row; save back. The write
   path must **patch the original JSON**, not re-serialise the model: two
   tests in `SessionTest` show re-encoding is lossy (an unknown field from a

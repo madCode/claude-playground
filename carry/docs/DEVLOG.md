@@ -69,3 +69,36 @@ that has gone, and a folder with nothing in it yet.
   fields. Hence the write path's design, now written down in the backlog.
 
 **Next.** The main-thread read, then the Log screen.
+
+## 2026-10-11 — cycle 2: reading off the main thread
+
+**From you.** Nothing new; top of the backlog from cycle 1's review.
+
+**Shipped.** The folder read moved to `Dispatchers.IO` behind a
+`SessionLoader`, state moved into a ViewModel, and a 15-second stall state
+so a wedged provider cannot trap the app on "Reading" with no button.
+
+**Review caught.** The async change had itself regressed the one thing the
+app is for:
+
+- Moving the initial state to `Loading` meant every Activity recreation —
+  rotation, font size, multi-window, process death — drew "Reading" over a
+  sheet that was already up, for as long as a blocked folder took. The
+  synchronous version never showed it because `onResume` finished before
+  the first frame. A ViewModel fixes it, and fixes the Activity leak in the
+  same move: an abandoned read held the Activity as its Context.
+- "One read at a time" was false. Cancelling a Job does not interrupt a
+  blocking `ContentResolver` call, so the abandoned read keeps running and
+  keeps holding the provider. The cancel is still right — it discards a
+  stale answer that would otherwise land after a newer one — but the
+  comment claimed an invariant the code does not have.
+- The picker callback's read was always thrown away, because `onResume`
+  runs after it and started a second read of the same folder. Removed.
+- Two of my tests again asserted less than their names: one exercised a
+  `keepLastGood` call production never makes, and the screenshot test for
+  "unreadable" rendered one of the four states, so it could not have caught
+  them being conflated. Rewritten to drive all four through one composition
+  and assert they differ.
+
+**Next.** Staleness — nothing compares the session's date to today, so an
+un-synced Saturday shows Thursday's weights as what to carry in.
