@@ -17,3 +17,20 @@ Two measurements from the old version set the priorities here:
 - **78% of logged entries were borrowed** from the other class's floor block,
   because intel for 3G is posted 3 days in 31. "Add something the sheet
   missed" isn't a convenience feature; on those days it is the session.
+
+## 2026-10-11 — the first device check, and what it caught
+
+The Today screen shipped with its title drawing underneath the status bar.
+`targetSdk` is 37, so Android enforces edge-to-edge and the app draws behind
+the system bars; no insets were applied.
+
+Worth writing down because of HOW it was missed. The Robolectric screenshot
+test draws the composable with no system bars in the picture at all, so it
+produced a clean, convincing image of a screen that was broken on a phone.
+Machine-checkable tests are the trustworthy kind, but they are only as good
+as what they model, and this one modelled a world without a status bar.
+
+**Insets are a device-only check.** Every screen added here gets looked at on
+a real phone before it is called done, and the fix pattern is: background on
+the outer box so slate runs behind the bars, `safeDrawingPadding()` on the
+content so nothing slides under the clock.
