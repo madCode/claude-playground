@@ -126,14 +126,16 @@ object SessionPatch {
         // by definition one the owner cannot see, so there was nothing
         // they could do about it and the day's real numbers could never
         // be written. Carrying loses nothing and blocks nothing.
-        val (_, carriedAll) = (doc["added"] as? JsonArray).splitAdded()
-        // The owner's rows may have been read from an EARLIER version of
-        // this file -- a draft survives the coach rewriting it underneath.
-        // Carrying an element whose id is also in `keep` would then write
-        // the same exercise twice: once as the owner's copy, once as the
-        // one it came from. Ids exist so this can be noticed at all.
-        val mine = keep.mapTo(mutableSetOf()) { it.id }
-        val carried = carriedAll.filterNot { (it as? JsonObject).idOf() in mine }
+        val (_, carried) = (doc["added"] as? JsonArray).splitAdded()
+        // Deliberately NOT deduped against `keep` by id, though the ids
+        // now make that possible. A draft pinned to older bytes can hold
+        // the owner's copy of a row the current file carries, and
+        // dropping the file's copy would write the draft's stale `asRead`
+        // over it -- destroying a key added since, which is the one thing
+        // the carry path exists to prevent. A visible duplicate is worse
+        // than it sounds and far better than a silent deletion, so the
+        // duplicate stays logged in the backlog rather than traded for a
+        // worse bug. Honouring it needs the file's row, not the draft's.
         val writtenAdded = keep.map(::encode) + carried
         val addedChanged = writtenAdded != addedNow
         if (changed.isEmpty() && !addedChanged) return Outcome.Patched(null)
@@ -162,10 +164,11 @@ object SessionPatch {
 
     /** Marks an id this app made up for a row that arrived without one.
      *  Never written to the file; see [encode]. */
-    private const val STAND_IN = "@"
+    const val STAND_IN = "@"
 
-    private fun JsonObject?.idOf(): String? =
-        (this?.get("id") as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }
+    /** True for an id that is this app's own guess rather than the row's
+     *  own name, so a caller can replace it with a real one. */
+    fun isStandIn(id: String): Boolean = id.isBlank() || id.startsWith(STAND_IN)
 
     private fun encode(row: AddedSet): JsonObject {
         val asRead = row.asRead

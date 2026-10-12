@@ -6,6 +6,9 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -26,6 +29,32 @@ class CarryViewModelTest {
 
     @Before fun setUp() = Dispatchers.setMain(dispatcher)
     @After fun tearDown() = Dispatchers.resetMain()
+
+    @Test
+    fun `a row from a file with no ids gets a real one on the way in`() = runTest(dispatcher) {
+        // The stand-in `addedIn` hands back is the old index identity
+        // under a new name: drop a blank row and the next row inherits
+        // its id, its screen slot and the text box keyed to it. Nothing
+        // in the patch promotes it, so if this does not, the whole fix
+        // applies only to rows added on this phone -- which is not where
+        // the bug was.
+        val raw = Session.json.encodeToString(SampleSession.today)
+            .replace("\"sets\"", "\"added\": [{\"name\": \"plank\", \"reps\": 60}], \"sets\"")
+        val model = CarryViewModel(app, SavedStateHandle())
+        model.read = { CarryState.Ready(SampleSession.today, raw, "doc") }
+        model.refresh()
+        advanceUntilIdle()
+
+        // The seed runs through Dispatchers.Default, which the test
+        // dispatcher does not drive, so wait for the condition rather
+        // than for a number of ticks.
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) { while (model.added.value.isEmpty()) delay(5) }
+        }
+        val row = model.added.value.single()
+        assertEquals("plank", row.name)
+        assertFalse("still a stand-in: ${row.id}", SessionPatch.isStandIn(row.id))
+    }
 
     @Test
     fun `a folder that never answers ends in a state with a way out`() = runTest(dispatcher) {

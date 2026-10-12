@@ -6,6 +6,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -384,31 +385,32 @@ class SessionPatchTest {
     }
 
     @Test
-    fun `a row the owner is writing is not also carried back as a second copy`() {
-        // The draft survives the coach rewriting the file underneath, so
-        // the owner's rows can come from older bytes while the carried
-        // elements are read from the current ones. Without an id there
-        // was no way to tell the two copies apart, and both were written.
+    fun `a carried row survives even when the owner is writing one with its id`() {
+        // Deduping these by id was tried and reverted. The owner's copy
+        // comes from a draft pinned to OLDER bytes, so dropping the
+        // file's copy writes that draft's stale `asRead` over it --
+        // destroying whatever was added to the row since, which is the
+        // one thing the carry path exists to prevent. A visible duplicate
+        // is the lesser bug; it stays in the backlog.
         val file = withAdded("""{"id": "abc123", "name": "plank", "junk": "${"x".repeat(80_000)}"}""")
-        // Too big to show, so it would be carried -- while the owner's
-        // copy of the same row is being written.
-        assertEquals(emptyList<AddedSet>(), SessionPatch.addedIn(file))
+        assertEquals("too big to show, so it is carried", emptyList<AddedSet>(), SessionPatch.addedIn(file))
         val out = patched(file, emptyMap(), listOf(AddedSet(id = "abc123", name = "plank", reps = 60)))
-        val saved = doc(out)["added"]!!.jsonArray
-        assertEquals("one plank, not two", 1, saved.size)
-        assertEquals("60", saved.single().jsonObject["reps"]!!.jsonPrimitive.content)
+        assertEquals("the file's copy must not be deleted", doc(file)["added"]!!.jsonArray.single(),
+            doc(out)["added"]!!.jsonArray.last())
     }
 
     @Test
-    fun `a file written before rows had ids still reads, and gains them on the next save`() {
+    fun `a file written before rows had ids reads with a stand-in, marked as one`() {
         val old = withAdded("""{"name": "plank", "reps": 60}""")
         val row = SessionPatch.addedIn(old).single()
-        assertEquals("a positional stand-in, stable for this file", "@0", row.id)
-
-        // Editing it writes a real one only if Carry has one to write;
-        // the stand-in is not persisted as though it were real.
-        val out = patched(old, emptyMap(), listOf(row.copy(id = "real1234", reps = 45)))
-        assertEquals("real1234", doc(out)["added"]!!.jsonArray.single().jsonObject["id"]!!.jsonPrimitive.content)
+        assertEquals("@0", row.id)
+        // Marked, because the stand-in is the old index identity under a
+        // new name and something has to replace it. The ViewModel does
+        // that on seeding -- see CarryViewModelTest; this only pins that
+        // the mark is readable.
+        assertTrue(SessionPatch.isStandIn(row.id))
+        assertTrue(SessionPatch.isStandIn(""))
+        assertFalse(SessionPatch.isStandIn("real1234"))
     }
 
     @Test

@@ -611,3 +611,21 @@ when the list shrinks under it` passed the moment it was written, which
 after tonight is a reason for suspicion rather than confidence — so the
 keying was reverted to index, the test was watched to fail, and the fix put
 back. Four tests tonight could not fail on the bug they named; this one can.
+
+**Review caught, and it was the same trap one level out.** The fix only
+applied to rows added on this phone: nothing promoted a positional
+stand-in, so a row from an existing file kept position as its identity
+forever and the original bug survived inside a single file — drop a blank
+row, save, and the next row inherits its stand-in, its slot and its box.
+The screen test passed vacuously because its rows were minted. Promotion
+now happens where the rows are seeded, through one function so no path can
+miss it, and the ViewModel test for it was likewise checked by removing
+the promotion and watching it fail.
+
+The review also found the dedupe worse than what it replaced. Dropping a
+carried element whose id the owner is also writing sounds right, but the
+owner's copy comes from a draft pinned to older bytes, so the file's copy
+is deleted and a stale `asRead` written over it — destroying a key added
+since, which is the one thing the carry path exists to prevent. That turned
+a visible, lossless duplicate into a silent deletion. Reverted; the
+duplicate stays in the backlog, where it was.

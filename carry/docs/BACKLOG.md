@@ -2,8 +2,15 @@
 
 ## Next
 
-Cycle 15's stable row id closed two of the four items that were here —
-the index-keyed boxes and the row written twice. These two remain:
+Cycle 15's stable row id closed the index-keyed boxes. Three remain:
+
+- **A row can still be written twice.** The owner's copy may come from a
+  draft pinned to older bytes while the carried elements are read from
+  the current file. Deduping by id was tried in cycle 15 and reverted: it
+  deletes the file's copy and writes the draft's stale `asRead` over it,
+  destroying a key added since — a silent deletion traded for a visible
+  duplicate. Honouring it needs the row as it is *on disk now*, which is
+  the same thing the next item needs.
 
 - **A carried key can be resurrected from a stale draft.** `asRead` is
   pinned to the bytes of the first keystroke; if the file is rewritten

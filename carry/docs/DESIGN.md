@@ -185,11 +185,23 @@ file was rewritten underneath and it changed category between reads; and
 nothing could tell "the row the owner is editing" from "the row in that
 slot".
 
-A file written before ids gets a positional stand-in on read. That is
-enough to key a screen for as long as that file is on it, and it is
-deliberately never written back — a stand-in persisted into the file would
-collide with the next read's stand-in for a different row, and two rows
-sharing an id is worse than none having one.
+A file written before ids gets a positional stand-in on read, and the
+**ViewModel replaces it with a real one the moment the rows are seeded** —
+every seeding path goes through one function, because the one that didn't
+would be the one that let it back in. Without that promotion the fix would
+only ever have applied to rows added on this phone, which is not where the
+bug was: a stand-in is the index identity under a new name, so dropping a
+blank row hands its id, its slot and its text box to the next row.
+
+A stand-in is never written back. Persisted, it would collide with the
+next read's stand-in for a different row, and two rows sharing an id is
+worse than none having one — the screen keys boxes by it.
+
+The ids make deduping a carried element against the row the owner is
+writing *possible*, and that was tried and reverted: the owner's copy can
+come from a draft pinned to older bytes, so dropping the file's copy
+writes a stale `asRead` over it and destroys whatever was added to the row
+since. A visible duplicate is the lesser bug.
 
 
 `sets` comes from the runner; `added` is the owner's own, and Carry is the
