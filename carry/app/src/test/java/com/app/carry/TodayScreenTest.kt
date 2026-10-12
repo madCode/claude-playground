@@ -3,6 +3,7 @@ package com.app.carry
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -41,7 +42,12 @@ class TodayScreenTest {
     fun `today shows the change, the held weights and the tail`() {
         compose.setContent { TodayScreen(SampleSession.today) }
 
-        compose.onNodeWithText("2G · Fri 17 Oct").assertIsDisplayed()
+        // Asserting the PROPERTY, not the string. Building the expectation
+        // from formatDate would move with the bug it is meant to catch --
+        // if the formatter regressed to returning its input, both sides
+        // would agree and the test would pass.
+        compose.onNodeWithText("2G · 2026-10-17").assertDoesNotExist()
+        compose.onNodeWithText("2G · ", substring = true).assertIsDisplayed()
         // The one number you would get wrong from memory, named rather than
         // left to be subtracted.
         compose.onNodeWithText("+5").assertIsDisplayed()
@@ -65,6 +71,42 @@ class TodayScreenTest {
             "⚠ No 3G intel. This is the 2G floor block — check the board."
         ).assertIsDisplayed()
         shoot("02-borrowed")
+    }
+
+    @Test
+    fun `every day but today is marked, and today is not`() {
+        // All four branches. Two of them shipped un-rendered by any test
+        // last time, and nothing asserted that TODAY stays quiet -- a
+        // warning that always shows is the cry-wolf failure, and this
+        // line borrows the borrowed-block warning's voice, so devaluing
+        // it costs more than itself.
+        val session = SampleSession.today     // dated 2026-10-17
+        val warning = hasText("\u26a0 ", substring = true)
+
+        compose.setContent { TodayScreen(session, java.time.LocalDate.of(2026, 10, 17)) }
+        compose.onNode(warning).assertDoesNotExist()
+    }
+
+    @Test
+    fun `an older session is marked above the numbers`() {
+        compose.setContent { TodayScreen(SampleSession.today, java.time.LocalDate.of(2026, 10, 19)) }
+        compose.onNodeWithText(
+            "\u26a0 This is an older session, not today's. Your folder may not have synced."
+        ).assertIsDisplayed()
+        shoot("10-stale")
+    }
+
+    @Test
+    fun `a session dated ahead, and one with an unreadable date, each say so`() {
+        compose.setContent { TodayScreen(SampleSession.today, java.time.LocalDate.of(2026, 10, 1)) }
+        compose.onNodeWithText("\u26a0 This session is dated ahead of today.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a date the app cannot read is admitted on screen`() {
+        val odd = SampleSession.today.copy(date = "whenever")
+        compose.setContent { TodayScreen(odd, java.time.LocalDate.of(2026, 10, 17)) }
+        compose.onNodeWithText("\u26a0 Carry can't tell what day this session is for.").assertIsDisplayed()
     }
 
     @Test

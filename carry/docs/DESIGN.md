@@ -61,6 +61,22 @@ wrong diagnosis sends someone to fix the wrong thing:
 | Can't read that session / Carry is out of date | a file that is there but truncated mid-sync, or written by a newer coach | the picker |
 | Folder isn't answering | the read passed 15 seconds; a provider can block forever with no timeout to set | the picker |
 
+**A sheet that is not today's says so above the numbers**, in the same
+place and the same voice as the borrowed-block warning, because it is the
+same kind of mistake: a sheet that looks authoritative and is not about
+today. The likeliest cause is simply that the sync has not run. A date the
+app cannot parse is admitted rather than assumed to be today.
+
+**Known limit: two machines, two notions of "today".** The date in the file
+is a calendar date written by the Mac; "today" is the phone's. They agree
+while both are in the owner's own zone, which is the normal case, because
+the date means "the day of the class" and the class is local to them.
+Travelling far enough east or west to cross local midnight relative to the
+Mac will mis-report by a day in whichever direction. Left alone
+deliberately: carrying a zone in the schema is the companion script's
+decision, not the app's, and a tolerance band would blunt the signal this
+line exists to give. Worth revisiting if it ever actually happens.
+
 **A sheet already on screen outlives all of them.** `keepLastGood` holds the
 last good session through an empty or unreadable refresh, because a sync
 replaces a file rather than editing it and there is a window where it is
