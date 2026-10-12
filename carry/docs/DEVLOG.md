@@ -468,3 +468,48 @@ Also merged tonight: Gradle 9.8, Kotlin 2.4.20, Kover 0.9.11 and AGP
 9.4.1, from the Dependabot config added in cycle 8. The AGP bump failed
 until the Gradle one landed — it needs 9.6+ and the wrapper was on 9.3,
 which Dependabot had raised as a separate PR.
+
+## 2026-10-12 — cycle 12: the added-rows round trip
+
+**From you.** Nothing; this was the item left open at the top of the
+backlog after cycle 5's review.
+
+**Shipped.** The `added` array — the rows you add for something the sheet
+missed — is replaced whole on every save. That makes it a different kind
+of risk from `sets`: a row Carry can't read isn't skipped, it's deleted.
+Three ways that lost your own typing.
+
+The live one wasn't in the patch code at all. `save()` ran
+`_added.value.filter { it.name.isNotBlank() }` before handing anything to
+the patch, so a row you typed a weight into and hadn't named yet was
+thrown away — silently, under a "Saved" message, with nothing afterwards
+to tell you it had happened. No test covered that line. The comment above
+it said "a row the owner started and left nameless is not an answer",
+which is true right up until there's a number in it.
+
+So the patch decides now, not the ViewModel. A row holding nothing is
+left out. A row holding numbers with no name is **refused**, and because a
+refusal about a row you can't see is a dead end, unnamed rows now reach
+the screen too — and the row's own name box asks for it in brick before
+you ever get to the save button.
+
+The second was `encode` not copying unknown keys through, which the `sets`
+path has done since cycle 1. Added rows now carry the object the file held,
+verbatim. Two things fall out of that: a key a newer Carry wrote survives
+an edit by an older one, and a save that changed nothing finally compares
+equal — before this, a file with any extra key on an added row rewrote
+itself on every save, which to a folder being watched by a sync looks like
+a change that isn't one.
+
+The third is the new one: those verbatim rows live in the draft, which is
+re-encoded into saved instance state on **every keystroke** and crosses a
+Binder transaction to get there. The draft used to hold the whole file
+text and died of exactly that past about half a megabyte, destroying the
+typing it exists to protect. The file is synced from another machine, so
+its size is not ours to assume: an added list bigger than Carry would ever
+write refuses the save rather than deleting it.
+
+**Also**: the tally read "0 of 11 filled" with 20 lb typed into an added
+row, because it counted added rows by whether they had a name. The
+screenshot of the new state is what showed it — which is the argument for
+cycle 11 in one line.

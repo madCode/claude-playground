@@ -2,10 +2,11 @@
 
 ## Next
 
-**Smaller, still open from cycle 5's review:** `addedIn` silently drops
-rows it can't parse and the next save deletes them; `encode` doesn't copy
-unknown keys through on added rows, unlike the `sets` path, so a save with
-no edits can still rewrite the file.
+Nothing outstanding from a review. What is left either needs the phone
+(see "Owed on a device"), needs a decision that is yours (below), or is
+a new feature from "Later" — the notification on a new session file is
+the one that pays for itself soonest, because the lobby glance currently
+depends on remembering to open the app.
 
 
 ## From the security pass
