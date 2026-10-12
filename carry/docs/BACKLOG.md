@@ -102,6 +102,12 @@ Things a JVM cannot answer honestly, to check on a real phone:
 
 ## Later
 
+- **A logo.** Owner asked 2026-10-12. Chalk on slate, and it has to work
+  as a one-colour launcher icon at 48dp as well as wherever else it ends
+  up; the app's own identity is already settled (Barlow Condensed, the
+  amber that means exactly one thing), so this is drawing inside it.
+
+
 - Notification when a new session file appears, so the lobby glance doesn't
   depend on remembering to open the app.
 - Read the class from the phone's own calendar, which is what finally frees
