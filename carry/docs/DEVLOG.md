@@ -818,3 +818,38 @@ round again the quiet explains itself, and a band still saying it would be
 telling you off for variety the studio chose. It now disappears on its
 own at that point, and stays away below eight movements, where there is
 too little training to say anything about its shape.
+
+## 2026-10-12 — cycle 20: the axis with no weight on it
+
+**From you.** *"There should be a way for me to note that... like pushups
+I'm still on knee pushups. I should know when to push myself to do more
+full pushups. But maybe that's too much to include in the app."*
+
+Not too much — the largest uncovered area there is. **37% of your logged
+sets carry no weight at all**, and across 98 real sheets 31% of lines are
+bodyweight, median a third of any given sheet. The coach's whole model is
+"what weight next"; for a third of your training there is no weight, so it
+said "no weight needed" and nothing else, for ever.
+
+**And it was worse than silent.** The bodyweight path already had a rule:
+three clean sets in a row earned *"full form 3x in a row, push it: faster
+pace or the harder option"*. Ten knee push-ups done for all the prescribed
+reps are COMPLETE — so three sessions of them congratulated you on form you
+had not used, and told you to go faster on top of it. Recording *mod* fixes
+a wrong message, not just a missing one.
+
+**Shipped:** *mod* on every row, three clean modified sets earn "try one as
+prescribed", mixed form holds rather than pushing, and the full-form
+message now only fires when nothing in the streak was modified. The ladder
+stays in your head — naming the next rung for every movement is a knowledge
+base we do not have and you do not need.
+
+Also *hard*, finally reaching the app: it went into the schema and the
+engine earlier today and there was no way to set it, which is a half
+feature. *easy* and *hard* are one question with two answers, so they are
+exclusive.
+
+Five chips fit because the rows went to two lines an hour earlier. "easier"
+wrapped inside its 44dp box, so the chips size to their label now with 44dp
+as a minimum rather than a fixed square — and the word is *mod*, which is
+what a coach on the floor says.

@@ -23,8 +23,8 @@ failed, because four of them say "first time, go by feel" and three say
 3. Everything with no number — first-timers, bodyweight, untracked — folded
    into a single tail line. Present, not prominent.
 
-**Log** — what you did. One row per exercise: weight, reps, and three chips
-(*easy*, *hurt*, *skip*). Plus **add a row**, for anything the sheet didn't
+**Log** — what you did. One row per exercise, two lines tall: weight,
+reps, and five chips (*easy*, *hard*, *mod*, *hurt*, *skip*). Plus **add a row**, for anything the sheet didn't
 list.
 
 *skip* is a different kind of thing from the other two: it is not a quality
@@ -36,6 +36,25 @@ not got to. Skipping clears the row and takes its boxes away: there is no
 number to put in them, and a weight against a set you did not do is the
 wrong number this app exists to avoid. Un-skipping does not bring the old
 number back, because nobody re-entered it.
+
+*easy* and *hard* are one question with two answers, so they are mutually
+exclusive. The coach reads them in opposite directions, and until
+2026-10-12 it could only hear one of them: `easy` earned a bump a session
+early while `hard` appeared nowhere in the engine at all, so every
+qualitative signal pushed the weight up and none held it. Found by reading
+the owner's own replies, where "ok hard" appears as readily as "ok, easy".
+
+*mod* is "I did the easier version" — knees, a box under the step-up. It
+exists because **a third of this owner's logged sets carry no weight**, and
+a third of a typical sheet is bodyweight: for all of that the coach's
+"what weight next" model has nothing to say. It is the only progression
+axis those movements have, and three clean modified sets earn "try one as
+prescribed". It also fixed a wrong message rather than only adding a
+missing one — ten clean knee push-ups are *complete*, so three of them used
+to earn "full form 3x in a row, push it", congratulating the owner on form
+they had not used. The ladder itself stays in the owner's head: naming the
+next rung for every movement is a knowledge base we do not have and they
+do not need.
 
 The other two are the two things that cannot be derived:
 

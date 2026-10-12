@@ -78,6 +78,8 @@ data class ExerciseSet(
     val weight: Double? = null,
     val reps: Int? = null,
     val easy: Boolean = false,
+    val hard: Boolean = false,
+    val easier: Boolean = false,
     val hurt: Boolean = false,
     val skipped: Boolean = false,
     val note: String? = null,
@@ -146,6 +148,8 @@ data class AddedSet(
     val weight: Double? = null,
     val reps: Int? = null,
     val easy: Boolean = false,
+    val hard: Boolean = false,
+    val easier: Boolean = false,
     val hurt: Boolean = false,
     val note: String? = null,
     /**
@@ -168,7 +172,7 @@ data class AddedSet(
      *  nothing lost by leaving it out of the file. */
     val blank: Boolean get() =
         name.isBlank() && weight == null && reps == null &&
-            !easy && !hurt && note.isNullOrBlank()
+            !easy && !hard && !easier && !hurt && note.isNullOrBlank()
 
     companion object {
         /** Short, because it goes in the file next to a hand-typed name

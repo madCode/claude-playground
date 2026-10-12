@@ -1,6 +1,7 @@
 package com.app.carry
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -428,6 +429,24 @@ class SessionPatchTest {
         val poisoned = withAdded("""{"id": "@1", "name": "plank"}, {"name": "burpee"}""")
         val ids = SessionPatch.addedIn(poisoned).map { it.id }
         assertEquals("ids must stay distinct", ids.size, ids.toSet().size)
+    }
+
+    @Test
+    fun `how it felt and whether it was modified reach the file`() {
+        // Both are read by the coach: `hard` blocks the next bump, and
+        // three clean `easier` sets earn "try one as prescribed" — the
+        // only progression a bodyweight movement has.
+        val out = patched(original, mapOf(
+            0 to SessionPatch.Entry(weight = 45.0, hard = true),
+            1 to SessionPatch.Entry(reps = 10, easier = true),
+        ))
+        assertEquals(true, set(out, 0)["hard"]!!.jsonPrimitive.boolean)
+        assertEquals(false, set(out, 0)["easier"]!!.jsonPrimitive.boolean)
+        assertEquals(true, set(out, 1)["easier"]!!.jsonPrimitive.boolean)
+        // And they come back, so a session finished in two sittings keeps
+        // what the first sitting said.
+        assertEquals(SessionPatch.Entry(weight = 45.0, hard = true), SessionPatch.entriesIn(out)[0])
+        assertEquals(SessionPatch.Entry(reps = 10, easier = true), SessionPatch.entriesIn(out)[1])
     }
 
     /** The fixture with a different `added` array, so each case states only

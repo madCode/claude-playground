@@ -256,6 +256,31 @@ class LogScreenTest {
         compose.onNodeWithText("0 of 10 filled", substring = true).assertIsDisplayed()
     }
 
+    @Test
+    fun `easy and hard are one question with two answers`() {
+        // A set is not both. The coach reads them in opposite directions —
+        // easy earns a bump early, hard blocks the next one — so holding
+        // both at once would mean nothing.
+        show()
+        compose.onAllNodesWithText("easy")[0].performClick()
+        assertEquals(SessionPatch.Entry(easy = true), edits.value[0])
+        compose.onAllNodesWithText("hard")[0].performClick()
+        assertEquals(SessionPatch.Entry(hard = true), edits.value[0])
+        compose.onAllNodesWithText("easy")[0].performClick()
+        assertEquals(SessionPatch.Entry(easy = true), edits.value[0])
+    }
+
+    @Test
+    fun `saying you did the easier version is its own answer`() {
+        // Knee push-ups. For a third of this owner's sets there is no
+        // weight to progress, so this is the only axis they have — and
+        // it is independent of how it felt.
+        show()
+        compose.onAllNodesWithText("mod")[0].performClick()
+        compose.onAllNodesWithText("hard")[0].performClick()
+        assertEquals(SessionPatch.Entry(easier = true, hard = true), edits.value[0])
+    }
+
     private fun shoot(name: String) {
         compose.waitForIdle()
         val shot = compose.onRoot().captureToImage().asAndroidBitmap()

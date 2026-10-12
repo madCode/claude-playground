@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -211,7 +213,20 @@ private fun LogRow(
                     // number rather than blanking what they already entered.
                     onChange(entry.copy(reps = text.trimEnd('.').toIntOrNull()))
                 }
-                Chip("easy", entry.easy, Look.Amber) { onChange(entry.copy(easy = !entry.easy)) }
+                // easy and hard are one question with two answers, so
+                // turning one on turns the other off. A set is not both.
+                Chip("easy", entry.easy, Look.Amber) {
+                    onChange(entry.copy(easy = !entry.easy, hard = false))
+                }
+                Chip("hard", entry.hard, Look.BrickInk) {
+                    onChange(entry.copy(hard = !entry.hard, easy = false))
+                }
+                // "I did the easier version" -- knees, a box under the
+                // step-up. For a third of this owner's sets there is no
+                // weight to progress, so this is the only axis they have.
+                Chip("mod", entry.easier, Look.ChalkDim) {
+                    onChange(entry.copy(easier = !entry.easier))
+                }
                 Chip("hurt", entry.hurt, Look.Brick) { onChange(entry.copy(hurt = !entry.hurt)) }
             }
             // Saying "I didn't do this" and leaving it blank are different
@@ -278,7 +293,9 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
             NumberField(row.reps?.toString() ?: "", "$key-r", "added exercise reps") {
                 onChange(row.copy(reps = it.trimEnd('.').toIntOrNull()))
             }
-            Chip("easy", row.easy, Look.Amber) { onChange(row.copy(easy = !row.easy)) }
+            Chip("easy", row.easy, Look.Amber) { onChange(row.copy(easy = !row.easy, hard = false)) }
+            Chip("hard", row.hard, Look.BrickInk) { onChange(row.copy(hard = !row.hard, easy = false)) }
+            Chip("mod", row.easier, Look.ChalkDim) { onChange(row.copy(easier = !row.easier)) }
             Chip("hurt", row.hurt, Look.Brick) { onChange(row.copy(hurt = !row.hurt)) }
             // No skip: a row you added is one you did. Skipping it is
             // clearing it, which the owner does by emptying the name.
@@ -335,18 +352,21 @@ private fun NumberField(initial: String, key: Any, label: String, onChange: (Str
 private fun Chip(text: String, on: Boolean, accent: androidx.compose.ui.graphics.Color, onToggle: () -> Unit) {
     // toggleable, not clickable: TalkBack otherwise announces "easy" the
     // same whether it is on or off, leaving colour as the only signal.
-    // And a 44dp box around 10sp of text, because this is filled in a car
-    // with cold hands.
+    // 44dp because this is filled in a car with cold hands -- but as a
+    // MINIMUM, not a fixed square: a longer word wrapped inside the box
+    // rather than widening it, which looked broken.
     Box(
         Modifier
-            .size(44.dp)
+            .heightIn(min = 44.dp)
+            .widthIn(min = 44.dp)
             .toggleable(value = on, role = Role.Checkbox, onValueChange = { onToggle() }),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text,
+            maxLines = 1,
             color = if (on) accent else Look.ChalkFaint,
-            fontFamily = Look.Figure, fontSize = 10.sp,
+            fontFamily = Look.Figure, fontSize = 11.sp,
             modifier = Modifier
                 .clip(RoundedCornerShape(3.dp))
                 .border(1.dp, if (on) accent else Look.RuleStrong, RoundedCornerShape(3.dp))
