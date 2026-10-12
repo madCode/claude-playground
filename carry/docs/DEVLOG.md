@@ -746,3 +746,34 @@ filled in a car with cold hands — so the trade is name width against hit
 area. Taking the boxes away from a skipped row gives the width back on
 exactly the rows that no longer need it, but it does nothing for the other
 nine. Logged for a device look rather than settled here.
+## 2026-10-12 — cycle 18: the label that wasn't needed
+
+**From you**, and it was a correction worth recording: *"all that matters
+is what dumbbell to grab whenever a shoulder press presents itself, right?"*
+
+I had measured the right corpus and asked the wrong question of it. I asked
+"which variant fields tell two same-named rows apart" — tempo 26%,
+implement 21%, stance 20% — concluded that no single field would do, and
+proposed a contextual label computed per sheet, plus a schema key to carry
+it. All of that was answering "how do we distinguish these rows", when the
+screen's job is "what do I pick up".
+
+Asked the owner's question instead, the same corpus says don't:
+
+- a sheet repeats a movement on **42%** of days, so this is not an edge case
+- those repeats use the **same implement 78%** of the time
+- they agree on whether a weight is needed at all **84%** of the time
+
+So a label would have said nothing four times in five. And in the 15% that
+are genuinely mixed, the sheet already separates them by the only axis that
+matters: on 2026-10-12 the two TRX shoulder presses carry "no weight
+needed" and land in the *No weight* line, while the double-dumbbell one
+lands in *By feel*. The information was already on the screen.
+
+**Shipped instead:** the names collapse. `shoulder press ×2` rather than
+`shoulder press, shoulder press` — the second mention was spending the one
+thing the glance screen is short of to repeat itself.
+
+The scheme that got dropped would have been a schema key, a per-sheet
+computation in the runner and a new field on the client, to restate
+something two existing fields already said.

@@ -83,6 +83,20 @@ class TodayScreenTest {
     }
 
     @Test
+    fun `a movement the sheet lists twice is named once, with a count`() {
+        // A sheet repeats a movement on 42% of days, and the repeats use
+        // the same implement 78% of the time — so the second mention
+        // almost never says anything the first did not. What this screen
+        // is for is which dumbbell to pick up, and that is answered by
+        // which line the name is on.
+        val twice = SampleSession.today.copy(
+            sets = SampleSession.today.sets + SampleSession.today.sets.last().copy(ref = 99),
+        )
+        compose.setContent { TodayScreen(twice, java.time.LocalDate.of(2026, 10, 17)) }
+        compose.onNodeWithText("sit-up ×2", substring = true).assertIsDisplayed()
+    }
+
+    @Test
     fun `every day but today is marked, and today is not`() {
         // All four branches. Two of them shipped un-rendered by any test
         // last time, and nothing asserted that TODAY stays quiet -- a

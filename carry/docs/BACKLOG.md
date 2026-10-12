@@ -70,13 +70,18 @@ believing the bundled fonts had broken rendering entirely.
 
 ## Found by putting it on a device, with your real data
 
-- **Three rows all say "shoulder press".** The WOD for 2026-10-12 has
-  three shoulder-press lines that differ only by variant, and the screen
-  shows `canonical`, so they are indistinguishable — on both tabs. You
-  cannot tell which one you are filling in. The variant is already in the
-  file and already opaque to Carry by design, so showing it means asking
-  the runner for a short display string alongside `canonical` rather than
-  Carry inventing one. That is a schema question, so it is yours.
+- ~~**Three rows all say "shoulder press"**~~ — **closed 2026-10-12, as
+  not a problem.** The owner reframed it: what this screen is for is
+  which dumbbell to pick up. Measured across the corpus, a sheet repeats
+  a movement on 42% of days, and those repeats use the **same implement
+  78%** of the time and agree on whether a weight is needed at all **84%**
+  of the time — so a label distinguishing them would say nothing four
+  times in five. In the 15% that are mixed, the sheet already separates
+  them: on 2026-10-12 the two TRX shoulder presses read "no weight
+  needed" and land under *No weight*, while the dumbbell one lands under
+  *By feel*. The variant-label scheme is dropped. What was left was
+  cosmetic — the same name printed twice in one line — and now collapses
+  to `shoulder press ×2`.
 - **A day with no history-backed weights is two tail lines and a lot of
   empty space.** Correct by the design — there is genuinely nothing to
   carry — but seeing it with real data is the first confirmation that on
