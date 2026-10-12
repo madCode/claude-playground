@@ -198,7 +198,16 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
             cursorBrush = SolidColor(Look.Amber),
             decorationBox = { inner ->
                 if (row.name.isEmpty()) {
-                    Text("what was it?", color = Look.ChalkFaint, fontFamily = Look.Name, fontSize = 13.5.sp)
+                    // Once there are numbers in the row, the missing name
+                    // is the thing that will refuse the save -- so it asks
+                    // here, in the box that fixes it, rather than letting
+                    // the owner find out at the save button.
+                    val asking = !row.blank
+                    Text(
+                        if (asking) "name this" else "what was it?",
+                        color = if (asking) Look.BrickInk else Look.ChalkFaint,
+                        fontFamily = Look.Name, fontSize = 13.5.sp,
+                    )
                 }
                 inner()
             },

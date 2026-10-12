@@ -167,6 +167,21 @@ class LogScreenTest {
         shoot("13-file-moved")
     }
 
+    @Test
+    fun `a row with a number and no name asks for the name in the row`() {
+        // The save refuses this row, so the ask belongs in the box that
+        // fixes it. Finding out at the save button is how the number got
+        // thrown away in the first place.
+        show()
+        compose.onNodeWithText("+ Add something the sheet missed").performClick()
+        compose.onNodeWithText("what was it?").assertIsDisplayed()
+        compose.onNodeWithContentDescription("added exercise weight in pounds")
+            .performTextReplacement("20")
+        assertEquals(20.0, added.value.single().weight)
+        compose.onNodeWithText("name this").assertIsDisplayed()
+        shoot("15-name-this")
+    }
+
     private fun shoot(name: String) {
         compose.waitForIdle()
         val shot = compose.onRoot().captureToImage().asAndroidBitmap()

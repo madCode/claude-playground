@@ -4,6 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 
 /**
  * The session file, as the companion script defines it.
@@ -110,4 +111,25 @@ data class AddedSet(
     val easy: Boolean = false,
     val hurt: Boolean = false,
     val note: String? = null,
-)
+    /**
+     * The row exactly as the file held it, carried so that a key this
+     * build has never heard of is handed back rather than dropped.
+     *
+     * The `sets` path copies unknown keys through already; this one did
+     * not, and the whole `added` array is replaced on every save, so a
+     * field a newer Carry wrote would be deleted by an older one. It also
+     * made a no-op save rewrite the file: the re-encoded row never
+     * compared equal to the row in the file, so "has anything changed"
+     * was always yes.
+     *
+     * Opaque on purpose. This build cannot know what those keys mean, so
+     * it never reads them -- the same bargain as [ExerciseSet.variant].
+     */
+    @SerialName("as_read") val asRead: JsonObject? = null,
+) {
+    /** A row the owner added and never filled in. Nothing to save, and
+     *  nothing lost by leaving it out of the file. */
+    val blank: Boolean get() =
+        name.isBlank() && weight == null && reps == null &&
+            !easy && !hurt && note.isNullOrBlank()
+}

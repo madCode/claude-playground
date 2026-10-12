@@ -3,6 +3,7 @@ package com.app.carry
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -41,8 +42,12 @@ class SessionPatchTest {
         assertTrue("expected a patch, got $out", out is SessionPatch.Outcome.Patched)
         return (out as SessionPatch.Outcome.Patched).text ?: text
     }
-    private fun refused(text: String, edits: Map<Int, SessionPatch.Entry>): String {
-        val out = SessionPatch.apply(text, edits)
+    private fun refused(
+        text: String,
+        edits: Map<Int, SessionPatch.Entry>,
+        added: List<AddedSet> = emptyList(),
+    ): String {
+        val out = SessionPatch.apply(text, edits, added)
         assertTrue("expected a refusal, got $out", out is SessionPatch.Outcome.Refused)
         return (out as SessionPatch.Outcome.Refused).why
     }
@@ -181,7 +186,9 @@ class SessionPatchTest {
         val row = AddedSet(name = "ybell deadlift to calf raise", weight = 26.0, reps = 12)
         val first = patched(original, emptyMap(), listOf(row))
         assertEquals(1, doc(first)["added"]!!.jsonArray.size)
-        assertEquals(listOf(row), SessionPatch.addedIn(first))
+        // `asRead` is the row as the file holds it, so it is only equal to
+        // itself; what this asserts is that the owner's fields round trip.
+        assertEquals(listOf(row), SessionPatch.addedIn(first).map { it.copy(asRead = null) })
 
         // Re-saving the same list must not duplicate it.
         val second = SessionPatch.apply(first, emptyMap(), SessionPatch.addedIn(first))
@@ -193,8 +200,86 @@ class SessionPatchTest {
     }
 
     @Test
-    fun `an added row with no name is not resurrected as a blank`() {
-        val junk = original.replace("\"added\": []", "\"added\": [{\"weight\": 10}, \"nonsense\"]")
-        assertEquals(emptyList<AddedSet>(), SessionPatch.addedIn(junk))
+    fun `an added row with nothing in it is not resurrected as a blank`() {
+        val empty = withAdded(
+            """{"name": "", "weight": null, "reps": null, "easy": false, "hurt": false, "note": null}"""
+        )
+        assertEquals(emptyList<AddedSet>(), SessionPatch.addedIn(empty))
+        // And it is not written back either, so it cannot accumulate.
+        val out = patched(empty, mapOf(0 to SessionPatch.Entry(weight = 45.0)))
+        assertEquals(0, doc(out)["added"]!!.jsonArray.size)
+    }
+
+    @Test
+    fun `an added row holding a number comes back even with no name`() {
+        // It used to be dropped on the read and so deleted by the next
+        // save. Unnamed rows have to reach the screen: the save refuses
+        // them, and a refusal about a row nobody can see is a dead end.
+        val numbered = withAdded("""{"weight": 10, "reps": 12}""")
+        assertEquals(listOf(10.0), SessionPatch.addedIn(numbered).map { it.weight })
+    }
+
+    @Test
+    fun `an added row with a number but no name is refused, not written`() {
+        val why = refused(original, emptyMap(), listOf(AddedSet(name = "", weight = 10.0)))
+        assertTrue("should say what to do, got: $why", why.contains("Name the exercise"))
+    }
+
+    @Test
+    fun `a blank added row is left out rather than written as unreadable`() {
+        val out = patched(original, mapOf(0 to SessionPatch.Entry(reps = 8)), listOf(AddedSet(name = "")))
+        assertEquals(0, doc(out)["added"]!!.jsonArray.size)
+    }
+
+    @Test
+    fun `a key a newer Carry wrote on an added row survives a save`() {
+        val file = withAdded(
+            """{"name": "plank", "weight": null, "reps": null, "easy": false,
+                "hurt": false, "note": null, "logged_by": "carry-2"}"""
+        )
+        // Re-saving what was read must not count as a change: before
+        // unknown keys were carried, the re-encoded row never compared
+        // equal to the file's, so every save rewrote the document.
+        val again = SessionPatch.apply(file, emptyMap(), SessionPatch.addedIn(file))
+        assertEquals(null, (again as SessionPatch.Outcome.Patched).text)
+
+        val row = SessionPatch.addedIn(file).single()
+        val out = patched(file, emptyMap(), listOf(row.copy(weight = 20.0)))
+        val saved = doc(out)["added"]!!.jsonArray.single().jsonObject
+        assertEquals("carry-2", saved["logged_by"]!!.jsonPrimitive.content)
+        assertEquals(20.0, saved["weight"]!!.jsonPrimitive.content.toDouble(), 0.0)
+    }
+
+    @Test
+    fun `a save that would delete an unreadable added row is refused`() {
+        // The array is replaced wholesale, so a row this build cannot read
+        // is destroyed rather than skipped.
+        val why = refused(withAdded("\"nonsense\""), mapOf(0 to SessionPatch.Entry(weight = 45.0)))
+        assertTrue("should name the risk, got: $why", why.contains("delete"))
+
+        // An unknown key alone is enough, even next to empty fields.
+        val ghost = withAdded("""{"name": "", "logged_by": "carry-2"}""")
+        assertTrue(refused(ghost, mapOf(0 to SessionPatch.Entry(weight = 45.0))).contains("delete"))
+    }
+
+    @Test
+    fun `an added list too big to carry is refused, not deleted`() {
+        // Every added row is held verbatim in the draft, which is encoded
+        // into saved instance state on every keystroke and crosses a
+        // Binder transaction. A file from another machine must not be able
+        // to put a megabyte in there -- nor to have Carry quietly delete it.
+        val huge = withAdded("""{"name": "plank", "junk": "${"x".repeat(80_000)}"}""")
+        assertEquals(emptyList<AddedSet>(), SessionPatch.addedIn(huge))
+        assertTrue(
+            refused(huge, mapOf(0 to SessionPatch.Entry(weight = 45.0))).contains("bigger than anything Carry wrote")
+        )
+    }
+
+    /** The fixture with a different `added` array, so each case states only
+     *  the rows it is about. */
+    private fun withAdded(rows: String): String {
+        val placeholder = "\"added\": []"
+        assertTrue("fixture no longer has $placeholder", original.contains(placeholder))
+        return original.replace(placeholder, "\"added\": [$rows]")
     }
 }

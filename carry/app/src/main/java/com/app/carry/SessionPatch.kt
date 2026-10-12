@@ -90,6 +90,22 @@ object SessionPatch {
         if (doc["added"] != null && doc["added"] !is JsonArray) {
             return Outcome.Refused("That file's added-exercise list isn't shaped the way Carry expects.")
         }
+        // The `added` array is REPLACED wholesale below, so a row this
+        // build cannot read is not merely skipped -- it is deleted, and it
+        // held the owner's own typing from an earlier sitting. `sets`
+        // already refuses for exactly this reason.
+        if ((doc["added"] as? JsonArray)?.oversized() == true) {
+            return Outcome.Refused(
+                "That file's added-exercise list is far bigger than anything Carry wrote, so it wasn't touched."
+            )
+        }
+        val unreadable = (doc["added"] as? JsonArray).orEmptyList().count { !it.readableBack() }
+        if (unreadable > 0) {
+            return Outcome.Refused(
+                "That file has $unreadable added exercise${if (unreadable == 1) "" else "s"} " +
+                    "Carry can't read, and saving would delete ${if (unreadable == 1) "it" else "them"}."
+            )
+        }
         val setsIn = (rawSets as? JsonArray)?.map { it as? JsonObject ?: return Outcome.Refused(
             "One of the exercises in that file isn't shaped the way Carry expects."
         ) } ?: emptyList()
@@ -103,10 +119,24 @@ object SessionPatch {
             return Outcome.Refused("Carry couldn't find ${unplaceable.size} of those exercises in the file any more. It may have been replaced while you were filling it in.")
         }
 
+        // An added row with numbers but no name cannot be read back --
+        // `addedIn` drops it and the next save deletes it. Rather than
+        // lose the typing, say so: the row is on screen, so naming it or
+        // clearing it is one tap away. A row with nothing in it at all is
+        // simply left out.
+        val keep = added.filterNot { it.blank }
+        val unnamed = keep.count { it.name.isBlank() }
+        if (unnamed > 0) {
+            return Outcome.Refused(
+                "Name the ${if (unnamed == 1) "exercise" else "$unnamed exercises"} you added, " +
+                    "or clear ${if (unnamed == 1) "its" else "their"} numbers, before saving."
+            )
+        }
+
         val current = entriesIn(original)
         val changed = edits.filter { (ref, entry) -> entry != (current[ref] ?: Entry()) }
         val addedNow = (doc["added"] as? JsonArray).orEmptyList()
-        val addedChanged = added.map(::encode) != addedNow
+        val addedChanged = keep.map(::encode) != addedNow
         if (changed.isEmpty() && !addedChanged) return Outcome.Patched(null)
 
         val sets = setsIn.map { set ->
@@ -122,7 +152,7 @@ object SessionPatch {
         val patched = buildJsonObject {
             doc.forEach { (key, value) -> put(key, value) }
             put("sets", JsonArray(sets))
-            put("added", JsonArray(added.map(::encode)))
+            put("added", JsonArray(keep.map(::encode)))
         }
         return runCatching {
             Outcome.Patched(Session.json.encodeToString(JsonObject.serializer(), patched))
@@ -132,6 +162,9 @@ object SessionPatch {
     private fun JsonArray?.orEmptyList(): List<JsonElement> = this?.toList() ?: emptyList()
 
     private fun encode(row: AddedSet): JsonObject = buildJsonObject {
+        // Copy FIRST, then overwrite, as the `sets` path does: a key a
+        // newer Carry wrote on this row survives an edit by this one.
+        row.asRead?.forEach { (key, value) -> put(key, value) }
         put("name", JsonPrimitive(row.name))
         put("weight", row.weight?.let(::number) ?: JsonNull)
         put("reps", row.reps?.let(::JsonPrimitive) ?: JsonNull)
@@ -229,20 +262,64 @@ object SessionPatch {
         val rows = runCatching {
             (Session.json.parseToJsonElement(original) as? JsonObject)?.get("added") as? JsonArray
         }.getOrNull() ?: return emptyList()
+        if (rows.oversized()) return emptyList()
+        // Kept on "holds something", not on "has a name". A row with a
+        // weight and no name has to come BACK to the screen: the save
+        // refuses it, and a row the owner cannot see is a refusal they
+        // cannot act on. Only a row holding nothing is dropped.
         return rows.mapNotNull { element ->
-            runCatching {
-                val row = element as? JsonObject ?: return@runCatching null
-                val name = (row["name"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
-                    ?: return@runCatching null
-                AddedSet(
-                    name = name,
-                    weight = (row["weight"] as? JsonPrimitive)?.content?.toDoubleOrNull(),
-                    reps = (row["reps"] as? JsonPrimitive)?.content?.toIntOrNull(),
-                    easy = (row["easy"] as? JsonPrimitive)?.content.toBoolean(),
-                    hurt = (row["hurt"] as? JsonPrimitive)?.content.toBoolean(),
-                    note = (row["note"] as? JsonPrimitive)?.takeIf { it != JsonNull }?.content,
-                )
-            }.getOrNull()
+            runCatching { element.decodeAdded()?.takeIf { !it.blank } }.getOrNull()
         }
     }
+
+    private fun JsonElement.decodeAdded(): AddedSet? {
+        val row = this as? JsonObject ?: return null
+        return AddedSet(
+            name = (row["name"] as? JsonPrimitive)?.content.orEmpty(),
+            weight = (row["weight"] as? JsonPrimitive)?.content?.toDoubleOrNull(),
+            reps = (row["reps"] as? JsonPrimitive)?.content?.toIntOrNull(),
+            easy = (row["easy"] as? JsonPrimitive)?.content.toBoolean(),
+            hurt = (row["hurt"] as? JsonPrimitive)?.content.toBoolean(),
+            note = (row["note"] as? JsonPrimitive)?.takeIf { it != JsonNull }?.content,
+            asRead = row,
+        )
+    }
+
+    /**
+     * Whether a save would hand this element back as it found it.
+     *
+     * The save replaces the whole array, so a row [addedIn] drops is not
+     * skipped but deleted. One kind of row is safe to drop: one holding
+     * nothing at all, which costs nobody anything and is not worth
+     * blocking a save over, whoever wrote it.
+     */
+    private fun JsonElement.readableBack(): Boolean {
+        val decoded = runCatching { decodeAdded() }.getOrNull() ?: return false
+        if (!decoded.blank) return true          // kept, and its keys carried
+        // Dropped. Fine only if there was nothing in it to begin with --
+        // an unknown key is still something, even next to empty fields.
+        return (this as JsonObject).keys.all { it in WRITTEN_KEYS }
+    }
+
+    /** The keys [encode] writes, so [readableBack] can tell "an old empty
+     *  row" from "a row carrying something this build cannot read". */
+    private val WRITTEN_KEYS = setOf("name", "weight", "reps", "easy", "hurt", "note")
+
+    /**
+     * Too big to carry.
+     *
+     * [AddedSet.asRead] holds each row verbatim, and the rows live in the
+     * draft -- which is re-encoded into saved instance state on EVERY
+     * keystroke and crosses a Binder transaction to get there. The draft
+     * used to hold the whole file text and died of exactly that past about
+     * half a megabyte, destroying the typing it existed to protect.
+     *
+     * Carry writes these rows itself and a real one is a hundred-odd
+     * bytes, so this is roughly five hundred of them. But the file is
+     * synced from another machine, so its size is not ours to assume --
+     * and a save that cannot carry them refuses rather than deletes them.
+     */
+    private fun JsonArray.oversized(): Boolean = toString().length > MAX_ADDED_BYTES
+
+    private const val MAX_ADDED_BYTES = 64 * 1024
 }

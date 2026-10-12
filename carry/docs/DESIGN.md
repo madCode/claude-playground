@@ -173,6 +173,30 @@ Two consequences worth keeping:
   exercises, and dropped unplaceable edits while reporting success. A
   training history survives a missing number; it cannot survive a wrong
   one, because nothing downstream can tell.
+
+### The rows you added
+
+`sets` comes from the runner; `added` is the owner's own, and Carry is the
+only thing that writes it. That array is **replaced whole** on every save,
+which makes it a different kind of risk from `sets`: a row Carry cannot
+read is not skipped, it is deleted.
+
+So the same bargain is struck twice over. Each added row carries the object
+the file held, verbatim, so a key a newer Carry wrote survives an edit by an
+older one — and so a save that changed nothing compares equal and writes
+nothing, as it already does for `sets`. A row holding numbers but no name
+reaches the screen rather than being quietly dropped, and the save refuses
+it with the row visible and the cursor one tap from the fix. A row holding
+nothing at all is simply left out. Anything else in that array — an element
+that is not an object, an unknown key on an otherwise empty row, or a list
+far bigger than Carry would ever write — refuses the save and leaves the
+file alone.
+
+The size limit is not paranoia about disks. Added rows live in the draft,
+which is re-encoded into saved instance state on every keystroke and
+crosses a Binder transaction to get there; the draft used to hold the whole
+file text and died of exactly that, destroying the typing it existed to
+protect.
 - **An answer can be unmade.** The edits are the desired state of the rows
   they name, not a list of changes, so clearing a mistyped weight clears it.
   Filtering blanks out meant a wrong number could never be taken back.
