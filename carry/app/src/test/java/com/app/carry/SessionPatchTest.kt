@@ -335,6 +335,32 @@ class SessionPatchTest {
     }
 
     @Test
+    fun `a value this build cannot parse is carried, not treated as empty`() {
+        // `"45 lb"` is not a number, so the row decodes blank -- and a
+        // check that only looked at key NAMES called that "holds
+        // nothing" and deleted it.
+        for (row in listOf(
+            """{"name": "", "weight": "45 lb"}""",
+            """{"name": "", "easy": "yes"}""",
+        )) {
+            val file = withAdded(row)
+            val out = patched(file, mapOf(0 to SessionPatch.Entry(weight = 45.0)))
+            assertEquals("must survive the save", doc(file)["added"], doc(out)["added"])
+        }
+    }
+
+    @Test
+    fun `a null name does not become an exercise called null`() {
+        // `JsonNull.content` is the string "null". Writing that back is
+        // Carry inventing an identity, which is the one thing it must
+        // never do.
+        val file = withAdded("""{"name": null, "weight": 45}""")
+        assertEquals("", SessionPatch.addedIn(file).single().name)
+        val why = refused(file, emptyMap(), SessionPatch.addedIn(file))
+        assertTrue("got: $why", why.contains("Name the exercise"))
+    }
+
+    @Test
     fun `a file with a carried row does not churn on every save`() {
         // The carried elements go back at the END, so a file that
         // interleaved them could be reordered once. It must settle: a

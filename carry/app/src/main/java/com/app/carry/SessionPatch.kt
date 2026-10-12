@@ -294,7 +294,11 @@ object SessionPatch {
     private fun JsonElement.decodeAdded(): AddedSet? {
         val row = this as? JsonObject ?: return null
         return AddedSet(
-            name = (row["name"] as? JsonPrimitive)?.content.orEmpty(),
+            // takeIf, as `note` does: `JsonNull.content` is the string
+            // "null", so `{"name": null}` used to reach the screen as an
+            // exercise called null and be WRITTEN back as one. Carry
+            // inventing an identity is the one thing it must never do.
+            name = (row["name"] as? JsonPrimitive)?.takeIf { it != JsonNull }?.content.orEmpty(),
             weight = (row["weight"] as? JsonPrimitive)?.content?.toDoubleOrNull(),
             reps = (row["reps"] as? JsonPrimitive)?.content?.toIntOrNull(),
             easy = (row["easy"] as? JsonPrimitive)?.content.toBoolean(),
@@ -305,15 +309,21 @@ object SessionPatch {
     }
 
     /** Provably empty, so dropping it rather than carrying it loses
-     *  nothing: a known key holding a value this build can read, and
-     *  reading it gave nothing. `"name": {"a": 1}` does NOT qualify --
-     *  it decodes to "", which makes a row look empty while it is in
-     *  fact carrying an object. */
+     *  nothing. Every key is one [encode] writes and every value is one
+     *  an empty row is written with. It is not enough to check the key
+     *  NAMES: `{"name": "", "weight": "45 lb"}` decodes blank, because
+     *  "45 lb" is not a number, and used to be deleted on that basis. */
     private fun JsonElement.holdsNothing(): Boolean {
         val row = this as? JsonObject ?: return false
-        if (decodeAdded()?.blank != true) return false
-        return row.all { (key, value) -> key in WRITTEN_KEYS && value is JsonPrimitive }
+        return row.all { (key, value) ->
+            key in WRITTEN_KEYS && value is JsonPrimitive && value.empty()
+        }
     }
+
+    /** What [encode] writes for a field nobody filled in. Anything else
+     *  is content, whether or not this build can parse it. */
+    private fun JsonPrimitive.empty(): Boolean =
+        this == JsonNull || content.isBlank() || (!isString && content == "false")
 
     /** The keys [encode] writes, so [holdsNothing] can tell an empty row
      *  from one carrying something this build cannot read. */
@@ -354,7 +364,9 @@ object SessionPatch {
 
     /** Big enough that nothing Carry wrote comes close -- a real added row
      *  is a hundred-odd bytes -- and small enough that forty of them do
-     *  not threaten the transaction the draft crosses. */
+     *  not threaten the transaction the draft crosses. [MAX_DEPTH] is
+     *  borrowed from [normalise]; a legitimately deeper added row is
+     *  carried rather than shown, which no writer has yet produced. */
     private const val MAX_ROW_BYTES = 2048
     private const val MAX_ADDED_ROWS = 40
     private const val TOO_BIG = Int.MAX_VALUE / 4

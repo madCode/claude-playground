@@ -164,7 +164,7 @@ only the six a person can edit are replaced.
 Two consequences worth keeping:
 
 - **Saving a session nobody edited returns the file unchanged** — byte for
-  byte. A sync watches this folder, and a file that rewrites itself on
+  byte, for every file Carry itself has written. A sync watches this folder, and a file that rewrites itself on
   every save looks like a change that isn't one.
 - **It refuses rather than guesses.** A file whose exercise list is not a
   list, two rows sharing an id, an edit that no longer matches any row — all
@@ -187,7 +187,12 @@ function so they cannot drift, and the save writes shown + carried.
 Refusing the save instead was tried first and is a trap worth recording:
 the offending row is by definition one the owner cannot see, so there is
 nothing they can do about it, and the day's real numbers could never be
-written either. Carrying loses nothing and blocks nothing.
+written either.
+
+One case still blocks, and it is not carrying's to fix: a row nested two
+thousand deep overflows the stack inside `encodeToString`, which runs over
+the whole document, so no version of this app can write that file. It
+refuses and says the file is unchanged, which is true.
 
 A shown row keeps the object the file held, verbatim, and an **untouched
 row goes back as those same bytes**. That is what makes a save that

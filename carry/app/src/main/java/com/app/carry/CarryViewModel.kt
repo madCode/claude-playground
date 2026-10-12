@@ -198,9 +198,11 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     private fun rememberTyping() {
         val ready = _state.value as? CarryState.Ready ?: return
         val existing = savedDraft()?.takeIf { it.sheetId == ready.session.sheetId }
-        // This runs on the main thread on EVERY keystroke. Losing the
-        // draft costs the typing only if the process then dies; throwing
-        // here costs it immediately, which is the opposite of the point.
+        // This runs on the main thread on EVERY keystroke, so a throw
+        // here costs the typing immediately -- the opposite of the
+        // point. It guards the ENCODE only: a draft too big for the
+        // transaction fails later, when the system writes saved
+        // instance state, and nothing here can catch that.
         runCatching {
             handle[DRAFT] = Session.json.encodeToString(
                 Draft(

@@ -551,7 +551,24 @@ three of these were pinned down):
 - The draft encode wasn't guarded, so a throw there crashed on a
   keystroke — destroying the typing the draft exists to protect.
 
-Two findings are logged in the backlog rather than fixed here: added-row
-text boxes keyed by list index show the wrong row's text after the list
-shrinks, and a carried key can be resurrected from a stale draft after the
-file is rewritten underneath. Both predate this change in shape.
+A second look at the fixes found two more real losses, both now fixed:
+`{"name": "", "weight": "45 lb"}` counted as an empty row and was
+deleted, because the check looked at key names rather than values; and
+`{"name": null}` reached the screen as an exercise called `null`, because
+`JsonNull.content` is the string "null" — Carry inventing an identity,
+which is the one thing it must never do.
+
+It also caught two claims I had written that were too strong. Carrying
+does not block *nothing*: a row nested two thousand deep still can't be
+written, because the whole document is re-encoded and the nesting is in
+the document. And the `runCatching` around the draft encode cannot catch
+the oversized-transaction failure that motivated it — that is thrown
+later, by the system. Both corrected where they were claimed.
+
+Four findings are logged in the backlog with repros rather than fixed
+here: index-keyed text boxes after the list shrinks, a carried key
+resurrected from a stale draft, a row written twice when the file is
+rewritten underneath and a row changes category, and the forty-first
+added row vanishing from the screen. The first two predate this change;
+the last two need a file no writer produces today, and in every one of
+them what shipped before deleted the row outright.

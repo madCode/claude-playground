@@ -18,6 +18,23 @@
   but the copied-through value should come from the row as it is on disk
   now.
 
+**From the second look, both needing more than forty added rows or a
+file rewritten underneath — and both better than what shipped before,
+which deleted the row outright:**
+
+- **A row can be written twice.** The owner's rows may come from a draft
+  pinned to older bytes while the carried elements are recomputed from
+  the current file. If the coach rewrites the file and a row changes
+  category — gains a key over 2 KB, or is pushed past the fortieth — it
+  is both kept (the owner's copy) and carried (this file's copy), so the
+  importer sees two. Nothing is lost, but the duplicate is invisible on
+  the next read. Wants a stable id per added row, which would also fix
+  the index-keyed boxes above.
+- **The forty-first row you add disappears from the screen.** With forty
+  readable rows already in the file, a row you add is written, then the
+  re-seed after a successful save shows only the first forty — so it is
+  in the file, uneditable, and nothing says so.
+
 Otherwise nothing outstanding from a review. What is left either needs the phone
 (see "Owed on a device"), needs a decision that is yours (below), or is
 a new feature from "Later" — the notification on a new session file is
