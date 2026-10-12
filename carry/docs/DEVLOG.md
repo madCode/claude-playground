@@ -34,3 +34,38 @@ as what they model, and this one modelled a world without a status bar.
 a real phone before it is called done, and the fix pattern is: background on
 the outer box so slate runs behind the bars, `safeDrawingPadding()` on the
 content so nothing slides under the clock.
+
+## 2026-10-11 — cycle 1: the folder picker
+
+**From you.** "Consider this your project to build" — plus a set of cycles
+tonight rather than a standing routine.
+
+**Shipped.** A folder chosen once with a persisted SAF tree permission, the
+day's session read from it, and Today rendered from a real file instead of
+the sample. Screens for the three ways that can fail: no folder, a grant
+that has gone, and a folder with nothing in it yet.
+
+**Review caught** (fresh-eyes subagent, eleven findings, most of them real):
+
+- `remember()` stored the Uri even when `takePersistableUriPermission`
+  threw, so the app believed it held a folder it could not read — picker on
+  every cold start, forever, with nothing to explain it. "Do we hold this
+  folder" now asks `persistedUriPermissions`, which is the only authority.
+- An empty folder was reported as a lost grant. The likeliest cause is the
+  coach not having written today's session yet, so this told the owner they
+  had lost a folder they had just correctly picked. Separated.
+- Resuming while Syncthing replaced a file threw away the sheet on screen
+  and offered only the picker. `keepLastGood` holds the last good session
+  through an empty or unreadable refresh.
+- `getTreeDocumentId` ran outside the guard, so a document Uri where a tree
+  Uri belonged crashed on resume instead of falling back to the picker.
+- Three of my tests proved nothing they claimed: one asserted `isTaskRoot`
+  (true for any launched activity), one claimed to test persistence that
+  Robolectric shadows away, one claimed to exercise a `SecurityException`
+  path it never entered. Rewritten to claim only what they show.
+- My headline round-trip test compared one field, so it would have passed
+  while everything else was mangled. Widened — and it then failed, which
+  found that re-encoding reformats `45` as `45.0` on top of dropping unknown
+  fields. Hence the write path's design, now written down in the backlog.
+
+**Next.** The main-thread read, then the Log screen.

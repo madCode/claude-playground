@@ -2,11 +2,31 @@
 
 ## Next
 
-- Gradle skeleton, CI workflow, screenshot tests, coverage floor.
-- Folder picker (SAF tree permission), remembered across launches. Lift the
-  Android 11+ approach from dailyLog, which already solved this.
-- Read a session file; render **Today**.
-- **Log** screen: weight, reps, easy, hurt, add-a-row; save back.
+- **Move the folder read off the main thread.** `carryState` does a
+  `ContentResolver.query` and a whole-file read synchronously in `onResume`
+  and on every rotation. A sync-backed provider can be slow or blocked, and
+  this is the resume path -- an ANR at exactly the "glance before class"
+  moment. Top of the list.
+- **Log** screen: weight, reps, easy, hurt, add-a-row; save back. The write
+  path must **patch the original JSON**, not re-serialise the model: two
+  tests in `SessionTest` show re-encoding is lossy (an unknown field from a
+  newer runner is dropped, and `45` comes back as `45.0`). CLAUDE.md says
+  unfilled rows survive a round trip untouched, and only patching can.
+- **Staleness.** `SessionFiles.newest` picks the latest date in the folder
+  and never compares it to today, so an un-synced Saturday shows Thursday's
+  weights as what to carry in. The only hint is a small subhead. This is the
+  one path that can put a wrong number in someone's head.
+- Bundle Barlow Condensed and IBM Plex Mono; names are less compact than the
+  approved mock until then.
+
+## Owed on a device
+
+Things a JVM cannot answer honestly, to check on a real phone:
+
+- A persisted tree permission actually surviving a cold start, and surviving
+  `adb install -r` (which can revoke it and look exactly like a first run).
+- Bottom-edge insets against the navigation bar with a long session.
+- The round trip through Syncthing end to end.
 
 ## Later
 

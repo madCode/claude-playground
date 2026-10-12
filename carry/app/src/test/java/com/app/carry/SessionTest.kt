@@ -11,6 +11,7 @@ import org.junit.Test
 
 class SessionTest {
 
+
     /** The runner's file, with a variant shape Carry has no business
      *  understanding and fields a newer runner might add. */
     private val fromRunner = """
@@ -61,6 +62,53 @@ class SessionTest {
     fun `an unknown field from a newer runner does not break the read`() {
         val session = Session.json.decodeFromString<Session>(fromRunner)
         assertEquals("bench press", session.sets.single().canonical)
+    }
+
+    @Test
+    fun `every field this app models survives a round trip`() {
+        // The variant test above only compares one field. A reviewer pointed
+        // out it would pass while everything else was mangled, so this
+        // compares the whole document, key by key, for what the model knows.
+        val session = Session.json.decodeFromString<Session>(fromRunner)
+        val written = Json.parseToJsonElement(Session.json.encodeToString(session)).jsonObject
+        val original = Json.parseToJsonElement(fromRunner).jsonObject
+        for (key in listOf("schema", "sheet_id", "date", "class", "borrowed_from")) {
+            assertEquals("$key changed", original[key], written[key])
+        }
+        val before = original["sets"]!!.jsonArray[0].jsonObject
+        val after = written["sets"]!!.jsonArray[0].jsonObject
+        // IDENTITY must be byte-identical: these are the fields the one rule
+        // is about, and the ones the coach matches on.
+        for (key in listOf("ref", "line", "canonical", "components", "variant", "prescribed_reps")) {
+            assertEquals("sets[0].$key changed", before[key], after[key])
+        }
+    }
+
+    @Test
+    fun `re-encoding is lossy in two known ways, and the write path must not use it`() {
+        // Characterising real limitations rather than pretending they are
+        // absent. Both say the same thing: a model cannot faithfully
+        // reproduce a document it only partly describes.
+        //
+        //   1. ignoreUnknownKeys lets a newer runner's file be READ, but the
+        //      unknown field does not come back out.
+        //   2. a Double re-emits 45 as 45.0.
+        //
+        // Neither breaks the importer today, but "unfilled rows survive a
+        // round trip untouched" is a rule in CLAUDE.md, so when Carry starts
+        // writing it must PATCH the original JSON rather than re-serialise
+        // this model. See docs/BACKLOG.md.
+        val session = Session.json.decodeFromString<Session>(fromRunner)
+        val after = Json.parseToJsonElement(Session.json.encodeToString(session))
+            .jsonObject["sets"]!!.jsonArray[0].jsonObject
+        assertTrue(
+            "unknown field survived -- if this fails, the write path was fixed",
+            "something_a_newer_runner_added" !in after.keys,
+        )
+        assertEquals(
+            "integer weight reformatted -- if this fails, the write path was fixed",
+            "45.0", after["suggested_weight"].toString(),
+        )
     }
 
     @Test
