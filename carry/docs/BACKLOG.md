@@ -2,6 +2,11 @@
 
 ## Next
 
+**A stable id per added row.** The owner approved one going in the file
+on 2026-10-12, so this is unblocked. It fixes all three of the items
+below at once, which is why they are grouped here rather than done
+piecemeal.
+
 **From cycle 12's review, with repros:**
 
 - **Added-row boxes are keyed by list index**, so they show the previous
