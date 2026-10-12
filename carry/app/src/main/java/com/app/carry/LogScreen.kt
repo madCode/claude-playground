@@ -76,7 +76,11 @@ fun LogScreen(
     // An added row counts once it holds anything, the same test the sets
     // use. Counting only named ones meant typing a weight into a row you
     // had not named yet left the tally reading "0 of 11 filled".
-    val filled = entries.count { !it.value.blank } + added.count { !it.blank }
+    val skipped = entries.count { it.value.skipped }
+    // A skipped row is answered, not filled. Counting it as filled would
+    // say the form is further along than it is; counting it as neither
+    // would leave the tally stuck below the total with nothing to do.
+    val filled = entries.count { !it.value.blank && !it.value.skipped } + added.count { !it.blank }
     // Blank added rows are left out of the file, so they are left out of
     // the count too: tapping "+ Add" used to make the tally read worse
     // ("1 of 12"), then quietly improve again after a save that wrote
@@ -89,7 +93,11 @@ fun LogScreen(
             fontWeight = FontWeight.Bold, fontSize = 19.sp, modifier = Modifier.padding(top = 16.dp),
         )
         Text(
-            "$filled of $total filled · partial is fine",
+            listOfNotNull(
+                "$filled of $total filled",
+                if (skipped > 0) "$skipped skipped" else null,
+                "partial is fine",
+            ).joinToString(" · "),
             color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
             modifier = Modifier.padding(top = 3.dp, bottom = 10.dp),
         )
@@ -178,19 +186,44 @@ private fun LogRow(
             Box(Modifier.width(3.dp).height(20.dp).clip(RoundedCornerShape(2.dp)).background(hue))
         }
         Text(
-            name, color = Look.Chalk, fontFamily = Look.Name, fontSize = 13.5.sp,
+            name, color = if (entry.skipped) Look.ChalkFaint else Look.Chalk,
+            fontFamily = Look.Name, fontSize = 13.5.sp,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
         )
-        NumberField(entry.weight.asWeightField(), "$key-w", "$name weight in pounds") { text ->
-            onChange(entry.copy(weight = text.toDoubleOrNull()))
+        // A skipped row offers no boxes. There is no number to put in them
+        // -- that is what skipped means -- and taking them away gives the
+        // name back the width the third chip cost it, on exactly the rows
+        // that no longer need it.
+        if (!entry.skipped) {
+            NumberField(entry.weight.asWeightField(), "$key-w", "$name weight in pounds") { text ->
+                onChange(entry.copy(weight = text.toDoubleOrNull()))
+            }
+            NumberField(entry.reps?.toString() ?: "", "$key-r", "$name reps") { text ->
+                // "8." is mid-typing, not a mistake: keep the last whole
+                // number rather than blanking what they already entered.
+                onChange(entry.copy(reps = text.trimEnd('.').toIntOrNull()))
+            }
         }
-        NumberField(entry.reps?.toString() ?: "", "$key-r", "$name reps") { text ->
-            // "8." is mid-typing, not a mistake: keep the last whole number
-            // rather than blanking what they already entered.
-            onChange(entry.copy(reps = text.trimEnd('.').toIntOrNull()))
+        if (!entry.skipped) {
+            Chip("easy", entry.easy, Look.Amber) { onChange(entry.copy(easy = !entry.easy)) }
+            Chip("hurt", entry.hurt, Look.Brick) { onChange(entry.copy(hurt = !entry.hurt)) }
         }
-        Chip("easy", entry.easy, Look.Amber) { onChange(entry.copy(easy = !entry.easy)) }
-        Chip("hurt", entry.hurt, Look.Brick) { onChange(entry.copy(hurt = !entry.hurt)) }
+        // Saying "I didn't do this" and leaving it blank are different
+        // facts, and only one of them was sayable. `skipped` has been in
+        // the schema, in the patch and in the importer -- which logs those
+        // so the coach stops re-asking -- since before this screen
+        // existed, with no way to set it. A movement deliberately skipped
+        // was indistinguishable from one not got to, so the coach kept
+        // suggesting it for ever.
+        //
+        // Clearing it clears the row with it: a weight against a set you
+        // did not do is the wrong number this app exists to avoid.
+        Chip("skip", entry.skipped, Look.ChalkDim) {
+            onChange(
+                if (entry.skipped) entry.copy(skipped = false)
+                else SessionPatch.Entry(skipped = true)
+            )
+        }
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Look.Rule))
 }
