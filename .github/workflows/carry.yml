@@ -1,0 +1,87 @@
+name: Carry
+
+on:
+  push:
+    branches: [main]
+    paths: ['carry/**', '.github/workflows/carry.yml']
+  pull_request:
+    branches: [main]
+    paths: ['carry/**', '.github/workflows/carry.yml']
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: carry
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+      - name: Validate the Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+      - name: Build, lint, tests and coverage
+        run: ./gradlew build koverXmlReport koverHtmlReport koverVerify
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: carry-debug-apk
+          path: carry/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+      - name: Upload test reports, coverage and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carry-reports
+          path: |
+            carry/app/build/reports/tests/
+            carry/build/reports/kover/
+            carry/app/build/screenshots/
+          retention-days: 14
+
+  # A fixed link to the newest build from main, for installing on a phone:
+  # https://github.com/madCode/claude-playground/releases/download/carry-debug/carry-debug.apk
+  publish-debug:
+    needs: build
+    # Not on a re-run: an older run's number is a lower version code, which a phone with a newer build can't install.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: carry-debug
+      cancel-in-progress: true
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: carry-debug-apk
+      - name: Update the carry-debug release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mv app-debug.apk carry-debug.apk
+          build="${{ github.run_number }}"
+          short="${GITHUB_SHA::7}"
+          title="Carry debug build $build · $short"
+          notes="Build $build from main ($short). Installs as com.app.carry.debug."
+          if gh release view carry-debug > /dev/null 2>&1; then
+            gh release upload carry-debug carry-debug.apk --clobber
+            gh api -X PATCH "repos/$GH_REPO/git/refs/tags/carry-debug" -f sha="$GITHUB_SHA" -F force=true > /dev/null
+            gh release edit carry-debug --title "$title" --notes "$notes"
+          else
+            gh release create carry-debug carry-debug.apk --prerelease --target "$GITHUB_SHA" --title "$title" --notes "$notes"
+          fi

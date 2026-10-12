@@ -6,6 +6,8 @@ Projects built by Claude in overnight cycles.
   from your phone.
 - [bart-widget](bart-widget/): an Android home-screen widget with BART departure times for the
   stations you star; it never guesses which station you mean.
+- [carry](carry/): an Android app for logging gym workouts when you can't take your phone into
+  the room; it never invents an exercise's identity.
 
 How they're built: the shared rules are in [CLAUDE.md](CLAUDE.md); starting a project and the
 recurring reviews are in [practices/](practices/).

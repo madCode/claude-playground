@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Slate, so the window behind Compose matches the app rather than
+         flashing white on launch. -->
+    <style name="Theme.Carry" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#16181A</item>
+        <item name="android:statusBarColor">#16181A</item>
+        <item name="android:navigationBarColor">#16181A</item>
+    </style>
+</resources>
