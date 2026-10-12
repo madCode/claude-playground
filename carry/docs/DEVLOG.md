@@ -209,3 +209,49 @@ the most valuable review so far:
 
 **Next.** The Log screen itself, against a write path that is now genuinely
 tested.
+
+## 2026-10-11 — cycle 5: the Log screen
+
+**From you.** Nothing new; the last thing on the near list.
+
+**Shipped.** Two tabs — *Before* and *After*, because there are two
+moments and the app is never open between them. Each row takes a weight, a
+reps count and the two chips that cannot be derived; plus a row the owner
+can add for anything the sheet missed, which on a day with no intel for
+their class is the session rather than an afterthought.
+
+A session opens showing what a previous sitting already entered, seeded
+from the file itself rather than remembered, and only when the file
+changes — re-seeding on every read would throw away edits in progress. A
+save reports which of the three real outcomes happened, and "couldn't
+save, your file is unchanged" is worded differently from "the file may be
+damaged", because they ask different things of the owner.
+
+**Review caught — a weight ten times too large, silently.**
+
+- **The decimal point could not be typed.** The field rendered the *parsed*
+  value back into the box, so "12." parsed to 12.0, rendered as "12", and
+  the next keystroke made **125**. A half-pound dumbbell became a weight
+  ten times too large with nothing on screen to show it. The field holds
+  text now and only the parent parses. My test for exactly this used
+  `performTextReplacement`, which commits the whole string at once — the
+  one path that worked — so it could not have failed on the bug it was
+  named for. It types key by key now.
+- A file with two rows sharing a ref crashed the After tab outright:
+  `LazyColumn` throws on a duplicate key, before `SessionPatch`'s refusal
+  could ever be shown.
+- `isDigit()` accepts Hindi and Arabic digits, which then fail to parse, so
+  on those keyboards the box blanked on every keystroke. `'0'..'9'` now.
+- Chips announced identically to TalkBack whether on or off, with colour
+  the only signal, and were ~26x20dp — filled in a car with cold hands.
+  They are `toggleable` with a `Checkbox` role in a 44dp target.
+- Three more of my tests asserted less than their names: one could only
+  fail if the save button were entirely unwired, one never turned a chip
+  off, one typed nothing.
+
+**Left for cycle 6, recorded in BACKLOG.md:** four ways the owner's typing
+can still be lost or misplaced — process death, a newer file arriving
+mid-fill, edits made against bytes that have since changed, and save
+racing refresh. They are one coherent cycle rather than a scattering.
+
+**Next.** Cycle 6, above.

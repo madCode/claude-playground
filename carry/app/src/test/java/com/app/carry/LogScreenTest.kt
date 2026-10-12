@@ -1,0 +1,155 @@
+package com.app.carry
+
+import android.graphics.Bitmap
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import java.io.File
+
+@RunWith(AndroidJUnit4::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(qualifiers = "w411dp-h891dp-xxhdpi")
+class LogScreenTest {
+    @get:Rule val compose = createComposeRule()
+    private val out = File(System.getProperty("screenshotDir") ?: "build/screenshots").apply { mkdirs() }
+
+    private val edits = mutableStateOf<Map<Int, SessionPatch.Entry>>(emptyMap())
+    private val added = mutableStateOf<List<AddedSet>>(emptyList())
+    private var saves = 0
+
+    private fun show(saving: SaveState = SaveState.Idle) {
+        compose.setContent {
+            LogScreen(
+                session = SampleSession.today,
+                entries = edits.value,
+                added = added.value,
+                onEdit = { ref, e -> edits.value = edits.value + (ref to e) },
+                onAdd = { added.value = added.value + AddedSet(name = "") },
+                onEditAdded = { i, row -> added.value = added.value.toMutableList().also { it[i] = row } },
+                onSave = { saves++ },
+                saving = saving,
+            )
+        }
+    }
+
+    @Test
+    fun `typing a weight and reps records exactly what was typed`() {
+        show()
+        compose.onNodeWithContentDescription("bench press weight in pounds").performTextReplacement("45")
+        compose.onNodeWithContentDescription("bench press reps").performTextReplacement("8")
+        assertEquals(SessionPatch.Entry(weight = 45.0, reps = 8), edits.value[0])
+    }
+
+    @Test
+    fun `a half-pound dumbbell survives being typed one key at a time`() {
+        // The previous version of this test used performTextReplacement,
+        // which commits the whole string in one go -- the one path that
+        // worked. Typed key by key, the field rendered the PARSED value
+        // back, so "12." became "12" and the next key made 125: a weight
+        // ten times too large, silently, in a training history.
+        show()
+        val field = compose.onNodeWithContentDescription("bench press weight in pounds")
+        "12.5".forEach { field.performTextInput(it.toString()) }
+        assertEquals(12.5, edits.value[0]!!.weight!!, 0.001)
+    }
+
+    @Test
+    fun `the box and the stored value never disagree`() {
+        // The real rule. A second decimal point is dropped rather than
+        // accepted, and the digit after it still lands -- so "12.5.7" is
+        // 12.57, which is also what the box reads. Whatever the owner can
+        // see is what gets written; the failure that matters is the two
+        // drifting apart silently.
+        show()
+        val field = compose.onNodeWithContentDescription("bench press weight in pounds")
+        "12.5.7".forEach { field.performTextInput(it.toString()) }
+        val shown = compose.onNodeWithContentDescription("bench press weight in pounds")
+            .fetchSemanticsNode().config
+            .getOrNull(androidx.compose.ui.semantics.SemanticsProperties.EditableText)?.text
+        assertEquals("12.57", shown)
+        assertEquals(shown!!.toDouble(), edits.value[0]!!.weight!!, 0.001)
+    }
+
+    @Test
+    fun `clearing a field clears the value rather than leaving the old one`() {
+        // A mistyped weight has to be unmakeable; the write path supports
+        // it, and the screen must actually produce the blank entry.
+        show()
+        val field = compose.onNodeWithContentDescription("bench press weight in pounds")
+        field.performTextReplacement("95")
+        field.performTextReplacement("")
+        assertTrue("expected a blank entry, got ${edits.value[0]}", edits.value[0]!!.blank)
+    }
+
+    @Test
+    fun `the two chips are independent, and turning one off leaves the other`() {
+        show()
+        assertEquals(null, edits.value[0])
+        compose.onAllNodesWithText("hurt")[0].performClick()
+        assertEquals(SessionPatch.Entry(hurt = true), edits.value[0])
+        compose.onAllNodesWithText("easy")[0].performClick()
+        assertEquals(SessionPatch.Entry(easy = true, hurt = true), edits.value[0])
+        // The half a bad copy() would break.
+        compose.onAllNodesWithText("hurt")[0].performClick()
+        assertEquals(SessionPatch.Entry(easy = true, hurt = false), edits.value[0])
+    }
+
+    @Test
+    fun `adding a row gives somewhere to name it`() {
+        // On a day with no intel for the owner's class this is the session,
+        // not an afterthought.
+        show()
+        compose.onNodeWithText("+ Add something the sheet missed").performClick()
+        compose.onNodeWithContentDescription("added exercise name").performTextReplacement("ybell deadlift")
+        assertEquals("ybell deadlift", added.value.single().name)
+        shoot("11-log")
+    }
+
+    @Test
+    fun `a failed save says whether the file is in trouble`() {
+        // "Try again" and "your file needs rescuing" are different things
+        // to tell someone.
+        show(SaveState.Failed("Couldn't save, and the file on disk may be damaged.", damaged = true))
+        compose.onNodeWithText("⚠ Couldn't save, and the file on disk may be damaged.").assertIsDisplayed()
+        compose.onNodeWithText("Try again").assertIsDisplayed()
+        shoot("12-save-failed")
+    }
+
+    @Test
+    fun `nothing saves by itself`() {
+        // Previously this asserted 0 saves without interacting at all,
+        // so it could only fail if the button were entirely unwired.
+        show()
+        compose.onNodeWithContentDescription("bench press weight in pounds").performTextInput("45")
+        compose.onAllNodesWithText("easy")[0].performClick()
+        compose.onNodeWithText("+ Add something the sheet missed").performClick()
+        assertEquals("typing must not write to the file", 0, saves)
+        compose.onNodeWithText("Save").performClick()
+        assertEquals(1, saves)
+    }
+
+    private fun shoot(name: String) {
+        compose.waitForIdle()
+        File(out, "$name.png").outputStream().use {
+            compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
+    }
+}

@@ -39,10 +39,10 @@ class CarryViewModelTest {
     @Test
     fun `a refresh that comes back empty leaves the sheet alone`() = runTest(dispatcher) {
         val model = CarryViewModel(app)
-        model.read = { CarryState.Ready(SampleSession.today) }
+        model.read = { readyFor() }
         model.refresh()
         advanceUntilIdle()
-        assertEquals(CarryState.Ready(SampleSession.today), model.state.value)
+        assertEquals(readyFor(), model.state.value)
 
         // Syncthing replaces the file; the next read lands mid-write.
         model.read = { CarryState.Unreadable("session-2026-10-17-2G.json", wrongSchema = false) }
@@ -50,7 +50,7 @@ class CarryViewModelTest {
         advanceUntilIdle()
         assertEquals(
             "a sheet must not vanish while it is being looked at",
-            CarryState.Ready(SampleSession.today), model.state.value,
+            readyFor(), model.state.value,
         )
     }
 
@@ -63,10 +63,10 @@ class CarryViewModelTest {
         val model = CarryViewModel(app)
         model.read = { awaitCancellation() }
         model.refresh()
-        model.read = { CarryState.Ready(SampleSession.today) }
+        model.read = { readyFor() }
         model.refresh()
         advanceUntilIdle()
-        assertEquals(CarryState.Ready(SampleSession.today), model.state.value)
+        assertEquals(readyFor(), model.state.value)
     }
 
     @Test

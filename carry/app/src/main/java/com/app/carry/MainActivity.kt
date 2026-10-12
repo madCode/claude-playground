@@ -52,6 +52,15 @@ class MainActivity : ComponentActivity() {
                     state = model.state.value,
                     onChooseFolder = { pick.launch(null) },
                     modifier = Modifier.safeDrawingPadding(),
+                    log = LogBinding(
+                        entries = model.edits.value,
+                        added = model.added.value,
+                        saving = model.saving.value,
+                        onEdit = model::edit,
+                        onAdd = model::addRow,
+                        onEditAdded = model::editAdded,
+                        onSave = model::save,
+                    ),
                 )
             }
         }

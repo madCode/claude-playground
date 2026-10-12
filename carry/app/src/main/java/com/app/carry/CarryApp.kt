@@ -7,6 +7,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -49,7 +57,13 @@ sealed interface CarryState {
      * prevent. A verdict stored next to the thing it judges can only get
      * more wrong as it ages, so freshness is derived where it is shown.
      */
-    data class Ready(val session: Session) : CarryState
+    data class Ready(
+        val session: Session,
+        /** The file exactly as it was read. Patching works on these bytes,
+         *  never on a re-encoding of [session] -- see SessionPatch. */
+        val raw: String,
+        val documentId: String,
+    ) : CarryState
 }
 
 /**
@@ -71,7 +85,7 @@ fun carryState(folder: Folder): CarryState {
     val text = folder.read(id) ?: return CarryState.Unreadable(newest, wrongSchema = false)
     val session = SessionFiles.parse(text)
         ?: return CarryState.Unreadable(newest, wrongSchema = SessionFiles.looksLikeNewerSchema(text))
-    return CarryState.Ready(session)
+    return CarryState.Ready(session, text, id)
 }
 
 /**
@@ -90,8 +104,25 @@ fun keepLastGood(previous: CarryState, next: CarryState): CarryState = when {
     else -> next
 }
 
+/** Everything the Log half needs, so CarryApp stays renderable from a test
+ *  without a ViewModel behind it. */
+data class LogBinding(
+    val entries: Map<Int, SessionPatch.Entry>,
+    val added: List<AddedSet>,
+    val saving: SaveState,
+    val onEdit: (Int, SessionPatch.Entry) -> Unit,
+    val onAdd: () -> Unit,
+    val onEditAdded: (Int, AddedSet) -> Unit,
+    val onSave: () -> Unit,
+)
+
 @Composable
-fun CarryApp(state: CarryState, onChooseFolder: () -> Unit, modifier: Modifier = Modifier) {
+fun CarryApp(
+    state: CarryState,
+    onChooseFolder: () -> Unit,
+    modifier: Modifier = Modifier,
+    log: LogBinding? = null,
+) {
     when (state) {
         CarryState.Loading -> Message(
             title = "Reading",
@@ -136,7 +167,43 @@ fun CarryApp(state: CarryState, onChooseFolder: () -> Unit, modifier: Modifier =
             onAction = onChooseFolder,
             modifier = modifier,
         )
-        is CarryState.Ready -> TodayScreen(state.session, modifier = modifier)
+        is CarryState.Ready -> if (log == null) {
+            TodayScreen(state.session, modifier = modifier)
+        } else {
+            var onLog by rememberSaveable { mutableStateOf(false) }
+            Column(modifier.fillMaxSize().background(Look.Slate)) {
+                Row(Modifier.fillMaxWidth()) {
+                    Tab("Before", !onLog, Modifier.weight(1f)) { onLog = false }
+                    Tab("After", onLog, Modifier.weight(1f)) { onLog = true }
+                }
+                if (onLog) {
+                    LogScreen(
+                        session = state.session, entries = log.entries, added = log.added,
+                        onEdit = log.onEdit, onAdd = log.onAdd, onEditAdded = log.onEditAdded,
+                        onSave = log.onSave, saving = log.saving,
+                    )
+                } else {
+                    TodayScreen(state.session)
+                }
+            }
+        }
+    }
+}
+
+/** Two words, because there are two moments: the lobby and the car. */
+@Composable
+private fun Tab(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Column(modifier.clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text,
+            color = if (selected) Look.Chalk else Look.ChalkFaint,
+            fontFamily = Look.Name, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+            modifier = Modifier.padding(top = 14.dp, bottom = 9.dp),
+        )
+        Box(
+            Modifier.fillMaxWidth().height(2.dp)
+                .background(if (selected) Look.Amber else Look.Rule)
+        )
     }
 }
 
