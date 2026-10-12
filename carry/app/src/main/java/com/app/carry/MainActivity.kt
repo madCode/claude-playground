@@ -10,8 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.activity.viewModels
 
 /**
  * Edge to edge, with insets applied to the CONTENT and not to the
@@ -25,17 +25,14 @@ import androidx.compose.ui.Modifier
  * same will be true of every screen added here.
  */
 class MainActivity : ComponentActivity() {
-    private lateinit var folder: SessionFolder
-
-    // Held by the activity, not created in composition: it has to survive
-    // recomposition, and it is refreshed in onResume because the normal case
-    // is a sync dropping the day's session in while the app is backgrounded.
-    private val state = mutableStateOf<CarryState>(CarryState.NeedsFolder())
+    // In a ViewModel, not an Activity field: it has to survive recreation,
+    // or every rotation draws "Reading" over the sheet while a slow folder
+    // is read again from scratch.
+    private val model: CarryViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        folder = SessionFolder(this)
 
         setContent {
             val pick = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -44,12 +41,15 @@ class MainActivity : ComponentActivity() {
                 // remember() returns false when the grant could not be
                 // persisted; carryState then reports NeedsFolder on its own,
                 // because `chosen` asks the system rather than the prefs.
-                if (tree != null) folder.remember(tree)
-                state.value = carryState(folder)
+                //
+                // No refresh here on purpose: onResume always runs after
+                // this callback, so refreshing would start a second read of
+                // the same folder and throw the first one's answer away.
+                if (tree != null) model.folder.remember(tree)
             }
             Box(Modifier.fillMaxSize().background(Look.Slate)) {
                 CarryApp(
-                    state = state.value,
+                    state = model.state.value,
                     onChooseFolder = { pick.launch(null) },
                     modifier = Modifier.safeDrawingPadding(),
                 )
@@ -57,10 +57,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** The normal case is a sync dropping the day's session in while the
+     *  app is backgrounded, so the folder is re-read on every resume. */
     override fun onResume() {
         super.onResume()
-        // keepLastGood: a sync replaces the file rather than editing it, so
-        // resuming mid-write must not throw away the sheet on screen.
-        state.value = keepLastGood(state.value, carryState(folder))
+        model.refresh()
     }
 }

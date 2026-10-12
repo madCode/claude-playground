@@ -19,12 +19,22 @@ import androidx.compose.ui.unit.sp
 
 /** What the app is showing, decided once and passed down. */
 sealed interface CarryState {
+    /** Before the first read finishes. Reading the folder is IPC to another
+     *  app's provider and can block on a running sync, so it never happens
+     *  on the main thread and there is always a moment with nothing yet. */
+    data object Loading : CarryState
+
     /** No folder chosen, or one whose grant is gone -- told apart by the
      *  system's own record, never guessed from an empty folder. */
     data class NeedsFolder(val lostGrant: Boolean = false) : CarryState
 
     /** A folder we can read, with no session in it yet. */
     data object NoSession : CarryState
+
+    /** The folder stopped answering. A sync mid-scan or a wedged provider
+     *  can block a read indefinitely, and there is no timeout to set on it,
+     *  so this exists to give the owner a way out. */
+    data object Stalled : CarryState
 
     /** A session file that is there but unreadable -- truncated mid-sync, or
      *  written by a runner newer than this app. Different from absent, and
@@ -75,6 +85,13 @@ fun keepLastGood(previous: CarryState, next: CarryState): CarryState = when {
 @Composable
 fun CarryApp(state: CarryState, onChooseFolder: () -> Unit, modifier: Modifier = Modifier) {
     when (state) {
+        CarryState.Loading -> Message(
+            title = "Reading",
+            body = "Looking in your folder for today's session.",
+            action = null,
+            onAction = {},
+            modifier = modifier,
+        )
         is CarryState.NeedsFolder -> Message(
             title = if (state.lostGrant) "Lost the folder" else "Pick your folder",
             body = if (state.lostGrant) {
@@ -83,6 +100,13 @@ fun CarryApp(state: CarryState, onChooseFolder: () -> Unit, modifier: Modifier =
                 "Choose the folder your sync keeps. Carry reads the day's session from it and writes your log back."
             },
             action = "Choose folder",
+            onAction = onChooseFolder,
+            modifier = modifier,
+        )
+        CarryState.Stalled -> Message(
+            title = "Folder isn't answering",
+            body = "Carry asked your folder for today's session and got nothing back. A sync part way through can do that.",
+            action = "Pick a different folder",
             onAction = onChooseFolder,
             modifier = modifier,
         )
@@ -110,7 +134,7 @@ fun CarryApp(state: CarryState, onChooseFolder: () -> Unit, modifier: Modifier =
 
 @Composable
 private fun Message(
-    title: String, body: String, action: String, onAction: () -> Unit, modifier: Modifier = Modifier,
+    title: String, body: String, action: String?, onAction: () -> Unit, modifier: Modifier = Modifier,
 ) {
     Column(
         modifier.fillMaxSize().background(Look.Slate).padding(horizontal = 28.dp),
@@ -125,7 +149,7 @@ private fun Message(
             body, color = Look.ChalkDim, fontFamily = Look.Name, fontSize = 14.sp,
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 10.dp),
         )
-        Text(
+        if (action != null) Text(
             action, color = Look.Slate, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
             fontSize = 14.sp,
             modifier = Modifier
@@ -136,4 +160,21 @@ private fun Message(
                 .padding(horizontal = 18.dp, vertical = 11.dp),
         )
     }
+}
+
+
+/**
+ * Reads the folder somewhere that is not the main thread.
+ *
+ * [carryState] is a `ContentResolver.query` plus a whole-file read against
+ * another app's provider. For a folder a sync service is writing to, that
+ * can block for as long as it likes and there is no timeout to set. It used
+ * to run in `onResume`, which is an ANR at exactly the moment the app
+ * exists for -- a glance in the lobby before class.
+ */
+class SessionLoader(
+    private val folder: Folder,
+    private val io: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.IO,
+) {
+    suspend fun load(): CarryState = kotlinx.coroutines.withContext(io) { carryState(folder) }
 }

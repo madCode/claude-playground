@@ -47,6 +47,25 @@ The old breakdown vocabulary (*fail*, *knees*, *modified*, *half*) collapses
 into this. `breakdown` stays in the schema so old history still reads, but
 Carry never writes it; anything that needs words goes in the note.
 
+### When there is no sheet to show
+
+Five states, and they are separate because each needs different words. A
+wrong diagnosis sends someone to fix the wrong thing:
+
+| State | What it means | What it offers |
+|---|---|---|
+| Reading | the first read, which happens off the main thread | nothing; it is brief |
+| Pick your folder | nothing chosen yet | the picker |
+| Lost the folder | chosen, but the grant is gone — asked of the system, never guessed from an empty folder | the picker |
+| Nothing to carry | folder readable, no session written yet | the picker |
+| Can't read that session / Carry is out of date | a file that is there but truncated mid-sync, or written by a newer coach | the picker |
+| Folder isn't answering | the read passed 15 seconds; a provider can block forever with no timeout to set | the picker |
+
+**A sheet already on screen outlives all of them.** `keepLastGood` holds the
+last good session through an empty or unreadable refresh, because a sync
+replaces a file rather than editing it and there is a window where it is
+absent or half written. Briefly stale beats vanishing while being read.
+
 ## Rules worth keeping
 
 - **A blank row is blank.** Never silently "skipped". The old survey logged
