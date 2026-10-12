@@ -138,6 +138,16 @@ object SessionPatch {
         // they could do about it and the day's real numbers could never
         // be written. Carrying loses nothing and blocks nothing.
         val (_, carried) = (doc["added"] as? JsonArray).splitAdded()
+        // The row AS IT IS ON DISK NOW, by id. `asRead` on the owner's
+        // copy is pinned to the bytes their first keystroke saw, so
+        // copying unknown keys from it put back a key the writer had since
+        // removed -- resurrecting data nobody holds any more. The ids made
+        // finding the current row possible; before them there was nothing
+        // to match on.
+        val onDisk = (doc["added"] as? JsonArray).orEmptyList()
+            .mapNotNull { it as? JsonObject }
+            .mapNotNull { row -> row.idOf()?.let { it to row } }
+            .toMap()
         // Deliberately NOT deduped against `keep` by id, though the ids
         // now make that possible. A draft pinned to older bytes can hold
         // the owner's copy of a row the current file carries, and
@@ -147,7 +157,7 @@ object SessionPatch {
         // than it sounds and far better than a silent deletion, so the
         // duplicate stays logged in the backlog rather than traded for a
         // worse bug. Honouring it needs the file's row, not the draft's.
-        val writtenAdded = keep.map(::encode) + carried
+        val writtenAdded = keep.map { encode(it, onDisk[it.id]) } + carried
         val addedChanged = writtenAdded != addedNow
         if (changed.isEmpty() && !addedChanged) return Outcome.Patched(null)
 
@@ -173,6 +183,12 @@ object SessionPatch {
 
     private fun JsonArray?.orEmptyList(): List<JsonElement> = this?.toList() ?: emptyList()
 
+    /** The row's own name for itself, when it has a real one. A positional
+     *  stand-in is not an identity anything may be matched on. */
+    private fun JsonObject.idOf(): String? =
+        (this["id"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+            ?.takeIf { it.isNotBlank() && !it.startsWith(STAND_IN) }
+
     /** Marks an id this app made up for a row that arrived without one.
      *  Never written to the file; see [encode]. */
     const val STAND_IN = "@"
@@ -181,8 +197,15 @@ object SessionPatch {
      *  own name, so a caller can replace it with a real one. */
     fun isStandIn(id: String): Boolean = id.isBlank() || id.startsWith(STAND_IN)
 
-    private fun encode(row: AddedSet): JsonObject {
-        val asRead = row.asRead
+    /**
+     * @param current this row as the file holds it NOW, found by id, or
+     *   null when the file has no such row. Preferred over the row's own
+     *   [AddedSet.asRead], which is pinned to the bytes the first
+     *   keystroke saw: a key the writer removed in between would otherwise
+     *   be copied back out of the stale copy and reappear.
+     */
+    private fun encode(row: AddedSet, current: JsonObject? = null): JsonObject {
+        val asRead = current ?: row.asRead
         // Untouched? Hand back the bytes that came in. Re-encoding is
         // lossy in both directions: it normalises `45.0` to `45`, so a
         // save that changed nothing would rewrite a file a sync is
@@ -321,6 +344,7 @@ object SessionPatch {
     private fun JsonArray?.splitAdded(): Pair<List<AddedSet>, List<JsonElement>> {
         val shown = mutableListOf<AddedSet>()
         val carried = mutableListOf<JsonElement>()
+        var held = 0
         for ((at, element) in orEmptyList().withIndex()) {
             val decoded = runCatching { element.decodeAdded(at) }.getOrNull()
             when {
@@ -328,8 +352,11 @@ object SessionPatch {
                 // with a weight and no name has to come BACK to the
                 // screen: the save refuses it, and a row the owner cannot
                 // see is a refusal they cannot act on.
-                decoded != null && !decoded.blank &&
-                    shown.size < MAX_ADDED_ROWS && element.bulk() <= MAX_ROW_BYTES -> shown += decoded
+                decoded != null && !decoded.blank && element.bulk() <= MAX_ROW_BYTES &&
+                    held + element.bulk() <= MAX_SHOWN_BYTES -> {
+                    shown += decoded
+                    held += element.bulk()
+                }
                 element.holdsNothing() -> Unit
                 else -> carried += element
             }
@@ -423,6 +450,20 @@ object SessionPatch {
      *  borrowed from [normalise]; a legitimately deeper added row is
      *  carried rather than shown, which no writer has yet produced. */
     private const val MAX_ROW_BYTES = 2048
-    private const val MAX_ADDED_ROWS = 40
+
+    /**
+     * What all the shown rows together may cost, which is the thing the
+     * draft actually has to carry.
+     *
+     * A count of forty was the first attempt and had a cliff in it: add a
+     * row to a file that already held forty and it was written, then the
+     * re-seed after the save showed only the first forty -- so the row the
+     * owner had just typed vanished, still in the file and no longer
+     * reachable. A budget has no cliff at any count a person could reach:
+     * a real added row is a hundred-odd bytes, so this is several hundred
+     * of them, and the thing it is protecting -- a Binder transaction the
+     * draft crosses on every keystroke -- is measured in bytes anyway.
+     */
+    private const val MAX_SHOWN_BYTES = 48 * 1024
     private const val TOO_BIG = Int.MAX_VALUE / 4
 }

@@ -871,3 +871,27 @@ publishable on a borrowed day — the honest answer being "no", at the cost
 of most of the feature's value on exactly the days it exists for. That
 cost is gone: the app now collects added rows first on those days, so the
 honest answer and the useful one are the same one.
+## 2026-10-12 — cycle 22: the last two from the reviews
+
+**From you.** "Keep moving" — these were the two left that needed nothing
+from you.
+
+**A key the writer removed came back.** `asRead` is pinned to the bytes
+the owner's first keystroke saw, so copying unknown keys out of it put
+back a key the coach had since deleted — resurrecting data nobody holds
+any more. The row is found on disk by id now, and the keys come from the
+file as it stands rather than from a stale copy. Both directions are
+tested: a key removed since stays removed, a key added since is kept. The
+ids shipped two cycles ago are what made this possible at all; before
+them there was nothing to match a row on.
+
+**The forty-first added row vanished.** The cap on shown rows was a count,
+and a count has a cliff in it: with forty rows already in the file, a row
+the owner typed was written and then dropped by the re-seed after the save
+— in the file, and no longer reachable from the phone. The budget is in
+bytes now, which is what the draft actually has to carry across a Binder
+transaction; a real added row is a hundred-odd of them, so there is no
+cliff at any count a person could reach.
+
+That empties the review backlog. Everything still open is either yours to
+decide, owed on a phone, or a feature nobody has asked for yet.
