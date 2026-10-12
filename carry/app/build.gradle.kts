@@ -57,6 +57,14 @@ android {
             all {
                 // Robolectric's Android 16+ runtime needs this on JDK 21.
                 it.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
+                // One JVM per class. Without it, running the whole suite in
+                // a single JVM left SEVEN of the twelve screenshots as the
+                // same blank image -- captureToImage returning an empty
+                // bitmap rather than failing, so the tests stayed green and
+                // CI uploaded the blanks as evidence. Two of them fooled me
+                // during this project. Costs a few seconds; buys pictures
+                // that are worth looking at.
+                it.setForkEvery(1L)
                 it.systemProperty("screenshotDir", layout.buildDirectory.dir("screenshots").get().asFile.path)
             }
         }

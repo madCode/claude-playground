@@ -12,6 +12,14 @@ day's session into a folder as JSON; Carry renders it, you fill it in, and it
 saves the file back. Syncthing (or anything else that moves files) does the
 rest.
 
+<p>
+  <img src="docs/screenshots/01-today.png" width="200" alt="Today: the weights to carry in, with the one that changed marked +5">
+  <img src="docs/screenshots/11-log.png" width="200" alt="Log: a row per exercise with weight, reps, easy and hurt">
+  <img src="docs/screenshots/10-stale.png" width="200" alt="A sheet that is not today's, marked above the numbers">
+</p>
+
+*Invented exercises and weights — nobody's real training is in this repository.*
+
 ## How it works
 
 1. **Pick a folder, once.** Whatever your file sync watches.
