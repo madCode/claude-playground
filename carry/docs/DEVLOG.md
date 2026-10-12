@@ -513,3 +513,45 @@ write refuses the save rather than deleting it.
 row, because it counted added rows by whether they had a name. The
 screenshot of the new state is what showed it — which is the argument for
 cycle 11 in one line.
+
+**Review caught** (fresh-eyes subagent, eleven findings; it verified the
+kotlinx-JSON behaviour empirically rather than from memory, which is how
+three of these were pinned down):
+
+- **The first fix was a dead end.** Refusing to save over an added row
+  Carry couldn't read sounded like the cautious choice and wasn't: that
+  row is *by definition* one the owner can't see, so there was nothing to
+  do about it, and the day's real numbers could never be written either.
+  The same shape the file already guards against in two other places. The
+  answer is to **carry** anything the screen never saw straight back out —
+  nothing lost, nothing blocked.
+- **A whole class of row was still being deleted silently.** The guard
+  checked key *names*, so `{"name": {"canonical": "goblet squat"}}`
+  decoded to an empty name, looked like an empty row, and was written out
+  of existence under "Saved". Carrying fixes this too.
+- **`added` should never have been in the `Session` model.** `name` had no
+  default, so a row with no `name` key threw during deserialization and
+  the loader reported "Can't read that session" — the whole day lost over
+  one odd row. Worse, it made the new behaviour unreachable: the test
+  fixture for "an unnamed row reaches the screen" was a file the app
+  cannot load, and the test passed only because it called the patch
+  directly. A green test with no reachable behaviour, which is the exact
+  trap written up at the top of this log.
+- **A crash loop I had just introduced.** The size cap measured rows with
+  `toString()`, which recurses: 12 KB of two-thousand-deep JSON overflows
+  the stack, and that ran inside the read on every resume. Now measured
+  with a depth-capped walk, the same lesson `normalise()` already carried.
+- **Re-encoding destroyed values on rows nobody edited** — `reps: 12.5`
+  to null, `easy: "yes"` to false — while reporting success, and made
+  no-op saves rewrite the file (`45.0` → `45`). An untouched row now goes
+  back as the bytes that came in.
+- **A one-space name refused the save with both hints suppressed.** The
+  refusal tests `isBlank`, the placeholder tested `isEmpty`: told to name
+  a row, with every row on screen looking named.
+- The draft encode wasn't guarded, so a throw there crashed on a
+  keystroke — destroying the typing the draft exists to protect.
+
+Two findings are logged in the backlog rather than fixed here: added-row
+text boxes keyed by list index show the wrong row's text after the list
+shrinks, and a carried key can be resurrected from a stale draft after the
+file is rewritten underneath. Both predate this change in shape.

@@ -198,15 +198,20 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     private fun rememberTyping() {
         val ready = _state.value as? CarryState.Ready ?: return
         val existing = savedDraft()?.takeIf { it.sheetId == ready.session.sheetId }
-        handle[DRAFT] = Session.json.encodeToString(
-            Draft(
-                sheetId = ready.session.sheetId,
-                fromFingerprint = existing?.fromFingerprint ?: ready.raw.hashCode(),
-                fromIdentities = existing?.fromIdentities ?: SessionPatch.identitiesOf(ready.raw),
-                edits = _edits.value,
-                added = _added.value,
+        // This runs on the main thread on EVERY keystroke. Losing the
+        // draft costs the typing only if the process then dies; throwing
+        // here costs it immediately, which is the opposite of the point.
+        runCatching {
+            handle[DRAFT] = Session.json.encodeToString(
+                Draft(
+                    sheetId = ready.session.sheetId,
+                    fromFingerprint = existing?.fromFingerprint ?: ready.raw.hashCode(),
+                    fromIdentities = existing?.fromIdentities ?: SessionPatch.identitiesOf(ready.raw),
+                    edits = _edits.value,
+                    added = _added.value,
+                )
             )
-        )
+        }
     }
 
     private fun touched() {

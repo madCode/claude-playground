@@ -1,6 +1,7 @@
 package com.app.carry
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -211,6 +212,14 @@ class SessionPatchTest {
     }
 
     @Test
+    fun `a one-space name still refuses, and the row says so`() {
+        // `blank` is isBlank, so " " refuses -- and the placeholder used
+        // isEmpty, so neither hint showed and every row looked named.
+        val why = refused(original, emptyMap(), listOf(AddedSet(name = " ", weight = 10.0)))
+        assertTrue("should say what to do, got: $why", why.contains("Name the exercise"))
+    }
+
+    @Test
     fun `an added row holding a number comes back even with no name`() {
         // It used to be dropped on the read and so deleted by the next
         // save. Unnamed rows have to reach the screen: the save refuses
@@ -251,33 +260,78 @@ class SessionPatchTest {
     }
 
     @Test
-    fun `a save that would delete an unreadable added row is refused`() {
-        // The array is replaced wholesale, so a row this build cannot read
-        // is destroyed rather than skipped.
-        val why = refused(withAdded("\"nonsense\""), mapOf(0 to SessionPatch.Entry(weight = 45.0)))
-        assertTrue("should name the risk, got: $why", why.contains("delete"))
-
-        // An unknown key alone is enough, even next to empty fields.
-        val ghost = withAdded("""{"name": "", "logged_by": "carry-2"}""")
-        assertTrue(refused(ghost, mapOf(0 to SessionPatch.Entry(weight = 45.0))).contains("delete"))
-
-        // And a known key holding something unreadable: this decodes to a
-        // blank name, so the row looks empty while carrying an object.
-        val odd = withAdded("""{"name": {"a": 1}}""")
-        assertTrue(refused(odd, mapOf(0 to SessionPatch.Entry(weight = 45.0))).contains("delete"))
+    fun `an added row the screen never saw is carried back out, not deleted`() {
+        // The array is replaced wholesale, so anything not handed back is
+        // destroyed. Refusing the save instead was worse than it sounds:
+        // the offending row is by definition one the owner cannot see, so
+        // the day's real numbers could never be written either.
+        for (row in listOf(
+            "\"nonsense\"",                                  // not an object at all
+            """{"name": "", "logged_by": "carry-2"}""",     // blank, but holds a key
+            """{"name": {"a": 1}}""",                       // decodes blank, holds an object
+        )) {
+            val file = withAdded(row)
+            assertEquals("should not reach the screen", emptyList<AddedSet>(), SessionPatch.addedIn(file))
+            val out = patched(file, mapOf(0 to SessionPatch.Entry(weight = 45.0)))
+            assertEquals("the day's numbers must still save", 45.0, set(out, 0)["weight"]!!.jsonPrimitive.double, 0.0)
+            assertEquals("and the row must survive", doc(file)["added"], doc(out)["added"])
+        }
     }
 
     @Test
-    fun `an added list too big to carry is refused, not deleted`() {
-        // Every added row is held verbatim in the draft, which is encoded
-        // into saved instance state on every keystroke and crosses a
-        // Binder transaction. A file from another machine must not be able
-        // to put a megabyte in there -- nor to have Carry quietly delete it.
+    fun `a carried row sits alongside one the owner adds`() {
+        val file = withAdded("\"nonsense\"")
+        val out = patched(file, emptyMap(), listOf(AddedSet(name = "plank", reps = 60)))
+        val saved = doc(out)["added"]!!.jsonArray
+        assertEquals(2, saved.size)
+        assertEquals("plank", saved[0].jsonObject["name"]!!.jsonPrimitive.content)
+        assertEquals("nonsense", saved[1].jsonPrimitive.content)
+    }
+
+    @Test
+    fun `an added row too big to hold is carried, not held and not deleted`() {
+        // Shown rows are held verbatim in the draft, which is encoded into
+        // saved instance state on every keystroke and crosses a Binder
+        // transaction. A file from another machine must not be able to put
+        // a megabyte in there -- nor to have Carry delete it instead.
         val huge = withAdded("""{"name": "plank", "junk": "${"x".repeat(80_000)}"}""")
         assertEquals(emptyList<AddedSet>(), SessionPatch.addedIn(huge))
-        assertTrue(
-            refused(huge, mapOf(0 to SessionPatch.Entry(weight = 45.0))).contains("bigger than anything Carry wrote")
-        )
+        val out = patched(huge, mapOf(0 to SessionPatch.Entry(weight = 45.0)))
+        assertEquals(doc(huge)["added"], doc(out)["added"])
+    }
+
+    @Test
+    fun `a deeply nested added row does not blow the stack on the read`() {
+        // 2000 levels is 12 KB of valid JSON that parses fine, and
+        // `toString()` on it overflows the stack. The READ is what
+        // matters: it runs on every resume, so a throw there is a crash
+        // loop on a file the phone cannot edit. Measuring a row's size
+        // is depth-capped for this reason.
+        val deep = withAdded("""{"name": "plank", "junk": ${"{\"a\":".repeat(2000)}1${"}".repeat(2000)}}""")
+        assertEquals(emptyList<AddedSet>(), SessionPatch.addedIn(deep))
+
+        // The WRITE still can't serialise it -- nor could it before this
+        // change, since the whole document is re-encoded and the nesting
+        // is in the document. It refuses, says the file is unchanged, and
+        // that is true; it does not crash and does not half-write.
+        val why = refused(deep, mapOf(0 to SessionPatch.Entry(weight = 45.0)))
+        assertTrue("got: $why", why.contains("file is unchanged"))
+    }
+
+    @Test
+    fun `a value this build cannot parse survives a row it did not edit`() {
+        // Re-encoding flattens what it cannot read: `12.5` reps becomes
+        // null, `45.0` becomes `45`. An untouched row goes back verbatim.
+        val file = withAdded("""{"name": "plank", "weight": 45.0, "reps": 12.5}""")
+        val row = SessionPatch.addedIn(file).single()
+        assertEquals(null, SessionPatch.apply(file, emptyMap(), listOf(row)).let {
+            (it as SessionPatch.Outcome.Patched).text
+        })
+
+        val out = patched(file, mapOf(0 to SessionPatch.Entry(reps = 8)), listOf(row))
+        val saved = doc(out)["added"]!!.jsonArray.single().jsonObject
+        assertEquals("12.5", saved["reps"]!!.jsonPrimitive.content)
+        assertEquals("45.0", saved["weight"]!!.jsonPrimitive.content)
     }
 
     /** The fixture with a different `added` array, so each case states only

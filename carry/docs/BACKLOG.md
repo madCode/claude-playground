@@ -2,7 +2,23 @@
 
 ## Next
 
-Nothing outstanding from a review. What is left either needs the phone
+**From cycle 12's review, with repros:**
+
+- **Added-row boxes are keyed by list index**, so they show the previous
+  occupant's text after the list shrinks. Tap "+ Add" twice, fill only
+  the second (`plank`, 30), save: the blank row is dropped, `plank` moves
+  to index 0, and the weight box next to it renders empty while the file
+  holds 30. The screen says "Saved" and shows a number that isn't there —
+  the re-enter-from-memory failure. Needs a stable id per added row
+  rather than its position.
+- **A carried key can be resurrected from a stale draft.** `asRead` is
+  pinned to the bytes of the first keystroke; if the file is rewritten
+  underneath and the writer removed a key, saving puts it back. Narrow —
+  it needs the rewritten-file path and a key that was deleted remotely —
+  but the copied-through value should come from the row as it is on disk
+  now.
+
+Otherwise nothing outstanding from a review. What is left either needs the phone
 (see "Owed on a device"), needs a decision that is yours (below), or is
 a new feature from "Later" — the notification on a new session file is
 the one that pays for itself soonest, because the lobby glance currently
