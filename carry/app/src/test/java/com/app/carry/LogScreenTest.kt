@@ -146,6 +146,27 @@ class LogScreenTest {
         assertEquals(1, saves)
     }
 
+    @Test
+    fun `a rewritten session says so and offers a way out`() {
+        // Without the escape the owner is stuck: the save refuses, every
+        // refresh re-raises the warning, and the only other exits destroy
+        // the numbers they typed.
+        var discarded = 0
+        compose.setContent {
+            LogScreen(
+                session = SampleSession.today,
+                entries = emptyMap(), added = emptyList(),
+                onEdit = { _, _ -> }, onAdd = {}, onEditAdded = { _, _ -> },
+                onSave = {}, saving = SaveState.Idle,
+                fileMoved = true, onDiscard = { discarded++ },
+            )
+        }
+        compose.onNodeWithText("Your numbers are still here", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Use the new sheet instead").performClick()
+        assertEquals(1, discarded)
+        shoot("13-file-moved")
+    }
+
     private fun shoot(name: String) {
         compose.waitForIdle()
         File(out, "$name.png").outputStream().use {

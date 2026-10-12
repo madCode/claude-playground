@@ -255,3 +255,62 @@ mid-fill, edits made against bytes that have since changed, and save
 racing refresh. They are one coherent cycle rather than a scattering.
 
 **Next.** Cycle 6, above.
+
+## 2026-10-11 — cycle 6: don't lose what was typed
+
+**From you.** Nothing new; the cycle cycle 5's review asked for.
+
+**Shipped.** The four ways the owner's typing could be lost or misplaced,
+which is worth stating plainly: everything else on screen can be
+re-derived from the session file, and the numbers someone just entered
+cannot.
+
+- A draft, rewritten on every keystroke and held in `SavedStateHandle`, so
+  process death no longer takes a half-filled form. Ten rows in the car,
+  switch to Spotify, Android reclaims the process — they come back.
+- A newer file arriving keeps what was typed instead of blanking it, and
+  says so on the screen rather than leaving it to be noticed.
+- The draft keeps the bytes the numbers were typed against, so a save can
+  compare each edited row's identity between then and now. `ref` is only
+  an index: a re-run that renumbers rows would otherwise write a weight
+  meant for a deadlift against a lateral raise, and the patcher cannot see
+  that — it only refuses refs that have *gone*.
+- Two taps in one frame no longer start two writes, and a save completing
+  after a refresh no longer overwrites the newer state.
+
+**Caught while building.** The restore path did nothing when the file was
+unchanged — I had written the draft on every edit and then left `_edits`
+alone on reload, which is precisely the case process death produces. The
+test caught it immediately, which is the argument for writing the test
+from the scenario rather than from the code.
+
+**Review caught — the design was unsound, not just buggy.**
+
+- **A draft carried no session identity.** Saturday's unsaved weights would
+  load onto Tuesday's sheet when it synced in, and if the two shared an
+  exercise at the same index — the same studio running the same template
+  does that routinely — they would be *written into it*. A `sheetId` on the
+  draft closes that, and closes two more findings with it: added rows being
+  replaced wholesale into another session's file, and the identity check
+  passing vacuously when only added rows were touched.
+- **"Typed" meant "the file has numbers in it."** A session finished in two
+  sittings therefore looked identical to one being filled in, so the
+  keep-and-warn path fired with nothing typed at all. A draft is now only
+  created by a keystroke.
+- **The identity gate could be skipped through its own bookkeeping**: the
+  pin was re-set to "whatever is current" on every edit, so edits typed
+  against one file could end up pinned to another and patched in blind. It
+  keeps the original pin now.
+- **The warning was a dead end.** Once the file moved and the save refused,
+  every refresh re-raised it and the save could never succeed — the only
+  exits were clearing app data or swiping the app away, both of which
+  destroy the numbers. There is a "use the new sheet instead" out.
+- **The identity comparison was order-sensitive** (a runner re-emitting the
+  same variant object with its keys in a different order would have refused
+  saves permanently) and could degenerate to comparing `line` alone, so two
+  blocks of the same movement swapping places slipped through. Normalised,
+  with prescribed reps in the key, and it has direct tests in both
+  directions now — it had none.
+
+**Next.** Bundled fonts, then a security pass before anything is called a
+release.

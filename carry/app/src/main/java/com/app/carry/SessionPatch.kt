@@ -30,6 +30,7 @@ import kotlinx.serialization.json.buildJsonObject
 object SessionPatch {
 
     /** What a person can change about one row. */
+    @kotlinx.serialization.Serializable
     data class Entry(
         val weight: Double? = null,
         val reps: Int? = null,
@@ -167,6 +168,46 @@ object SessionPatch {
             }.getOrNull()
         }.toMap()
     }
+
+    /**
+     * True when every named row still describes the same exercise in both
+     * texts.
+     *
+     * `ref` is only an index, so a runner that re-runs and renumbers its
+     * rows turns an edit meant for a deadlift into one against a lateral
+     * raise. [apply] refuses a ref that has gone missing but cannot see a
+     * renumbering, which is the quieter and worse case.
+     */
+    fun identityHolds(before: String, after: String, refs: Set<Int>): Boolean {
+        val a = identities(before)
+        val b = identities(after)
+        return refs.all { a[it] != null && a[it] == b[it] }
+    }
+
+    /** Key order must not matter: `variant` is an opaque object the runner
+     *  may re-emit in any order, and comparing its printed form would
+     *  refuse saves for a file that had not meaningfully changed. */
+    private fun normalise(element: JsonElement?): String = when (element) {
+        null -> "\u0001absent"
+        is JsonObject -> element.entries.sortedBy { it.key }
+            .joinToString(",", "{", "}") { "${it.key}:${normalise(it.value)}" }
+        is JsonArray -> element.joinToString(",", "[", "]") { normalise(it) }
+        else -> element.toString()
+    }
+
+    private fun identities(text: String): Map<Int, String> = runCatching {
+        ((Session.json.parseToJsonElement(text) as JsonObject)["sets"] as JsonArray)
+            .mapNotNull { element ->
+                val set = element as? JsonObject ?: return@mapNotNull null
+                val ref = refOf(set) ?: return@mapNotNull null
+                // prescribed_reps included: the same movement appears in two
+                // blocks of one workout often enough that `line` alone can
+                // make two different rows compare equal, and a renumbering
+                // that swapped exactly those would slip through.
+                ref to listOf("line", "canonical", "components", "variant", "prescribed_reps")
+                    .joinToString("\u0000") { normalise(set[it]) }
+            }.toMap()
+    }.getOrDefault(emptyMap())
 
     /** The rows the owner added, so a second save neither duplicates nor
      *  forgets them. */
