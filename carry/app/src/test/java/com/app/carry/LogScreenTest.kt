@@ -206,6 +206,45 @@ class LogScreenTest {
             .assertTextEquals("30")
     }
 
+    @Test
+    fun `skipping something is sayable, and is not the same as leaving it blank`() {
+        // `skipped` was in the schema, in the patch and in the importer
+        // before this screen existed, with no way to set it — so a
+        // movement deliberately skipped looked exactly like one not got
+        // to, and the coach kept suggesting it for ever.
+        show()
+        compose.onAllNodesWithText("skip")[0].performClick()
+        assertEquals(SessionPatch.Entry(skipped = true), edits.value[0])
+        assertEquals("blank is still blank", null, edits.value[1])
+        compose.onNodeWithText("1 skipped", substring = true).assertIsDisplayed()
+        shoot("19-skipped")
+    }
+
+    @Test
+    fun `skipping clears what was typed, and un-skipping does not put it back`() {
+        // A weight against a set you did not do is the wrong number this
+        // app exists to avoid, so it goes. Bringing it back on un-skip
+        // would be this app inventing a number nobody re-entered.
+        show()
+        compose.onNodeWithContentDescription("bench press weight in pounds").performTextReplacement("45")
+        assertEquals(45.0, edits.value[0]?.weight)
+        compose.onAllNodesWithText("skip")[0].performClick()
+        assertEquals(SessionPatch.Entry(skipped = true), edits.value[0])
+        compose.onAllNodesWithText("skip")[0].performClick()
+        assertEquals(SessionPatch.Entry(), edits.value[0])
+    }
+
+    @Test
+    fun `a skipped row is not counted as filled`() {
+        // It is answered, not filled. Counting it as filled would say the
+        // form is further along than it is.
+        show()
+        compose.onNodeWithContentDescription("bench press weight in pounds").performTextReplacement("45")
+        compose.onNodeWithText("1 of 10 filled", substring = true).assertIsDisplayed()
+        compose.onAllNodesWithText("skip")[0].performClick()
+        compose.onNodeWithText("0 of 10 filled", substring = true).assertIsDisplayed()
+    }
+
     private fun shoot(name: String) {
         compose.waitForIdle()
         val shot = compose.onRoot().captureToImage().asAndroidBitmap()

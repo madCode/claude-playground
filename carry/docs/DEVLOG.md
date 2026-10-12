@@ -725,3 +725,24 @@ folder really holds in it, and it was checked by flipping the pair back.
 Two device checks, two integration bugs invisible to a green suite. The
 pattern is the same both times: the tests covered each half and nothing
 covered the seam.
+
+## 2026-10-12 — cycle 17: saying you skipped it
+
+**From you.** "When will you work on the skip chip?" — fair, having been
+promised twice.
+
+**Shipped.** A third chip. `skipped` had been in the schema, in the patch
+and in the importer since before the Log screen existed, with no way to set
+it: a movement you deliberately didn't do looked exactly like one you never
+got to, so the coach kept suggesting it for ever. Skipping clears the row
+and removes its boxes — there is no number to put in them, and a weight
+against a set you did not do is the wrong number this app exists to avoid.
+Un-skipping does not restore the old number, because nobody re-entered it.
+
+**The cost, which is real and is yours to judge on the phone.** A third
+44dp target takes 44dp from the name column, and "single-arm row · split
+stance" now truncates where it didn't. The 44dp is deliberate — this is
+filled in a car with cold hands — so the trade is name width against hit
+area. Taking the boxes away from a skipped row gives the width back on
+exactly the rows that no longer need it, but it does nothing for the other
+nine. Logged for a device look rather than settled here.

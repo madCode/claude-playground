@@ -23,10 +23,21 @@ failed, because four of them say "first time, go by feel" and three say
 3. Everything with no number — first-timers, bodyweight, untracked — folded
    into a single tail line. Present, not prominent.
 
-**Log** — what you did. One row per exercise: weight, reps, and two chips
-(*easy*, *hurt*). Plus **add a row**, for anything the sheet didn't list.
+**Log** — what you did. One row per exercise: weight, reps, and three chips
+(*easy*, *hurt*, *skip*). Plus **add a row**, for anything the sheet didn't
+list.
 
-Four fields, and the two chips are the two things that cannot be derived:
+*skip* is a different kind of thing from the other two: it is not a quality
+of a set, it is the statement that there wasn't one. It had been in the
+schema, in the patch and in the importer — which logs skipped items so the
+coach stops re-asking — since before this screen existed, with no way to
+set it, so a movement deliberately skipped was indistinguishable from one
+not got to. Skipping clears the row and takes its boxes away: there is no
+number to put in them, and a weight against a set you did not do is the
+wrong number this app exists to avoid. Un-skipping does not bring the old
+number back, because nobody re-entered it.
+
+The other two are the two things that cannot be derived:
 
 - *easy* — finishing a set says nothing about what was left in reserve, and
   this is the only signal measured as able to raise the owner above their own
