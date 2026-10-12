@@ -83,7 +83,21 @@ data class ExerciseSet(
         }
 
     val displayName: String
-        get() = canonical ?: components?.joinToString(" + ") ?: line
+        get() = (canonical ?: components?.joinToString(" + ") ?: line).readable()
+}
+
+/**
+ * Strips the characters that can make text render in an order other than
+ * the one stored: bidi overrides and embeddings, and zero-width marks.
+ *
+ * These arrive by accident rather than by attack — the names come from
+ * Reddit comments by way of another machine — but this is an app whose
+ * stated worst outcome is a wrong number in someone's head, and a line
+ * that reads backwards is the same kind of failure.
+ */
+internal fun String.readable(): String = filter { c ->
+    c.code !in 0x202A..0x202E && c.code !in 0x2066..0x2069 &&
+        c.code != 0x200B && c.code != 0x200E && c.code != 0x200F && c.code != 0xFEFF
 }
 
 /** Something the sheet never listed. On a day with no intel for the owner's

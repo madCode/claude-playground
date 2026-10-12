@@ -420,3 +420,23 @@ on a flattering input is not evidence.
 
 **Next.** What is left is in BACKLOG.md, including three things that are
 the owner's call rather than mine.
+
+## 2026-10-11 — cycle 10: the last two from the security pass
+
+**Shipped.** `chosen` now requires read *and* write, because Carry writes
+the log back — checking only read made a read-only tree (what some cloud
+providers hand out) look perfectly usable right up until the save failed,
+after the workout, with the numbers already typed.
+
+And exercise names have bidi overrides and zero-width marks stripped.
+These arrive by accident rather than by attack — the names come from
+Reddit comments by way of another machine — but this is an app whose
+stated worst outcome is a wrong number in someone's head, and text that
+renders in an order other than the one stored is the same kind of failure.
+
+**Note for the morning.** Adding `dependabot.yml` in cycle 8 did what it
+was supposed to and immediately opened nine pull requests: five action
+bumps, which are repo-wide because workflows are, and four Gradle and
+Kotlin bumps for Carry. None are merged. The toolchain ones (Kotlin 2.3 to
+2.4, AGP 9.1 to 9.4) are real upgrades that deserve a cycle rather than a
+rubber stamp, and the action ones touch the other two projects.

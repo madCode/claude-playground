@@ -78,10 +78,17 @@ class SessionFolder(private val context: Context) : Folder {
             if (value == null) remove(KEY) else putString(KEY, value.toString())
         }.apply()
 
-    /** Does the system still consider this ours to read? */
+    /**
+     * Does the system still consider this ours to read AND write?
+     *
+     * Both, because Carry writes the log back. Checking only read made a
+     * read-only tree -- what some cloud providers hand out -- look
+     * perfectly usable right up until the save failed, after the workout,
+     * with the numbers already typed.
+     */
     private fun held(tree: Uri): Boolean = runCatching {
         context.contentResolver.persistedUriPermissions.any {
-            it.uri == tree && it.isReadPermission
+            it.uri == tree && it.isReadPermission && it.isWritePermission
         }
     }.getOrDefault(false)
 

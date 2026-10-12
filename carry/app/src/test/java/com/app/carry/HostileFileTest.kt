@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,6 +57,18 @@ class HostileFileTest {
         )
         compose.setContent { TodayScreen(duplicated, today) }
         compose.onNodeWithText("Carry these in").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a name cannot reverse the line it sits on`() {
+        // A right-to-left override in an exercise name arrives by accident
+        // -- these come from Reddit comments by way of another machine --
+        // and renders the rest of the text backwards. In an app whose
+        // stated worst outcome is a wrong number in someone's head, text
+        // that reads in an order other than the one stored is the same
+        // kind of failure.
+        val sneaky = ExerciseSet(ref = 0, line = "x", canonical = "dead\u202elift\u200b")
+        assertEquals("deadlift", sneaky.displayName)
     }
 
     @Test
