@@ -36,7 +36,14 @@ import androidx.compose.ui.unit.sp
  *  3. everything with no number, folded into one tail line
  */
 @Composable
-fun TodayScreen(session: Session, modifier: Modifier = Modifier) {
+fun TodayScreen(
+    session: Session,
+    // Derived here, from the very date on the line above it, rather than
+    // passed in as a verdict someone else reached earlier.
+    today: java.time.LocalDate = java.time.LocalDate.now(),
+    modifier: Modifier = Modifier,
+) {
+    val day = SessionFiles.dayOf(session.date, today)
     val weighted = session.sets.filter { it.suggestedWeight != null }
     val changed = weighted.filter { it.change != null }
     val held = weighted.filter { it.change == null }
@@ -44,7 +51,8 @@ fun TodayScreen(session: Session, modifier: Modifier = Modifier) {
 
     Column(modifier.fillMaxSize().background(Look.Slate).padding(horizontal = 14.dp)) {
         Text(
-            listOfNotNull(session.classTag, session.date).joinToString(" · "),
+            listOfNotNull(session.classTag, SessionFiles.formatDate(session.date))
+                .joinToString(" · "),
             color = Look.Chalk, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
             fontSize = 19.sp, modifier = Modifier.padding(top = 16.dp),
         )
@@ -52,6 +60,16 @@ fun TodayScreen(session: Session, modifier: Modifier = Modifier) {
             "Carry these in", color = Look.ChalkDim, fontFamily = Look.Name,
             fontSize = Look.SmallSize, modifier = Modifier.padding(top = 3.dp, bottom = 10.dp),
         )
+        // Above the numbers, in the same place and the same voice as the
+        // borrowed-block warning: a sheet that is not today's is the one
+        // way this screen can put a wrong weight in someone's head, and the
+        // likeliest cause is simply that the sync has not run.
+        when (day) {
+            SessionFiles.Day.PAST -> Warning("This is an older session, not today's. Your folder may not have synced.")
+            SessionFiles.Day.FUTURE -> Warning("This session is dated ahead of today.")
+            SessionFiles.Day.UNKNOWN -> Warning("Carry can't tell what day this session is for.")
+            SessionFiles.Day.TODAY -> Unit
+        }
         session.borrowedFrom?.let {
             Text(
                 "⚠ No ${session.classTag} intel. This is the $it floor block — check the board.",
@@ -64,6 +82,14 @@ fun TodayScreen(session: Session, modifier: Modifier = Modifier) {
             if (noNumber.isNotEmpty()) item { TailLine(noNumber) }
         }
     }
+}
+
+@Composable
+private fun Warning(text: String) {
+    Text(
+        "\u26a0 $text", color = Look.BrickInk, fontFamily = Look.Name,
+        fontSize = Look.SmallSize, modifier = Modifier.padding(bottom = 8.dp),
+    )
 }
 
 @Composable

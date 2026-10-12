@@ -9,6 +9,41 @@ package com.app.carry
  * part no JVM test can answer honestly.
  */
 object SessionFiles {
+    /** How the session's own date relates to the day it is being read on. */
+    enum class Day { TODAY, PAST, FUTURE, UNKNOWN }
+
+    /**
+     * A sheet is answering the question "what do I carry in THIS MORNING".
+     * If the sync has not run, the newest file in the folder is an older
+     * workout, and showing its weights under "carry these in" is the one
+     * way this app can put a wrong number in someone's head. So the day is
+     * compared, and a sheet that is not today's says so above the numbers.
+     */
+    fun dayOf(sessionDate: String, today: java.time.LocalDate): Day = try {
+        val d = java.time.LocalDate.parse(sessionDate)
+        when {
+            d == today -> Day.TODAY
+            d.isBefore(today) -> Day.PAST
+            else -> Day.FUTURE
+        }
+    } catch (_: java.time.format.DateTimeParseException) {
+        Day.UNKNOWN
+    }
+
+    /**
+     * "2026-10-17" reads as "Sat 17 Oct"; anything else is shown as sent.
+     *
+     * Formatted in the reader's own locale, so no test may assert the
+     * literal string -- an earlier one hardcoded English and would have
+     * failed CI on a German runner.
+     */
+    fun formatDate(sessionDate: String): String = try {
+        java.time.LocalDate.parse(sessionDate)
+            .format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM"))
+    } catch (_: java.time.format.DateTimeParseException) {
+        sessionDate
+    }
+
     /** The runner writes `session-<date>-<class>.json`. */
     private val NAME = Regex("""^session-(\d{4}-\d{2}-\d{2})-([A-Za-z0-9]+)\.json$""")
 

@@ -20,7 +20,7 @@ object SampleSession {
 
     val today = Session(
         sheetId = "2026-10-17:2G",
-        date = "Fri 17 Oct",
+        date = "2026-10-17",
         classTag = "2G",
         sets = listOf(
             set(0, "bench press", "push", 45.0, previous = 40.0),

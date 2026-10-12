@@ -41,6 +41,14 @@ sealed interface CarryState {
      *  worth different words: one means wait, the other means update. */
     data class Unreadable(val name: String, val wrongSchema: Boolean) : CarryState
 
+    /**
+     * Note what is NOT here: how fresh the sheet is. That was a field once,
+     * computed when the file was read -- and keepLastGood then put a sheet
+     * read on Friday back on screen on Saturday still carrying "this is
+     * today's", which is exactly the failure the comparison exists to
+     * prevent. A verdict stored next to the thing it judges can only get
+     * more wrong as it ages, so freshness is derived where it is shown.
+     */
     data class Ready(val session: Session) : CarryState
 }
 
@@ -128,7 +136,7 @@ fun CarryApp(state: CarryState, onChooseFolder: () -> Unit, modifier: Modifier =
             onAction = onChooseFolder,
             modifier = modifier,
         )
-        is CarryState.Ready -> TodayScreen(state.session, modifier)
+        is CarryState.Ready -> TodayScreen(state.session, modifier = modifier)
     }
 }
 

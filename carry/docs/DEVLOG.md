@@ -102,3 +102,59 @@ app is for:
 
 **Next.** Staleness — nothing compares the session's date to today, so an
 un-synced Saturday shows Thursday's weights as what to carry in.
+
+## 2026-10-11 — cycle 3: a sheet that is not today's says so
+
+**From you.** Nothing new; top of the backlog after cycle 2.
+
+**Shipped.** The session's own date is compared to the day it is read on,
+and anything that is not today is marked above the numbers. Dates are also
+shown the way a person writes them ("Sat 17 Oct") rather than as ISO.
+
+Why it matters more than it looks: the newest file in the folder is chosen
+by the date in its name, which is right, but nothing checked that the date
+was *today*. Saturday morning with the sync not yet run would have shown
+Thursday's weights under "carry these in" — the one way this screen can put
+a wrong number in someone's head, and it would have looked completely
+normal.
+
+**Caught while building.** Two of my own edits were applied with
+`str.replace` and no assertion, so they silently did nothing — one of them
+left the header printing a raw ISO date while a test insisted it should be
+formatted, which cost three runs to find. Every scripted edit in this cycle
+now asserts the target text exists first. The failing test also disagreed
+with the code about the locale; it now builds its expectation from the same
+formatter rather than hardcoding a day name.
+
+**Review caught — the cycle had not actually closed the hole.**
+
+- `Ready` carried the freshness verdict as a field, computed when the file
+  was read. `keepLastGood` then puts a sheet read on Friday back on screen
+  on Saturday still carrying "this is today's" — the precise failure this
+  cycle exists to prevent, now reachable through the one path whose job is
+  to show an old sheet. A verdict stored beside the thing it judges can
+  only get more wrong as it ages, so it is derived at render from the date
+  on the line above it, and the field is gone.
+- `Day.TODAY` as a default meant "forgot to pass it" rendered as "this is
+  today's" — the one value of four that shows no warning, inverting the
+  rule that an unreadable date is admitted rather than assumed. No default
+  survives.
+- Two of the four warnings shipped un-rendered by any test, and nothing
+  asserted that today stays quiet. A warning that always shows is the
+  cry-wolf failure, and this line borrows the borrowed-block warning's
+  voice, so devaluing it costs more than itself. All four are covered now.
+- I removed a locale-hardcoded assertion from one test and immediately
+  reintroduced it in the new one: `"Sat 17 Oct"` fails on a German CI
+  runner. Now asserts properties — that it stops being ISO and keeps the
+  day — because the formatter uses the reader's locale on purpose.
+- And the replacement assertion I was pleased with built its expectation
+  from the function under test, so it would have moved with the very bug
+  it was written for. It now asserts the header is *not* the raw ISO date.
+
+**Not fixed, documented instead.** The file's date comes from the Mac and
+"today" comes from the phone; travelling across zones can mis-report by a
+day. Carrying a zone is the companion script's call, and a tolerance band
+would blunt the signal. In DESIGN.md as a known limit.
+
+**Next.** The Log screen — the write path, which must patch the original
+JSON rather than re-serialise.

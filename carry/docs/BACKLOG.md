@@ -7,10 +7,6 @@
   tests in `SessionTest` show re-encoding is lossy (an unknown field from a
   newer runner is dropped, and `45` comes back as `45.0`). CLAUDE.md says
   unfilled rows survive a round trip untouched, and only patching can.
-- **Staleness.** `SessionFiles.newest` picks the latest date in the folder
-  and never compares it to today, so an un-synced Saturday shows Thursday's
-  weights as what to carry in. The only hint is a small subhead. This is the
-  one path that can put a wrong number in someone's head.
 - Bundle Barlow Condensed and IBM Plex Mono; names are less compact than the
   approved mock until then.
 
