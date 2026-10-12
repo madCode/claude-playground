@@ -853,3 +853,21 @@ Five chips fit because the rows went to two lines an hour earlier. "easier"
 wrapped inside its 44dp box, so the chips size to their label now with 44dp
 as a minimum rather than a fixed square — and the word is *mod*, which is
 what a coach on the floor says.
+
+## 2026-10-12 — cycle 21: the add-row leads on a borrowed day
+
+**From you.** "Borrowed-day layout: promote the add-row."
+
+Intel for your class is posted on a small minority of days, so the sheet
+is usually another class's block and whatever you add by hand IS the
+workout. That button was at the bottom, under eleven rows of the wrong
+exercises. On a borrowed day it now leads: the warning, then "+ Add what
+you did" in amber, then your added rows, and only then the borrowed sheet.
+On a normal day nothing moves.
+
+**It also changed a decision on the parked intel post (#60).** The first
+of its three open questions was whether anything but an added row is
+publishable on a borrowed day — the honest answer being "no", at the cost
+of most of the feature's value on exactly the days it exists for. That
+cost is gone: the app now collects added rows first on those days, so the
+honest answer and the useful one are the same one.
