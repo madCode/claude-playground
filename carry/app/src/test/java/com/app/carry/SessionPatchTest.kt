@@ -260,6 +260,11 @@ class SessionPatchTest {
         // An unknown key alone is enough, even next to empty fields.
         val ghost = withAdded("""{"name": "", "logged_by": "carry-2"}""")
         assertTrue(refused(ghost, mapOf(0 to SessionPatch.Entry(weight = 45.0))).contains("delete"))
+
+        // And a known key holding something unreadable: this decodes to a
+        // blank name, so the row looks empty while carrying an object.
+        val odd = withAdded("""{"name": {"a": 1}}""")
+        assertTrue(refused(odd, mapOf(0 to SessionPatch.Entry(weight = 45.0))).contains("delete"))
     }
 
     @Test

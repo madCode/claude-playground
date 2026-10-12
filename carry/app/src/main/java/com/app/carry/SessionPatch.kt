@@ -297,8 +297,13 @@ object SessionPatch {
         val decoded = runCatching { decodeAdded() }.getOrNull() ?: return false
         if (!decoded.blank) return true          // kept, and its keys carried
         // Dropped. Fine only if there was nothing in it to begin with --
-        // an unknown key is still something, even next to empty fields.
-        return (this as JsonObject).keys.all { it in WRITTEN_KEYS }
+        // an unknown key is still something, even next to empty fields,
+        // and so is a known key holding a value this build cannot read.
+        // `"name": {"a": 1}` decodes to "", which makes a row look empty
+        // while it is in fact carrying something.
+        return (this as JsonObject).all { (key, value) ->
+            key in WRITTEN_KEYS && value is JsonPrimitive
+        }
     }
 
     /** The keys [encode] writes, so [readableBack] can tell "an old empty

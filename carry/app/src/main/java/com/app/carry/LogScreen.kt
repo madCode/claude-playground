@@ -73,7 +73,10 @@ fun LogScreen(
      *  with it rather than keeping the last workout's keystrokes. */
     sessionKey: String = session.sheetId,
 ) {
-    val filled = entries.count { !it.value.blank } + added.count { it.name.isNotBlank() }
+    // An added row counts once it holds anything, the same test the sets
+    // use. Counting only named ones meant typing a weight into a row you
+    // had not named yet left the tally reading "0 of 11 filled".
+    val filled = entries.count { !it.value.blank } + added.count { !it.blank }
     val total = session.sets.size + added.size
 
     Column(modifier.fillMaxSize().background(Look.Slate).padding(horizontal = 14.dp)) {
