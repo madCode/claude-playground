@@ -176,6 +176,22 @@ Two consequences worth keeping:
 
 ### The rows you added
 
+Each added row carries an **id of its own**, minted when the row is added
+and written into the file. Position was the identity before, and it was
+wrong three ways at once: the text boxes were keyed by index, so a box kept
+its text when the list shrank under it — the screen showing 30 next to a
+row whose file entry held nothing; a row could be written twice when the
+file was rewritten underneath and it changed category between reads; and
+nothing could tell "the row the owner is editing" from "the row in that
+slot".
+
+A file written before ids gets a positional stand-in on read. That is
+enough to key a screen for as long as that file is on it, and it is
+deliberately never written back — a stand-in persisted into the file would
+collide with the next read's stand-in for a different row, and two rows
+sharing an id is worse than none having one.
+
+
 `sets` comes from the runner; `added` is the owner's own, and Carry is the
 only thing that writes it. That array is **replaced whole** on every save,
 which makes it a different kind of risk from `sets`: a row Carry does not

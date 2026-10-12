@@ -228,7 +228,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     }
 
     fun addRow() {
-        _added.value = _added.value + AddedSet(name = "")
+        _added.value = _added.value + AddedSet(id = AddedSet.newId())
         touched()
     }
 

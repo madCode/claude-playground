@@ -6,6 +6,8 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -42,7 +44,7 @@ class LogScreenTest {
                 entries = edits.value,
                 added = added.value,
                 onEdit = { ref, e -> edits.value = edits.value + (ref to e) },
-                onAdd = { added.value = added.value + AddedSet(name = "") },
+                onAdd = { added.value = added.value + AddedSet(id = AddedSet.newId()) },
                 onEditAdded = { i, row -> added.value = added.value.toMutableList().also { it[i] = row } },
                 onSave = { saves++ },
                 saving = saving,
@@ -180,6 +182,28 @@ class LogScreenTest {
         assertEquals(20.0, added.value.single().weight)
         compose.onNodeWithText("name this").assertIsDisplayed()
         shoot("15-name-this")
+    }
+
+    @Test
+    fun `a box keeps its own number when the list shrinks under it`() {
+        // Save a session whose first added row was left blank: that row
+        // is dropped from the file, the second slides into slot 0, and a
+        // box keyed by index renders the blank row's empty string while
+        // the file holds 30. The screen says "Saved" and shows a number
+        // that is not there -- re-entering from memory is how a wrong
+        // number gets into the history.
+        show()
+        compose.onNodeWithText("+ Add something the sheet missed").performClick()
+        compose.onNodeWithText("+ Add something the sheet missed").performClick()
+        val boxes = compose.onAllNodesWithContentDescription("added exercise weight in pounds")
+        boxes[1].performTextReplacement("30")
+        assertEquals(30.0, added.value[1].weight)
+
+        // What the save's re-seed does: the blank row is gone.
+        added.value = listOf(added.value[1])
+        compose.waitForIdle()
+        compose.onAllNodesWithContentDescription("added exercise weight in pounds")[0]
+            .assertTextEquals("30")
     }
 
     private fun shoot(name: String) {

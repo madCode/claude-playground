@@ -126,7 +126,14 @@ object SessionPatch {
         // by definition one the owner cannot see, so there was nothing
         // they could do about it and the day's real numbers could never
         // be written. Carrying loses nothing and blocks nothing.
-        val (_, carried) = (doc["added"] as? JsonArray).splitAdded()
+        val (_, carriedAll) = (doc["added"] as? JsonArray).splitAdded()
+        // The owner's rows may have been read from an EARLIER version of
+        // this file -- a draft survives the coach rewriting it underneath.
+        // Carrying an element whose id is also in `keep` would then write
+        // the same exercise twice: once as the owner's copy, once as the
+        // one it came from. Ids exist so this can be noticed at all.
+        val mine = keep.mapTo(mutableSetOf()) { it.id }
+        val carried = carriedAll.filterNot { (it as? JsonObject).idOf() in mine }
         val writtenAdded = keep.map(::encode) + carried
         val addedChanged = writtenAdded != addedNow
         if (changed.isEmpty() && !addedChanged) return Outcome.Patched(null)
@@ -153,6 +160,13 @@ object SessionPatch {
 
     private fun JsonArray?.orEmptyList(): List<JsonElement> = this?.toList() ?: emptyList()
 
+    /** Marks an id this app made up for a row that arrived without one.
+     *  Never written to the file; see [encode]. */
+    private const val STAND_IN = "@"
+
+    private fun JsonObject?.idOf(): String? =
+        (this?.get("id") as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }
+
     private fun encode(row: AddedSet): JsonObject {
         val asRead = row.asRead
         // Untouched? Hand back the bytes that came in. Re-encoding is
@@ -160,11 +174,25 @@ object SessionPatch {
         // save that changed nothing would rewrite a file a sync is
         // watching, and it flattens anything this build cannot parse --
         // a `reps` of `12.5` becomes null -- on a row nobody edited.
-        if (asRead != null && asRead.decodeAdded() == row) return asRead
+        // `copy(id = row.id)`: a file written before rows had ids decodes
+        // with a positional one, and the row now carries a real one. That
+        // difference alone is not an edit -- but it IS a reason to write,
+        // so the id is excluded from the comparison and the fresh encode
+        // below puts it in the file.
+        if (asRead != null && asRead.decodeAdded(0)?.copy(id = row.id) == row) return asRead
         return buildJsonObject {
             // Copy FIRST, then overwrite, as the `sets` path does: a key a
             // newer Carry wrote on this row survives an edit by this one.
             asRead?.forEach { (key, value) -> put(key, value) }
+            // A real one only. Writing `"id": ""` would put a key in the
+            // file that says nothing, and writing a POSITIONAL stand-in
+            // is worse: persisted as `"@1"`, it collides with the next
+            // read's stand-in for whatever row then sits at index 1, and
+            // two rows sharing an id is worse than neither having one --
+            // the screen keys boxes by it and the save dedupes by it.
+            // Stand-ins stay in memory, where they are unique by
+            // construction.
+            if (row.id.isNotBlank() && !row.id.startsWith(STAND_IN)) put("id", JsonPrimitive(row.id))
             put("name", JsonPrimitive(row.name))
             put("weight", row.weight?.let(::number) ?: JsonNull)
             put("reps", row.reps?.let(::JsonPrimitive) ?: JsonNull)
@@ -275,8 +303,8 @@ object SessionPatch {
     private fun JsonArray?.splitAdded(): Pair<List<AddedSet>, List<JsonElement>> {
         val shown = mutableListOf<AddedSet>()
         val carried = mutableListOf<JsonElement>()
-        for (element in orEmptyList()) {
-            val decoded = runCatching { element.decodeAdded() }.getOrNull()
+        for ((at, element) in orEmptyList().withIndex()) {
+            val decoded = runCatching { element.decodeAdded(at) }.getOrNull()
             when {
                 // Kept on "holds something", not on "has a name". A row
                 // with a weight and no name has to come BACK to the
@@ -291,9 +319,16 @@ object SessionPatch {
         return shown to carried
     }
 
-    private fun JsonElement.decodeAdded(): AddedSet? {
+    private fun JsonElement.decodeAdded(at: Int): AddedSet? {
         val row = this as? JsonObject ?: return null
         return AddedSet(
+            // A file written before rows had ids gets a positional one.
+            // Stable for as long as that file is, which is until the
+            // first save — after which it carries real ones. NOT derived
+            // from the row's content: that changes on every keystroke,
+            // and the text boxes are keyed by this.
+            id = (row["id"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+                ?.takeIf { it.isNotBlank() && !it.startsWith(STAND_IN) } ?: "$STAND_IN$at",
             // takeIf, as `note` does: `JsonNull.content` is the string
             // "null", so `{"name": null}` used to reach the screen as an
             // exercise called null and be WRITTEN back as one. Carry
@@ -327,7 +362,7 @@ object SessionPatch {
 
     /** The keys [encode] writes, so [holdsNothing] can tell an empty row
      *  from one carrying something this build cannot read. */
-    private val WRITTEN_KEYS = setOf("name", "weight", "reps", "easy", "hurt", "note")
+    private val WRITTEN_KEYS = setOf("id", "name", "weight", "reps", "easy", "hurt", "note")
 
     /**
      * Roughly how many bytes a row would cost to hold, without building

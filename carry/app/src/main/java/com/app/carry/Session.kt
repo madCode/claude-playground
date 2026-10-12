@@ -112,6 +112,24 @@ internal fun String.readable(): String = filter { c ->
  */
 @Serializable
 data class AddedSet(
+    /**
+     * This row's own name for itself, so nothing has to identify it by
+     * where it sits in a list.
+     *
+     * Position was the identity before, and it was wrong in three ways at
+     * once: the text boxes were keyed by index, so after the list shrank
+     * a row showed the previous occupant's number — the screen saying 30
+     * while the file said nothing; a row could be written twice when the
+     * file was rewritten underneath and it changed category between
+     * reads; and there was no way to tell "the row the owner is editing"
+     * from "the row in that slot".
+     *
+     * Written into the file, which the owner approved on 2026-10-12. The
+     * importer reads named keys and ignores the rest, so it is inert
+     * there — this is Carry's own bookkeeping, kept where it survives a
+     * reload.
+     */
+    val id: String = "",
     val name: String = "",
     val weight: Double? = null,
     val reps: Int? = null,
@@ -139,4 +157,12 @@ data class AddedSet(
     val blank: Boolean get() =
         name.isBlank() && weight == null && reps == null &&
             !easy && !hurt && note.isNullOrBlank()
+
+    companion object {
+        /** Short, because it goes in the file next to a hand-typed name
+         *  and the owner may read it. Collisions do not corrupt anything
+         *  — two rows sharing an id are interchangeable to every caller
+         *  — so there is no reason to spend 36 characters on one. */
+        fun newId(): String = java.util.UUID.randomUUID().toString().take(8)
+    }
 }
