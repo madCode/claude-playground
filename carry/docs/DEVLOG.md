@@ -895,3 +895,22 @@ cliff at any count a person could reach.
 
 That empties the review backlog. Everything still open is either yours to
 decide, owed on a phone, or a feature nobody has asked for yet.
+
+## 2026-10-12 — cycle 23: bigger again, and say which build you are
+
+**From you**, with another screenshot: *"This text still feels small."*
+
+It was, and the reason the first pass did not settle it is worth writing
+down: there is no way to tell from a screenshot which build it came from.
+`SmallSize` has now gone 11 → 13.5 → 15 and `LabelSize` 9.5 → 11.5 → 13,
+and at no point could either of us be sure the picture we were discussing
+had the previous change in it.
+
+So, your second ask, now a practice: **every app shows which build it is,
+copyable in one tap.** In Carry that is one line at the bottom of the
+*Since* tab — the screen read at home rather than in a lobby or a car —
+reading `Carry 0.1.0-debug.66+c0f0d17` and copying itself when tapped. It
+comes from `BuildConfig`, never a string typed into the UI, because a typed
+one goes stale silently. Written up in `practices/version-page.md`.
+
+It is not a changelog or an update check. One line.

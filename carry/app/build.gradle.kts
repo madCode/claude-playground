@@ -31,6 +31,11 @@ android {
         }
     }
 
+    buildFeatures {
+        // So the app can show which build it is -- see SinceScreen.
+        buildConfig = true
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"

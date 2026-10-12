@@ -76,13 +76,17 @@ object Look {
     // a real phone, and it was: SmallSize was 11sp where Android's default
     // body text is 14. These screens are read at arm's length in a lobby
     // and filled in in a car, which are not conditions for caption type.
-    val NameSize = 16.5.sp
-    val FigureSize = 20.sp
-    val SmallSize = 13.5.sp
+    val NameSize = 17.sp
+    val FigureSize = 21.sp
+    // Raised twice. 11sp first, then 13.5 -- and still "feels small" on the
+    // owner's own phone, which is the only measurement that counts here.
+    // Android's default body text is 14sp and this is secondary text read
+    // at arm's length, so it has no business being under it.
+    val SmallSize = 15.sp
 
     /** Section labels. Small on purpose — they are signposts, not content —
      *  but not so small they stop being readable. */
-    val LabelSize = 11.5.sp
+    val LabelSize = 13.sp
 
     /** Screen titles. */
     val TitleSize = 21.sp
