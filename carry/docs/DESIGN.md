@@ -138,6 +138,38 @@ Rejected: a session hero header. It looked good and cost a third of the
 first screen to restate what the rows already said, on a screen whose
 measured job is three numbers in one glance.
 
+## Writing it back
+
+Carry **patches the original JSON**; it never re-serialises its own model.
+Cycle 1 measured why: re-encoding drops a field a newer runner added, and
+turns a weight of `45` into `45.0`. A model cannot faithfully reproduce a
+document it only partly describes, and CLAUDE.md promises unfilled rows
+come back untouched. So every key the runner wrote is copied through and
+only the six a person can edit are replaced.
+
+Two consequences worth keeping:
+
+- **Saving a session nobody edited returns the file unchanged** — byte for
+  byte. A sync watches this folder, and a file that rewrites itself on
+  every save looks like a change that isn't one.
+- **It refuses rather than guesses.** A file whose exercise list is not a
+  list, two rows sharing an id, an edit that no longer matches any row — all
+  leave the file untouched and say why. The first version silently replaced
+  a malformed list with an empty one, wrote one weight against two
+  exercises, and dropped unplaceable edits while reporting success. A
+  training history survives a missing number; it cannot survive a wrong
+  one, because nothing downstream can tell.
+- **An answer can be unmade.** The edits are the desired state of the rows
+  they name, not a list of changes, so clearing a mistyped weight clears it.
+  Filtering blanks out meant a wrong number could never be taken back.
+- **The write is verify-and-restore, not atomic.** Opening a document for
+  writing truncates it, so a failure after that point destroys the owner's
+  numbers *and* the runner's intel. Carry writes, reads back, and puts the
+  old content back if what landed is not what was sent — then reports which
+  of three things happened: saved, not saved and the file is fine, or the
+  file needs rescuing. SAF offers no atomic replace, so a process killed
+  mid-write still leaves damage and nothing here can prevent it.
+
 ## The session file
 
 Carry reads and writes one JSON per session, defined by the companion

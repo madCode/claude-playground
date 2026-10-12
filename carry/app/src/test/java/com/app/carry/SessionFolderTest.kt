@@ -73,6 +73,18 @@ class SessionFolderTest {
     }
 
     @Test
+    fun `a write that cannot happen says so rather than pretending`() {
+        // A save the owner believes happened and did not is how a session's
+        // numbers disappear, so this returns false rather than Unit.
+        SessionFolder(context).forget()
+        assertEquals(false, SessionFolder(context).write("anything", "{}"))
+
+        val folder = SessionFolder(context)
+        folder.remember(Uri.parse("content://nothing.here/tree/gone"))
+        assertEquals(false, folder.write("gone", "{}"))
+    }
+
+    @Test
     fun `an unknown provider lists nothing instead of throwing`() {
         val folder = SessionFolder(context)
         folder.remember(Uri.parse("content://nothing.here/tree/gone"))

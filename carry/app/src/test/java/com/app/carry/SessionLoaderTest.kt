@@ -17,6 +17,7 @@ private class ThreadRecordingFolder : Folder {
         readOn = Thread.currentThread().name
         return listOf("d" to "session-2026-10-17-2G.json")
     }
+    override fun write(documentId: String, text: String) = false
     override fun read(documentId: String) =
         """{"schema":"gym-session/1","sheet_id":"2026-10-17:2G","date":"2026-10-17","class":"2G","sets":[]}"""
 }

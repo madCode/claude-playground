@@ -12,6 +12,7 @@ private class FakeFolder(
     val contents: Map<String, String> = emptyMap(),
 ) : Folder {
     override fun list() = files
+    override fun write(documentId: String, text: String) = false
     override fun read(documentId: String) = contents[documentId]
 }
 
