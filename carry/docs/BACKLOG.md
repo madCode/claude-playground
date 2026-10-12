@@ -68,12 +68,30 @@ blank, so the suite can never again upload nothing as evidence — which it
 did for seven of twelve screenshots, and which fooled me twice, once into
 believing the bundled fonts had broken rendering entirely.
 
+## Found by putting it on a device, with your real data
+
+- **Three rows all say "shoulder press".** The WOD for 2026-10-12 has
+  three shoulder-press lines that differ only by variant, and the screen
+  shows `canonical`, so they are indistinguishable — on both tabs. You
+  cannot tell which one you are filling in. The variant is already in the
+  file and already opaque to Carry by design, so showing it means asking
+  the runner for a short display string alongside `canonical` rather than
+  Carry inventing one. That is a schema question, so it is yours.
+- **A day with no history-backed weights is two tail lines and a lot of
+  empty space.** Correct by the design — there is genuinely nothing to
+  carry — but seeing it with real data is the first confirmation that on
+  such a day the app's whole value is the log and the "add something the
+  sheet missed" row. Worth knowing before judging the Today screen.
+
 ## Owed on a device
 
 Things a JVM cannot answer honestly, to check on a real phone:
 
 - A persisted tree permission actually surviving a cold start, and surviving
   `adb install -r` (which can revoke it and look exactly like a first run).
+  (Partly done 2026-10-12 on an emulator: the grant was taken through the
+  real picker and the folder held across a force-stop and relaunch. A
+  phone and a reinstall are still owed.)
 - Bottom-edge insets against the navigation bar with a long session.
 - The round trip through Syncthing end to end.
 

@@ -629,3 +629,42 @@ is deleted and a stale `asRead` written over it — destroying a key added
 since, which is the one thing the carry path exists to prevent. That turned
 a visible, lossless duplicate into a silent deletion. Reverted; the
 duplicate stays in the backlog, where it was.
+
+## 2026-10-12 — the first run on a device, with real data
+
+**From you.** "Yes, wire it up" and "feel free to copy the existing data
+into session files" — which together made this possible for the first
+time.
+
+The runner now writes the session file (in the other repo), so the whole
+chain could be tried end to end: real history → runner → file → sync
+folder → the real folder picker → the two screens. It was put on an
+Android 36 emulator and driven through the SAF grant by hand.
+
+**It did not work, and nothing in either repo had failed.** The phone said
+*"No session in that folder yet"* with two session files sitting in the
+folder. The client matches `session-<date>-<class>.json` and ignores
+everything else — the folder is shared, and a half-synced file is normal
+there — and the runner was writing `<date>-<class>.json`. 125 tests here,
+26 test files there, all green, on two halves that could not talk to each
+other. One function owns the name now and a test pins it against the
+client's own regex.
+
+**What the real data then showed**, which no invented fixture would have:
+
+- Of eleven exercises, **none** had a suggested weight. Eight are
+  bodyweight or TRX, and of the three weighted moves only one appears in
+  the history at all — as a dumbbell overhead variant against today's TRX
+  one, so "no weight needed" is the correct answer rather than a miss.
+  A day like this is two tail lines and a lot of empty space, which is the
+  design working: there is nothing to carry, and the app's whole value
+  that day is the log.
+- **Three rows all read "shoulder press."** The sheet has three
+  shoulder-press lines differing only by variant, and the screen shows
+  `canonical`. On both tabs they are indistinguishable, so there is no way
+  to know which one you are filling in. Logged for the owner, because the
+  fix is a display string from the runner rather than Carry inventing one.
+
+The round trip was also checked against the real file in a throwaway JVM
+test: fill one row in, patch, and every other row comes back
+byte-identical. That part held.
