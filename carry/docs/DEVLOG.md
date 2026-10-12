@@ -665,6 +665,14 @@ client's own regex.
   to know which one you are filling in. Logged for the owner, because the
   fix is a display string from the runner rather than Carry inventing one.
 
-The round trip was also checked against the real file in a throwaway JVM
-test: fill one row in, patch, and every other row comes back
-byte-identical. That part held.
+**And then the whole loop closed, for the first time.** On the device: 35
+lb x 12 typed into the first row, saved, and the file on disk came back
+with that row filled and every other row untouched — identity, variant
+and the runner's own keys intact. The file was pulled off the phone and
+handed to the importer, which read it as `shoulder press: 35 lb x 12`,
+ready to log.
+
+Real history → runner → session file → folder → phone → SAF → form →
+save → importer. Every link, with the owner's own data, none of it
+invented. That is the thing the rebuild was for, and until tonight no
+part of it had been run against another part.
