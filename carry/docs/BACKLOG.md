@@ -2,43 +2,29 @@
 
 ## Next
 
-**A stable id per added row.** The owner approved one going in the file
-on 2026-10-12, so this is unblocked. It fixes all three of the items
-below at once, which is why they are grouped here rather than done
-piecemeal.
+Cycle 15's stable row id closed the index-keyed boxes. Three remain:
 
-**From cycle 12's review, with repros:**
+- **A row can still be written twice.** The owner's copy may come from a
+  draft pinned to older bytes while the carried elements are read from
+  the current file. Deduping by id was tried in cycle 15 and reverted: it
+  deletes the file's copy and writes the draft's stale `asRead` over it,
+  destroying a key added since — a silent deletion traded for a visible
+  duplicate. Honouring it needs the row as it is *on disk now*, which is
+  the same thing the next item needs.
 
-- **Added-row boxes are keyed by list index**, so they show the previous
-  occupant's text after the list shrinks. Tap "+ Add" twice, fill only
-  the second (`plank`, 30), save: the blank row is dropped, `plank` moves
-  to index 0, and the weight box next to it renders empty while the file
-  holds 30. The screen says "Saved" and shows a number that isn't there —
-  the re-enter-from-memory failure. Needs a stable id per added row
-  rather than its position.
 - **A carried key can be resurrected from a stale draft.** `asRead` is
   pinned to the bytes of the first keystroke; if the file is rewritten
   underneath and the writer removed a key, saving puts it back. Narrow —
   it needs the rewritten-file path and a key that was deleted remotely —
   but the copied-through value should come from the row as it is on disk
-  now.
-
-**From the second look, both needing more than forty added rows or a
-file rewritten underneath — and both better than what shipped before,
-which deleted the row outright:**
-
-- **A row can be written twice.** The owner's rows may come from a draft
-  pinned to older bytes while the carried elements are recomputed from
-  the current file. If the coach rewrites the file and a row changes
-  category — gains a key over 2 KB, or is pushed past the fortieth — it
-  is both kept (the owner's copy) and carried (this file's copy), so the
-  importer sees two. Nothing is lost, but the duplicate is invisible on
-  the next read. Wants a stable id per added row, which would also fix
-  the index-keyed boxes above.
+  now. The id makes this tractable: the row on disk can now be found.
 - **The forty-first row you add disappears from the screen.** With forty
   readable rows already in the file, a row you add is written, then the
   re-seed after a successful save shows only the first forty — so it is
-  in the file, uneditable, and nothing says so.
+  in the file, uneditable, and nothing says so. The id did NOT fix this;
+  the cap is on what the draft can hold, and the honest fix is either to
+  bound by bytes rather than count, or to say on screen that rows exist
+  which are not being shown.
 
 Otherwise nothing outstanding from a review. What is left either needs the phone
 (see "Owed on a device"), needs a decision that is yours (below), or is

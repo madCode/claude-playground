@@ -176,6 +176,34 @@ Two consequences worth keeping:
 
 ### The rows you added
 
+Each added row carries an **id of its own**, minted when the row is added
+and written into the file. Position was the identity before, and it was
+wrong three ways at once: the text boxes were keyed by index, so a box kept
+its text when the list shrank under it — the screen showing 30 next to a
+row whose file entry held nothing; a row could be written twice when the
+file was rewritten underneath and it changed category between reads; and
+nothing could tell "the row the owner is editing" from "the row in that
+slot".
+
+A file written before ids gets a positional stand-in on read, and the
+**ViewModel replaces it with a real one the moment the rows are seeded** —
+every seeding path goes through one function, because the one that didn't
+would be the one that let it back in. Without that promotion the fix would
+only ever have applied to rows added on this phone, which is not where the
+bug was: a stand-in is the index identity under a new name, so dropping a
+blank row hands its id, its slot and its text box to the next row.
+
+A stand-in is never written back. Persisted, it would collide with the
+next read's stand-in for a different row, and two rows sharing an id is
+worse than none having one — the screen keys boxes by it.
+
+The ids make deduping a carried element against the row the owner is
+writing *possible*, and that was tried and reverted: the owner's copy can
+come from a draft pinned to older bytes, so dropping the file's copy
+writes a stale `asRead` over it and destroys whatever was added to the row
+since. A visible duplicate is the lesser bug.
+
+
 `sets` comes from the runner; `added` is the owner's own, and Carry is the
 only thing that writes it. That array is **replaced whole** on every save,
 which makes it a different kind of risk from `sets`: a row Carry does not

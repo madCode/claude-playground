@@ -572,3 +572,60 @@ rewritten underneath and a row changes category, and the forty-first
 added row vanishing from the screen. The first two predate this change;
 the last two need a file no writer produces today, and in every one of
 them what shipped before deleted the row outright.
+
+## 2026-10-12 — cycle 15: rows that know their own name
+
+**From you.** "Go ahead, add an id" — the schema addition that unblocked
+this. It fixes three logged defects at once, which is why they were grouped
+rather than done piecemeal.
+
+**Shipped.** Every added row carries an id of its own, minted when the row
+is added and written into the file. Position was the identity before, and
+it was wrong three ways at once:
+
+- **The screen showed a number that was not in the file.** Text boxes were
+  keyed by list index. Add two rows, fill only the second, save: the blank
+  one is dropped, the second slides into slot 0, and its weight box renders
+  the blank row's empty string while the file holds 30. "Saved", and a
+  number missing from the form that is sitting in the file — the
+  re-enter-from-memory failure, which is how a *wrong* number gets in.
+- **A row could be written twice.** The draft survives the coach rewriting
+  the file underneath, so the owner's rows can come from older bytes while
+  the carried elements are read from the current ones. With nothing to
+  match on, both copies were written. The save now drops a carried element
+  whose id is one the owner is already writing.
+- Nothing could tell "the row being edited" from "the row in that slot".
+
+**Caught before the review got to it**, which is worth writing down because
+it is the same class of mistake as the rest of the night: a file written
+before ids gets a positional stand-in on read, and the first version
+*wrote that stand-in back into the file*. Persisted, `"@1"` collides with
+the next read's stand-in for whatever row then sits at index 1 — and two
+rows sharing an id is worse than neither having one, since the screen keys
+its boxes by it and the save dedupes by it. Stand-ins now stay in memory,
+where they are unique by construction, and an id starting with `@` is never
+trusted from a file.
+
+**The test was checked by breaking the fix.** `a box keeps its own number
+when the list shrinks under it` passed the moment it was written, which
+after tonight is a reason for suspicion rather than confidence — so the
+keying was reverted to index, the test was watched to fail, and the fix put
+back. Four tests tonight could not fail on the bug they named; this one can.
+
+**Review caught, and it was the same trap one level out.** The fix only
+applied to rows added on this phone: nothing promoted a positional
+stand-in, so a row from an existing file kept position as its identity
+forever and the original bug survived inside a single file — drop a blank
+row, save, and the next row inherits its stand-in, its slot and its box.
+The screen test passed vacuously because its rows were minted. Promotion
+now happens where the rows are seeded, through one function so no path can
+miss it, and the ViewModel test for it was likewise checked by removing
+the promotion and watching it fail.
+
+The review also found the dedupe worse than what it replaced. Dropping a
+carried element whose id the owner is also writing sounds right, but the
+owner's copy comes from a draft pinned to older bytes, so the file's copy
+is deleted and a stale `asRead` written over it — destroying a key added
+since, which is the one thing the carry path exists to prevent. That turned
+a visible, lossless duplicate into a silent deletion. Reverted; the
+duplicate stays in the backlog, where it was.

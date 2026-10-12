@@ -135,7 +135,16 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                     SessionPatch.entriesIn(ready.raw) to SessionPatch.addedIn(ready.raw)
                 }
                 _edits.value = entries
-                _added.value = added
+                // Rows from a file written before ids arrive with a
+                // positional stand-in, which is the old index identity
+                // under a new name: drop a blank row and the next row
+                // inherits its id, its screen slot and its text box. They
+                // get a real id here, once, and the next save writes it
+                // into the file -- after which the row has a name of its
+                // own for good. Nothing else promotes them, so without
+                // this the fix only ever applied to rows added on this
+                // phone.
+                _added.value = named(added)
                 _fileMovedUnderEdits.value = false
             }
             // Same session, same bytes: the draft is the truth, and a fresh
@@ -180,9 +189,23 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         _saving.value = SaveState.Idle
         (_state.value as? CarryState.Ready)?.let { ready ->
             _edits.value = SessionPatch.entriesIn(ready.raw)
-            _added.value = SessionPatch.addedIn(ready.raw)
+            _added.value = named(SessionPatch.addedIn(ready.raw))
         }
     }
+
+    /**
+     * Gives a real id to any row that arrived without one.
+     *
+     * A file written before ids hands back a positional stand-in, which
+     * is the old index identity under a new name: drop a blank row and
+     * the next row inherits its id, its screen slot and the text box
+     * keyed to it. Every place that seeds from a file goes through here,
+     * because the one that didn't would be the one that reintroduced it.
+     * The next save writes these into the file, after which the rows have
+     * names of their own for good.
+     */
+    private fun named(rows: List<AddedSet>): List<AddedSet> =
+        rows.map { if (SessionPatch.isStandIn(it.id)) it.copy(id = AddedSet.newId()) else it }
 
     private fun savedDraft(): Draft? = handle.get<String>(DRAFT)?.let {
         runCatching { Session.json.decodeFromString<Draft>(it) }.getOrNull()
@@ -228,7 +251,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     }
 
     fun addRow() {
-        _added.value = _added.value + AddedSet(name = "")
+        _added.value = _added.value + AddedSet(id = AddedSet.newId())
         touched()
     }
 
@@ -296,7 +319,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                             // next refresh cannot blank the form by reading
                             // a state captured before the save.
                             _edits.value = SessionPatch.entriesIn(text)
-                            _added.value = SessionPatch.addedIn(text)
+                            _added.value = named(SessionPatch.addedIn(text))
                             SaveState.Saved
                         }
                         Saved.NO_FILE_INTACT -> SaveState.Failed(

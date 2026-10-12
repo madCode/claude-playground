@@ -151,7 +151,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexed(
 ) {
     items(added.size) { i ->
         val row = added[i]
-        AddedRow(row, "$sessionKey-added-$i") { onEditAdded(i, it) }
+        // Keyed by the row's own id, not by $i. Keyed by index, a box
+        // kept its text when the list shrank under it -- save a session
+        // where the first added row was left blank and it is dropped,
+        // the second slides into slot 0, and its weight box renders the
+        // blank row's empty string while the file holds 30. The screen
+        // says "Saved" and shows a number that is not there.
+        AddedRow(row, "$sessionKey-added-${row.id}") { onEditAdded(i, it) }
     }
 }
 

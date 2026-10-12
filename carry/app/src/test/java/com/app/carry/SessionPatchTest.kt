@@ -6,6 +6,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -187,9 +188,10 @@ class SessionPatchTest {
         val row = AddedSet(name = "ybell deadlift to calf raise", weight = 26.0, reps = 12)
         val first = patched(original, emptyMap(), listOf(row))
         assertEquals(1, doc(first)["added"]!!.jsonArray.size)
-        // `asRead` is the row as the file holds it, so it is only equal to
-        // itself; what this asserts is that the owner's fields round trip.
-        assertEquals(listOf(row), SessionPatch.addedIn(first).map { it.copy(asRead = null) })
+        // `asRead` is the row as the file holds it and `id` is assigned on
+        // the way back out, so neither is equal to itself here; what this
+        // asserts is that the owner's own fields round trip.
+        assertEquals(listOf(row), SessionPatch.addedIn(first).map { it.copy(asRead = null, id = "") })
 
         // Re-saving the same list must not duplicate it.
         val second = SessionPatch.apply(first, emptyMap(), SessionPatch.addedIn(first))
@@ -370,6 +372,62 @@ class SessionPatchTest {
         val once = patched(file, mapOf(0 to SessionPatch.Entry(weight = 45.0)))
         val again = SessionPatch.apply(once, emptyMap(), SessionPatch.addedIn(once))
         assertEquals(null, (again as SessionPatch.Outcome.Patched).text)
+    }
+
+    @Test
+    fun `an added row keeps its id across a save, so nothing identifies it by position`() {
+        val first = patched(original, emptyMap(), listOf(AddedSet(id = "abc123", name = "plank", reps = 60)))
+        assertEquals("abc123", SessionPatch.addedIn(first).single().id)
+        // And re-saving what was read is still a no-op: the id must not
+        // be the thing that makes every save rewrite the file.
+        val again = SessionPatch.apply(first, emptyMap(), SessionPatch.addedIn(first))
+        assertEquals(null, (again as SessionPatch.Outcome.Patched).text)
+    }
+
+    @Test
+    fun `a carried row survives even when the owner is writing one with its id`() {
+        // Deduping these by id was tried and reverted. The owner's copy
+        // comes from a draft pinned to OLDER bytes, so dropping the
+        // file's copy writes that draft's stale `asRead` over it --
+        // destroying whatever was added to the row since, which is the
+        // one thing the carry path exists to prevent. A visible duplicate
+        // is the lesser bug; it stays in the backlog.
+        val file = withAdded("""{"id": "abc123", "name": "plank", "junk": "${"x".repeat(80_000)}"}""")
+        assertEquals("too big to show, so it is carried", emptyList<AddedSet>(), SessionPatch.addedIn(file))
+        val out = patched(file, emptyMap(), listOf(AddedSet(id = "abc123", name = "plank", reps = 60)))
+        assertEquals("the file's copy must not be deleted", doc(file)["added"]!!.jsonArray.single(),
+            doc(out)["added"]!!.jsonArray.last())
+    }
+
+    @Test
+    fun `a file written before rows had ids reads with a stand-in, marked as one`() {
+        val old = withAdded("""{"name": "plank", "reps": 60}""")
+        val row = SessionPatch.addedIn(old).single()
+        assertEquals("@0", row.id)
+        // Marked, because the stand-in is the old index identity under a
+        // new name and something has to replace it. The ViewModel does
+        // that on seeding -- see CarryViewModelTest; this only pins that
+        // the mark is readable.
+        assertTrue(SessionPatch.isStandIn(row.id))
+        assertTrue(SessionPatch.isStandIn(""))
+        assertFalse(SessionPatch.isStandIn("real1234"))
+    }
+
+    @Test
+    fun `a positional stand-in is never written into the file`() {
+        // Persisted, `"@1"` collides with the next read's stand-in for
+        // whatever row then sits at index 1 -- and two rows sharing an id
+        // is worse than neither having one, because the screen keys its
+        // boxes by it and the save dedupes by it.
+        val old = withAdded("""{"name": "plank", "reps": 60}""")
+        val row = SessionPatch.addedIn(old).single()
+        val out = patched(old, emptyMap(), listOf(row.copy(reps = 45)))
+        assertEquals(null, doc(out)["added"]!!.jsonArray.single().jsonObject["id"])
+
+        // And one that somehow reached the file is not trusted as real.
+        val poisoned = withAdded("""{"id": "@1", "name": "plank"}, {"name": "burpee"}""")
+        val ids = SessionPatch.addedIn(poisoned).map { it.id }
+        assertEquals("ids must stay distinct", ids.size, ids.toSet().size)
     }
 
     /** The fixture with a different `added` array, so each case states only
