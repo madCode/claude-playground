@@ -66,7 +66,7 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: jekyll-poster-debug-apk
       - name: Update the jekyll-poster-debug release
