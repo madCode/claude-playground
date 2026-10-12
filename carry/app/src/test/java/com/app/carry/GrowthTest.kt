@@ -1,6 +1,7 @@
 package com.app.carry
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -62,6 +63,28 @@ class GrowthTest {
         val bodyweight = since.days.single { it.date == "2026-09-27" }
         assertEquals(0, bodyweight.lifts)
         assertEquals(null, bodyweight.best)
+    }
+
+    @Test
+    fun `the quiet band explains itself only while the quiet needs explaining`() {
+        // 19 of 20 distinct: almost nothing repeats, the streak rule
+        // almost never fires, and the sheets look empty for a reason worth
+        // saying out loud.
+        fun since(n: Int, repeats: Int) = Growth.of(
+            listOf(file("2026-09-27", sets = (0 until n).map {
+                set(it, "m$it", "legs", weight = "20", key = "k${it % (n - repeats)}")
+            }.joinToString(",")))
+        )
+        assertTrue("sparse history still needs the explanation", since(20, 1).explainsTheQuiet)
+
+        // Once a quarter of them have come round again the coach is not
+        // mostly quiet any more, and a band still saying so would be
+        // telling the owner off for variety the studio chose for them.
+        assertFalse("repeats now common", since(20, 8).explainsTheQuiet)
+
+        // And with barely any training there is nothing to say about its
+        // shape either way.
+        assertFalse("too little to read", since(4, 1).explainsTheQuiet)
     }
 
     @Test

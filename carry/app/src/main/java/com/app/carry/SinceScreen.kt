@@ -48,7 +48,7 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
         Text(
             if (since.sessions == 1) "1 session" else "${since.sessions} sessions",
             color = Look.Chalk, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
-            fontSize = 19.sp, maxLines = 1, modifier = Modifier.padding(top = 16.dp),
+            fontSize = Look.TitleSize, maxLines = 1, modifier = Modifier.padding(top = 16.dp),
         )
         Text(
             span(since), color = Look.ChalkDim, fontFamily = Look.Name,
@@ -78,7 +78,7 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
                 item { Band("Every session") }
                 items(since.days) { DayRow(it) }
             }
-            item { Quiet(since) }
+            if (since.explainsTheQuiet) item { Quiet(since) }
         }
     }
 }
@@ -99,7 +99,7 @@ private fun span(since: Growth.Since): String {
 private fun Band(text: String) {
     Text(
         text.uppercase(), color = Look.ChalkFaint, fontFamily = Look.Figure,
-        fontSize = 9.5.sp, letterSpacing = 1.2.sp,
+        fontSize = Look.LabelSize, letterSpacing = 1.2.sp,
         modifier = Modifier.padding(top = 18.dp, bottom = 4.dp),
     )
 }
@@ -223,9 +223,15 @@ private fun Trail(weights: List<Double>) {
 /**
  * Why there is not more here.
  *
- * Load-bearing, not an apology. The owner has seen rows with no number on
- * them all week; without this they would reasonably conclude the app is
- * broken rather than that the studio never repeats a movement.
+ * Load-bearing, not an apology — the owner has seen rows with no number on
+ * them all week, and without this they would reasonably conclude the app
+ * is broken rather than that the studio never repeats a movement.
+ *
+ * But it earns its place only while it is still explaining something, so
+ * it retires itself: see [Growth.Since.explainsTheQuiet]. Once enough
+ * movements come round again the quiet stops needing an explanation, and
+ * a band that stayed would be telling the owner off for variety that
+ * isn't theirs to choose.
  */
 @Composable
 private fun Quiet(since: Growth.Since) {
@@ -255,7 +261,7 @@ private fun Stat(number: String, label: String) {
         horizontalArrangement = Arrangement.spacedBy(9.dp)) {
         Text(
             number, color = Look.Chalk, fontFamily = Look.Figure, fontWeight = FontWeight.SemiBold,
-            fontSize = 17.sp, modifier = Modifier.width(30.dp),
+            fontSize = 19.sp, modifier = Modifier.width(34.dp),
         )
         Text(label, color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
             maxLines = 2, overflow = TextOverflow.Ellipsis)

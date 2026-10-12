@@ -12,6 +12,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.performTextInput
@@ -36,6 +39,13 @@ class LogScreenTest {
     private val edits = mutableStateOf<Map<Int, SessionPatch.Entry>>(emptyMap())
     private val added = mutableStateOf<List<AddedSet>>(emptyList())
     private var saves = 0
+
+    /** Rows are two lines tall, so most of this screen starts off-screen —
+     *  and a LazyColumn does not compose what is off-screen, so there is
+     *  no node to scroll TO. The list has to be scrolled to it. */
+    private fun reach(text: String) {
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text, substring = true))
+    }
 
     private fun show(saving: SaveState = SaveState.Idle) {
         compose.setContent {
@@ -119,8 +129,8 @@ class LogScreenTest {
         // On a day with no intel for the owner's class this is the session,
         // not an afterthought.
         show()
-        compose.onNodeWithText("+ Add something the sheet missed").performClick()
-        compose.onNodeWithContentDescription("added exercise name").performTextReplacement("ybell deadlift")
+        reach("+ Add something the sheet missed"); compose.onNodeWithText("+ Add something the sheet missed").performClick()
+        reach("what was it?"); compose.onNodeWithContentDescription("added exercise name").performTextReplacement("ybell deadlift")
         assertEquals("ybell deadlift", added.value.single().name)
         shoot("11-log")
     }
@@ -130,6 +140,7 @@ class LogScreenTest {
         // "Try again" and "your file needs rescuing" are different things
         // to tell someone.
         show(SaveState.Failed("Couldn't save, and the file on disk may be damaged.", damaged = true))
+        reach("Try again")
         compose.onNodeWithText("⚠ Couldn't save, and the file on disk may be damaged.").assertIsDisplayed()
         compose.onNodeWithText("Try again").assertIsDisplayed()
         shoot("12-save-failed")
@@ -142,9 +153,9 @@ class LogScreenTest {
         show()
         compose.onNodeWithContentDescription("bench press weight in pounds").performTextInput("45")
         compose.onAllNodesWithText("easy")[0].performClick()
-        compose.onNodeWithText("+ Add something the sheet missed").performClick()
+        reach("+ Add something the sheet missed"); compose.onNodeWithText("+ Add something the sheet missed").performClick()
         assertEquals("typing must not write to the file", 0, saves)
-        compose.onNodeWithText("Save").performClick()
+        reach("Save"); compose.onNodeWithText("Save").performClick()
         assertEquals(1, saves)
     }
 
@@ -175,7 +186,7 @@ class LogScreenTest {
         // fixes it. Finding out at the save button is how the number got
         // thrown away in the first place.
         show()
-        compose.onNodeWithText("+ Add something the sheet missed").performClick()
+        reach("+ Add something the sheet missed"); compose.onNodeWithText("+ Add something the sheet missed").performClick()
         compose.onNodeWithText("what was it?").assertIsDisplayed()
         compose.onNodeWithContentDescription("added exercise weight in pounds")
             .performTextReplacement("20")
@@ -193,8 +204,8 @@ class LogScreenTest {
         // that is not there -- re-entering from memory is how a wrong
         // number gets into the history.
         show()
-        compose.onNodeWithText("+ Add something the sheet missed").performClick()
-        compose.onNodeWithText("+ Add something the sheet missed").performClick()
+        reach("+ Add something the sheet missed"); compose.onNodeWithText("+ Add something the sheet missed").performClick()
+        reach("+ Add something the sheet missed"); compose.onNodeWithText("+ Add something the sheet missed").performClick()
         val boxes = compose.onAllNodesWithContentDescription("added exercise weight in pounds")
         boxes[1].performTextReplacement("30")
         assertEquals(30.0, added.value[1].weight)
@@ -243,6 +254,31 @@ class LogScreenTest {
         compose.onNodeWithText("1 of 10 filled", substring = true).assertIsDisplayed()
         compose.onAllNodesWithText("skip")[0].performClick()
         compose.onNodeWithText("0 of 10 filled", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun `easy and hard are one question with two answers`() {
+        // A set is not both. The coach reads them in opposite directions —
+        // easy earns a bump early, hard blocks the next one — so holding
+        // both at once would mean nothing.
+        show()
+        compose.onAllNodesWithText("easy")[0].performClick()
+        assertEquals(SessionPatch.Entry(easy = true), edits.value[0])
+        compose.onAllNodesWithText("hard")[0].performClick()
+        assertEquals(SessionPatch.Entry(hard = true), edits.value[0])
+        compose.onAllNodesWithText("easy")[0].performClick()
+        assertEquals(SessionPatch.Entry(easy = true), edits.value[0])
+    }
+
+    @Test
+    fun `saying you did the easier version is its own answer`() {
+        // Knee push-ups. For a third of this owner's sets there is no
+        // weight to progress, so this is the only axis they have — and
+        // it is independent of how it felt.
+        show()
+        compose.onAllNodesWithText("mod")[0].performClick()
+        compose.onAllNodesWithText("hard")[0].performClick()
+        assertEquals(SessionPatch.Entry(easier = true, hard = true), edits.value[0])
     }
 
     private fun shoot(name: String) {

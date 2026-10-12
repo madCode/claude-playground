@@ -35,12 +35,21 @@ object SessionPatch {
         val weight: Double? = null,
         val reps: Int? = null,
         val easy: Boolean = false,
+        /** Exclusive with [easy]: a set is not both. Blocks the next bump
+         *  rather than earning one — the coach could hear "easy" and push,
+         *  and had nothing at all to hear for the other direction. */
+        val hard: Boolean = false,
+        /** "I did the easier version" — knees, a box under the step-up.
+         *  The only progression a bodyweight movement has, and a third of
+         *  this owner's sets carry no weight at all. */
+        val easier: Boolean = false,
         val hurt: Boolean = false,
         val skipped: Boolean = false,
         val note: String? = null,
     ) {
         val blank: Boolean get() =
-            weight == null && reps == null && !easy && !hurt && !skipped && note == null
+            weight == null && reps == null && !easy && !hard && !easier &&
+                !hurt && !skipped && note == null
     }
 
     sealed interface Outcome {
@@ -62,6 +71,8 @@ object SessionPatch {
         put("weight", weight?.let(::number) ?: JsonNull)
         put("reps", reps?.let(::JsonPrimitive) ?: JsonNull)
         put("easy", JsonPrimitive(easy))
+        put("hard", JsonPrimitive(hard))
+        put("easier", JsonPrimitive(easier))
         put("hurt", JsonPrimitive(hurt))
         put("skipped", JsonPrimitive(skipped))
         put("note", note?.let(::JsonPrimitive) ?: JsonNull)
@@ -200,6 +211,8 @@ object SessionPatch {
             put("weight", row.weight?.let(::number) ?: JsonNull)
             put("reps", row.reps?.let(::JsonPrimitive) ?: JsonNull)
             put("easy", JsonPrimitive(row.easy))
+            put("hard", JsonPrimitive(row.hard))
+            put("easier", JsonPrimitive(row.easier))
             put("hurt", JsonPrimitive(row.hurt))
             put("note", row.note?.let(::JsonPrimitive) ?: JsonNull)
         }
@@ -225,6 +238,8 @@ object SessionPatch {
                     weight = (set["weight"] as? JsonPrimitive)?.content?.toDoubleOrNull(),
                     reps = (set["reps"] as? JsonPrimitive)?.content?.toIntOrNull(),
                     easy = (set["easy"] as? JsonPrimitive)?.content.toBoolean(),
+                    hard = (set["hard"] as? JsonPrimitive)?.content.toBoolean(),
+                    easier = (set["easier"] as? JsonPrimitive)?.content.toBoolean(),
                     hurt = (set["hurt"] as? JsonPrimitive)?.content.toBoolean(),
                     skipped = (set["skipped"] as? JsonPrimitive)?.content.toBoolean(),
                     note = (set["note"] as? JsonPrimitive)?.takeIf { it != JsonNull }?.content,
@@ -340,6 +355,8 @@ object SessionPatch {
             weight = (row["weight"] as? JsonPrimitive)?.content?.toDoubleOrNull(),
             reps = (row["reps"] as? JsonPrimitive)?.content?.toIntOrNull(),
             easy = (row["easy"] as? JsonPrimitive)?.content.toBoolean(),
+            hard = (row["hard"] as? JsonPrimitive)?.content.toBoolean(),
+            easier = (row["easier"] as? JsonPrimitive)?.content.toBoolean(),
             hurt = (row["hurt"] as? JsonPrimitive)?.content.toBoolean(),
             note = (row["note"] as? JsonPrimitive)?.takeIf { it != JsonNull }?.content,
             asRead = row,
@@ -365,7 +382,7 @@ object SessionPatch {
 
     /** The keys [encode] writes, so [holdsNothing] can tell an empty row
      *  from one carrying something this build cannot read. */
-    private val WRITTEN_KEYS = setOf("id", "name", "weight", "reps", "easy", "hurt", "note")
+    private val WRITTEN_KEYS = setOf("id", "name", "weight", "reps", "easy", "hard", "easier", "hurt", "note")
 
     /**
      * Roughly how many bytes a row would cost to hold, without building

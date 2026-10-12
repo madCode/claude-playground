@@ -72,7 +72,18 @@ object Look {
         Font(R.font.ibm_plex_mono_bold, FontWeight.Bold),
     )
 
-    val NameSize = 15.sp
-    val FigureSize = 18.sp
-    val SmallSize = 11.sp
+    // Raised across the board 2026-10-12 — "this font is WAY too small" on
+    // a real phone, and it was: SmallSize was 11sp where Android's default
+    // body text is 14. These screens are read at arm's length in a lobby
+    // and filled in in a car, which are not conditions for caption type.
+    val NameSize = 16.5.sp
+    val FigureSize = 20.sp
+    val SmallSize = 13.5.sp
+
+    /** Section labels. Small on purpose — they are signposts, not content —
+     *  but not so small they stop being readable. */
+    val LabelSize = 11.5.sp
+
+    /** Screen titles. */
+    val TitleSize = 21.sp
 }

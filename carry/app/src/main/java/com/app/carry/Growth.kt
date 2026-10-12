@@ -69,6 +69,24 @@ object Growth {
         val repeated: Int?,
     ) {
         val empty: Boolean get() = sets == 0
+
+        /**
+         * Whether the "why the coach is often quiet" band still has a job.
+         *
+         * It exists because almost nothing repeats, so the streak rule
+         * almost never fires and the sheets look empty. That is worth
+         * explaining while it is true. Once a reasonable share of
+         * movements have come round again the quiet explains itself, and a
+         * band still saying it would be telling the owner off for variety
+         * the studio chose for them. So it retires on its own rather than
+         * on anybody remembering to take it out.
+         */
+        val explainsTheQuiet: Boolean
+            get() {
+                val seen = movements ?: return false
+                val again = repeated ?: return false
+                return seen >= MIN_TO_EXPLAIN && again * 100 < seen * REPEAT_PERCENT
+            }
     }
 
     /**
@@ -149,6 +167,14 @@ object Growth {
         )
     }
 
+
+    /** Below this there is not enough training to say anything about its
+     *  shape, and the band would be reading tea leaves. */
+    private const val MIN_TO_EXPLAIN = 8
+
+    /** Once this share of movements has come round again, the coach is no
+     *  longer mostly quiet and the band has nothing left to explain. */
+    private const val REPEAT_PERCENT = 25
 
     /** Enough bars to show a direction; more is a chart, and six sessions
      *  do not support one. */
