@@ -61,7 +61,7 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: bart-widget-debug-apk
       - name: Update the bart-widget-debug release
