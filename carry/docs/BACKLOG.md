@@ -2,16 +2,14 @@
 
 ## Next
 
-Nothing outstanding from a review. The three items that were here —
-index-keyed boxes, a row written twice, a carried key resurrected from a
-stale draft, and the forty-first row vanishing — are all closed.
+Nothing outstanding from a review. The four items that sat here are all
+closed: index-keyed text boxes, a row written twice, a carried key
+resurrected from a stale draft, and the forty-first added row vanishing.
 
- What is left either needs the phone
-(see "Owed on a device"), needs a decision that is yours (below), or is
-a new feature from "Later" — the notification on a new session file is
-the one that pays for itself soonest, because the lobby glance currently
-depends on remembering to open the app.
-
+What is left either needs the phone (see "Owed on a device"), needs a
+decision that is yours (below), or is a feature from "Later" — of which
+the notification on a new session file pays for itself soonest, because
+the lobby glance still depends on remembering to open the app.
 
 ## From the security pass
 
