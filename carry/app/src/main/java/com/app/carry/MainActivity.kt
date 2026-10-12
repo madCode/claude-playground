@@ -45,12 +45,18 @@ class MainActivity : ComponentActivity() {
                 // No refresh here on purpose: onResume always runs after
                 // this callback, so refreshing would start a second read of
                 // the same folder and throw the first one's answer away.
-                if (tree != null) model.folder.remember(tree)
+                if (tree != null && model.folder.isWholeVolume(tree)) {
+                    model.rejectedTooWide()
+                } else if (tree != null) {
+                    model.folder.remember(tree)
+                }
             }
             Box(Modifier.fillMaxSize().background(Look.Slate)) {
                 CarryApp(
                     state = model.state.value,
                     onChooseFolder = { pick.launch(null) },
+                    holding = model.folder.label,
+                    onForget = model::forgetFolder,
                     modifier = Modifier.safeDrawingPadding(),
                     log = LogBinding(
                         entries = model.edits.value,

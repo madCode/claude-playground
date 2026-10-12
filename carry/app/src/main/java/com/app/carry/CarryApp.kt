@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,7 +35,13 @@ sealed interface CarryState {
 
     /** No folder chosen, or one whose grant is gone -- told apart by the
      *  system's own record, never guessed from an empty folder. */
-    data class NeedsFolder(val lostGrant: Boolean = false) : CarryState
+    data class NeedsFolder(
+        val lostGrant: Boolean = false,
+        /** They picked a whole volume, which this app will not hold. */
+        val tooWide: Boolean = false,
+        /** The folder currently held, if any, so it can be seen and dropped. */
+        val holding: String? = null,
+    ) : CarryState
 
     /** A folder we can read, with no session in it yet. */
     data object NoSession : CarryState
@@ -73,7 +80,7 @@ sealed interface CarryState {
  * file.
  */
 fun carryState(folder: Folder): CarryState {
-    if (folder.grantLost) return CarryState.NeedsFolder(lostGrant = true)
+    if (folder.grantLost) return CarryState.NeedsFolder(lostGrant = true, holding = folder.label)
     if (!folder.chosen) return CarryState.NeedsFolder()
     val files = folder.list()
     // An empty folder is NOT a lost grant. The likeliest reason by far is
@@ -124,6 +131,10 @@ fun CarryApp(
     onChooseFolder: () -> Unit,
     modifier: Modifier = Modifier,
     log: LogBinding? = null,
+    /** Named on every screen that offers the picker, and droppable there:
+     *  a persistent recursive grant that cannot be seen cannot be audited. */
+    holding: String? = null,
+    onForget: () -> Unit = {},
 ) {
     when (state) {
         CarryState.Loading -> Message(
@@ -134,14 +145,25 @@ fun CarryApp(
             modifier = modifier,
         )
         is CarryState.NeedsFolder -> Message(
-            title = if (state.lostGrant) "Lost the folder" else "Pick your folder",
-            body = if (state.lostGrant) {
-                "Carry can't read the folder it had. Reinstalling can do that. Pick it again."
-            } else {
-                "Choose the folder your sync keeps. Carry reads the day's session from it and writes your log back."
+            title = when {
+                state.tooWide -> "That's your whole phone"
+                state.lostGrant -> "Lost the folder"
+                else -> "Pick your folder"
+            },
+            body = when {
+                // A tree grant is recursive and persistent. Carry needs one
+                // folder, so it will not hold a whole volume.
+                state.tooWide ->
+                    "Carry only wants the one folder your sync keeps, not everything on the phone. Pick the folder itself."
+                state.lostGrant ->
+                    "Carry can't read the folder it had. Reinstalling can do that. Pick it again."
+                else ->
+                    "Choose the folder your sync keeps. Carry reads the day's session from it and writes your log back."
             },
             action = "Choose folder",
             onAction = onChooseFolder,
+            holding = state.holding,
+            onForget = onForget,
             modifier = modifier,
         )
         CarryState.Stalled -> Message(
@@ -152,6 +174,8 @@ fun CarryApp(
             modifier = modifier,
         )
         CarryState.NoSession -> Message(
+            holding = holding,
+            onForget = onForget,
             title = "Nothing to carry",
             body = "No session in that folder yet. It appears once the coach has the day's workout.",
             action = "Pick a different folder",
@@ -211,7 +235,12 @@ private fun Tab(text: String, selected: Boolean, modifier: Modifier = Modifier, 
 
 @Composable
 private fun Message(
-    title: String, body: String, action: String?, onAction: () -> Unit, modifier: Modifier = Modifier,
+    title: String, body: String, action: String?, onAction: () -> Unit,
+    modifier: Modifier = Modifier,
+    /** The folder currently held, named so the owner can see the scope of
+     *  what they granted -- and drop it. */
+    holding: String? = null,
+    onForget: () -> Unit = {},
 ) {
     Column(
         modifier.fillMaxSize().background(Look.Slate).padding(horizontal = 28.dp),
@@ -226,6 +255,22 @@ private fun Message(
             body, color = Look.ChalkDim, fontFamily = Look.Name, fontSize = 14.sp,
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 10.dp),
         )
+        if (holding != null) {
+            Text(
+                "Holding: $holding",
+                color = Look.ChalkFaint, fontFamily = Look.Figure, fontSize = 11.sp,
+                textAlign = TextAlign.Center, modifier = Modifier.padding(top = 18.dp),
+            )
+            Text(
+                "Forget this folder",
+                color = Look.ChalkDim, fontFamily = Look.Name, fontSize = 12.sp,
+                modifier = Modifier
+                    .padding(top = 6.dp)
+                    .border(1.dp, Look.RuleStrong, RoundedCornerShape(4.dp))
+                    .clickable(onClick = onForget)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+        }
         if (action != null) Text(
             action, color = Look.Slate, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
             fontSize = 14.sp,

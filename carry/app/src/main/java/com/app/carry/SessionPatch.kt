@@ -187,13 +187,21 @@ object SessionPatch {
     /** Key order must not matter: `variant` is an opaque object the runner
      *  may re-emit in any order, and comparing its printed form would
      *  refuse saves for a file that had not meaningfully changed. */
-    private fun normalise(element: JsonElement?): String = when (element) {
-        null -> "\u0001absent"
-        is JsonObject -> element.entries.sortedBy { it.key }
-            .joinToString(",", "{", "}") { "${it.key}:${normalise(it.value)}" }
-        is JsonArray -> element.joinToString(",", "[", "]") { normalise(it) }
+    private fun normalise(element: JsonElement?, depth: Int = 0): String = when {
+        element == null -> "\u0001absent"
+        // The file is written elsewhere and `variant` is deliberately
+        // opaque, so its nesting is not ours to trust. Overflowing the
+        // stack here would be swallowed into "the exercises no longer line
+        // up" and make saving impossible for good.
+        depth > MAX_DEPTH -> "\u0001deep"
+        element is JsonObject -> element.entries.sortedBy { it.key }
+            .joinToString(",", "{", "}") { "${it.key}:${normalise(it.value, depth + 1)}" }
+        element is JsonArray -> element.joinToString(",", "[", "]") { normalise(it, depth + 1) }
         else -> element.toString()
     }
+
+    /** A variant is a flat bag of words; anything deeper is not meaningful. */
+    private const val MAX_DEPTH = 12
 
     private fun identities(text: String): Map<Int, String> = runCatching {
         ((Session.json.parseToJsonElement(text) as JsonObject)["sets"] as JsonArray)

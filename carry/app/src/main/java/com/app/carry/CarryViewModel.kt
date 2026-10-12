@@ -144,6 +144,22 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     /** Throw away what was typed and take the file as it now stands. The
      *  only way out of a rewritten session, and it has to be the owner's
      *  choice because their numbers are what gets discarded. */
+    /** Hands the folder back. The grant is recursive and survives reboots,
+     *  so there has to be a way out of it that is not "uninstall". */
+    fun forgetFolder() {
+        folder.forget()
+        handle.remove<String>(DRAFT)
+        _edits.value = emptyMap()
+        _added.value = emptyList()
+        _fileMovedUnderEdits.value = false
+        _state.value = CarryState.NeedsFolder()
+    }
+
+    /** The owner picked a whole volume; say so rather than holding it. */
+    fun rejectedTooWide() {
+        _state.value = CarryState.NeedsFolder(tooWide = true, holding = folder.label)
+    }
+
     fun discardEdits() {
         handle.remove<String>(DRAFT)
         _fileMovedUnderEdits.value = false

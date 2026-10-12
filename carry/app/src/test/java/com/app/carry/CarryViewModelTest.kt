@@ -176,6 +176,26 @@ class CarryViewModelTest {
     }
 
     @Test
+    fun `the folder can be handed back, and that clears everything with it`() {
+        // A recursive grant that survives reboots needs a way out that is
+        // not "uninstall the app".
+        val model = CarryViewModel(app, SavedStateHandle())
+        model.folder.remember(android.net.Uri.parse("content://x/tree/primary%3ASync%2Fgym"))
+        model.forgetFolder()
+        assertEquals(null, model.folder.uri)
+        assertEquals(emptyMap<Int, SessionPatch.Entry>(), model.edits.value)
+        assertEquals(CarryState.NeedsFolder(), model.state.value)
+    }
+
+    @Test
+    fun `picking the whole phone is reported rather than held`() {
+        val model = CarryViewModel(app, SavedStateHandle())
+        model.rejectedTooWide()
+        val state = model.state.value
+        assertTrue(state is CarryState.NeedsFolder && state.tooWide)
+    }
+
+    @Test
     fun `the folder outlives the activity that asked for it`() {
         // Held against the Application, so an abandoned read cannot keep a
         // destroyed Activity alive while a blocked provider finishes.

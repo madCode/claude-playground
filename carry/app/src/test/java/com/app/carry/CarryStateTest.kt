@@ -6,6 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 private class FakeFolder(
+    override val label: String? = "Sync/gym",
     override val chosen: Boolean = true,
     override val grantLost: Boolean = false,
     val files: List<Pair<String, String>> = emptyList(),
@@ -70,7 +71,9 @@ class CarryStateTest {
     @Test
     fun `a revoked grant is reported from the system's own record`() {
         val state = carryState(FakeFolder(chosen = false, grantLost = true))
-        assertEquals(CarryState.NeedsFolder(lostGrant = true), state)
+        // The folder is named: a recursive grant nobody can see is one
+        // nobody can audit.
+        assertEquals(CarryState.NeedsFolder(lostGrant = true, holding = "Sync/gym"), state)
     }
 
     @Test

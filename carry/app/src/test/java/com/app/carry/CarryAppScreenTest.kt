@@ -97,6 +97,33 @@ class CarryAppScreenTest {
     }
 
     @Test
+    fun `picking the whole phone is refused in words`() {
+        // A tree grant is recursive and persistent, and "Internal storage"
+        // sits a row above the folder in the picker.
+        compose.setContent {
+            CarryApp(CarryState.NeedsFolder(tooWide = true), onChooseFolder = {})
+        }
+        compose.onNodeWithText("That's your whole phone").assertIsDisplayed()
+        compose.onNodeWithText("not everything on the phone", substring = true).assertIsDisplayed()
+        shoot("14-too-wide")
+    }
+
+    @Test
+    fun `the folder being held is named, and can be handed back`() {
+        var forgotten = 0
+        compose.setContent {
+            CarryApp(
+                CarryState.NoSession, onChooseFolder = {},
+                holding = "Sync/gym", onForget = { forgotten++ },
+            )
+        }
+        compose.onNodeWithText("Holding: Sync/gym").assertIsDisplayed()
+        compose.onNodeWithText("Forget this folder").performClick()
+        assertEquals(1, forgotten)
+        shoot("15-holding")
+    }
+
+    @Test
     fun `a ready session shows the sheet`() {
         compose.setContent { CarryApp(readyFor(), onChooseFolder = {}) }
         compose.onNodeWithText("Carry these in").assertIsDisplayed()

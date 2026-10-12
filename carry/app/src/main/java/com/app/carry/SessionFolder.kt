@@ -8,6 +8,10 @@ import android.provider.DocumentsContract
 /** What [carryState] needs, so the decision can be tested without Android's
  *  storage framework behind it. */
 interface Folder {
+    /** What the owner picked, in words, so the app can say what it holds.
+     *  A grant nobody can see is a grant nobody can audit. */
+    val label: String?
+
     /** A folder has been chosen AND the grant to read it still exists. */
     val chosen: Boolean
 
@@ -81,6 +85,12 @@ class SessionFolder(private val context: Context) : Folder {
         }
     }.getOrDefault(false)
 
+    /** "primary:Sync/gym" reads as "Sync/gym"; a volume root as "/". */
+    override val label: String? get() = uri?.let { tree ->
+        runCatching { DocumentsContract.getTreeDocumentId(tree).substringAfter(':') }
+            .getOrNull()?.ifEmpty { "/" }
+    }
+
     override val chosen: Boolean get() = uri?.let(::held) == true
     override val grantLost: Boolean get() = uri?.let { !held(it) } == true
 
@@ -92,7 +102,22 @@ class SessionFolder(private val context: Context) : Folder {
      * worked until the process died, and the next cold start showed the
      * picker again, forever, with nothing to explain it.
      */
+    /**
+     * Refuses a whole volume.
+     *
+     * The picker opens with "Internal storage" a row above wherever the
+     * owner is going, and a tree grant is RECURSIVE and persistent: one
+     * mis-tap would hand this app read and write over every file on the
+     * phone, surviving reboots until it is uninstalled. This app exists
+     * because its predecessor held a handle wider than its job, so the
+     * scope is checked rather than trusted.
+     */
+    fun isWholeVolume(tree: Uri): Boolean = runCatching {
+        DocumentsContract.getTreeDocumentId(tree).substringAfter(':').isEmpty()
+    }.getOrDefault(false)
+
     fun remember(tree: Uri): Boolean {
+        if (isWholeVolume(tree)) return false
         // Release the previous one first: re-picking otherwise accumulates
         // grants against the per-package cap.
         uri?.takeIf { it != tree }?.let { old ->
@@ -153,14 +178,38 @@ class SessionFolder(private val context: Context) : Folder {
         } ?: false
     }.getOrDefault(false)
 
+    /**
+     * Refuses anything implausibly large rather than reading it.
+     *
+     * A session is a few KB. The folder is written by another machine and
+     * replicated by a sync service, so a runner bug or any oversized file
+     * whose name happens to match can arrive — and this text is held three
+     * times over (the string, its parse tree, and the draft in saved
+     * instance state), where it becomes an OOM or a
+     * TransactionTooLargeException that takes the owner's typed numbers
+     * with it.
+     */
     override fun read(documentId: String): String? = runCatching {
         val tree = uri ?: return null
         val doc = DocumentsContract.buildDocumentUriUsingTree(tree, documentId)
-        context.contentResolver.openInputStream(doc)?.use { it.readBytes().decodeToString() }
+        context.contentResolver.openInputStream(doc)?.use { stream ->
+            // Bounded by hand: readNBytes is API 33 and minSdk is 26.
+            val buffer = ByteArray(MAX_SESSION_BYTES + 1)
+            var filled = 0
+            while (filled < buffer.size) {
+                val n = stream.read(buffer, filled, buffer.size - filled)
+                if (n < 0) break
+                filled += n
+            }
+            if (filled > MAX_SESSION_BYTES) null else buffer.decodeToString(0, filled)
+        }
     }.getOrNull()
 
     private companion object {
         const val KEY = "session_folder"
         const val FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+
+        /** A real session is a few KB; a megabyte is already absurd. */
+        const val MAX_SESSION_BYTES = 1_000_000
     }
 }

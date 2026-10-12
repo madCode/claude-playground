@@ -79,7 +79,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.datastore.preferences)
     implementation(libs.coroutines.android)
     implementation(libs.serialization.json)
 
