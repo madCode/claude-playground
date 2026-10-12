@@ -449,6 +449,55 @@ class SessionPatchTest {
         assertEquals(SessionPatch.Entry(reps = 10, easier = true), SessionPatch.entriesIn(out)[1])
     }
 
+    @Test
+    fun `a key the writer removed stays removed, rather than coming back`() {
+        // `asRead` is pinned to the bytes the owner's first keystroke saw.
+        // Copying unknown keys out of THAT put back a key the writer had
+        // since deleted, resurrecting data nobody holds any more. The row
+        // is found on disk by id now.
+        val before = withAdded("""{"id": "abc", "name": "plank", "logged_by": "carry-2"}""")
+        val row = SessionPatch.addedIn(before).single()
+        assertEquals("carry-2", doc(before)["added"]!!.jsonArray.single()
+            .jsonObject["logged_by"]!!.jsonPrimitive.content)
+
+        // The coach rewrites the file and drops that key.
+        val after = withAdded("""{"id": "abc", "name": "plank"}""")
+        val out = patched(after, emptyMap(), listOf(row.copy(reps = 60)))
+        val saved = doc(out)["added"]!!.jsonArray.single().jsonObject
+        assertEquals(null, saved["logged_by"])
+        assertEquals("60", saved["reps"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `a key the writer ADDED since is kept`() {
+        // The other direction, and the reason the keys are copied at all.
+        val before = withAdded("""{"id": "abc", "name": "plank"}""")
+        val row = SessionPatch.addedIn(before).single()
+        val after = withAdded("""{"id": "abc", "name": "plank", "rpe": 8}""")
+        val out = patched(after, emptyMap(), listOf(row.copy(reps = 60)))
+        assertEquals("8", doc(out)["added"]!!.jsonArray.single()
+            .jsonObject["rpe"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `a row added to a long list does not vanish after the save`() {
+        // A count cap had a cliff in it: with forty rows already there, a
+        // row the owner typed was written and then dropped by the re-seed
+        // -- in the file, and no longer reachable. The budget is in bytes,
+        // which is what the draft actually has to carry, and a real added
+        // row is a hundred-odd of them.
+        val many = (0 until 60).joinToString(",") {
+            """{"id": "r$it", "name": "move $it", "reps": 10}"""
+        }
+        val file = withAdded(many)
+        val rows = SessionPatch.addedIn(file)
+        assertEquals("all of them reach the screen", 60, rows.size)
+
+        val out = patched(file, emptyMap(), rows + AddedSet(id = "new", name = "plank", reps = 60))
+        assertEquals(61, doc(out)["added"]!!.jsonArray.size)
+        assertEquals("and it is still there on the way back", 61, SessionPatch.addedIn(out).size)
+    }
+
     /** The fixture with a different `added` array, so each case states only
      *  the rows it is about. */
     private fun withAdded(rows: String): String {
