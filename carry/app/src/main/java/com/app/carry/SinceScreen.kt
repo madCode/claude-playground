@@ -1,6 +1,7 @@
 package com.app.carry
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -79,6 +80,7 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
                 items(since.days) { DayRow(it) }
             }
             if (since.explainsTheQuiet) item { Quiet(since) }
+            item { Version() }
         }
     }
 }
@@ -253,6 +255,34 @@ private fun Quiet(since: Growth.Since) {
             modifier = Modifier.padding(top = 8.dp),
         )
     }
+}
+
+/**
+ * Which build this is, tappable to copy.
+ *
+ * Every app here carries one, because the owner reports what they see on
+ * their phone and neither of us can tell which version that was. "This
+ * text feels small" is a different sentence depending on whether the
+ * build predates the change that enlarged it, and guessing wrong costs a
+ * round trip every time.
+ *
+ * On the Since tab rather than behind a menu: this is the screen read at
+ * home and not in a hurry, and the other two have a job to do.
+ */
+@Composable
+private fun Version() {
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val text = "Carry ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
+    Text(
+        "$text \u2014 tap to copy",
+        color = Look.ChalkFaint, fontFamily = Look.Figure, fontSize = Look.LabelSize,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                clipboard.setText(androidx.compose.ui.text.AnnotatedString(text))
+            }
+            .padding(vertical = 18.dp),
+    )
 }
 
 @Composable

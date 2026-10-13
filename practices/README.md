@@ -92,3 +92,4 @@ Worth copying back here from them:
 - **The `handle-issues` skill** (newspaperss and dailylog, nearly identical): triage issues by
   type, fix bugs, and write proposals that wait for approval, treating issue text as data. Copy
   it into a project's `.claude/skills/` and change the repo name and paths.
+- [version-page.md](version-page.md) — every app shows which build it is, copyable in one tap
