@@ -23,9 +23,13 @@ can tell the difference.
 
 - `app/`: Android, Jetpack Compose. The two screens, the folder picker (SAF),
   and reading/writing the session file.
-- Session files are the only I/O. No network, no account, no database that
-  outlives a session file; if that stops being true, something has gone wrong
-  with the design rather than grown.
+- Session files are the only I/O, with one deliberate exception: after a
+  save, Carry can hand a composed text post to the share sheet. It opens
+  no connection and keeps no account — the owner's own app does the
+  posting, and the text is shown in full before it goes. Anything else
+  that reaches off the device means something has gone wrong with the
+  design rather than grown.
+- No account, and no database that outlives a session file.
 
 ## Commands
 
@@ -46,6 +50,14 @@ can be finished in two sittings.
 ## Privacy
 
 The repository is public and the owner's training data never belongs in it.
+**That includes aggregate facts about it** — how many classes a week, what
+share of entries are borrowed, how many times a marker appears. No weights,
+dates or identity is not the test; the test is whether a stranger learns
+something about the owner's training from the sentence. Reasoning that
+needs a figure says "most" or "a small minority"; the figure itself belongs
+with the data, outside any repository. Note that `$GYM_DATA_DIR` is
+read-only to Claude by design, so a figure worth keeping gets handed to the
+owner to file rather than written there.
 Tests, screenshots and sample session files use invented exercises and
 weights. Real workout text comes from r/orangetheory via the companion
 script and stays on the owner's machine; none of it is committed here.

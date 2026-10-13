@@ -143,6 +143,10 @@ data class LogBinding(
     /** What the whole folder adds up to, or null while it is still being
      *  read — the tab is not offered until there is something behind it. */
     val since: Growth.Since? = null,
+    /** Hands the composed intel to whatever the owner posts with. A
+     *  callback rather than an Intent here, so the screen stays
+     *  renderable from a test with no Android in the picture. */
+    val onShare: (String) -> Unit = {},
 )
 
 @Composable
@@ -230,6 +234,7 @@ fun CarryApp(
                 when (tab) {
                     1 -> LogScreen(
                         session = state.session, entries = log.entries, added = log.added,
+                        onShare = log.onShare,
                         onEdit = log.onEdit, onAdd = log.onAdd, onEditAdded = log.onEditAdded,
                         onSave = log.onSave, saving = log.saving, fileMoved = log.fileMoved,
                         onDiscard = log.onDiscard,

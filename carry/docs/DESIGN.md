@@ -6,10 +6,10 @@ No phone in the studio. So Carry is never open while you train — it is a
 glance before and a form after, and anything that assumes otherwise is
 wrong for this app. Two screens, no live timer, no during-workout logging.
 
-Measured on real workouts at ~1.4 classes a week: a sheet carries a median
-of **three numbers worth remembering, and zero weight changes**. That is the
-whole information budget. A screen that shows eleven exercises equally has
-failed, because four of them say "first time, go by feel" and three say
+Measured against the owner's real sheets: a typical one carries **a handful
+of numbers worth remembering, and most often no weight changes at all**.
+That is the whole information budget. A screen that gives every exercise
+equal weight has failed, because most lines say "first time, go by feel" or
 "no weight needed" — nothing to carry.
 
 ## Screens
@@ -63,12 +63,12 @@ The other two are the two things that cannot be derived:
   habit, since every other number the coach has comes from their past
   timidity.
 - *hurt* — "couldn't finish" is already derived from reps against prescribed
-  reps, so a *fail* marker adds nothing (checked: three uses in the real
-  history, all three on sets already flagged incomplete). Pain is different
+  reps, so a *fail* marker adds nothing; checked against the real history,
+  every use of it sat on a set already flagged incomplete. Pain is different
   on two counts. Bodyweight and timed lines often carry no prescribed rep
-  count at all, so nothing is derivable and the marker is the only signal —
-  the one real *knees* entry in the history is exactly this, a push-up with
-  no reps and no prescription. And a set can be *completed* and still hurt,
+  count at all, so nothing is derivable and the marker is the only signal,
+  which is exactly the shape the real *knees* entry took. And a set can be
+  *completed* and still hurt,
   which a reps comparison cannot see; the cost of missing it is that the
   coach counts a clean set toward a streak and suggests more weight next
   time.
@@ -214,6 +214,62 @@ version that worked that out locally, by hashing the whole variant, made 20
 of 20 lifts look distinct when one pair was the same movement — it was
 including the fields the runner deliberately leaves out of the key. Where
 a file carries no key, the count is withheld rather than guessed.
+
+## Handing the block over
+
+Intel for the owner's class is posted on a small minority of days, which is
+why most of their history is borrowed from the other class's block. Nobody
+posts theirs. So after the log is saved, Carry composes the post and shows
+it; the owner sends it with their own app.
+
+Three rules, and a review of the first version found it breaking all three.
+
+- **It never republishes a block as another class's.** On a borrowed day
+  the sheet *is* the other class's block — that is what borrowed means — so
+  printing those lines under this class's heading fabricates intel, and the
+  coach scrapes it back next week as genuine. The pollution this project
+  exists to fix would become self-sustaining and public. On a borrowed day
+  the post carries movements with **no rep counts**, and says in plain
+  words that it is a report rather than the board.
+- **It publishes nothing of the owner's.** No weights, and no performed
+  reps either: an added row's reps are what they managed, not what the
+  class was told to do, so printing them would leak a personal number *and*
+  invent a prescription.
+- **The rep count is the board's own wording, never the runner's working
+  number.** `prescribed_reps` is what the weight math uses — an alternating
+  "10 total" becomes 5 a side, a "6 - 10" range becomes its floor — and for
+  most rows the two differ. Publishing it would tell the subreddit to do
+  half the reps. The file carries `prescribed_text` beside it for exactly
+  this, and a timed line carries `prescribed_duration_sec` instead ("45 sec
+  of low plank", never "45 x").
+- **The file is not trusted, even for a number.** `prescribed_text` arrives
+  from the same writer as `suggested` ("try 45 lb (up from 40, held 3x)"),
+  and it is both shown and published — so it is accepted only if it looks
+  like a rep scheme, and a duration only if it is between one second and an
+  hour. Anything else and the row simply carries no prescription. A field
+  that cannot be validated is not published.
+- **The promise it cannot keep, it checks instead.** The screen says "the
+  movements only — never your weights", and an added row's name is typed by
+  hand, so that is not something the app can guarantee. Stripping trailing
+  digits would silently mangle `bicep curl 21s`, a real movement. So any
+  bullet whose *movement name* carries a digit is shown in brick in the
+  preview, with the line above changed to say so. The prescription's own
+  digits are excluded from the test, or every line on an intel day would be
+  flagged and the flag would mean nothing. Nor is a name the runner parsed:
+  `bicep curl 21s` and `90/90 hip stretch` are real movements, and a
+  warning that fires on a line nobody typed is one the owner learns to
+  ignore.
+- **It is built from fields this app owns.** `canonical` and `components`
+  are parsed out by the runner; `line` is the sheet text verbatim and Carry
+  does not own what goes in it. Its sibling `suggested` already holds "try
+  45 lb (up from 40, held 3x)", so a runner revision folding an annotation
+  into `line` would have published a weight with no change here and no test
+  failing. A row Carry cannot name itself is left out rather than guessed.
+
+Only rows answered with a number count, and the post is **shown in full
+before it is sent**. That last one is the load-bearing guard: the text is
+built from a file written on another machine, so no amount of care in this
+file is worth as much as the owner reading the thing first.
 
 ## Writing it back
 

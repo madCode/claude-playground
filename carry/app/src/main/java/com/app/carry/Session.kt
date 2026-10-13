@@ -63,6 +63,20 @@ data class ExerciseSet(
     val components: List<String>? = null,
     val variant: JsonElement? = null,
     @SerialName("prescribed_reps") val prescribedReps: Int? = null,
+    /**
+     * What the BOARD said, as written: "8", "10 total", "6-10 each".
+     *
+     * [prescribedReps] is the number the runner's weight math uses — an
+     * alternating "10 total" is 5 a side, a range is its floor — and for
+     * most rows the two differ. Showing or publishing that number as the
+     * prescription tells the owner, and the subreddit, to do half the reps.
+     * So anything a person reads uses this; [prescribedReps] is for
+     * comparing rows, not for display.
+     */
+    @SerialName("prescribed_text") val prescribedText: String? = null,
+    /** Seconds, when the line prescribes time instead of reps ("45 sec of
+     *  low plank"). Exclusive with the two above. */
+    @SerialName("prescribed_duration_sec") val prescribedDurationSec: Int? = null,
     /** What the coach said to try, verbatim, e.g. "try 45 lb (up from 40, held 3x)". */
     val suggested: String? = null,
     /** Parsed out by the runner so the screen never has to read prose. */
@@ -98,6 +112,16 @@ data class ExerciseSet(
 
     val displayName: String
         get() = (canonical ?: components?.joinToString(" + ") ?: line).readable()
+
+    /**
+     * The prescription as the board wrote it — "10 total x", "45 sec of" —
+     * or null when the line states neither. Walking in, this is half of
+     * what the row is: a 30-second plank and a 90-second one are different
+     * asks, and "10 total" means five a side.
+     */
+    val prescription: String?
+        get() = prescribedDurationSec?.takeIf { it in 1..MAX_DURATION_SEC }?.let { "${durationText(it)} of" }
+            ?: prescribedText?.asScheme()?.let { "$it x" }
 }
 
 /**
@@ -109,6 +133,33 @@ data class ExerciseSet(
  * stated worst outcome is a wrong number in someone's head, and a line
  * that reads backwards is the same kind of failure.
  */
+/**
+ * A set is never longer than this. The field arrives from a file written on
+ * another machine, so `0`, a negative and `Int.MAX_VALUE` all have to be
+ * refused rather than rendered: `0 sec of squat` and `-45 sec of squat`
+ * would go on the Log row AND into a public post.
+ */
+private const val MAX_DURATION_SEC = 60 * 60
+
+/** "45 sec", "1 min" — the way the sheet writes it. */
+internal fun durationText(seconds: Int): String =
+    if (seconds % 60 == 0 && seconds >= 60) "${seconds / 60} min" else "$seconds sec"
+
+/**
+ * A rep scheme, or null if it does not look like one.
+ *
+ * `prescribed_text` is free text from the same file, and the same writer,
+ * as `line` and `suggested` — and `suggested` holds "try 45 lb (up from 40,
+ * held 3x)". This field is both shown to the owner and published, so it is
+ * the one place a runner revision could put a weight in a post under the
+ * words "never your weights". A scheme is digits, separators and the words
+ * "total"/"each"; anything else is refused outright rather than trusted,
+ * and the row simply carries no prescription.
+ */
+private val SCHEME = Regex("""\d{1,3}(?:\s*[-/]\s*\d{1,3}){0,4}(?:\s+(?:total|each|per side))?""")
+
+internal fun String.asScheme(): String? = trim().takeIf { SCHEME.matches(it) }
+
 internal fun String.readable(): String = filter { c ->
     c.code !in 0x202A..0x202E && c.code !in 0x2066..0x2069 &&
         c.code != 0x200B && c.code != 0x200E && c.code != 0x200F && c.code != 0xFEFF
