@@ -155,6 +155,11 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                 // phone.
                 _added.value = named(added)
                 _fileMovedUnderEdits.value = false
+                // "Saved" describes the file that WAS on screen. Left
+                // standing, it offers to post a session nobody filled in:
+                // the sync drops the day's second class in, this reseeds
+                // from it, and the button is still there.
+                _saving.value = SaveState.Idle
             }
             // Same session, same bytes: the draft is the truth, and a fresh
             // ViewModel after process death starts empty.

@@ -14,6 +14,17 @@ the lobby glance still depends on remembering to open the app.
 ## From the security pass
 
 
+**Yours to do, not mine:**
+
+- **Ask GitHub Support to garbage-collect the old commits.** The aggregate
+  facts about your training are scrubbed from `DESIGN.md` and `DEVLOG.md`
+  going forward, and `CLAUDE.md` now has a rule so it doesn't recur — but
+  they remain in this repository's history. A force-push would not fix
+  that on its own: the old commits stay reachable by direct SHA URL until
+  GitHub collects them, which only Support can trigger. It would also
+  invalidate the four open Dependabot PRs and the `carry-debug` release
+  tag, so it is not worth doing without the Support request behind it.
+
 **For you to decide, not for me:**
 
 - **The other two projects' workflows are unpinned** — 11 zizmor findings
@@ -90,13 +101,11 @@ Things a JVM cannot answer honestly, to check on a real phone:
   depend on remembering to open the app.
 - Read the class from the phone's own calendar, which is what finally frees
   the companion script from needing a calendar config of its own.
-- **The intel post — built, reviewed three times, and parked as PR #60.**
-  Three rounds of severe findings, each of my fixes wrong one level
-  further down. The root of it: Carry does not know what your class's
-  block was, only which rows you put numbers against on a sheet that may
-  be another class's. Three decisions are yours before it ships, written
-  out in the PR; a short cycle once they are made. The branch keeps the
-  guards all three reviews agreed on.
+- A test that can fail for the wrong reason: `CarryViewModelTest`
+  occasionally dies in a full-suite run with "Dispatchers.Main is used
+  concurrently with setting it". A `viewModelScope` job outlives its test
+  and races the next `setMain`. Intermittent, so it reddens CI at random
+  rather than reliably; the fix is cancelling the model in `@After`.
 
 ## The endpoint
 

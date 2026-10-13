@@ -11,12 +11,18 @@ them. A file-based client is what replaces it.
 
 Two measurements from the old version set the priorities here:
 
-- **About a third of what the owner reported never reached their history.**
-  Three replies were refused by an all-or-nothing parser; in two of them,
-  every line but one was fine. Typed fields exist to delete that whole class.
-- **78% of logged entries were borrowed** from the other class's floor block,
-  because intel for 3G is posted 3 days in 31. "Add something the sheet
-  missed" isn't a convenience feature; on those days it is the session.
+- **A large share of what the owner reported never reached their history.**
+  An all-or-nothing parser refused whole replies over one bad line, and
+  most of the refused replies were fine but for that line. Typed fields
+  exist to delete that whole class of loss.
+- **Most logged entries were borrowed** from the other class's floor block,
+  because intel for 3G is posted on a small minority of days. "Add
+  something the sheet missed" isn't a convenience feature; on those days
+  it is the session.
+
+(Measurements are deliberately not quoted here — this repository is
+public, and an aggregate fact about one person's training is still a fact
+about them. The figures were handed to the owner to file with the data.)
 
 ## 2026-10-11 — the first device check, and what it caught
 
@@ -914,3 +920,146 @@ comes from `BuildConfig`, never a string typed into the UI, because a typed
 one goes stale silently. Written up in `practices/version-page.md`.
 
 It is not a changelog or an update check. One line.
+## 2026-10-12 — cycle 24: handing the block over
+
+**From you.** Nothing directly; this was "compose the 3G intel post" from
+the backlog's Later list. Mid-cycle you also cleared three decisions that
+had been blocking: the runner may emit session files, added rows may carry
+an id, and the aggregate facts about your training come out of the public
+docs. Then the one this PR was parked on — what to promise about names you
+type — you left to me: "I have no idea, up to you."
+
+**Shipped.** After a save, Carry composes the post that tells the subreddit
+what this class did, shows it in full, and hands it to your share sheet.
+Intel for your class is posted on a small minority of days, which is why
+most of your history is borrowed; this is the only path that gets one of
+your sessions into the corpus at all.
+
+**Review caught — and the first version should not have shipped.** The
+fresh-eyes pass returned twelve findings, and the first was a design error
+rather than a bug:
+
+- **On a borrowed day the post published the OTHER class's block under
+  your class's heading.** The sheet on a borrowed day *is* 3G's block, with
+  3G's rep counts. Posting that as 2G intel would have fabricated a board
+  that never existed — and the coach scrapes r/orangetheory, so it would
+  have read its own fabrication back next week as genuine. The exact
+  pollution this project exists to fix, made self-sustaining and public.
+  Most of your days are borrowed days, so this was not an edge case; it was
+  the main case.
+- **Added rows published the reps you managed as the block's
+  prescription.** An added row has no prescription — `reps` is what you
+  did. "8 x ybell deadlift" leaks a personal number *and* invents a
+  workout. A test of mine asserted this as correct, which locked it in.
+- **It was built from `line`**, the one raw field Carry deliberately never
+  displays and does not own. Its sibling `suggested` holds "try 45 lb (up
+  from 40, held 3x)" — same schema, same writer. One runner revision
+  folding an annotation into `line` and "never your weights" was false,
+  with no change here and no test failing.
+- A newline in a name wrote its own bullets, publishing movements the class
+  never did. Folding the break to a space stopped the extra bullets and
+  still published the rest of the string, so the name is cut at the break.
+- The heading was neither sanitised nor capped; nothing capped the post's
+  length; and the share failure was swallowed, so a text too big for the
+  transaction made the button do nothing, for ever, silently.
+- **The button outlived its session.** Nothing reset `SaveState` on a new
+  read, so a sync dropping the day's second class in left "Saved" standing
+  and offered a post for a sheet nobody had filled in.
+- "The same test the history uses" was not: tapping *hurt* while deciding
+  counted as having done the movement.
+- Added rows were appended last and then truncated, so a long sheet
+  silently dropped exactly the rows that matter most on a borrowed day.
+- **And the two headline tests could not fail.** They asserted the output
+  did not contain a weight — but the composer never read a weight field on
+  any path, so they would have stayed green while it started publishing
+  your notes. They are rewritten to drive the channels that actually carry
+  text: `line`, `suggested`, `note`, the class tag, the date, added rows,
+  each with hostile content in it.
+
+The fix made the thing simpler. It is built from the parsed fields, it
+publishes rep counts only where they are genuinely the board's, and it
+shows you the text before it goes — which is the guard worth more than all
+the others, because no amount of care in this file beats you reading it.
+
+**Then it sat for 36 commits, and the unparking found two more.**
+
+- **The rep count it published was the wrong number.** It used
+  `prescribed_reps`, which is what the runner's weight math settled on, not
+  what the board said: an alternating "10 total" is 5 a side, and a "6 -
+  10" range is its floor. Measured against the cached sheets, **those two
+  disagree for 56% of rows** — so most of the post would have told the
+  subreddit to do half the reps. The runner now carries the board's own
+  wording (`prescribed_text`) and the duration of a timed line
+  (`prescribed_duration_sec`) in the session file, and the post uses those.
+  The same fields put the prescription on the Log row, where there was
+  previously nothing: a 30-second plank and a 90-second one had looked
+  identical.
+- **The promise under the button was one the app cannot keep.** "The
+  movements only — never your weights" is false the moment you type `ybell
+  deadlift 26`. Stripping trailing digits was the obvious fix and the wrong
+  one: it mangles `bicep curl 21s`, a real movement. So the preview shows
+  any bullet whose *movement name* carries a digit in brick and says to
+  check them. The prescription's own digits are excluded, or every line on
+  an intel day would be flagged and the flag would mean nothing.
+
+**Caught on the rebase, which is its own lesson.** Two tests passed for the
+wrong reason once the rows became two lines tall. The post button is the
+last item of a `LazyColumn`, which does not compose what is off-screen, so
+`assertDoesNotExist` on it passed whether or not the button existed — the
+list simply never scrolled that far. The "offered only once the log is
+written down" test now drives one composition from Idle to Saved and
+asserts the button IS reachable after the save, which is what gives the
+absence before it any meaning.
+
+**The second review, on the unparked branch, found six more.** Five were
+mine, from this pass:
+
+- **A duration the file could not mean was rendered anyway.** An `Int` `0`
+  is not null, so `prescribed_duration_sec: 0` beat a perfectly good
+  prescription and published `0 sec of squat`; a negative went straight
+  through the `>= 60` minutes test as `-45 sec of`. Now anything outside
+  one second to one hour is refused and the row falls back to its rep
+  scheme.
+- **`prescribed_text` was published verbatim.** It is free text from the
+  same file and the same writer as `suggested`, which holds "try 45 lb (up
+  from 40, held 3x)" — so it was exactly the hole the design already names,
+  reopened in a field that is both shown to you and published, under a
+  caption saying "never your weights". It is now accepted only if it looks
+  like a rep scheme: digits, separators, and total/each. `10 (45 lb)` is
+  dropped, and the row carries no prescription rather than a trusted one.
+  That bounds its length on the Log row too, which was otherwise unbounded
+  and could push the movement name off the row entirely.
+- **The flag fired on movements you never typed.** `bicep curl 21s`,
+  `90/90 hip stretch` and `3 way shoulder` are real names, and flagging one
+  lights "check the lines in red" on a line you cannot fix — on every intel
+  day, until you learn to ignore the one guard the design calls worth more
+  than all the others. Only a name you typed can be flagged now.
+- **Adding the new fields to the row identity would have refused a save.**
+  A runner upgrade re-emits the same session WITH the new fields, which
+  flips every row's fingerprint — so a session half-filled across two
+  sittings could only be discarded. Reverted; the fields add nothing
+  `prescribed_reps` did not already give.
+- **A typed row could shadow the sheet's own.** Deduplicating on the
+  rendered bullet made "10 total x squat" typed by hand equal to the
+  sheet's, and typed rows come first, so the real one was dropped and the
+  survivor flagged.
+- And `an empty log is offered no post to make` was the third test passing
+  for the wrong reason, the same off-screen `LazyColumn` trap.
+
+**Noted, not fixed.** `SessionFiles.formatDate` hands back the raw `date`
+field when it will not parse, so free text in a synced file reaches the
+post's heading. It is capped at 80 characters and cut at any control
+character, so it cannot invent bullets — it would read as nonsense, which
+you see before sending.
+
+**Still open, and not this PR's to fix:** `CarryViewModelTest` can fail in
+a full-suite run with "Dispatchers.Main is used concurrently with setting
+it" — a `viewModelScope` job outliving its test and racing the next
+`setMain`. It is on main, it is intermittent, and it is unrelated to the
+post; it is in the backlog.
+
+**And the review found one in the coach, not the app.** Asked whether the
+coach could read back what the app publishes, it turned out
+`6-10 x deadlift` normalised to `610 x deadlift` and was read as six
+hundred and ten prescribed reps — twelve rows in the cached sheets, fixed
+on the runner side.

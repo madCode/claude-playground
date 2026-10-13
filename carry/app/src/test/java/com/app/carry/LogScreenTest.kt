@@ -17,6 +17,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -47,7 +48,17 @@ class LogScreenTest {
         compose.onNode(hasScrollAction()).performScrollToNode(hasText(text, substring = true))
     }
 
-    private fun show(saving: SaveState = SaveState.Idle) {
+    private var shared: String? = null
+
+    /** Held as state, not passed by value, so a test can drive one
+     *  composition from Idle to Saved. The intel post is the last item of
+     *  the list and only exists once saved, so proving it ABSENT before a
+     *  save means also proving it present after one — in the same
+     *  composition, with the same scroll. */
+    private val saving = mutableStateOf<SaveState>(SaveState.Idle)
+
+    private fun show(state: SaveState = SaveState.Idle) {
+        saving.value = state
         compose.setContent {
             LogScreen(
                 session = SampleSession.today,
@@ -57,7 +68,8 @@ class LogScreenTest {
                 onAdd = { added.value = added.value + AddedSet(id = AddedSet.newId()) },
                 onEditAdded = { i, row -> added.value = added.value.toMutableList().also { it[i] = row } },
                 onSave = { saves++ },
-                saving = saving,
+                saving = saving.value,
+                onShare = { shared = it },
             )
         }
     }
@@ -306,6 +318,87 @@ class LogScreenTest {
         compose.onNodeWithText("+ Add what you did").assertDoesNotExist()
         reach("+ Add something the sheet missed")
         compose.onNodeWithText("+ Add something the sheet missed").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the intel post is offered only once the log is written down`() {
+        // Before the save it would be offering to publish numbers that
+        // are not yet anywhere.
+        //
+        // Both halves are one test on purpose. The button is the last item
+        // of a LazyColumn, which does not compose what is off-screen, so
+        // `assertDoesNotExist` passes just as well when the list simply
+        // never scrolled that far — which is exactly what rebasing onto the
+        // two-line rows did to this test. Asserting it IS reachable after
+        // the save, from the same composition, is what gives the absence
+        // its meaning.
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        show()
+        reach("Save")
+        compose.onNodeWithText("Post what 2G did").assertDoesNotExist()
+
+        saving.value = SaveState.Saved
+        reach("Post what 2G did")
+        compose.onNodeWithText("Post what 2G did").assertIsDisplayed()
+    }
+
+    @Test
+    fun `nothing is sent until the owner has seen the text`() {
+        // The claim under the button is one this screen cannot verify --
+        // the text is built from a file written on another machine -- so
+        // the only assurance worth anything is reading it first.
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 47.5))
+        show(SaveState.Saved)
+        reach("Post what 2G did")
+        compose.onNodeWithText("Post what 2G did").performClick()
+        assertEquals("opening the preview must not send", null, shared)
+        reach("Send it")
+        // "2G floor block", not "bench press": the row label contains that
+        // too, so matching on it would pass with no preview on screen.
+        compose.onNodeWithText("2G floor block", substring = true).assertIsDisplayed()
+        shoot("16-post-intel")
+
+        compose.onNodeWithText("Send it").performClick()
+        val post = shared!!
+        assertTrue(post, post.contains("bench press"))
+        assertTrue("the owner's load is theirs", !post.contains("47.5"))
+    }
+
+    @Test
+    fun `an empty log is offered no post to make`() {
+        // Scrolled to the bottom first, and the positive half proved in the
+        // same composition. The share card is the LAST item of a
+        // LazyColumn, which composes nothing off-screen, so an
+        // `assertDoesNotExist` with no scroll passes whether or not the
+        // card is there — it never got that far.
+        show(SaveState.Saved)
+        reach("Save")
+        compose.onNodeWithText("Post what 2G did").assertDoesNotExist()
+
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        reach("Post what 2G did")
+        compose.onNodeWithText("Post what 2G did").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a name that looks like it carries a weight is called out before sending`() {
+        // The promise under the button is "the movements only — never your
+        // weights", and a typed name can break it. The app cannot fix that
+        // for you without mangling real names, so it shows you which lines
+        // to look at, at the moment you are deciding to send.
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        added.value = listOf(
+            AddedSet(id = "a", name = "ybell deadlift 26", weight = 26.0),
+            AddedSet(id = "b", name = "pop squat", weight = 15.0),
+        )
+        show(SaveState.Saved)
+        reach("Post what 2G did")
+        compose.onNodeWithText("Post what 2G did").performClick()
+        compose.onNodeWithText("Check the lines in red", substring = true).assertIsDisplayed()
+        // Scroll past the preview, so the shot shows the flagged bullet
+        // and not just the warning above it.
+        reach("Send it")
+        shoot("21-post-flagged")
     }
 
     private fun shoot(name: String) {

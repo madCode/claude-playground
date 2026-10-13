@@ -35,7 +35,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,6 +70,7 @@ fun LogScreen(
     onEditAdded: (Int, AddedSet) -> Unit,
     onSave: () -> Unit,
     saving: SaveState,
+    onShare: (String) -> Unit = {},
     /** The file changed under numbers that have not been saved. */
     fileMoved: Boolean = false,
     onDiscard: () -> Unit = {},
@@ -149,6 +153,7 @@ fun LogScreen(
             items(session.sets) { set ->
                 LogRow(
                     name = set.displayName,
+                    prescription = set.prescription,
                     family = set.family,
                     entry = entries[set.ref] ?: SessionPatch.Entry(),
                     key = "$sessionKey-${set.ref}",
@@ -163,6 +168,14 @@ fun LogScreen(
                 item { AddRow(onAdd, loud = false) }
             }
             item { SaveButton(saving, onSave) }
+            // Only once it is written down. Before that the post would be
+            // offering to publish numbers that are not yet anywhere, and
+            // the moment to hand intel over is when the logging is done.
+            if (saving is SaveState.Saved) {
+                IntelPost.compose(session, entries, added)?.let { post ->
+                    item { ShareIntel(session.classTag, post, onShare) }
+                }
+            }
         }
     }
 }
@@ -203,6 +216,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexed(
 @Composable
 private fun LogRow(
     name: String,
+    /** "10 total x", "45 sec of" — what the board asked for, which is half
+     *  of what the row is. Kept out of [name] so it stays out of the
+     *  TalkBack labels on the number boxes, which name the movement. */
+    prescription: String?,
     family: String?,
     entry: SessionPatch.Entry,
     key: String,
@@ -221,7 +238,10 @@ private fun LogRow(
                 Box(Modifier.width(3.dp).height(18.dp).clip(RoundedCornerShape(2.dp)).background(hue))
             }
             Text(
-                name, color = if (entry.skipped) Look.ChalkFaint else Look.Chalk,
+                // One Text, so a long name wraps around the prescription
+                // instead of squeezing it off the row.
+                prescription?.let { "$it $name" } ?: name,
+                color = if (entry.skipped) Look.ChalkFaint else Look.Chalk,
                 fontFamily = Look.Name, fontSize = Look.NameSize,
                 maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
             )
@@ -404,7 +424,76 @@ private fun Chip(text: String, on: Boolean, accent: androidx.compose.ui.graphics
     }
 }
 
-/** What the save button is saying right now. */
+/**
+ * Hands the block over to be posted. Intel for this class is posted on a
+ * small minority of days, which is why most of the owner's history is
+ * borrowed from the other class's block — so this is the one action here
+ * that helps somebody other than them. (The share of days is a fact about
+ * the owner's training and this repository is public, so it stays out of
+ * here; see CLAUDE.md, "Privacy".)
+ */
+@Composable
+private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String) -> Unit) {
+    // Shown before it is sent, always. The claim under the button is one
+    // this screen cannot verify on its own -- the text is built from a
+    // file written on another machine -- and the only assurance worth
+    // anything is the owner reading the thing before it leaves.
+    var open by rememberSaveable { mutableStateOf(false) }
+    Column(Modifier.padding(top = 14.dp, bottom = 24.dp)) {
+        Text(
+            if (open) "Hide" else "Post what ${classTag ?: "this class"} did",
+            color = Look.Chalk, fontFamily = Look.Name, fontSize = 13.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, Look.RuleStrong, RoundedCornerShape(4.dp))
+                .clickable { open = !open }
+                .padding(vertical = 12.dp),
+        )
+        Text(
+            // The honest version of the claim. A name is typed by hand, so
+            // "never your weights" is not something this screen can promise
+            // on its own — what it can do is show you the lines where you
+            // may have typed one.
+            if (post.suspect.isEmpty()) "The movements only \u2014 never your weights."
+            else "Check the lines in red \u2014 they look like they carry a weight.",
+            color = if (post.suspect.isEmpty()) Look.ChalkFaint else Look.BrickInk,
+            fontFamily = Look.Name, fontSize = Look.SmallSize,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        )
+        if (open) {
+            Text(
+                buildAnnotatedString {
+                    post.text.lines().forEachIndexed { i, line ->
+                        if (i > 0) append('\n')
+                        if (line in post.suspect) {
+                            withStyle(SpanStyle(color = Look.BrickInk)) { append(line) }
+                        } else {
+                            append(line)
+                        }
+                    }
+                },
+                color = Look.ChalkDim, fontFamily = Look.Figure, fontSize = 11.sp,
+                modifier = Modifier
+                    .fillMaxWidth().padding(top = 10.dp)
+                    .clip(RoundedCornerShape(4.dp)).background(Look.SlateRaised)
+                    .padding(10.dp),
+            )
+            Text(
+                "Send it",
+                color = Look.Slate, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
+                fontSize = 13.sp, textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth().padding(top = 10.dp)
+                    .clip(RoundedCornerShape(4.dp)).background(Look.Amber)
+                    .clickable { onSend(post.text) }
+                    .padding(vertical = 12.dp),
+            )
+        }
+    }
+}
+
 sealed interface SaveState {
     data object Idle : SaveState
     data object Saving : SaveState

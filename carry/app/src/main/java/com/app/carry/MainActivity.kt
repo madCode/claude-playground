@@ -69,10 +69,36 @@ class MainActivity : ComponentActivity() {
                         onEditAdded = model::editAdded,
                         onSave = model::save,
                         since = model.since.value,
+                        onShare = ::share,
                     ),
                 )
             }
         }
+    }
+
+    /**
+     * Hands the composed block to whatever the owner posts with.
+     *
+     * A chooser every time, deliberately: this is the one thing the app
+     * sends anywhere, and it should be obvious where it is going rather
+     * than silently reusing a default picked once months ago.
+     */
+    private fun share(text: String) {
+        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(android.content.Intent.EXTRA_TEXT, text)
+        }
+        // Swallowing this was its own bug: nothing takes the text, or the
+        // text is too big for the transaction, and the button simply does
+        // nothing for ever -- the same silent-success shape that lost the
+        // nameless row. Say it out loud instead.
+        runCatching { startActivity(android.content.Intent.createChooser(send, null)) }
+            .onFailure {
+                android.widget.Toast.makeText(
+                    this, "Nothing on this phone would take the text.",
+                    android.widget.Toast.LENGTH_LONG,
+                ).show()
+            }
     }
 
     /** The normal case is a sync dropping the day's session in while the
