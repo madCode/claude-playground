@@ -9,17 +9,27 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +55,42 @@ import androidx.compose.ui.unit.sp
  */
 @Composable
 fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
+    // There is no nav library here and this does not justify adding one:
+    // the app is three tabs, and one nullable id inside this screen keeps
+    // it that way.
+    //
+    // Saveable, so the session stays open across a rotation and a process
+    // death -- the owner reads this screen at home, where being thrown
+    // back to the list for turning the phone is the kind of thing that
+    // makes an app feel broken. By the session's OWN id rather than by its
+    // place in the list: the folder is re-read on every resume, a sync can
+    // drop a file in, and the list reorders under a remembered index.
+    var opened by rememberSaveable { mutableStateOf<String?>(null) }
+    // Hoisted out of the LazyColumn below, which is disposed while a
+    // session is open: its own remembered position goes with it, so
+    // closing the session landed the owner back at the top of a year of
+    // history, above two other bands, every time. Here it outlives the
+    // detail view.
+    //
+    // This one IS an index, unlike the selection above, and a file
+    // arriving does shift what it points at. That costs a scroll position,
+    // which is the cheapest thing on this screen to get wrong -- the
+    // selection is the one that must not drift, because it decides which
+    // session is on screen.
+    val list = rememberLazyListState()
+    val open = opened?.let { id -> since.days.firstOrNull { it.sheetId == id } }
+    // A file can stop being there between reads -- a sync replaces rather
+    // than edits, and the owner can delete one. Drop the selection in that
+    // case rather than hold it: held, the detail view would spring open
+    // again over whatever the owner was reading the moment the file came
+    // back.
+    LaunchedEffect(since.days, opened) {
+        if (opened != null && since.days.none { it.sheetId == opened }) opened = null
+    }
+    if (open != null) {
+        PastSession(open, onBack = { opened = null }, modifier = modifier)
+        return
+    }
     Column(modifier.fillMaxSize().background(Look.Slate).padding(horizontal = 14.dp)) {
         Text(
             if (since.sessions == 1) "1 session" else "${since.sessions} sessions",
@@ -66,7 +112,7 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
             return@Column
         }
 
-        LazyColumn(Modifier.weight(1f)) {
+        LazyColumn(Modifier.weight(1f), state = list) {
             if (since.nearBump.isNotEmpty()) {
                 item { Band("Close to a bump") }
                 items(since.nearBump) { BumpRow(it) }
@@ -77,7 +123,7 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
             }
             if (since.days.isNotEmpty()) {
                 item { Band("Every session") }
-                items(since.days) { DayRow(it) }
+                items(since.days) { day -> DayRow(day) { opened = day.sheetId } }
             }
             if (since.explainsTheQuiet) item { Quiet(since) }
             item { Version() }
@@ -168,17 +214,28 @@ private fun PeakRow(peak: Growth.Peak) {
 }
 
 /**
- * One past session, named by its heaviest lift.
+ * One past session, named by its heaviest lift, and the way into it.
  *
  * "What did I do on the 27th" is a question about a day, and nothing else
  * on this screen can answer it — the bands above are all cut across days.
  * A session is remembered by its hardest thing, so that is what it is
- * labelled with rather than by a count alone.
+ * labelled with rather than by a count alone. Tapping it opens the day
+ * itself, row by row, which is the rest of the answer.
  */
 @Composable
-private fun DayRow(day: Growth.Day) {
+private fun DayRow(day: Growth.Day, onOpen: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        Modifier
+            .fillMaxWidth()
+            // A row is now a target, not a label. 48dp is Android's
+            // minimum and the content came to about 38.
+            .heightIn(min = 48.dp)
+            .clickable(onClick = onOpen, role = Role.Button)
+            // One label for the whole row: unlabelled, TalkBack reads the
+            // date, the count and the weight as three separate things and
+            // the tap target as a fourth with no name at all.
+            .semantics { contentDescription = spoken(day) }
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -203,9 +260,25 @@ private fun DayRow(day: Growth.Day) {
             Text(figure(it.weight), color = Look.Chalk, fontFamily = Look.Figure,
                 fontWeight = FontWeight.SemiBold, fontSize = Look.FigureSize)
         }
+        // Says the row goes somewhere. Without it nothing distinguishes
+        // these rows from the two bands above, which do not open anything,
+        // and a tap target nobody knows about is one nobody uses.
+        Text(
+            "›", color = Look.ChalkFaint, fontFamily = Look.Name,
+            fontSize = Look.NameSize, maxLines = 1,
+        )
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Look.Rule))
 }
+
+/** The whole row as one sentence, with the units the layout leaves to the
+ *  column a figure sits in. */
+private fun spoken(day: Growth.Day): String = listOfNotNull(
+    day.classTag,
+    SessionFiles.formatDate(day.date),
+    if (day.lifts == 1) "1 lift" else "${day.lifts} lifts",
+    day.best?.let { "heaviest ${it.name}, ${it.weight.asWeight()} pounds" },
+).joinToString(", ")
 
 @Composable
 private fun Trail(weights: List<Double>) {

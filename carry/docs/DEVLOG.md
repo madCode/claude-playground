@@ -1063,3 +1063,101 @@ coach could read back what the app publishes, it turned out
 `6-10 x deadlift` normalised to `610 x deadlift` and was read as six
 hundred and ten prescribed reps — twelve rows in the cached sheets, fixed
 on the runner side.
+
+## 2026-10-14 — cycle 25: opening a past session
+
+Tapping a row in *Every session* opens that day: every row the sheet listed,
+in sheet order, with the weight and reps that were entered — and the rows
+nobody filled in shown blank rather than as anything else. Then the rows
+added by hand, which on a borrowed day are the whole session.
+
+Three decisions worth keeping:
+
+- **The rows ride along on `Growth.Day`** rather than the screen re-reading
+  the file by document id. The parse has already happened, off the main
+  thread, on the read that built the Since screen; a second read would add a
+  loading state, a missing-file state and an SAF round trip to a screen
+  whose data is already in hand. A file that goes away between reads is
+  handled by the selection, not by the detail view.
+- **The selection is the session's own `sheet_id`**, held in a
+  `rememberSaveable` inside the Since screen — no nav library for one
+  screen. An index would have reopened a different day the moment a sync
+  dropped a file in, and two classes on one day share a date. When the
+  selected session is no longer in the folder the selection is dropped, so
+  the detail view cannot spring open again later over whatever is being
+  read.
+- **It is a record, not a form.** No text box and nothing to toggle, and the
+  screen says so in a line rather than leaving the owner to infer it from
+  what is missing. A test asserts there is no node on the screen that takes
+  text or toggles, and that the only thing to tap is the way out.
+
+**What the testing turned up.** `BackHandler` no longer registers with
+`OnBackPressedDispatcher`: activity-compose 1.13 prefers the navigation-event
+dispatcher and only falls back to the old one. So
+`activity.onBackPressedDispatcher.onBackPressed()` reports success against a
+screen that never handled the press — the test drives a
+`DirectNavigationEventInput` instead, and the handler is reached.
+
+**Left alone, deliberately.** A session whose sheet rows are all blank and
+whose real content is in `added` is still not listed as a session at all:
+`Growth.of` decides what counts as a session from `sets` alone. That is the
+commonest shape of a borrowed day, so it matters — but changing it moves the
+session count, the date span and the quiet-band figures on the Since screen,
+which is a decision of its own rather than a detail of this one. In the
+backlog.
+
+**What the review found.** Four real bugs, three of them in code this cycle
+touched and one older:
+
+- **One new field nearly cost whole sessions.** Reading `backfilled` off the
+  `Session` model made any value that is not a JSON boolean — a `null`, a
+  `1`, a `"true"` — throw during deserialization, which the loader turns
+  into "Can't read that session" and which takes the Before tab's sheet with
+  it. The exact failure `added` is kept out of the model to avoid, walked
+  into one file over. It is read out of the raw JSON now, where anything
+  unexpected costs a line of wording rather than a day.
+- **A row answered only with a marker was called blank.** `mod` is the only
+  progression axis a bodyweight movement has, and for the third of this
+  owner's sets that carry no weight it IS the record. The screen was telling
+  them they had left empty the one row they did answer.
+- **Two classes in one day were added together.** `Growth.of` counted a
+  day's lifts by date rather than by session, so opening the 3G session
+  showed a header claiming the 2G class's heaviest lift, with no such weight
+  in the rows underneath it. Older than this cycle; it only became visible
+  once the count sat above that session's own rows.
+- **The Since tab was a save behind.** Only `refresh`, which runs on resume,
+  recomputed the history — so the owner could save the day's log, open it
+  from the list and read back the blank rows they had just filled in, under
+  the words "what you saved that day".
+
+And two smaller ones: closing a session dropped the list's scroll position,
+landing the owner back at the top of a year of history (the list's state is
+hoisted out of the branch now); and the test that claimed to prove otherwise
+could not have, because its fixture fit on one screen and the scroll was a
+no-op — the third time that trap has caught this project. The fixture is two
+dozen sessions now, with a test whose only job is to fail if the row it
+reaches for is ever on screen without scrolling.
+
+**Left as it is.** Two files claiming the same `sheet_id` leave the
+selection picking the first; nothing dedupes them, and an index would be
+worse for the reasons this screen keeps an id at all.
+
+**And the second look caught the fix.** The short review of just the fix
+diff — the one the rules ask for after acting on findings — found that the
+Since re-read had been dropped inside the `when` whose value becomes
+`_saving`. So the save button went on saying "Saving…" for the whole of a
+read of every file in the folder, against a provider that can block
+forever, with the file already written and the retry guard refusing another
+tap: no way to tell a hung save from a lost one. Worse than the staleness it
+was fixing.
+
+It is a tracked job of its own now, started after the state flips and
+cancelled by the next one, which also stops a save's slow snapshot landing
+on top of a fresher refresh. Worth recording that the review *of the review
+fixes* was where the real bug was.
+
+The test for it also had to be rewritten twice. The first version waited on
+a coroutine deliberately left suspended, which outlives its test and is the
+shape of this project's one known intermittent failure — it passed alone and
+failed in the suite. The second asserts what the button said at the moment
+the read started, which needs nothing left hanging.

@@ -14,15 +14,21 @@ to know it worked; written 2026-10-14 so a session can start without re-deriving
 the analysis).
 
 ### Screens
-- [ ] **Open a past session from the Since list** — no screen answers "what did I
+- [x] **Open a past session from the Since list** — no screen answers "what did I
   lift that day" *(you asked, design:
   [open-a-past-session](designs/open-a-past-session.md))*
+- [ ] A session the owner logged entirely by hand is not listed at all: `Growth.of`
+  decides what counts as a session from `sets`, so a borrowed day whose sheet rows
+  are all blank and whose real content is in `added` never reaches *Every session*.
+  That is the commonest shape of a borrowed day. Changing it moves the session
+  count, the date span and the quiet-band figures, so it is its own decision
 - [ ] The bars on *Heaviest by what it trains* encode every weight in that family
   with no scale and no time direction; the bar count varies by how many sets the
   family has, which reads as meaning something it doesn't. Propose cutting them
   and keeping the number *(you asked)*
-- [ ] *Every session* answers no question a person would ask. Either each row
-  opens that session (above) or the band goes *(you asked)*
+- [x] *Every session* answers no question a person would ask. Either each row
+  opens that session (above) or the band goes — each row now opens that session
+  *(you asked)*
 
 ### The lobby glance
 - [ ] **Notify when a new session file lands** — the glance still depends on

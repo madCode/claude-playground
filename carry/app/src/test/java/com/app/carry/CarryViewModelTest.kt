@@ -87,6 +87,62 @@ class CarryViewModelTest {
     }
 
     @Test
+    fun `a save re-reads the folder, once the button already says Saved`() = runTest(dispatcher) {
+        // The Since tab is built from the folder, and only a resume used to
+        // recompute it. So the owner could save the day's log, open that
+        // day from the list and read back the rows they had just filled in
+        // as blank -- under the words "what you saved that day".
+        //
+        // Through the save that writes NOTHING, which is the one path here
+        // that reaches "Saved" without a real folder behind it. The file
+        // already holding these numbers means something else wrote it, so
+        // the history is just as stale.
+        // Both halves in one test, and so one wait rather than two: the
+        // save finishes on `Dispatchers.Default`, which the test dispatcher
+        // does not drive, and waiting on that is the shape of this class's
+        // one known intermittent failure.
+        val model = CarryViewModel(app, SavedStateHandle())
+        model.read = { readyFor() }
+        var reads = 0
+        var sayingWhenRead: SaveState? = null
+        model.readSince = { reads++; sayingWhenRead = model.saving.value; Growth.of(emptyList()) }
+        model.refresh()
+        advanceUntilIdle()
+        val onOpening = reads
+
+        model.save()
+        awaitSaved(model, "the save never finished")
+        advanceUntilIdle()
+
+        assertTrue(
+            "the Since tab would still be showing the folder as it was before the save",
+            reads > onOpening,
+        )
+        // That read is one provider call per file over a year of sessions,
+        // against a provider that can block for as long as it likes. Done
+        // before the state flips, the button goes on saying "Saving..."
+        // over a file that is already written, with the two-taps-in-one-
+        // frame guard refusing another try.
+        assertEquals(
+            "the folder read has to come after the button stops saying \"Saving…\"",
+            SaveState.Saved, sayingWhenRead,
+        )
+    }
+
+
+    /** The patch runs on `Dispatchers.Default`, which the test dispatcher
+     *  does not drive — so this waits for the condition rather than for a
+     *  number of ticks. */
+    private suspend fun awaitSaved(model: CarryViewModel, why: String) {
+        val reached = runCatching {
+            withContext(Dispatchers.Default) {
+                withTimeout(20_000) { while (model.saving.value != SaveState.Saved) delay(5) }
+            }
+        }.isSuccess
+        assertTrue(why, reached)
+    }
+
+    @Test
     fun `a stale answer cannot overwrite a newer one`() = runTest(dispatcher) {
         // Two resumes in quick succession (unlock then rotate). Cancelling
         // does not stop the blocking read underneath -- it only discards the
