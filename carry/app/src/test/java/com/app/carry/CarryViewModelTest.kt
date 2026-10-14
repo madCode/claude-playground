@@ -2,11 +2,13 @@ package com.app.carry
 
 import android.app.Application
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.job
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -27,8 +29,53 @@ class CarryViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val app: Application get() = ApplicationProvider.getApplicationContext()
 
+    // Every ViewModel a test builds, so teardown can reach all of them. Two
+    // of these tests build two, and a single field would hold only the
+    // second -- leaving the first's scope running into the next test, which
+    // is the race this registry exists to close.
+    private val models = mutableListOf<CarryViewModel>()
+
+    private fun viewModel(handle: SavedStateHandle = SavedStateHandle()) =
+        CarryViewModel(app, handle).also { models += it }
+
     @Before fun setUp() = Dispatchers.setMain(dispatcher)
-    @After fun tearDown() = Dispatchers.resetMain()
+
+    /**
+     * Nothing from one test may still be touching Main when the next one
+     * sets it. A `viewModelScope` job outlives the test that launched it --
+     * two tests park one on `awaitCancellation` for ever -- and nothing
+     * else clears these: there is no ViewModelStore in a unit test, so
+     * `onCleared` never runs.
+     *
+     * Cancelled is not finished, which is why the cancel alone was not
+     * enough: `refresh` ends by resuming from `Dispatchers.IO`, and that
+     * resumption READS `Dispatchers.Main` from an IO thread. The blocking
+     * read it is parked in cannot be interrupted, so cancelling only stops
+     * the resumption's effect, not the dispatch -- and a dispatch landing
+     * while `resetMain` or the next `setMain` writes is
+     * "Dispatchers.Main is used concurrently with setting it", measured at
+     * one run in thirty with the cancel but without the wait below.
+     * Waiting for the job to finish puts that last dispatch before
+     * `resetMain` rather than racing it.
+     */
+    @After fun tearDown() {
+        val jobs = models.map { it.viewModelScope.coroutineContext.job }
+        jobs.forEach { it.cancel() }
+        val deadline = System.currentTimeMillis() + 10_000
+        while (jobs.any { !it.isCompleted }) {
+            // A cancelled continuation still has to run, and `runTest` has
+            // stopped driving the dispatcher by now, so drive it here.
+            dispatcher.scheduler.advanceUntilIdle()
+            // Loud rather than silent: a job that cannot be drained is the
+            // bug this teardown exists for, and leaving it to corrupt a
+            // later test is how it stayed unexplained for so long.
+            check(System.currentTimeMillis() < deadline) {
+                "a viewModelScope job outlived its test"
+            }
+            Thread.sleep(1)
+        }
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun `a row from a file with no ids gets a real one on the way in`() = runTest(dispatcher) {
@@ -40,7 +87,7 @@ class CarryViewModelTest {
         // the bug was.
         val raw = Session.json.encodeToString(SampleSession.today)
             .replace("\"sets\"", "\"added\": [{\"name\": \"plank\", \"reps\": 60}], \"sets\"")
-        val model = CarryViewModel(app, SavedStateHandle())
+        val model = viewModel()
         model.read = { CarryState.Ready(SampleSession.today, raw, "doc") }
         model.refresh()
         advanceUntilIdle()
@@ -61,7 +108,7 @@ class CarryViewModelTest {
         // openInputStream has no timeout and runCatching never fires on a
         // wedged provider, so without this the owner sits on "Reading" with
         // no button at all and force-quitting is the only exit.
-        val model = CarryViewModel(app, SavedStateHandle())
+        val model = viewModel()
         model.read = { awaitCancellation() }
         model.refresh()
         advanceUntilIdle()
@@ -70,7 +117,7 @@ class CarryViewModelTest {
 
     @Test
     fun `a refresh that comes back empty leaves the sheet alone`() = runTest(dispatcher) {
-        val model = CarryViewModel(app, SavedStateHandle())
+        val model = viewModel()
         model.read = { readyFor() }
         model.refresh()
         advanceUntilIdle()
@@ -92,7 +139,7 @@ class CarryViewModelTest {
         // does not stop the blocking read underneath -- it only discards the
         // result -- and discarding it is the point: an older answer landing
         // after a newer one would put an older sheet on screen.
-        val model = CarryViewModel(app, SavedStateHandle())
+        val model = viewModel()
         model.read = { awaitCancellation() }
         model.refresh()
         model.read = { readyFor() }
@@ -116,7 +163,7 @@ class CarryViewModelTest {
         // The likeliest real loss in the app: ten rows filled in the car,
         // switch to Spotify, Android reclaims the process.
         val handle = SavedStateHandle()
-        val first = CarryViewModel(app, handle)
+        val first = viewModel(handle)
         first.read = { ready() }
         first.refresh()
         advanceUntilIdle()
@@ -124,7 +171,7 @@ class CarryViewModelTest {
 
         // Same SavedStateHandle, brand new ViewModel: that is what process
         // death looks like from in here.
-        val reborn = CarryViewModel(app, handle)
+        val reborn = viewModel(handle)
         reborn.read = { ready() }
         reborn.refresh()
         advanceUntilIdle()
@@ -136,7 +183,7 @@ class CarryViewModelTest {
         // The coach re-runs and the file is replaced underneath. The form
         // used to go blank with no prompt. (A file for a DIFFERENT session
         // is a separate case entirely -- see the test above.)
-        val model = CarryViewModel(app, SavedStateHandle())
+        val model = viewModel()
         model.read = { ready() }
         model.refresh(); advanceUntilIdle()
         model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
@@ -153,12 +200,12 @@ class CarryViewModelTest {
         // would load onto Tuesday's sheet, and if the template repeated an
         // exercise at the same index they would be WRITTEN into it.
         val handle = SavedStateHandle()
-        val saturday = CarryViewModel(app, handle)
+        val saturday = viewModel(handle)
         saturday.read = { ready() }
         saturday.refresh(); advanceUntilIdle()
         saturday.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
 
-        val tuesday = CarryViewModel(app, handle)
+        val tuesday = viewModel(handle)
         tuesday.read = { ready(sheet.replace("2026-10-17:2G", "2026-10-20:2G"), id = "tue") }
         tuesday.refresh(); advanceUntilIdle()
         assertEquals("a draft belongs to one session", emptyMap<Int, SessionPatch.Entry>(), tuesday.edits.value)
@@ -169,7 +216,7 @@ class CarryViewModelTest {
     fun `there is a way out of a session that was rewritten`() = runTest(dispatcher) {
         // Otherwise the warning is permanent: the save refuses, every
         // refresh re-raises it, and the only exits destroy the numbers.
-        val model = CarryViewModel(app, SavedStateHandle())
+        val model = viewModel()
         model.read = { ready() }
         model.refresh(); advanceUntilIdle()
         model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
@@ -189,7 +236,7 @@ class CarryViewModelTest {
         // ref is only an index. A re-run that renumbers rows turns an edit
         // meant for a deadlift into one against a bench press, and the
         // patcher cannot see it -- it only refuses refs that have GONE.
-        val model = CarryViewModel(app, SavedStateHandle())
+        val model = viewModel()
         model.read = { ready() }
         model.refresh(); advanceUntilIdle()
         model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
@@ -211,7 +258,7 @@ class CarryViewModelTest {
         // past about half a megabyte is a TransactionTooLargeException that
         // destroys exactly the typing the draft exists to protect.
         val handle = SavedStateHandle()
-        val model = CarryViewModel(app, handle)
+        val model = viewModel(handle)
         model.read = { ready() }
         model.refresh(); advanceUntilIdle()
         model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
@@ -234,7 +281,7 @@ class CarryViewModelTest {
     fun `the folder can be handed back, and that clears everything with it`() {
         // A recursive grant that survives reboots needs a way out that is
         // not "uninstall the app".
-        val model = CarryViewModel(app, SavedStateHandle())
+        val model = viewModel()
         model.folder.remember(android.net.Uri.parse("content://x/tree/primary%3ASync%2Fgym"))
         model.forgetFolder()
         assertEquals(null, model.folder.uri)
@@ -244,7 +291,7 @@ class CarryViewModelTest {
 
     @Test
     fun `picking the whole phone is reported rather than held`() {
-        val model = CarryViewModel(app, SavedStateHandle())
+        val model = viewModel()
         model.rejectedTooWide()
         val state = model.state.value
         assertTrue(state is CarryState.NeedsFolder && state.tooWide)
@@ -254,7 +301,7 @@ class CarryViewModelTest {
     fun `the folder outlives the activity that asked for it`() {
         // Held against the Application, so an abandoned read cannot keep a
         // destroyed Activity alive while a blocked provider finishes.
-        val model = CarryViewModel(app, SavedStateHandle())
+        val model = viewModel()
         assertEquals(false, model.folder.chosen)
     }
 }

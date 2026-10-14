@@ -34,12 +34,6 @@ the analysis).
   runner side first *(design:
   [read-class-from-calendar](designs/read-class-from-calendar.md))*
 
-### Tests and CI
-- [ ] **The flaky ViewModel test** — `CarryViewModelTest` dies at random in a full
-  suite with "Dispatchers.Main is used concurrently with setting it": a
-  `viewModelScope` job outlives its test. It reddens unrelated PRs *(design:
-  [flaky-viewmodel-test](designs/flaky-viewmodel-test.md))*
-
 ### Identity
 - [ ] **A logo** — chalk on slate, and it has to work as a one-colour launcher
   icon at 48dp *(you asked, design: [logo](designs/logo.md))*
@@ -63,6 +57,11 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **The flaky ViewModel test** — `CarryViewModelTest` left `viewModelScope`
+  jobs running past the test that launched them, so one could dispatch to
+  `Dispatchers.Main` while the next test set it. Every ViewModel a test builds is
+  now registered and cancelled in teardown *(design:
+  [flaky-viewmodel-test](designs/flaky-viewmodel-test.md))*
 - [x] The four review items that sat in Next: index-keyed text boxes, a row written
   twice, a carried key resurrected from a stale draft, and the forty-first added
   row vanishing
