@@ -1141,3 +1141,23 @@ reaches for is ever on screen without scrolling.
 **Left as it is.** Two files claiming the same `sheet_id` leave the
 selection picking the first; nothing dedupes them, and an index would be
 worse for the reasons this screen keeps an id at all.
+
+**And the second look caught the fix.** The short review of just the fix
+diff — the one the rules ask for after acting on findings — found that the
+Since re-read had been dropped inside the `when` whose value becomes
+`_saving`. So the save button went on saying "Saving…" for the whole of a
+read of every file in the folder, against a provider that can block
+forever, with the file already written and the retry guard refusing another
+tap: no way to tell a hung save from a lost one. Worse than the staleness it
+was fixing.
+
+It is a tracked job of its own now, started after the state flips and
+cancelled by the next one, which also stops a save's slow snapshot landing
+on top of a fresher refresh. Worth recording that the review *of the review
+fixes* was where the real bug was.
+
+The test for it also had to be rewritten twice. The first version waited on
+a coroutine deliberately left suspended, which outlives its test and is the
+shape of this project's one known intermittent failure — it passed alone and
+failed in the suite. The second asserts what the button said at the moment
+the read started, which needs nothing left hanging.
