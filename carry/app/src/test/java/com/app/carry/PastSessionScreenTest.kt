@@ -57,18 +57,21 @@ class PastSessionScreenTest {
     private val day = SampleSession.past
 
     /**
-     * Five more invented sessions, so the day under test is genuinely off
-     * the bottom of the Since screen and the list has to be scrolled to
-     * reach it. Their heaviest lift is renamed, so the row the tests scroll
-     * to is the only one that matches.
+     * Two dozen more invented sessions, ALL NEWER than the day under test, so
+     * that day is genuinely off the bottom and the list has to be scrolled
+     * to reach it. `a day in the list is off-screen until the list is
+     * scrolled` holds that honest: with the fixture short enough to fit on
+     * one screen the scroll is a no-op, and three tests on this project
+     * passed for months that way.
+     *
+     * Their heaviest lift is renamed, so the row the tests scroll to is the
+     * only one in the list that matches.
      */
     private fun filler(date: String) =
         SampleSession.pastFile.replace("2026-09-27", date).replace("deadlift", "step-up")
 
     private val since = Growth.of(
-        listOf(SampleSession.pastFile) + listOf(
-            "2026-10-11", "2026-10-04", "2026-09-20", "2026-09-13", "2026-09-06",
-        ).map(::filler)
+        listOf(SampleSession.pastFile) + (1..24).map { filler("2026-10-%02d".format(it)) }
     )
 
     /** The row for the day under test, named by its heaviest lift so it is
@@ -117,13 +120,21 @@ class PastSessionScreenTest {
         compose.onNodeWithContentDescription("torso rotation · seated, not filled in")
             .assertIsDisplayed()
         compose.onNodeWithContentDescription("lateral raise, skipped").assertIsDisplayed()
-        // Three of the eight rows on that sheet were left alone, and each
-        // of them says so in its own words rather than showing a 0.
-        // Those two labels are matched in full, so a row that grew a
-        // stand-in zero or a "skipped" on a blank would fail them. Three
-        // of the eight rows on that sheet were left alone, and each says
-        // so in its own words.
-        compose.onAllNodesWithText("blank", substring = true).assertCountEquals(3)
+        // Both labels are matched in full, so a row that grew a stand-in
+        // zero, or a "skipped" on a blank, would fail them. Two of the
+        // eight rows on that sheet carry nothing at all, and each says so
+        // in its own words rather than showing a 0.
+        compose.onAllNodesWithText("blank", substring = true).assertCountEquals(2)
+    }
+
+    @Test
+    fun `a bodyweight row answered only with a marker is not called blank`() {
+        // For the movements that carry no weight -- a third of this owner's
+        // sets -- *mod* is the only progression axis there is, so the
+        // marker IS the record. Reading it back as "blank" would tell them
+        // they left empty the one row they did answer.
+        compose.setContent { PastSession(day, onBack = {}) }
+        compose.onNodeWithContentDescription("low plank, mod").assertIsDisplayed()
     }
 
     @Test
@@ -204,6 +215,18 @@ class PastSessionScreenTest {
     }
 
     @Test
+    fun `a day in the list is off-screen until the list is scrolled`() {
+        // Guards every test below that reaches for that row: a LazyColumn
+        // composes nothing it is not showing, so if the fixture ever gets
+        // short enough to fit on one screen the scroll becomes a no-op and
+        // those tests stop exercising what they claim to.
+        compose.setContent { SinceScreen(since) }
+        compose.onNode(thatDay).assertDoesNotExist()
+        reach(thatDay)
+        compose.onNode(thatDay).assertIsDisplayed()
+    }
+
+    @Test
     fun `tapping a session in the list opens that session`() {
         openThatDay()
         compose.onNodeWithContentDescription("bench press, 45 pounds, 10 reps, easy")
@@ -212,11 +235,16 @@ class PastSessionScreenTest {
     }
 
     @Test
-    fun `the way back on screen returns to the list`() {
+    fun `the way back on screen returns to the list, where it was left`() {
         openThatDay()
         compose.onNodeWithContentDescription("Back to every session").performClick()
-        compose.onNodeWithText("Every session".uppercase()).assertIsDisplayed()
         compose.onNodeWithContentDescription("Back to every session").assertDoesNotExist()
+        // Displayed, not merely present: the row was reached by scrolling a
+        // year of history past two other bands, and the list's own
+        // remembered position is disposed along with it while a session is
+        // open. Landing back at the top means re-scrolling to open the next
+        // day.
+        compose.onNode(thatDay).assertIsDisplayed()
     }
 
     @Test
@@ -245,10 +273,10 @@ class PastSessionScreenTest {
         compose.runOnUiThread { back.backCompleted() }
 
         compose.onNodeWithContentDescription("Back to every session").assertDoesNotExist()
-        // The row that was tapped exists in the list and nowhere else, so
-        // finding it again proves which screen this is -- wherever the
-        // list is scrolled to, which is where it was left.
-        compose.onNode(thatDay).assertExists()
+        // That row exists in the list and nowhere else, and it is far
+        // enough down that it is only displayed if the list came back where
+        // it was left.
+        compose.onNode(thatDay).assertIsDisplayed()
     }
 
     @Test
@@ -290,7 +318,7 @@ class PastSessionScreenTest {
 
         shown.value = since
         compose.onNodeWithContentDescription("Back to every session").assertDoesNotExist()
-        compose.onNodeWithText("Every session".uppercase()).assertIsDisplayed()
+        compose.onNode(thatDay).assertIsDisplayed()
     }
 
     @Test

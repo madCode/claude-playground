@@ -211,6 +211,10 @@ lines were left empty is half the answer to "what did I do that day". The
 rows the owner added by hand come after the sheet's own, which on a borrowed
 day is the whole session.
 
+A row with nothing on it at all reads as blank; a row carrying only a feel
+marker does not, because for the movements that carry no weight the marker
+is the whole record.
+
 It is a **record, not a form**, and says so. There is nothing on it to type
 into: the one editable session is today's, on the Log screen, and two ways
 to write one file is how a wrong number gets in. A back-filled day — a

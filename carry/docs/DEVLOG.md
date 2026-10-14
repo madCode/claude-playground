@@ -1105,3 +1105,39 @@ commonest shape of a borrowed day, so it matters — but changing it moves the
 session count, the date span and the quiet-band figures on the Since screen,
 which is a decision of its own rather than a detail of this one. In the
 backlog.
+
+**What the review found.** Four real bugs, three of them in code this cycle
+touched and one older:
+
+- **One new field nearly cost whole sessions.** Reading `backfilled` off the
+  `Session` model made any value that is not a JSON boolean — a `null`, a
+  `1`, a `"true"` — throw during deserialization, which the loader turns
+  into "Can't read that session" and which takes the Before tab's sheet with
+  it. The exact failure `added` is kept out of the model to avoid, walked
+  into one file over. It is read out of the raw JSON now, where anything
+  unexpected costs a line of wording rather than a day.
+- **A row answered only with a marker was called blank.** `mod` is the only
+  progression axis a bodyweight movement has, and for the third of this
+  owner's sets that carry no weight it IS the record. The screen was telling
+  them they had left empty the one row they did answer.
+- **Two classes in one day were added together.** `Growth.of` counted a
+  day's lifts by date rather than by session, so opening the 3G session
+  showed a header claiming the 2G class's heaviest lift, with no such weight
+  in the rows underneath it. Older than this cycle; it only became visible
+  once the count sat above that session's own rows.
+- **The Since tab was a save behind.** Only `refresh`, which runs on resume,
+  recomputed the history — so the owner could save the day's log, open it
+  from the list and read back the blank rows they had just filled in, under
+  the words "what you saved that day".
+
+And two smaller ones: closing a session dropped the list's scroll position,
+landing the owner back at the top of a year of history (the list's state is
+hoisted out of the branch now); and the test that claimed to prove otherwise
+could not have, because its fixture fit on one screen and the scroll was a
+no-op — the third time that trap has caught this project. The fixture is two
+dozen sessions now, with a test whose only job is to fail if the row it
+reaches for is ever on screen without scrolling.
+
+**Left as it is.** Two files claiming the same `sheet_id` leave the
+selection picking the first; nothing dedupes them, and an index would be
+worse for the reasons this screen keeps an id at all.

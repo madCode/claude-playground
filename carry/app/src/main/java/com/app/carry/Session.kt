@@ -27,13 +27,6 @@ data class Session(
     val date: String,
     @SerialName("class") val classTag: String? = null,
     @SerialName("borrowed_from") val borrowedFrom: String? = null,
-    /**
-     * Written by whatever back-filled the day, for sessions logged before
-     * this app existed. Read, never written: the importer refuses these
-     * files, and a field Carry set here would be a claim about where a
-     * record came from that it is not in a position to make.
-     */
-    val backfilled: Boolean = false,
     val sets: List<ExerciseSet> = emptyList(),
 ) {
     companion object {

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -65,6 +66,12 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
     // place in the list: the folder is re-read on every resume, a sync can
     // drop a file in, and the list reorders under a remembered index.
     var opened by rememberSaveable { mutableStateOf<String?>(null) }
+    // Hoisted out of the LazyColumn below, which is disposed while a
+    // session is open: its own remembered position goes with it, so
+    // closing the session landed the owner back at the top of a year of
+    // history, above two other bands, every time. Here it outlives the
+    // detail view.
+    val list = rememberLazyListState()
     val open = opened?.let { id -> since.days.firstOrNull { it.sheetId == id } }
     // A file can stop being there between reads -- a sync replaces rather
     // than edits, and the owner can delete one. Drop the selection in that
@@ -99,7 +106,7 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
             return@Column
         }
 
-        LazyColumn(Modifier.weight(1f)) {
+        LazyColumn(Modifier.weight(1f), state = list) {
             if (since.nearBump.isNotEmpty()) {
                 item { Band("Close to a bump") }
                 items(since.nearBump) { BumpRow(it) }

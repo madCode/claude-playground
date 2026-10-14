@@ -346,6 +346,15 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                             // a state captured before the save.
                             _edits.value = SessionPatch.entriesIn(text)
                             _added.value = named(SessionPatch.addedIn(text))
+                            // The folder is the history, and it just
+                            // changed. Only `refresh` recomputed this, and
+                            // that runs on resume -- so the owner could
+                            // save, tap Since, open today, and read back
+                            // the blank rows they had just filled in, under
+                            // the words "what you saved that day". Nothing
+                            // on that screen tells "not saved" from "not
+                            // re-read".
+                            _since.value = withContext(kotlinx.coroutines.Dispatchers.IO) { readFolder() }
                             SaveState.Saved
                         }
                         Saved.NO_FILE_INTACT -> SaveState.Failed(

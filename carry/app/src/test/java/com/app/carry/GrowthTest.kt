@@ -267,6 +267,28 @@ class GrowthTest {
     }
 
     @Test
+    fun `two classes in one day are counted apart, not added together`() {
+        // Each row in the list, and now the header of the session it
+        // opens, states a count and a heaviest lift ALONGSIDE that one
+        // session's rows. Summing across the date puts the other class's
+        // 50 on this class's day, with no 50 in the rows underneath it.
+        val since = Growth.of(
+            listOf(
+                file("2026-09-27", cls = "2G", sets = set(0, "a", "legs", weight = "50")),
+                file("2026-09-27", cls = "3G", sets = set(0, "b", "legs", weight = "25")),
+            )
+        )
+        val own = since.days.associateBy { it.sheetId }
+        assertEquals(1, own.getValue("2026-09-27:2G").lifts)
+        assertEquals(50.0, own.getValue("2026-09-27:2G").best?.weight)
+        assertEquals(1, own.getValue("2026-09-27:3G").lifts)
+        assertEquals(25.0, own.getValue("2026-09-27:3G").best?.weight)
+        // Both still count towards the totals, which are about the folder
+        // rather than about one day.
+        assertEquals(2, since.sets)
+    }
+
+    @Test
     fun `a day is opened by the session's own id, not by where it sits`() {
         // The list reorders as files arrive, and two classes in one day
         // share a date. The sheet id is the only stable handle.
@@ -306,6 +328,23 @@ class GrowthTest {
             .replace(""""added":[]""", """"added":[{"id":"a1","name":"\u202ecarry","weight":35}]""")
         val day = Growth.of(listOf(text)).days.single()
         assertEquals("carry", day.rows.last().name)
+    }
+
+    @Test
+    fun `an odd value in the backfilled flag does not cost the whole session`() {
+        // That field is written by whatever back-filled the day, not by the
+        // runner and not by Carry. Reading it through the Session model
+        // made a non-boolean throw during deserialization -- which the
+        // loader turns into "Can't read that session", taking the sheet on
+        // the Before tab with it. Exactly the failure `added` is kept out
+        // of the model to avoid.
+        for (odd in listOf("null", "1", "\"true\"")) {
+            val text = file("2026-09-27", sets = set(0, "a", "legs", weight = "10"))
+                .replace(""""sets":[""", """"backfilled":$odd,"sets":[""")
+            val since = Growth.of(listOf(text))
+            assertEquals("a $odd backfilled flag cost the session", 1, since.days.size)
+            assertFalse(since.days.single().backfilled)
+        }
     }
 
     @Test

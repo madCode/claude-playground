@@ -1,5 +1,8 @@
 package com.app.carry
 
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+
 /**
  * What the folder adds up to.
  *
@@ -60,9 +63,21 @@ object Growth {
          *  On a borrowed day these ARE the session. */
         val added: Boolean = false,
     ) {
-        /** Answered, as [ExerciseSet.answered] means it. A row with
-         *  neither a number nor a skip is blank, and shown blank. */
-        val answered: Boolean get() = weight != null || reps != null || skipped
+        /**
+         * Anything at all was recorded against this row.
+         *
+         * Wider than [ExerciseSet.answered], which asks whether there is a
+         * number — because for the third of this owner's sets that carry no
+         * weight, the marker IS the record. *mod* is the only progression
+         * axis a bodyweight movement has, so a plank with nothing but
+         * `easier` on it is a row they answered, and calling it blank tells
+         * them they skipped the one thing they did say.
+         *
+         * A row with none of this is blank, and is shown blank.
+         */
+        val answered: Boolean get() =
+            weight != null || reps != null || skipped ||
+                easy || hard || easier || hurt || !note.isNullOrBlank()
 
         /** The feel markers that are set, in the order the Log screen
          *  offers them, so the two screens read the same way round. */
@@ -91,9 +106,18 @@ object Growth {
          *  sheet it filled in. Shown as one, and never offered as a form. */
         val backfilled: Boolean = false,
         /**
-         * Every row of that day's sheet in sheet order, then the rows the
-         * owner added — blank ones included, because "what did I lift on
-         * the 27th" is partly answered by which lines have nothing on them.
+         * Every row of that day's sheet in sheet order — blank ones
+         * included, because "what did I lift on the 27th" is partly
+         * answered by which lines have nothing on them — and then the rows
+         * the owner added.
+         *
+         * The added half is whatever [SessionPatch.addedIn] shows, which
+         * is not quite all of them: a row holding nothing is dropped (it
+         * has nothing to show), and so is one too big or too deep for the
+         * Log screen's draft to carry. Those caps belong to the editor
+         * rather than to this screen, but a second definition of "the rows
+         * the owner added" is the two-implementations-drift failure this
+         * project has already paid for once, so there is one.
          *
          * Carried here rather than re-read by document id when the detail
          * view opens. The parse has already happened, on the IO thread
@@ -162,13 +186,7 @@ object Growth {
     fun of(files: List<String>): Since {
         val parsed = files.mapNotNull { text -> SessionFiles.parse(text)?.let { it to text } }
         val sessions = parsed.map { it.first }
-        // A set counts only if a weight was actually recorded. A blank row
-        // is not a zero, and `weight: 0` in the oldest records meant both
-        // "bodyweight" and "skipped" — neither is a lift.
-        val lifts = sessions.flatMap { session ->
-            session.sets.filter { !it.skipped && (it.weight ?: 0.0) > 0.0 }
-                .map { Lift(session.date, it.displayName, it.family, it.weight!!, it.reps) }
-        }
+        val lifts = sessions.flatMap(::liftsOf)
         // A sheet nobody filled in is not a session they did. One of those
         // was sitting in the real folder — eleven blank rows from an early
         // test — and it counted as a session AND contributed eleven
@@ -218,14 +236,19 @@ object Growth {
             ?.groupingBy { it }?.eachCount()
 
         val days = logged.map { (session, text) ->
-            val mine = lifts.filter { it.date == session.date }
+            // This session's own lifts, not every lift sharing its date.
+            // Two classes in one day is the case `sheet_id` exists for, and
+            // the count and the heaviest now sit above that one session's
+            // rows: summing across the date put the other class's heaviest
+            // in a header with no such weight in the list under it.
+            val mine = liftsOf(session)
             Day(
                 sheetId = session.sheetId,
                 date = session.date,
                 classTag = session.classTag,
                 lifts = mine.size,
                 best = mine.maxByOrNull { it.weight },
-                backfilled = session.backfilled,
+                backfilled = backfilledIn(text),
                 rows = rowsOf(session, text),
             )
         }.sortedByDescending { it.date }
@@ -243,6 +266,13 @@ object Growth {
         )
     }
 
+
+    /** One session's weighted sets. A blank row is not a zero, and
+     *  `weight: 0` in the oldest records meant both "bodyweight" and
+     *  "skipped" — neither is a lift. */
+    private fun liftsOf(session: Session): List<Lift> =
+        session.sets.filter { !it.skipped && (it.weight ?: 0.0) > 0.0 }
+            .map { Lift(session.date, it.displayName, it.family, it.weight!!, it.reps) }
 
     /**
      * One day's sheet, row by row, for the screen that reads it back.
@@ -281,6 +311,24 @@ object Growth {
                 added = true,
             )
         }
+
+    /**
+     * Whether this file is a record of a day logged before Carry existed.
+     *
+     * Read out of the raw JSON rather than off [Session], for the same
+     * reason `added` is: a value the model cannot decode — `null`, a 1, the
+     * string "true" — throws during deserialization, and the loader turns
+     * that into "Can't read that session", which takes the Before tab's
+     * sheet with it. The field is written by whatever back-filled the day,
+     * not by the runner and not by Carry, so it is the likeliest in the
+     * file to arrive in an unexpected shape. Anything that is not a JSON
+     * `true` simply means "not backfilled", which is the safe reading: it
+     * costs a line of wording, not a session.
+     */
+    private fun backfilledIn(text: String): Boolean = runCatching {
+        val flag = (Session.json.parseToJsonElement(text) as? JsonObject)?.get("backfilled")
+        (flag as? JsonPrimitive)?.takeIf { !it.isString }?.content == "true"
+    }.getOrDefault(false)
 
     /** Below this there is not enough training to say anything about its
      *  shape, and the band would be reading tea leaves. */
