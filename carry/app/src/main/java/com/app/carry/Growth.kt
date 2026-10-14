@@ -30,14 +30,78 @@ object Growth {
     /** The heaviest thing in a family, and the weights leading to it. */
     data class Peak(val family: String, val best: Lift, val trail: List<Double>)
 
+    /**
+     * One row of a past session, as the owner left it.
+     *
+     * A record, not a form: there are no edit hooks on it, and the only
+     * session Carry can write is today's, on the Log screen. Two ways to
+     * write the same file is how a wrong number gets in.
+     *
+     * Blank fields stay null. Nothing here fills one in or reads a blank
+     * as a zero or a skip — the distinction is the whole point of the
+     * screen that shows it.
+     */
+    data class Row(
+        val name: String,
+        val family: String?,
+        /** "10 total x", "45 sec of" — what the board asked for, in its
+         *  own words. Kept out of [name] so it stays out of the row's
+         *  TalkBack label, which names the movement. */
+        val prescription: String?,
+        val weight: Double?,
+        val reps: Int?,
+        val easy: Boolean = false,
+        val hard: Boolean = false,
+        val easier: Boolean = false,
+        val hurt: Boolean = false,
+        val skipped: Boolean = false,
+        val note: String? = null,
+        /** The owner typed this row themselves; the sheet never listed it.
+         *  On a borrowed day these ARE the session. */
+        val added: Boolean = false,
+    ) {
+        /** Answered, as [ExerciseSet.answered] means it. A row with
+         *  neither a number nor a skip is blank, and shown blank. */
+        val answered: Boolean get() = weight != null || reps != null || skipped
+
+        /** The feel markers that are set, in the order the Log screen
+         *  offers them, so the two screens read the same way round. */
+        val marks: List<String> get() = buildList {
+            if (easy) add("easy")
+            if (hard) add("hard")
+            if (easier) add("mod")
+            if (hurt) add("hurt")
+            if (skipped) add("skip")
+        }
+    }
+
     /** One day, as it would be read back months later. */
     data class Day(
+        /** The session's own name for itself, and the only stable handle on
+         *  it: the list's order changes as files arrive, and two classes on
+         *  one day share a date. What the detail view is opened by. */
+        val sheetId: String,
         val date: String,
         val classTag: String?,
         val lifts: Int,
         /** The heaviest thing done that day, which is what a person
          *  remembers a session by. Null on a day of only bodyweight. */
         val best: Lift?,
+        /** A record of a day logged before this app existed, rather than a
+         *  sheet it filled in. Shown as one, and never offered as a form. */
+        val backfilled: Boolean = false,
+        /**
+         * Every row of that day's sheet in sheet order, then the rows the
+         * owner added — blank ones included, because "what did I lift on
+         * the 27th" is partly answered by which lines have nothing on them.
+         *
+         * Carried here rather than re-read by document id when the detail
+         * view opens. The parse has already happened, on the IO thread
+         * that read the folder; a second read would add a loading state, a
+         * missing-file state and an SAF round trip to a screen whose data
+         * is already in hand. A session is a few KB.
+         */
+        val rows: List<Row> = emptyList(),
     )
 
     /** A row the runner says is close to earning more weight. */
@@ -96,7 +160,8 @@ object Growth {
      *   must not cost the owner the whole picture.
      */
     fun of(files: List<String>): Since {
-        val sessions = files.mapNotNull { SessionFiles.parse(it) }
+        val parsed = files.mapNotNull { text -> SessionFiles.parse(text)?.let { it to text } }
+        val sessions = parsed.map { it.first }
         // A set counts only if a weight was actually recorded. A blank row
         // is not a zero, and `weight: 0` in the oldest records meant both
         // "bodyweight" and "skipped" — neither is a lift.
@@ -109,8 +174,16 @@ object Growth {
         // test — and it counted as a session AND contributed eleven
         // movements to the very figure that explains why the coach is
         // quiet. A stat that counts what was never done is worse than none.
-        val logged = sessions.filter { s -> s.sets.any { it.weight != null || it.reps != null || it.skipped } }
-        val dates = logged.map { it.date }.filter { it.isNotBlank() }.sorted()
+        //
+        // Paired with the text it was parsed from, because the rows the
+        // owner ADDED are not part of [Session] — a row with no `name` key
+        // threw during deserialization once and cost the whole day, so
+        // they are read out of the raw JSON by [SessionPatch]. On a
+        // borrowed day those rows are the entire session.
+        val logged = parsed.filter { (s, _) ->
+            s.sets.any { it.weight != null || it.reps != null || it.skipped }
+        }
+        val dates = logged.map { it.first.date }.filter { it.isNotBlank() }.sorted()
 
         val peaks = lifts.filter { it.family != null }
             .groupBy { it.family!! }
@@ -139,18 +212,21 @@ object Growth {
         // Over what was actually LIFTED, not over every row on every sheet.
         // Grouped by the runner's own key, or not at all: all of them carry
         // one or the count is withheld.
-        val lifted = logged.flatMap { s -> s.sets.filter { !it.skipped && (it.weight ?: 0.0) > 0.0 } }
+        val lifted = logged.flatMap { (s, _) -> s.sets.filter { !it.skipped && (it.weight ?: 0.0) > 0.0 } }
         val counts = lifted.mapNotNull { it.key }
             .takeIf { it.size == lifted.size }
             ?.groupingBy { it }?.eachCount()
 
-        val days = logged.map { session ->
+        val days = logged.map { (session, text) ->
             val mine = lifts.filter { it.date == session.date }
             Day(
+                sheetId = session.sheetId,
                 date = session.date,
                 classTag = session.classTag,
                 lifts = mine.size,
                 best = mine.maxByOrNull { it.weight },
+                backfilled = session.backfilled,
+                rows = rowsOf(session, text),
             )
         }.sortedByDescending { it.date }
 
@@ -167,6 +243,44 @@ object Growth {
         )
     }
 
+
+    /**
+     * One day's sheet, row by row, for the screen that reads it back.
+     *
+     * Sheet order, then the rows the owner added — the order the Log
+     * screen offered them in on a normal day, so a session reads the same
+     * way months later as it did when it was filled in.
+     */
+    private fun rowsOf(session: Session, text: String): List<Row> =
+        session.sets.map { set ->
+            Row(
+                name = set.displayName,
+                family = set.family,
+                prescription = set.prescription,
+                weight = set.weight,
+                reps = set.reps,
+                easy = set.easy, hard = set.hard, easier = set.easier,
+                hurt = set.hurt, skipped = set.skipped, note = set.note,
+            )
+        } + SessionPatch.addedIn(text).map { row ->
+            Row(
+                // Through `readable()`, like a sheet row's name: this one
+                // was typed by hand on another machine, and a bidi
+                // override in it would make the line render in an order
+                // other than the one stored.
+                name = row.name.readable(),
+                // No family and no prescription, and neither is guessed.
+                // An added row is one the sheet never listed, so nothing
+                // parsed it and Carry does not invent an identity.
+                family = null,
+                prescription = null,
+                weight = row.weight,
+                reps = row.reps,
+                easy = row.easy, hard = row.hard, easier = row.easier,
+                hurt = row.hurt, note = row.note,
+                added = true,
+            )
+        }
 
     /** Below this there is not enough training to say anything about its
      *  shape, and the band would be reading tea leaves. */

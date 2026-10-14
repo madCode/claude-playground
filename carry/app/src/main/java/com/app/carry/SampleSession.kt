@@ -44,4 +44,63 @@ object SampleSession {
                 asked = null, reps = null, seconds = 45),
         ),
     )
+
+    /**
+     * A session as it reads back months later: some rows answered, one
+     * skipped, two left blank, one note, and one row the owner added by
+     * hand because the sheet never listed it.
+     *
+     * Kept as file TEXT rather than as a [Growth.Day], so anything reading
+     * it goes through the same parse the folder does -- including `added`,
+     * which is deliberately not part of [Session] and is read out of the
+     * raw JSON. A fixture that skipped that would have proved the screen
+     * works on rows the real path never produces.
+     *
+     * Invented exercises and invented weights; this repository is public.
+     */
+    val pastFile: String = """
+        {
+          "schema": "gym-session/1",
+          "sheet_id": "2026-09-27:3G",
+          "date": "2026-09-27",
+          "class": "3G",
+          "sets": [
+            {"ref": 0, "line": "10 x bench press", "canonical": "bench press",
+             "key": "bench-2db", "family": "push", "prescribed_text": "10",
+             "prescribed_reps": 10, "variant": null,
+             "weight": 45, "reps": 10, "easy": true},
+            {"ref": 1, "line": "10 x single-arm row", "canonical": "single-arm row · split stance",
+             "key": "row-1db", "family": "pull", "prescribed_text": "10",
+             "prescribed_reps": 10, "variant": null,
+             "weight": 40, "reps": 10},
+            {"ref": 2, "line": "10 x torso rotation", "canonical": "torso rotation · seated",
+             "key": "rotation-1db", "family": "core", "prescribed_text": "10",
+             "prescribed_reps": 10, "variant": null},
+            {"ref": 3, "line": "8 x goblet squat", "canonical": "goblet squat · harder",
+             "key": "goblet-1db", "family": "legs", "prescribed_text": "8",
+             "prescribed_reps": 8, "variant": null,
+             "weight": 25, "reps": 8, "hard": true, "note": "last two were ugly"},
+            {"ref": 4, "line": "10 total x deadlift", "canonical": "deadlift",
+             "key": "deadlift-2db", "family": "legs", "prescribed_text": "10 total",
+             "prescribed_reps": 5, "variant": null,
+             "weight": 50, "reps": 5},
+            {"ref": 5, "line": "8 each x lateral raise", "canonical": "lateral raise",
+             "key": "lateral-2db", "family": "push", "prescribed_text": "8 each",
+             "prescribed_reps": 8, "variant": null,
+             "skipped": true},
+            {"ref": 6, "line": "45 sec of low plank", "canonical": "low plank",
+             "key": "plank-bw", "family": "core", "prescribed_duration_sec": 45,
+             "variant": null, "easier": true},
+            {"ref": 7, "line": "10 x tricep extension", "canonical": "tricep extension · bench",
+             "key": "tricep-1db", "family": "push", "prescribed_text": "10",
+             "prescribed_reps": 10, "variant": null}
+          ],
+          "added": [
+            {"id": "c0ffee01", "name": "farmer carry", "weight": 35, "reps": 20, "hurt": true}
+          ]
+        }
+    """.trimIndent()
+
+    /** [pastFile] as the Since screen hands it to the detail view. */
+    val past: Growth.Day get() = Growth.of(listOf(pastFile)).days.first()
 }

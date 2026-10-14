@@ -244,4 +244,78 @@ class GrowthTest {
         assertEquals("2026-10-11", since.to)
         assertEquals(3, since.sessions)
     }
+
+    @Test
+    fun `a day carries its own rows, blanks included, in sheet order`() {
+        // The aggregates cannot answer "what did I lift on the 27th": a
+        // row with nothing on it is absent from every count on that
+        // screen, and which lines were left empty is half the answer.
+        val since = Growth.of(
+            listOf(file("2026-09-27", sets = listOf(
+                set(0, "sumo squat", "legs", weight = "50", reps = "10"),
+                set(1, "lateral raise", "push"),
+                set(2, "low plank", "core", skipped = true),
+            ).joinToString(",")))
+        )
+        val day = since.days.single()
+        assertEquals(listOf("sumo squat", "lateral raise", "low plank"), day.rows.map { it.name })
+        assertEquals(listOf(50.0, null, null), day.rows.map { it.weight })
+        assertEquals(listOf(true, false, true), day.rows.map { it.answered })
+        // One lift, three rows: the row count is not the lift count, and
+        // the screen says both.
+        assertEquals(1, day.lifts)
+    }
+
+    @Test
+    fun `a day is opened by the session's own id, not by where it sits`() {
+        // The list reorders as files arrive, and two classes in one day
+        // share a date. The sheet id is the only stable handle.
+        val since = Growth.of(
+            listOf(
+                file("2026-09-27", cls = "2G", sets = set(0, "a", "legs", weight = "10")),
+                file("2026-09-27", cls = "3G", sets = set(0, "b", "legs", weight = "10")),
+            )
+        )
+        assertEquals(setOf("2026-09-27:2G", "2026-09-27:3G"), since.days.map { it.sheetId }.toSet())
+    }
+
+    @Test
+    fun `the rows the owner added are part of the day`() {
+        // They are not in the Session model at all -- `added` is read out
+        // of the raw JSON, because decoding it as part of the session made
+        // one odd row cost the whole day. On a borrowed day they are the
+        // entire session, so a day built from the model alone would read
+        // back as empty.
+        val text = file("2026-09-27", sets = set(0, "sumo squat", "legs", weight = "50"))
+            .replace(""""added":[]""", """"added":[{"id":"a1","name":"farmer carry","weight":35,"reps":20}]""")
+        val day = Growth.of(listOf(text)).days.single()
+        assertEquals(listOf("sumo squat", "farmer carry"), day.rows.map { it.name })
+        assertEquals(listOf(false, true), day.rows.map { it.added })
+        // Added rows carry no weight toward the lift count, which comes
+        // from the sheet's own sets -- changing that would move the
+        // numbers on every band of the Since screen.
+        assertEquals(1, day.lifts)
+    }
+
+    @Test
+    fun `an added name that would render backwards is stripped, like a sheet row's`() {
+        // Typed by hand on another machine. A bidi override makes the line
+        // render in an order other than the one stored, which in this app
+        // is the same kind of failure as a wrong number.
+        val text = file("2026-09-27", sets = set(0, "sumo squat", "legs", weight = "50"))
+            .replace(""""added":[]""", """"added":[{"id":"a1","name":"\u202ecarry","weight":35}]""")
+        val day = Growth.of(listOf(text)).days.single()
+        assertEquals("carry", day.rows.last().name)
+    }
+
+    @Test
+    fun `a backfilled day says so, so it is never offered as a form`() {
+        val since = Growth.of(
+            listOf(
+                file("2026-09-27", backfilled = true, sets = set(0, "a", "legs", weight = "10")),
+                file("2026-10-11", sets = set(0, "b", "legs", weight = "10")),
+            )
+        )
+        assertEquals(listOf(false, true), since.days.map { it.backfilled })
+    }
 }

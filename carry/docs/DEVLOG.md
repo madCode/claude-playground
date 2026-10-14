@@ -1063,3 +1063,45 @@ coach could read back what the app publishes, it turned out
 `6-10 x deadlift` normalised to `610 x deadlift` and was read as six
 hundred and ten prescribed reps — twelve rows in the cached sheets, fixed
 on the runner side.
+
+## 2026-10-14 — cycle 25: opening a past session
+
+Tapping a row in *Every session* opens that day: every row the sheet listed,
+in sheet order, with the weight and reps that were entered — and the rows
+nobody filled in shown blank rather than as anything else. Then the rows
+added by hand, which on a borrowed day are the whole session.
+
+Three decisions worth keeping:
+
+- **The rows ride along on `Growth.Day`** rather than the screen re-reading
+  the file by document id. The parse has already happened, off the main
+  thread, on the read that built the Since screen; a second read would add a
+  loading state, a missing-file state and an SAF round trip to a screen
+  whose data is already in hand. A file that goes away between reads is
+  handled by the selection, not by the detail view.
+- **The selection is the session's own `sheet_id`**, held in a
+  `rememberSaveable` inside the Since screen — no nav library for one
+  screen. An index would have reopened a different day the moment a sync
+  dropped a file in, and two classes on one day share a date. When the
+  selected session is no longer in the folder the selection is dropped, so
+  the detail view cannot spring open again later over whatever is being
+  read.
+- **It is a record, not a form.** No text box and nothing to toggle, and the
+  screen says so in a line rather than leaving the owner to infer it from
+  what is missing. A test asserts there is no node on the screen that takes
+  text or toggles, and that the only thing to tap is the way out.
+
+**What the testing turned up.** `BackHandler` no longer registers with
+`OnBackPressedDispatcher`: activity-compose 1.13 prefers the navigation-event
+dispatcher and only falls back to the old one. So
+`activity.onBackPressedDispatcher.onBackPressed()` reports success against a
+screen that never handled the press — the test drives a
+`DirectNavigationEventInput` instead, and the handler is reached.
+
+**Left alone, deliberately.** A session whose sheet rows are all blank and
+whose real content is in `added` is still not listed as a session at all:
+`Growth.of` decides what counts as a session from `sets` alone. That is the
+commonest shape of a borrowed day, so it matters — but changing it moves the
+session count, the date span and the quiet-band figures on the Since screen,
+which is a decision of its own rather than a detail of this one. In the
+backlog.

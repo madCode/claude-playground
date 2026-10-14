@@ -204,6 +204,29 @@ the movements do not), every session newest first, and a plain statement of
 why there is not more. That last one is load-bearing: without it, every
 empty row on the other screens looks like a broken app.
 
+**One session opens.** Tapping a row in *every session* shows that day row
+by row: what the sheet asked for, what was entered against it, and the feel
+markers — with the rows nobody filled in **shown blank**, because which
+lines were left empty is half the answer to "what did I do that day". The
+rows the owner added by hand come after the sheet's own, which on a borrowed
+day is the whole session.
+
+It is a **record, not a form**, and says so. There is nothing on it to type
+into: the one editable session is today's, on the Log screen, and two ways
+to write one file is how a wrong number gets in. A back-filled day — a
+record of training from before this app — says that instead.
+
+The rows travel on the day rather than being re-read when the screen opens.
+The file was already parsed, off the main thread, by the read that built
+this screen; re-reading would add a loading state and a missing-file state
+to a screen whose data is in hand. There is no nav library for this — the
+app is three tabs — so the open session is one saved id inside the Since
+screen, plus a `BackHandler`. The id is the session's own `sheet_id`, never
+its place in the list: files arrive and the list reorders, and two classes
+in one day share a date. A session that has left the folder closes rather
+than being held, or it would spring open again over whatever is being read
+when the file comes back.
+
 **It derives, it never coaches.** Totals, maxima and counts are facts about
 rows already in the files. A streak is not — it comes from a rule about
 what earns a bump, that rule lives in the runner, and a second

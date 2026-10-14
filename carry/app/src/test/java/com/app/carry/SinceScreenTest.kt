@@ -38,9 +38,9 @@ class SinceScreenTest {
         ),
         nearBump = listOf(Growth.Bump("single-arm row", "pull", 40.0, 2, 3)),
         days = listOf(
-            Growth.Day("2026-10-11", "3G", 4, lift("2026-10-11", "deadlift", "combo", 30.0)),
-            Growth.Day("2026-09-27", "3G", 6, lift("2026-09-27", "sumo squat", "legs", 50.0)),
-            Growth.Day("2026-09-13", "2G", 0, null),
+            Growth.Day("2026-10-11:3G", "2026-10-11", "3G", 4, lift("2026-10-11", "deadlift", "combo", 30.0)),
+            Growth.Day("2026-09-27:3G", "2026-09-27", "3G", 6, lift("2026-09-27", "sumo squat", "legs", 50.0)),
+            Growth.Day("2026-09-13:2G", "2026-09-13", "2G", 0, null),
         ),
         movements = 19, repeated = 1,
     )
