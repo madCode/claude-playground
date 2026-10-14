@@ -60,7 +60,7 @@ means the After tab, which is a form built for afterwards. Unsketched.
 - [x] **The flaky ViewModel test** — `CarryViewModelTest` left `viewModelScope`
   jobs running past the test that launched them, so one could dispatch to
   `Dispatchers.Main` while the next test set it. Every ViewModel a test builds is
-  now registered and cancelled in teardown *(design:
+  now registered, cancelled and waited for in teardown (#72) *(design:
   [flaky-viewmodel-test](designs/flaky-viewmodel-test.md))*
 - [x] The four review items that sat in Next: index-keyed text boxes, a row written
   twice, a carried key resurrected from a stale draft, and the forty-first added
