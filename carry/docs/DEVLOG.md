@@ -6,11 +6,12 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** the prescription on every row (`10 total x`, `45 sec of`), which
-  the Log screen never showed; the intel post, with typed weights flagged
-  before sending (#60); bigger type and a copyable build number (#68).
-- **Watching:** `CarryViewModelTest` fails at random in a full suite — a
-  `viewModelScope` job outliving its test. A fix is in flight.
+- **Lately:** opening a past session from the Since list (#71); the flaky
+  `CarryViewModelTest` fixed and proved with a denser probe (#72); the
+  prescription on every row and the intel post (#60).
+- **Watching:** a session logged entirely by hand is still not listed on the
+  Since tab at all — it moves the screen's aggregates, so it is its own
+  decision rather than a bug fix.
 - **Waiting on you:** three checks only a real phone can answer (the folder
   grant surviving a reinstall, bottom insets, the Syncthing round trip), and
   the GitHub Support request in the backlog.
@@ -18,6 +19,151 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-14 — cycle 25: the flaky ViewModel test
+
+**From the backlog**, not from you: `CarryViewModelTest` had been failing at
+random in full-suite runs with "Dispatchers.Main is used concurrently with
+setting it" since cycle 24 noted it. Test-only change; no production code
+moved.
+
+**The cause.** Nothing clears a ViewModel in a unit test — there is no
+ViewModelStore, so `onCleared` never runs — so a `viewModelScope` job carries
+on past the test that launched it. Two tests park one on `awaitCancellation`
+for ever, and every `refresh` ends by resuming from
+`withContext(Dispatchers.IO)` to write state back on Main. That resumption
+reads `Dispatchers.Main` from an IO thread, and a read landing while
+`resetMain` or the next test's `setMain` writes is the message. The cost was
+never a real defect: it reddened pull requests that had nothing to do with it.
+
+**Reproducing it first, which is the only reason any of this is a claim rather
+than a hope.** Twenty full-suite runs on `main` failed **zero** times. Idle
+machines do not delay an IO thread past the end of a test. `forkEvery(1)`
+already gives the class its own JVM, so running only `CarryViewModelTest` is
+the same trial at a third of the cost — and thirty of those under CPU load
+reproduced it once, at `resetMain()`, in one of the two tests that build two
+ViewModels.
+
+**A registry, because a single field would have hidden the bug.** Two tests
+build two ViewModels each; a field holds whichever was assigned last and
+leaves the other's scope running into the next test, which is the race. Every
+ViewModel a test builds now goes through a helper that registers it, and
+teardown reaches all of them.
+
+**And the cancel the design doc asked for was not enough.** Built exactly as
+written, the same probe failed again — once in thirty, same line. Cancelled is
+not finished: the blocking read inside `withContext(Dispatchers.IO)` is not
+cooperative, so cancelling stops the write-back's effect but not the dispatch
+that carries it, and the dispatch still lands whenever the IO thread is next
+scheduled. Teardown now cancels **and waits**, driving the test dispatcher
+until every registered job reports `isCompleted`, which puts that last
+dispatch before `resetMain` by construction rather than by luck. If a job
+cannot be drained in ten seconds the teardown fails by name, so the next
+version of this bug accuses itself instead of a random later test.
+
+**Measured, after:** 0 of 90 focused runs under the same load, and 0 of 20
+full-suite runs. At the ~3% per-run rate the probe measured, 0 of 90 is
+evidence rather than proof; what carries the rest is structural — every job
+that can touch Main is in a `viewModelScope`, and none can still be running
+when `resetMain` is called.
+
+## 2026-10-14 — cycle 25: opening a past session
+
+Tapping a row in *Every session* opens that day: every row the sheet listed,
+in sheet order, with the weight and reps that were entered — and the rows
+nobody filled in shown blank rather than as anything else. Then the rows
+added by hand, which on a borrowed day are the whole session.
+
+Three decisions worth keeping:
+
+- **The rows ride along on `Growth.Day`** rather than the screen re-reading
+  the file by document id. The parse has already happened, off the main
+  thread, on the read that built the Since screen; a second read would add a
+  loading state, a missing-file state and an SAF round trip to a screen
+  whose data is already in hand. A file that goes away between reads is
+  handled by the selection, not by the detail view.
+- **The selection is the session's own `sheet_id`**, held in a
+  `rememberSaveable` inside the Since screen — no nav library for one
+  screen. An index would have reopened a different day the moment a sync
+  dropped a file in, and two classes on one day share a date. When the
+  selected session is no longer in the folder the selection is dropped, so
+  the detail view cannot spring open again later over whatever is being
+  read.
+- **It is a record, not a form.** No text box and nothing to toggle, and the
+  screen says so in a line rather than leaving the owner to infer it from
+  what is missing. A test asserts there is no node on the screen that takes
+  text or toggles, and that the only thing to tap is the way out.
+
+**What the testing turned up.** `BackHandler` no longer registers with
+`OnBackPressedDispatcher`: activity-compose 1.13 prefers the navigation-event
+dispatcher and only falls back to the old one. So
+`activity.onBackPressedDispatcher.onBackPressed()` reports success against a
+screen that never handled the press — the test drives a
+`DirectNavigationEventInput` instead, and the handler is reached.
+
+**Left alone, deliberately.** A session whose sheet rows are all blank and
+whose real content is in `added` is still not listed as a session at all:
+`Growth.of` decides what counts as a session from `sets` alone. That is the
+commonest shape of a borrowed day, so it matters — but changing it moves the
+session count, the date span and the quiet-band figures on the Since screen,
+which is a decision of its own rather than a detail of this one. In the
+backlog.
+
+**What the review found.** Four real bugs, three of them in code this cycle
+touched and one older:
+
+- **One new field nearly cost whole sessions.** Reading `backfilled` off the
+  `Session` model made any value that is not a JSON boolean — a `null`, a
+  `1`, a `"true"` — throw during deserialization, which the loader turns
+  into "Can't read that session" and which takes the Before tab's sheet with
+  it. The exact failure `added` is kept out of the model to avoid, walked
+  into one file over. It is read out of the raw JSON now, where anything
+  unexpected costs a line of wording rather than a day.
+- **A row answered only with a marker was called blank.** `mod` is the only
+  progression axis a bodyweight movement has, and for the third of this
+  owner's sets that carry no weight it IS the record. The screen was telling
+  them they had left empty the one row they did answer.
+- **Two classes in one day were added together.** `Growth.of` counted a
+  day's lifts by date rather than by session, so opening the 3G session
+  showed a header claiming the 2G class's heaviest lift, with no such weight
+  in the rows underneath it. Older than this cycle; it only became visible
+  once the count sat above that session's own rows.
+- **The Since tab was a save behind.** Only `refresh`, which runs on resume,
+  recomputed the history — so the owner could save the day's log, open it
+  from the list and read back the blank rows they had just filled in, under
+  the words "what you saved that day".
+
+And two smaller ones: closing a session dropped the list's scroll position,
+landing the owner back at the top of a year of history (the list's state is
+hoisted out of the branch now); and the test that claimed to prove otherwise
+could not have, because its fixture fit on one screen and the scroll was a
+no-op — the third time that trap has caught this project. The fixture is two
+dozen sessions now, with a test whose only job is to fail if the row it
+reaches for is ever on screen without scrolling.
+
+**Left as it is.** Two files claiming the same `sheet_id` leave the
+selection picking the first; nothing dedupes them, and an index would be
+worse for the reasons this screen keeps an id at all.
+
+**And the second look caught the fix.** The short review of just the fix
+diff — the one the rules ask for after acting on findings — found that the
+Since re-read had been dropped inside the `when` whose value becomes
+`_saving`. So the save button went on saying "Saving…" for the whole of a
+read of every file in the folder, against a provider that can block
+forever, with the file already written and the retry guard refusing another
+tap: no way to tell a hung save from a lost one. Worse than the staleness it
+was fixing.
+
+It is a tracked job of its own now, started after the state flips and
+cancelled by the next one, which also stops a save's slow snapshot landing
+on top of a fresher refresh. Worth recording that the review *of the review
+fixes* was where the real bug was.
+
+The test for it also had to be rewritten twice. The first version waited on
+a coroutine deliberately left suspended, which outlives its test and is the
+shape of this project's one known intermittent failure — it passed alone and
+failed in the suite. The second asserts what the button said at the moment
+the read started, which needs nothing left hanging.
 
 ## 2026-10-12 — cycle 24: handing the block over
 
@@ -163,149 +309,6 @@ coach could read back what the app publishes, it turned out
 hundred and ten prescribed reps — twelve rows in the cached sheets, fixed
 on the runner side.
 
-## 2026-10-14 — cycle 25: the flaky ViewModel test
-
-**From the backlog**, not from you: `CarryViewModelTest` had been failing at
-random in full-suite runs with "Dispatchers.Main is used concurrently with
-setting it" since cycle 24 noted it. Test-only change; no production code
-moved.
-
-**The cause.** Nothing clears a ViewModel in a unit test — there is no
-ViewModelStore, so `onCleared` never runs — so a `viewModelScope` job carries
-on past the test that launched it. Two tests park one on `awaitCancellation`
-for ever, and every `refresh` ends by resuming from
-`withContext(Dispatchers.IO)` to write state back on Main. That resumption
-reads `Dispatchers.Main` from an IO thread, and a read landing while
-`resetMain` or the next test's `setMain` writes is the message. The cost was
-never a real defect: it reddened pull requests that had nothing to do with it.
-
-**Reproducing it first, which is the only reason any of this is a claim rather
-than a hope.** Twenty full-suite runs on `main` failed **zero** times. Idle
-machines do not delay an IO thread past the end of a test. `forkEvery(1)`
-already gives the class its own JVM, so running only `CarryViewModelTest` is
-the same trial at a third of the cost — and thirty of those under CPU load
-reproduced it once, at `resetMain()`, in one of the two tests that build two
-ViewModels.
-
-**A registry, because a single field would have hidden the bug.** Two tests
-build two ViewModels each; a field holds whichever was assigned last and
-leaves the other's scope running into the next test, which is the race. Every
-ViewModel a test builds now goes through a helper that registers it, and
-teardown reaches all of them.
-
-**And the cancel the design doc asked for was not enough.** Built exactly as
-written, the same probe failed again — once in thirty, same line. Cancelled is
-not finished: the blocking read inside `withContext(Dispatchers.IO)` is not
-cooperative, so cancelling stops the write-back's effect but not the dispatch
-that carries it, and the dispatch still lands whenever the IO thread is next
-scheduled. Teardown now cancels **and waits**, driving the test dispatcher
-until every registered job reports `isCompleted`, which puts that last
-dispatch before `resetMain` by construction rather than by luck. If a job
-cannot be drained in ten seconds the teardown fails by name, so the next
-version of this bug accuses itself instead of a random later test.
-
-**Measured, after:** 0 of 90 focused runs under the same load, and 0 of 20
-full-suite runs. At the ~3% per-run rate the probe measured, 0 of 90 is
-evidence rather than proof; what carries the rest is structural — every job
-that can touch Main is in a `viewModelScope`, and none can still be running
-when `resetMain` is called.
-## 2026-10-14 — cycle 25: opening a past session
-
-Tapping a row in *Every session* opens that day: every row the sheet listed,
-in sheet order, with the weight and reps that were entered — and the rows
-nobody filled in shown blank rather than as anything else. Then the rows
-added by hand, which on a borrowed day are the whole session.
-
-Three decisions worth keeping:
-
-- **The rows ride along on `Growth.Day`** rather than the screen re-reading
-  the file by document id. The parse has already happened, off the main
-  thread, on the read that built the Since screen; a second read would add a
-  loading state, a missing-file state and an SAF round trip to a screen
-  whose data is already in hand. A file that goes away between reads is
-  handled by the selection, not by the detail view.
-- **The selection is the session's own `sheet_id`**, held in a
-  `rememberSaveable` inside the Since screen — no nav library for one
-  screen. An index would have reopened a different day the moment a sync
-  dropped a file in, and two classes on one day share a date. When the
-  selected session is no longer in the folder the selection is dropped, so
-  the detail view cannot spring open again later over whatever is being
-  read.
-- **It is a record, not a form.** No text box and nothing to toggle, and the
-  screen says so in a line rather than leaving the owner to infer it from
-  what is missing. A test asserts there is no node on the screen that takes
-  text or toggles, and that the only thing to tap is the way out.
-
-**What the testing turned up.** `BackHandler` no longer registers with
-`OnBackPressedDispatcher`: activity-compose 1.13 prefers the navigation-event
-dispatcher and only falls back to the old one. So
-`activity.onBackPressedDispatcher.onBackPressed()` reports success against a
-screen that never handled the press — the test drives a
-`DirectNavigationEventInput` instead, and the handler is reached.
-
-**Left alone, deliberately.** A session whose sheet rows are all blank and
-whose real content is in `added` is still not listed as a session at all:
-`Growth.of` decides what counts as a session from `sets` alone. That is the
-commonest shape of a borrowed day, so it matters — but changing it moves the
-session count, the date span and the quiet-band figures on the Since screen,
-which is a decision of its own rather than a detail of this one. In the
-backlog.
-
-**What the review found.** Four real bugs, three of them in code this cycle
-touched and one older:
-
-- **One new field nearly cost whole sessions.** Reading `backfilled` off the
-  `Session` model made any value that is not a JSON boolean — a `null`, a
-  `1`, a `"true"` — throw during deserialization, which the loader turns
-  into "Can't read that session" and which takes the Before tab's sheet with
-  it. The exact failure `added` is kept out of the model to avoid, walked
-  into one file over. It is read out of the raw JSON now, where anything
-  unexpected costs a line of wording rather than a day.
-- **A row answered only with a marker was called blank.** `mod` is the only
-  progression axis a bodyweight movement has, and for the third of this
-  owner's sets that carry no weight it IS the record. The screen was telling
-  them they had left empty the one row they did answer.
-- **Two classes in one day were added together.** `Growth.of` counted a
-  day's lifts by date rather than by session, so opening the 3G session
-  showed a header claiming the 2G class's heaviest lift, with no such weight
-  in the rows underneath it. Older than this cycle; it only became visible
-  once the count sat above that session's own rows.
-- **The Since tab was a save behind.** Only `refresh`, which runs on resume,
-  recomputed the history — so the owner could save the day's log, open it
-  from the list and read back the blank rows they had just filled in, under
-  the words "what you saved that day".
-
-And two smaller ones: closing a session dropped the list's scroll position,
-landing the owner back at the top of a year of history (the list's state is
-hoisted out of the branch now); and the test that claimed to prove otherwise
-could not have, because its fixture fit on one screen and the scroll was a
-no-op — the third time that trap has caught this project. The fixture is two
-dozen sessions now, with a test whose only job is to fail if the row it
-reaches for is ever on screen without scrolling.
-
-**Left as it is.** Two files claiming the same `sheet_id` leave the
-selection picking the first; nothing dedupes them, and an index would be
-worse for the reasons this screen keeps an id at all.
-
-**And the second look caught the fix.** The short review of just the fix
-diff — the one the rules ask for after acting on findings — found that the
-Since re-read had been dropped inside the `when` whose value becomes
-`_saving`. So the save button went on saying "Saving…" for the whole of a
-read of every file in the folder, against a provider that can block
-forever, with the file already written and the retry guard refusing another
-tap: no way to tell a hung save from a lost one. Worse than the staleness it
-was fixing.
-
-It is a tracked job of its own now, started after the state flips and
-cancelled by the next one, which also stops a save's slow snapshot landing
-on top of a fresher refresh. Worth recording that the review *of the review
-fixes* was where the real bug was.
-
-The test for it also had to be rewritten twice. The first version waited on
-a coroutine deliberately left suspended, which outlives its test and is the
-shape of this project's one known intermittent failure — it passed alone and
-failed in the suite. The second asserts what the button said at the moment
-the read started, which needs nothing left hanging.
 ## 2026-10-12 — cycle 23: bigger again, and say which build you are
 
 **From you**, with another screenshot: *"This text still feels small."*
@@ -546,53 +549,6 @@ Two device checks, two integration bugs invisible to a green suite. The
 pattern is the same both times: the tests covered each half and nothing
 covered the seam.
 
-## 2026-10-12 — the first run on a device, with real data
-
-**From you.** "Yes, wire it up" and "feel free to copy the existing data
-into session files" — which together made this possible for the first
-time.
-
-The runner now writes the session file (in the other repo), so the whole
-chain could be tried end to end: real history → runner → file → sync
-folder → the real folder picker → the two screens. It was put on an
-Android 36 emulator and driven through the SAF grant by hand.
-
-**It did not work, and nothing in either repo had failed.** The phone said
-*"No session in that folder yet"* with two session files sitting in the
-folder. The client matches `session-<date>-<class>.json` and ignores
-everything else — the folder is shared, and a half-synced file is normal
-there — and the runner was writing `<date>-<class>.json`. 125 tests here,
-26 test files there, all green, on two halves that could not talk to each
-other. One function owns the name now and a test pins it against the
-client's own regex.
-
-**What the real data then showed**, which no invented fixture would have:
-
-- Of eleven exercises, **none** had a suggested weight. Eight are
-  bodyweight or TRX, and of the three weighted moves only one appears in
-  the history at all — as a dumbbell overhead variant against today's TRX
-  one, so "no weight needed" is the correct answer rather than a miss.
-  A day like this is two tail lines and a lot of empty space, which is the
-  design working: there is nothing to carry, and the app's whole value
-  that day is the log.
-- **Three rows all read "shoulder press."** The sheet has three
-  shoulder-press lines differing only by variant, and the screen shows
-  `canonical`. On both tabs they are indistinguishable, so there is no way
-  to know which one you are filling in. Logged for the owner, because the
-  fix is a display string from the runner rather than Carry inventing one.
-
-**And then the whole loop closed, for the first time.** On the device: 35
-lb x 12 typed into the first row, saved, and the file on disk came back
-with that row filled and every other row untouched — identity, variant
-and the runner's own keys intact. The file was pulled off the phone and
-handed to the importer, which read it as `shoulder press: 35 lb x 12`,
-ready to log.
-
-Real history → runner → session file → folder → phone → SAF → form →
-save → importer. Every link, with the owner's own data, none of it
-invented. That is the thing the rebuild was for, and until tonight no
-part of it had been run against another part.
-
 ## 2026-10-12 — cycle 15: rows that know their own name
 
 **From you.** "Go ahead, add an id" — the schema addition that unblocked
@@ -781,6 +737,53 @@ Also merged tonight: Gradle 9.8, Kotlin 2.4.20, Kover 0.9.11 and AGP
 9.4.1, from the Dependabot config added in cycle 8. The AGP bump failed
 until the Gradle one landed — it needs 9.6+ and the wrapper was on 9.3,
 which Dependabot had raised as a separate PR.
+
+## 2026-10-12 — the first run on a device, with real data
+
+**From you.** "Yes, wire it up" and "feel free to copy the existing data
+into session files" — which together made this possible for the first
+time.
+
+The runner now writes the session file (in the other repo), so the whole
+chain could be tried end to end: real history → runner → file → sync
+folder → the real folder picker → the two screens. It was put on an
+Android 36 emulator and driven through the SAF grant by hand.
+
+**It did not work, and nothing in either repo had failed.** The phone said
+*"No session in that folder yet"* with two session files sitting in the
+folder. The client matches `session-<date>-<class>.json` and ignores
+everything else — the folder is shared, and a half-synced file is normal
+there — and the runner was writing `<date>-<class>.json`. 125 tests here,
+26 test files there, all green, on two halves that could not talk to each
+other. One function owns the name now and a test pins it against the
+client's own regex.
+
+**What the real data then showed**, which no invented fixture would have:
+
+- Of eleven exercises, **none** had a suggested weight. Eight are
+  bodyweight or TRX, and of the three weighted moves only one appears in
+  the history at all — as a dumbbell overhead variant against today's TRX
+  one, so "no weight needed" is the correct answer rather than a miss.
+  A day like this is two tail lines and a lot of empty space, which is the
+  design working: there is nothing to carry, and the app's whole value
+  that day is the log.
+- **Three rows all read "shoulder press."** The sheet has three
+  shoulder-press lines differing only by variant, and the screen shows
+  `canonical`. On both tabs they are indistinguishable, so there is no way
+  to know which one you are filling in. Logged for the owner, because the
+  fix is a display string from the runner rather than Carry inventing one.
+
+**And then the whole loop closed, for the first time.** On the device: 35
+lb x 12 typed into the first row, saved, and the file on disk came back
+with that row filled and every other row untouched — identity, variant
+and the runner's own keys intact. The file was pulled off the phone and
+handed to the importer, which read it as `shoulder press: 35 lb x 12`,
+ready to log.
+
+Real history → runner → session file → folder → phone → SAF → form →
+save → importer. Every link, with the owner's own data, none of it
+invented. That is the thing the rebuild was for, and until tonight no
+part of it had been run against another part.
 
 ## 2026-10-11 — cycle 10: the last two from the security pass
 
