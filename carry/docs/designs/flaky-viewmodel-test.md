@@ -1,6 +1,7 @@
 # CarryViewModelTest reddens CI at random
 
-Not built. Small, and worth doing before it wastes a review cycle.
+Built. What the fix actually took is at the bottom: the cancel this document
+asked for was necessary and **not sufficient**.
 
 ## The symptom
 
@@ -47,3 +48,25 @@ inside the scope, and cancellation does stop that.
 A flake cannot be proved fixed by one green run. Run the full suite in a loop
 -- twenty times is enough to make a random failure likely -- before and after.
 If it cannot be reproduced before the fix, do not claim the fix.
+
+## What it took, and the part this document had wrong
+
+Twenty full-suite runs on `main` produced **no** failure. `forkEvery(1)` gives
+the class its own JVM, so running only `CarryViewModelTest` is the same trial
+at a third of the cost; thirty of those under CPU load reproduced it once, at
+`resetMain()`, in one of the two tests that build two ViewModels. Load is the
+lever: the race needs a resumption from an IO thread to be delayed past the
+end of the test, which an idle machine rarely does.
+
+**The registry and the cancel alone did not fix it** -- thirty runs of the
+same probe failed once again, at the same line. Cancelled is not finished. The
+last thing `refresh` does is resume from `withContext(Dispatchers.IO)`, and
+that resumption *reads* `Dispatchers.Main` from the IO thread. The blocking
+read it is parked in cannot be interrupted, so cancelling stops the write-back
+but not the dispatch that carries it, and the dispatch still lands wherever it
+lands -- including after `resetMain`.
+
+So teardown cancels **and then waits**: it drives the test dispatcher until
+every registered job reports `isCompleted`, which puts that last dispatch
+before `resetMain` instead of racing it, and fails loudly after ten seconds if
+a job cannot be drained at all.

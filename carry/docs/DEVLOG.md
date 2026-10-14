@@ -1064,6 +1064,52 @@ coach could read back what the app publishes, it turned out
 hundred and ten prescribed reps — twelve rows in the cached sheets, fixed
 on the runner side.
 
+## 2026-10-14 — cycle 25: the flaky ViewModel test
+
+**From the backlog**, not from you: `CarryViewModelTest` had been failing at
+random in full-suite runs with "Dispatchers.Main is used concurrently with
+setting it" since cycle 24 noted it. Test-only change; no production code
+moved.
+
+**The cause.** Nothing clears a ViewModel in a unit test — there is no
+ViewModelStore, so `onCleared` never runs — so a `viewModelScope` job carries
+on past the test that launched it. Two tests park one on `awaitCancellation`
+for ever, and every `refresh` ends by resuming from
+`withContext(Dispatchers.IO)` to write state back on Main. That resumption
+reads `Dispatchers.Main` from an IO thread, and a read landing while
+`resetMain` or the next test's `setMain` writes is the message. The cost was
+never a real defect: it reddened pull requests that had nothing to do with it.
+
+**Reproducing it first, which is the only reason any of this is a claim rather
+than a hope.** Twenty full-suite runs on `main` failed **zero** times. Idle
+machines do not delay an IO thread past the end of a test. `forkEvery(1)`
+already gives the class its own JVM, so running only `CarryViewModelTest` is
+the same trial at a third of the cost — and thirty of those under CPU load
+reproduced it once, at `resetMain()`, in one of the two tests that build two
+ViewModels.
+
+**A registry, because a single field would have hidden the bug.** Two tests
+build two ViewModels each; a field holds whichever was assigned last and
+leaves the other's scope running into the next test, which is the race. Every
+ViewModel a test builds now goes through a helper that registers it, and
+teardown reaches all of them.
+
+**And the cancel the design doc asked for was not enough.** Built exactly as
+written, the same probe failed again — once in thirty, same line. Cancelled is
+not finished: the blocking read inside `withContext(Dispatchers.IO)` is not
+cooperative, so cancelling stops the write-back's effect but not the dispatch
+that carries it, and the dispatch still lands whenever the IO thread is next
+scheduled. Teardown now cancels **and waits**, driving the test dispatcher
+until every registered job reports `isCompleted`, which puts that last
+dispatch before `resetMain` by construction rather than by luck. If a job
+cannot be drained in ten seconds the teardown fails by name, so the next
+version of this bug accuses itself instead of a random later test.
+
+**Measured, after:** 0 of 90 focused runs under the same load, and 0 of 20
+full-suite runs. At the ~3% per-run rate the probe measured, 0 of 90 is
+evidence rather than proof; what carries the rest is structural — every job
+that can touch Main is in a `viewModelScope`, and none can still be running
+when `resetMain` is called.
 ## 2026-10-14 — cycle 25: opening a past session
 
 Tapping a row in *Every session* opens that day: every row the sheet listed,
