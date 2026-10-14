@@ -1,30 +1,89 @@
 # Backlog
 
+The running plan. Each cycle picks what matters most right now — device feedback
+first, then what the audit turns up — builds it with tests, and ticks it off.
+Feature proposals are ideas, not commitments.
+
 ## Next
 
-Each of these has a design doc in [docs/designs/](designs/) — what it is, why,
-what makes it non-trivial, and how to know it worked. Written 2026-10-14 so a
-session can start without re-deriving the analysis.
+Grouped by part of the app. The tag says where each item came from: *(you asked)*
+(the owner), *(device)* (real-phone testing), *(audit)* (the security pass or the
+weekly coach audit), *(design)* (has a design doc in
+[docs/designs/](designs/) — what it is, why, what makes it non-trivial, and how
+to know it worked; written 2026-10-14 so a session can start without re-deriving
+the analysis).
 
-- [Open a past session from the Since list](designs/open-a-past-session.md) —
-  the owner asked for it; no screen answers "what did I lift that day".
-- [Notify when a new session file lands](designs/new-session-notification.md)
-  — forces a decision: the app currently declares no permissions at all.
-- [Read the class from the phone's calendar](designs/read-class-from-calendar.md)
-  — bigger than it looks; needs a protocol change agreed on the runner side.
-- [The flaky ViewModel test](designs/flaky-viewmodel-test.md) — small, and it
-  reddens unrelated PRs.
-- [A logo](designs/logo.md) — the brief, and the constraint that decides it.
+### Screens
+- [ ] **Open a past session from the Since list** — no screen answers "what did I
+  lift that day" *(you asked, design:
+  [open-a-past-session](designs/open-a-past-session.md))*
+- [ ] The bars on *Heaviest by what it trains* encode every weight in that family
+  with no scale and no time direction; the bar count varies by how many sets the
+  family has, which reads as meaning something it doesn't. Propose cutting them
+  and keeping the number *(you asked)*
+- [ ] *Every session* answers no question a person would ask. Either each row
+  opens that session (above) or the band goes *(you asked)*
 
+### The lobby glance
+- [ ] **Notify when a new session file lands** — the glance still depends on
+  remembering to open the app. Forces a decision: the app currently declares no
+  Android permissions at all *(design:
+  [new-session-notification](designs/new-session-notification.md))*
+- [ ] **Read the class from the phone's own calendar** — frees the coach from its
+  own calendar config. Bigger than it looks: needs a protocol change agreed on the
+  runner side first *(design:
+  [read-class-from-calendar](designs/read-class-from-calendar.md))*
 
-Nothing outstanding from a review. The four items that sat here are all
-closed: index-keyed text boxes, a row written twice, a carried key
-resurrected from a stale draft, and the forty-first added row vanishing.
+### Tests and CI
+- [ ] **The flaky ViewModel test** — `CarryViewModelTest` dies at random in a full
+  suite with "Dispatchers.Main is used concurrently with setting it": a
+  `viewModelScope` job outlives its test. It reddens unrelated PRs *(design:
+  [flaky-viewmodel-test](designs/flaky-viewmodel-test.md))*
 
-What is left either needs the phone (see "Owed on a device"), needs a
-decision that is yours (below), or is a feature from "Later" — of which
-the notification on a new session file pays for itself soonest, because
-the lobby glance still depends on remembering to open the app.
+### Identity
+- [ ] **A logo** — chalk on slate, and it has to work as a one-colour launcher
+  icon at 48dp *(you asked, design: [logo](designs/logo.md))*
+
+### Owed on a device
+Things a JVM cannot answer honestly, to check on a real phone.
+- [ ] A persisted tree permission surviving `adb install -r`, which can revoke it
+  and look exactly like a first run. Partly done 2026-10-12 **on an emulator**: the
+  grant was taken through the real picker and held across a force-stop and
+  relaunch. **A phone and a reinstall are still owed** *(device)*
+- [ ] Bottom-edge insets against the navigation bar with a long session *(device)*
+- [ ] The round trip through Syncthing, end to end *(device)*
+
+## Feature proposals
+
+Ideas worth doing, not yet planned. Each gets a sketch before it moves to Next.
+
+### Quick-add from the lobby
+Nothing exists for "the sheet is wrong and I know it now". Adding a row currently
+means the After tab, which is a form built for afterwards. Unsketched.
+
+## Done
+
+- [x] The four review items that sat in Next: index-keyed text boxes, a row written
+  twice, a carried key resurrected from a stale draft, and the forty-first added
+  row vanishing
+- [x] ~~Three rows all say "shoulder press"~~ — closed 2026-10-12 **as not a
+  problem**. The owner reframed it: this screen is for which dumbbell to pick up.
+  Across the public sheet corpus a repeated movement uses the same implement 78%
+  of the time and agrees on whether a weight is needed at all 84% of the time, so
+  a distinguishing label would say nothing four times in five. The variant-label
+  scheme is dropped; what was left was cosmetic and now collapses to
+  `shoulder press ×2` *(device)*
+- [x] The prescription on every row — `10 total x`, `45 sec of` — which the Log
+  screen never showed, so a 30-second hold and a 90-second one looked identical
+  (#60)
+- [x] The intel post, with typed weights flagged in the preview before sending (#60)
+
+## Notes
+
+**A day with no history-backed weights is two tail lines and a lot of empty
+space.** Correct by the design — there is genuinely nothing to carry — but seeing
+it with real data is the first confirmation that on such a day the app's whole
+value is the log and the "add something the sheet missed" row *(device)*.
 
 ## From the security pass
 
@@ -72,55 +131,14 @@ blank, so the suite can never again upload nothing as evidence — which it
 did for seven of twelve screenshots, and which fooled me twice, once into
 believing the bundled fonts had broken rendering entirely.
 
-## Found by putting it on a device, with your real data
+## Yours, not mine
 
-- ~~**Three rows all say "shoulder press"**~~ — **closed 2026-10-12, as
-  not a problem.** The owner reframed it: what this screen is for is
-  which dumbbell to pick up. Measured across the corpus, a sheet repeats
-  a movement on 42% of days, and those repeats use the **same implement
-  78%** of the time and agree on whether a weight is needed at all **84%**
-  of the time — so a label distinguishing them would say nothing four
-  times in five. In the 15% that are mixed, the sheet already separates
-  them: on 2026-10-12 the two TRX shoulder presses read "no weight
-  needed" and land under *No weight*, while the dumbbell one lands under
-  *By feel*. The variant-label scheme is dropped. What was left was
-  cosmetic — the same name printed twice in one line — and now collapses
-  to `shoulder press ×2`.
-- **A day with no history-backed weights is two tail lines and a lot of
-  empty space.** Correct by the design — there is genuinely nothing to
-  carry — but seeing it with real data is the first confirmation that on
-  such a day the app's whole value is the log and the "add something the
-  sheet missed" row. Worth knowing before judging the Today screen.
-
-## Owed on a device
-
-Things a JVM cannot answer honestly, to check on a real phone:
-
-- A persisted tree permission actually surviving a cold start, and surviving
-  `adb install -r` (which can revoke it and look exactly like a first run).
-  (Partly done 2026-10-12 on an emulator: the grant was taken through the
-  real picker and the folder held across a force-stop and relaunch. A
-  phone and a reinstall are still owed.)
-- Bottom-edge insets against the navigation bar with a long session.
-- The round trip through Syncthing end to end.
-
-## Later
-
-- **A logo.** Owner asked 2026-10-12. Chalk on slate, and it has to work
-  as a one-colour launcher icon at 48dp as well as wherever else it ends
-  up; the app's own identity is already settled (Barlow Condensed, the
-  amber that means exactly one thing), so this is drawing inside it.
-
-
-- Notification when a new session file appears, so the lobby glance doesn't
-  depend on remembering to open the app.
-- Read the class from the phone's own calendar, which is what finally frees
-  the companion script from needing a calendar config of its own.
-- A test that can fail for the wrong reason: `CarryViewModelTest`
-  occasionally dies in a full-suite run with "Dispatchers.Main is used
-  concurrently with setting it". A `viewModelScope` job outlives its test
-  and races the next `setMain`. Intermittent, so it reddens CI at random
-  rather than reliably; the fix is cancelling the model in `@After`.
+The items in "From the security pass" above, and one decision the coach is
+waiting on: **whether a bump may count across a movement pattern.** Pattern is
+the only grouping where anything in the history reaches three, but `squat` holds
+lateral shift and `lunge` holds step-up, so a bump earned on one could name a
+weight for the other. The middle option on the table is to let a pattern count
+toward the streak while the bump still fires only on a movement already done.
 
 ## The endpoint
 
