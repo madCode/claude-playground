@@ -71,6 +71,12 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
     // closing the session landed the owner back at the top of a year of
     // history, above two other bands, every time. Here it outlives the
     // detail view.
+    //
+    // This one IS an index, unlike the selection above, and a file
+    // arriving does shift what it points at. That costs a scroll position,
+    // which is the cheapest thing on this screen to get wrong -- the
+    // selection is the one that must not drift, because it decides which
+    // session is on screen.
     val list = rememberLazyListState()
     val open = opened?.let { id -> since.days.firstOrNull { it.sheetId == id } }
     // A file can stop being there between reads -- a sync replaces rather
