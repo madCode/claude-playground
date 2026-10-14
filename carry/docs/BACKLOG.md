@@ -2,6 +2,21 @@
 
 ## Next
 
+Each of these has a design doc in [docs/designs/](designs/) — what it is, why,
+what makes it non-trivial, and how to know it worked. Written 2026-10-14 so a
+session can start without re-deriving the analysis.
+
+- [Open a past session from the Since list](designs/open-a-past-session.md) —
+  the owner asked for it; no screen answers "what did I lift that day".
+- [Notify when a new session file lands](designs/new-session-notification.md)
+  — forces a decision: the app currently declares no permissions at all.
+- [Read the class from the phone's calendar](designs/read-class-from-calendar.md)
+  — bigger than it looks; needs a protocol change agreed on the runner side.
+- [The flaky ViewModel test](designs/flaky-viewmodel-test.md) — small, and it
+  reddens unrelated PRs.
+- [A logo](designs/logo.md) — the brief, and the constraint that decides it.
+
+
 Nothing outstanding from a review. The four items that sat here are all
 closed: index-keyed text boxes, a row written twice, a carried key
 resurrected from a stale draft, and the forty-first added row vanishing.
