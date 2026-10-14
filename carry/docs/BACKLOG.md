@@ -1,5 +1,9 @@
 # Backlog
 
+Where this is: [DEVLOG.md](DEVLOG.md) opens with a status block and the debug
+build link. How it works now: [DESIGN.md](DESIGN.md). What is specified but not
+built: [designs/](designs/). This file is what is next.
+
 The running plan. Each cycle picks what matters most right now — device feedback
 first, then what the audit turns up — builds it with tests, and ticks it off.
 Feature proposals are ideas, not commitments.

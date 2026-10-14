@@ -34,7 +34,7 @@ can tell the difference.
 ## Commands
 
     ./gradlew build koverVerify          # everything CI runs
-    ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest'   # PNGs in app/build/screenshots
+    ./gradlew :app:testDebugUnitTest --tests '*ScreenTest'   # PNGs in app/build/screenshots
 
 JDK 21 and the Android SDK are required; `../jekyll-poster/tools/install-android-sdk.sh`
 installs the SDK for a cloud session.
