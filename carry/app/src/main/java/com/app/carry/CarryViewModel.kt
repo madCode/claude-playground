@@ -90,6 +90,14 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      *  through the constructor a ViewModelProvider has to call. */
     internal var read: suspend () -> CarryState = { SessionLoader(folder).load() }
 
+    /** The same seam for the folder's history, which is read on its own
+     *  schedule: on resume with the sheet, and again whenever a save has
+     *  changed what the folder holds. */
+    internal var readSince: suspend () -> Growth.Since =
+        { withContext(kotlinx.coroutines.Dispatchers.IO) { readFolder() } }
+
+    private var counting: Job? = null
+
     /**
      * Cancelling only discards the RESULT: the read underneath is a
      * blocking ContentResolver call and cannot be interrupted, so an
@@ -115,11 +123,12 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
             // than blank boxes the owner would fill in from memory. Only on
             // a NEW file: re-seeding would throw away edits in progress.
             (_state.value as? CarryState.Ready)?.let { reconcile(it) }
-            // The folder is the history, so this is every file in it. Off
-            // the main thread and after the sheet: the lobby screen must
-            // not wait on a year of sessions to show today's three numbers.
-            _since.value = withContext(kotlinx.coroutines.Dispatchers.IO) { readFolder() }
         }
+        // The folder is the history, so this is every file in it. Off the
+        // main thread and beside the sheet rather than behind it: the lobby
+        // screen must not wait on a year of sessions to show today's three
+        // numbers.
+        rereadHistory()
     }
 
     /**
@@ -324,6 +333,11 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                         handle.remove<String>(DRAFT)
                         _fileMovedUnderEdits.value = false
                         _saving.value = SaveState.Saved
+                        // Reached when the file already holds these
+                        // numbers, which means something else wrote it --
+                        // so the history is as out of date here as it is
+                        // after a write of our own.
+                        rereadHistory()
                         return@launch
                     }
                     val result = withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -357,9 +371,32 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                             damaged = true,
                         )
                     }
+                    // AFTER the state above, never inside it. The folder is
+                    // the history and it just changed, so the Since tab
+                    // must not go on showing the file as it was before --
+                    // but this reads every file in the folder, against a
+                    // provider that can block for as long as it likes. Done
+                    // inside the assignment, the button goes on saying
+                    // "Saving..." over a file that is already written, with
+                    // the retry guard refusing another tap.
+                    if (_saving.value == SaveState.Saved) rereadHistory()
                 }
             }
         }
+    }
+
+    /**
+     * Re-reads what the whole folder adds up to.
+     *
+     * One at a time, like the sheet read and for the same reason: an older
+     * snapshot landing after a newer one would put the history back where
+     * it was. Separate from the sheet read because it is far slower -- a
+     * year of files, one provider call each -- and the lobby screen must
+     * not wait on it.
+     */
+    private fun rereadHistory() {
+        counting?.cancel()
+        counting = viewModelScope.launch { _since.value = readSince() }
     }
 
     private companion object {
