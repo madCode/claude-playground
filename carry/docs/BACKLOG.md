@@ -60,6 +60,27 @@ not a thing anyone is blocked from building.
   ignores the typed name, so a hand-logged row with a name and nothing else is
   written to the file and still counted as never having happened *(audit)*
 
+### From the security pass, 2026-10-16
+
+The app has **no `INTERNET` permission** — confirmed in the merged
+manifest, not just the source — so it cannot open a socket. The share
+sheet is the only way anything leaves, which makes the preview above it
+the whole of the egress control.
+
+- [x] ~~The flagged lines in the post preview were marked by **colour
+  alone.**~~ Fixed. "Check the lines in red" is no use to a reader with a
+  colour vision deficiency, in glare, or on a greyscale display, and the
+  block had no content description at all, so TalkBack read it as one
+  undifferentiated string. The flagged lines now carry `⚠` in the text and
+  the block reads out naming them first. The mark is on the preview only:
+  `post.text` goes to the share sheet untouched, and a test asserts the
+  warning never reaches the subreddit.
+- [ ] **The Python side was not covered by this pass.** `gym-coach` holds
+  the Reddit API key, writes to Signal, and `errorlog`'s allowlist is what
+  keeps the data directory from leaking into a log a session can read. A
+  later security cycle should start there rather than re-reading the app
+  *(audit: security)*
+
 ### Wrong numbers, or a road to one
 
 The app's stated worst outcome is a wrong number in a training history.

@@ -24,6 +24,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -438,10 +439,41 @@ class LogScreenTest {
         reach("Post what 2G did")
         compose.onNodeWithText("Post what 2G did").performClick()
         compose.onNodeWithText("Check the lines in red", substring = true).assertIsDisplayed()
+        // Marked in the TEXT as well as in red. This preview is the one
+        // check between a hand-typed weight and a public subreddit, and
+        // "the lines in red" is no use to a reader who has no red -- a
+        // colour vision deficiency, glare, a greyscale display.
+        compose.onNodeWithText("⚠ ", substring = true).assertIsDisplayed()
+        // ...and the block reads out as what it is, naming the flagged
+        // line first. Unlabelled it arrived as one undifferentiated
+        // string and the safeguard was inaudible.
+        // Asserted as one phrase: the label also repeats the whole post
+        // further down, so checking for the lead and the name separately
+        // passes even when the lead has stopped naming anything.
+        compose.onNodeWithContentDescription(
+            "it carries a weight: - ybell deadlift 26", substring = true
+        ).assertIsDisplayed()
         // Scroll past the preview, so the shot shows the flagged bullet
         // and not just the warning above it.
         reach("Send it")
         shoot("21-post-flagged")
+    }
+
+    @Test
+    fun `the mark is on the preview only, never on what is sent`() {
+        // The one thing this must not do. `post.text` goes to the share
+        // sheet untouched; the warning lives in the preview that is built
+        // from it separately.
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        added.value = listOf(AddedSet(id = "a", name = "ybell deadlift 26", weight = 26.0))
+        show(SaveState.Saved)
+        reach("Post what 2G did")
+        compose.onNodeWithText("Post what 2G did").performClick()
+        reach("Send it")
+        compose.onNodeWithText("Send it").performClick()
+        assertTrue("nothing was handed over", shared != null)
+        assertFalse("the warning mark must not reach the subreddit", shared!!.contains("⚠"))
+        assertTrue(shared!!, shared!!.contains("ybell deadlift 26"))
     }
 
     private fun shoot(name: String) {

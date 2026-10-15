@@ -32,6 +32,42 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 35: the one check before the only way out
+
+**A security pass, and most of its value is what did NOT hold.** Four
+hypotheses, four dead ends, each worth having checked:
+
+- **Notes never reach the post.** Searched; `IntelPost` does not touch
+  the field at all.
+- **Bidi and control characters are already handled.** `post()` runs
+  `readable()`, then cuts at the first control character *or* Unicode line
+  or paragraph separator, collapses whitespace and caps the length — so a
+  name cannot smuggle extra bullets or reorder the preview against what
+  gets sent.
+- **The app has no `INTERNET` permission.** Confirmed in the *merged*
+  manifest rather than the source: what ships carries exactly one
+  permission, AndroidX's own signature-level
+  `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which is a protection and
+  not a capability. The app cannot open a socket.
+- **Backup and device transfer both exclude everything**, and the only
+  exported component is the launcher activity.
+
+So the share sheet is the only way anything leaves this device, and the
+preview above it is the whole of the egress control.
+
+**And that control was carried by colour alone.** The warning says "check
+the lines in red"; the flagged lines differed from the rest only by
+`BrickInk` versus `ChalkDim`, and the preview block had no content
+description, so TalkBack read it as one undifferentiated string. Unusable
+in glare, on a greyscale display, or to anyone with a colour vision
+deficiency — for the one check standing between a hand-typed weight and a
+public subreddit.
+
+**Shipped:** `⚠` on the flagged lines in the text, and a spoken label that
+names them first. The mark is on the preview only — `post.text` goes to
+the share sheet untouched, and a test asserts the warning never reaches
+the subreddit. Four falsifications.
+
 ## 2026-10-16 — cycle 34: two numbers that were never about the same thing
 
 **Confirmed against the runner before touching anything.** Its

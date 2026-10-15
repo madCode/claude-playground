@@ -333,6 +333,14 @@ ranking.
 
 ## Handing the block over
 
+The preview is the whole of the egress control -- the app has no
+`INTERNET` permission, so the share sheet is the only way anything
+leaves -- and it marks a suspect line in the TEXT as well as in red.
+Colour alone is unreadable in glare, on a greyscale display, or to
+anyone with a colour vision deficiency, and it is silent to TalkBack.
+The mark is on the preview only: what goes to the share sheet is the
+post text, handed over untouched.
+
 Intel for the owner's class is posted on a small minority of days, which is
 why most of their history is borrowed from the other class's block. Nobody
 posts theirs. So after the log is saved, Carry composes the post and shows

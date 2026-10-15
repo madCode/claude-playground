@@ -491,12 +491,23 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
         )
         if (open) {
+            // Marked in the TEXT, not only in red. This preview is the
+            // one check standing between a hand-typed weight and a public
+            // subreddit, and until 2026-10-16 which lines were flagged
+            // was carried by colour alone -- unavailable to anyone with a
+            // colour vision deficiency, in glare, or on a greyscale
+            // display, and invisible to TalkBack, which read the whole
+            // block as one undifferentiated string.
+            //
+            // Only the PREVIEW is marked. What goes to the share sheet is
+            // `post.text`, built separately and handed over untouched, so
+            // the mark can never reach the subreddit.
             Text(
                 buildAnnotatedString {
                     post.text.lines().forEachIndexed { i, line ->
                         if (i > 0) append('\n')
                         if (line in post.suspect) {
-                            withStyle(SpanStyle(color = Look.BrickInk)) { append(line) }
+                            withStyle(SpanStyle(color = Look.BrickInk)) { append("⚠ $line") }
                         } else {
                             append(line)
                         }
@@ -505,6 +516,7 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
                 color = Look.ChalkDim, fontFamily = Look.Figure, fontSize = 11.sp,
                 modifier = Modifier
                     .fillMaxWidth().padding(top = 10.dp)
+                    .semantics { contentDescription = spokenPost(post) }
                     .clip(RoundedCornerShape(4.dp)).background(Look.SlateRaised)
                     .padding(10.dp),
             )
@@ -520,6 +532,25 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
             )
         }
     }
+}
+
+/**
+ * The post, read out.
+ *
+ * The flagged lines are named first and counted, because the warning
+ * above the preview says "check the lines in red" and a listener has no
+ * red. Without this the whole block arrived as one string and the one
+ * safeguard on the one path off this device was unreadable.
+ */
+private fun spokenPost(post: IntelPost.Post): String {
+    val flagged = post.text.lines().filter { it in post.suspect }
+    val lead = when (flagged.size) {
+        0 -> "Post preview, nothing flagged."
+        1 -> "Post preview. One line looks like it carries a weight: ${flagged.first()}."
+        else -> "Post preview. ${flagged.size} lines look like they carry a weight: " +
+            flagged.joinToString("; ") + "."
+    }
+    return "$lead The whole post reads: ${post.text.lines().joinToString(", ")}"
 }
 
 sealed interface SaveState {
