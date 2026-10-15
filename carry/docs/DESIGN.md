@@ -306,6 +306,14 @@ was a claim the rows could not support, and *each one* was a claim about
 scope: the band is the newest sheet only, streaks strictly in progress,
 and five of those.
 
+A row leaves it the moment the owner's own answer contradicts it: marked
+*hard*, or logged **below** the weight the count is about. Those are the
+runner's own signals that the next bump is blocked. Logged at that weight
+stays — the count is then stale by one and understates, which is the safe
+direction — and logged heavier stays, because going up unprompted is the
+thing this app exists to notice. The streak itself is never re-derived
+here, only believed or withheld.
+
 Fewest sets away leads, which is the question the row answers — another
 clean set moves it — and not how far along, under which a movement two
 sets from a bump outranks one that is a single set away. It is capped,
