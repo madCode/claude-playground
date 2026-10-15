@@ -165,19 +165,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                 val (entries, added) = withContext(kotlinx.coroutines.Dispatchers.Default) {
                     SessionPatch.entriesIn(ready.raw) to SessionPatch.addedIn(ready.raw)
                 }
-                // Only the rows that are ON SCREEN. `entriesIn` reads the
-                // raw JSON, so it finds every ref in the file -- including
-                // a row this build could not decode and therefore does not
-                // show. Seeding those did two wrong things at once: the
-                // header counted them as filled ("1 of 1 filled" over two
-                // empty boxes, which reads as "already logged"), and the
-                // save's identity check tested them, so a rerun that
-                // changed only an INVISIBLE row refused a save the owner
-                // could do nothing about. They are left out of the file's
-                // rewrite by the same token: a row with no edit is copied
-                // through untouched.
-                val onScreen = ready.session.sets.map { it.ref }.toSet()
-                _edits.value = entries.filterKeys { it in onScreen }
+                _edits.value = ready.session.onScreen(entries)
                 // Rows from a file written before ids arrive with a
                 // positional stand-in, which is the old index identity
                 // under a new name: drop a blank row and the next row
@@ -236,7 +224,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         _fileMovedUnderEdits.value = false
         _saving.value = SaveState.Idle
         (_state.value as? CarryState.Ready)?.let { ready ->
-            _edits.value = SessionPatch.entriesIn(ready.raw)
+            _edits.value = ready.session.onScreen(SessionPatch.entriesIn(ready.raw))
             _added.value = named(SessionPatch.addedIn(ready.raw))
         }
     }
@@ -397,7 +385,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                                 // Re-seed from what was actually written, so
                                 // the next refresh cannot blank the form by
                                 // reading a state captured before the save.
-                                _edits.value = SessionPatch.entriesIn(text)
+                                _edits.value = ready.session.onScreen(SessionPatch.entriesIn(text))
                                 _added.value = named(SessionPatch.addedIn(text))
                             }
                             // True either way: the bytes reached the file
@@ -446,4 +434,29 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         const val STALL_AFTER_MS = 15_000L
         const val DRAFT = "draft"
     }
+}
+
+/**
+ * Only the rows the owner can SEE.
+ *
+ * `entriesIn` reads the raw JSON, so it finds every ref in the file --
+ * including a row this build could not decode and therefore does not
+ * show. Seeding those does two wrong things: the header counts them as
+ * filled, so an untouched form reads "1 of 1 filled" over an empty box
+ * and the owner leaves thinking they logged it; and the save's identity
+ * check tests them, so a rerun that changed only an INVISIBLE row refuses
+ * a save they can do nothing about.
+ *
+ * Nothing is lost by leaving them out. A row with no edit is copied
+ * through the patch untouched, so a value an earlier sitting wrote to a
+ * row this build cannot show stays in the file.
+ *
+ * A function rather than a line at the call site because there are THREE
+ * seeds -- the read, the discard, and the re-seed after a save -- and
+ * fixing only the read left the discard showing the bug verbatim and the
+ * post-save one showing it worse: "2 of 1 filled".
+ */
+internal fun Session.onScreen(entries: Map<Int, SessionPatch.Entry>): Map<Int, SessionPatch.Entry> {
+    val refs = sets.map { it.ref }.toSet()
+    return entries.filterKeys { it in refs }
 }

@@ -88,6 +88,45 @@ object SessionPatch {
         put("note", note?.let(::JsonPrimitive) ?: JsonNull)
     }
 
+    /**
+     * Why this document cannot be patched at all, or null when it can.
+     *
+     * Public because [SessionFiles.parse] calls it and refuses exactly
+     * what it names, so the screen can never offer a form over a file the
+     * save would reject. That used to be two lists kept in step by hand
+     * and they drifted twice: a `sets` that was not an array, and a
+     * duplicate `ref`, both read as a perfectly good sheet and then
+     * refused the save -- after a whole borrowed day had been typed in,
+     * with a message about a list the owner was being shown as empty. One
+     * list, called from both sides, cannot drift.
+     *
+     * These are the problems with the FILE. What depends on the owner's
+     * own input -- an edit naming a row that has gone, an added row with
+     * numbers and no name -- stays in [apply], because it is answerable
+     * from the screen.
+     *
+     * `null` counts as absent for both lists: they mean no rows, and
+     * nothing here or in the decode treats them differently.
+     */
+    fun unshaped(doc: JsonObject): String? {
+        val rawSets = doc["sets"].orAbsent()
+        if (rawSets != null && rawSets !is JsonArray) {
+            return "That file's exercise list isn't shaped the way Carry expects."
+        }
+        if (doc["added"].orAbsent().let { it != null && it !is JsonArray }) {
+            return "That file's added-exercise list isn't shaped the way Carry expects."
+        }
+        val setsIn = (rawSets as? JsonArray).orEmptyList()
+        if (setsIn.any { it !is JsonObject }) {
+            return "One of the exercises in that file isn't shaped the way Carry expects."
+        }
+        val refs = setsIn.mapNotNull { refOf(it as JsonObject) }
+        if (refs.size != refs.toSet().size) {
+            return "That file lists two exercises with the same id, so Carry can't tell them apart."
+        }
+        return null
+    }
+
     private fun refOf(set: JsonObject): Int? =
         (set["ref"] as? JsonPrimitive)?.takeIf { it.isString.not() }?.content?.toIntOrNull()
 
@@ -104,30 +143,10 @@ object SessionPatch {
         val doc = runCatching { Session.json.parseToJsonElement(original) as? JsonObject }.getOrNull()
             ?: return Outcome.Refused("That file isn't JSON this app can read, so nothing was changed.")
 
-        // `null` counts as absent, exactly as the DECODE now treats it --
-        // the two have to agree or the file opens and will not save. A
-        // `"sets": null` parses as a session with no rows, so the screen
-        // offers the added-row form and the Save button; refusing it here
-        // means the owner types a whole borrowed day in and is told the
-        // exercise list is the wrong shape, about a list they are being
-        // shown as empty. `[]` and an absent key always saved fine, which
-        // is what made the asymmetry a bug rather than a policy.
-        val rawSets = doc["sets"].orAbsent()
-        if (rawSets != null && rawSets !is JsonArray) {
-            return Outcome.Refused("That file's exercise list isn't shaped the way Carry expects.")
-        }
-        val rawAdded = doc["added"].orAbsent()
-        if (rawAdded != null && rawAdded !is JsonArray) {
-            return Outcome.Refused("That file's added-exercise list isn't shaped the way Carry expects.")
-        }
-        val setsIn = (rawSets as? JsonArray)?.map { it as? JsonObject ?: return Outcome.Refused(
-            "One of the exercises in that file isn't shaped the way Carry expects."
-        ) } ?: emptyList()
+        unshaped(doc)?.let { return Outcome.Refused(it) }
+        val setsIn = (doc["sets"].orAbsent() as? JsonArray).orEmptyList().map { it as JsonObject }
 
         val refs = setsIn.mapNotNull(::refOf)
-        if (refs.size != refs.toSet().size) {
-            return Outcome.Refused("That file lists two exercises with the same id, so Carry can't tell them apart.")
-        }
         val unplaceable = edits.keys - refs.toSet()
         if (unplaceable.isNotEmpty()) {
             return Outcome.Refused("Carry couldn't find ${unplaceable.size} of those exercises in the file any more. It may have been replaced while you were filling it in.")

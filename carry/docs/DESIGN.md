@@ -525,17 +525,34 @@ missing `ref`. The head is decoded with the rows taken out, so a bad row
 cannot take the date and the class tag with it.
 
 **Where the line between "a bad row" and "a bad file" is drawn: wherever
-the SAVE draws it.** The save refuses a `sets` that is not a list, and an
-element in it that is not an object, so the read refuses exactly those
-too — along with a file that is not JSON, one whose `schema` is not ours,
-and one whose `sheet_id` or `date` will not read. A reader that accepts
-what its writer rejects is worse than one that refuses: it opens a form,
-takes a whole day's typing, and then refuses to save it.
+the SAVE draws it**, and by calling the same function rather than keeping
+two lists in step. `SessionPatch.unshaped` names the problems with the
+file — a `sets` or an `added` that is not a list, an element of `sets`
+that is not an object, two rows sharing a `ref` — and both the read and
+the save refuse exactly those. (What depends on the owner's own input,
+like an edit naming a row that has gone, stays in the save: it is
+answerable from the screen.) On top of that the read refuses a file that
+is not JSON, one whose `schema` is not ours, and one whose `sheet_id` or
+`date` will not read.
+
+A reader that accepts what its writer rejects is worse than one that
+refuses: it opens a form, takes a whole day's typing, and then refuses to
+save it, with a message about a list the owner was shown as empty.
 
 Only the rows the owner can SEE are seeded into the form. The raw JSON
 holds every row, including the ones that did not decode, and treating
 those as the owner's would both count them as filled and let a change to
-an invisible row block a save.
+an invisible row block a save. There are three seeds — the read, the
+discard, and the re-seed after a save — and they share one function,
+because fixing only the first left the other two showing the bug.
+
+The Since tab is the exception to all of this: a day that read short is
+left out of its history entirely. Its figures are claims rather than a
+sheet, and "heaviest 50" over a day whose heaviest row did not decode is
+a confident wrong number. The one figure taken from the unfiltered read
+is the newest sheet behind "part way to a bump", because dropping a
+short day there would not leave a gap — it would promote yesterday's
+sheet into the answer to "where do I stand today".
 
 Dropping a row is safe because the save path never sees the decode: it
 patches the raw JSON and copies every row it did not edit through byte

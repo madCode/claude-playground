@@ -1,6 +1,7 @@
 package com.app.carry
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -177,6 +178,45 @@ class CarryStateTest {
     }
 
     @Test
+    fun `whatever the save refuses, the read refuses, and the other way round`() {
+        // Asserted from BOTH sides, because keeping two lists in step by
+        // hand is what went wrong twice: `added` of the wrong shape and a
+        // duplicate `ref` each read as a perfectly good sheet and then
+        // refused every save -- after a whole borrowed day had been typed
+        // in, with a message about a list shown as empty. They share one
+        // function now; this is what pins that they still do.
+        fun file(body: String) =
+            """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-17",$body}"""
+        val damaged = listOf(
+            """"sets":{"0":{"ref":0,"line":"x"}}""",
+            """"sets":"none"""",
+            """"sets":7""",
+            """"sets":[{"ref":0,"line":"10 x squat"},null]""",
+            """"sets":[{"ref":0,"line":"10 x squat"},"junk"]""",
+            // Both lists, and both reasons.
+            """"sets":[],"added":"oops"""",
+            """"sets":[],"added":{"0":{"name":"x"}}""",
+            """"sets":[{"ref":3,"line":"10 x squat"},{"ref":3,"line":"10 x row"}]""",
+        )
+        for (body in damaged) {
+            assertNull("the read accepted $body", SessionFiles.parse(file(body)))
+            assertTrue(
+                "the save accepted $body",
+                SessionPatch.apply(file(body), emptyMap()) is SessionPatch.Outcome.Refused,
+            )
+        }
+        // ...and the shapes that are NOT damage are taken by both.
+        for (body in listOf(""""sets":null""", """"sets":[]""", """"added":null""",
+                """"sets":[{"ref":0,"line":"10 x squat"}]""")) {
+            assertNotNull("the read refused $body", SessionFiles.parse(file(body)))
+            assertTrue(
+                "the save refused $body",
+                SessionPatch.apply(file(body), emptyMap()) is SessionPatch.Outcome.Patched,
+            )
+        }
+    }
+
+    @Test
     fun `damage that is not about one row still costs the file`() {
         // The line between "one bad row" and "a bad file" is drawn in
         // exactly one place: whatever the SAVE refuses, the read must
@@ -216,6 +256,35 @@ class CarryStateTest {
         assertEquals("a short day must not reach the history", 0, Growth.of(listOf(short)).sessions)
         assertEquals("the same file undamaged does", 1, Growth.of(listOf(whole)).sessions)
         assertEquals(2, Growth.of(listOf(whole)).sets)
+    }
+
+    @Test
+    fun `a short newest sheet does not hand the band to yesterday`() {
+        // The one figure that must NOT come from the filtered history.
+        // "Part way to a bump" is a statement about where the owner stands
+        // today; leaving a short newest sheet out does not leave a gap, it
+        // promotes yesterday's sheet into the answer -- a wrong number
+        // rather than a missing one, and the exact substitution the
+        // comment on `newest` exists to prevent.
+        fun day(date: String, done: Int, extra: String = "") =
+            """{"schema":"gym-session/1","sheet_id":"$date","date":"$date","sets":[
+              {"ref":0,"line":"10 x squat","canonical":"squat","key":"squat","family":"legs",
+               "suggested_weight":45,"streak_done":$done,"streak_needed":3,"weight":45,"reps":10}$extra
+            ]}"""
+        val older = day("2026-10-01", 1)
+        val newestShort = day("2026-10-14", 2, """,{"ref":1,"line":"10 x row","weight":"60 lb"}""")
+
+        // The premise, asserted rather than assumed: a stray quote in this
+        // fixture made the newest file unparseable instead of SHORT, and
+        // the test then failed for the right-looking wrong reason.
+        val parsedNewest = SessionFiles.parse(newestShort)
+        assertEquals("the newest file does not read at all", 1, parsedNewest?.sets?.size)
+        assertEquals("the newest file is not short", 1, SessionFiles.unreadableRows(newestShort, parsedNewest!!))
+
+        val band = Growth.of(listOf(older, newestShort)).nearBump
+        assertEquals("the band came from the wrong day", 2, band.single().done)
+        // ...and the short day is still out of the history itself.
+        assertEquals(1, Growth.of(listOf(older, newestShort)).sessions)
     }
 
     @Test

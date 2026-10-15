@@ -109,23 +109,20 @@ object SessionFiles {
      * The rows that decode, or null when the file is damaged in a way that
      * is not about one row.
      *
-     * The two refusals here are exactly the two [SessionPatch.apply]
-     * makes, and they have to stay exactly those: a `sets` that is not a
-     * list, and an element in it that is not an object, both make the save
-     * refuse the WHOLE file. Reading such a file as "a sheet with no rows"
-     * would open a screen that offers the owner a form, let them type a
-     * whole borrowed day into it, and then refuse the save with a message
-     * about a list they are being shown as empty. A reader that accepts
-     * what its writer rejects is worse than a reader that refuses.
+     * What counts as "not about one row" is not decided here: it is
+     * whatever [SessionPatch.unshaped] names, because that is what the
+     * SAVE refuses. A reader that accepts what its writer rejects is
+     * worse than one that refuses -- it opens a form, takes a whole
+     * borrowed day's typing, and then refuses to write it, with a message
+     * about a list the owner was shown as empty.
      *
-     * `null` and an absent `sets` are not damage -- both mean no rows, and
+     * `null` and an absent `sets` are not damage: both mean no rows, and
      * the save takes both.
      */
     private fun rowsIn(doc: JsonObject): List<ExerciseSet>? {
+        if (SessionPatch.unshaped(doc) != null) return null
         val listed = doc["sets"].takeIf { it !is JsonNull } ?: return emptyList()
-        val rows = listed as? JsonArray ?: return null
-        if (rows.any { it !is JsonObject }) return null
-        return rows.mapNotNull {
+        return (listed as JsonArray).mapNotNull {
             runCatching { Session.json.decodeFromJsonElement<ExerciseSet>(it) }.getOrNull()
         }
     }

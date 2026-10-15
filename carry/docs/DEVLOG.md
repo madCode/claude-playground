@@ -94,7 +94,33 @@ much further than the reader:
   bad row cost the whole file — a missing figure rather than a wrong one.
   Saying so instead is on the backlog.
 
-Eleven falsifications in all.
+**The short second look then found five more, and the first is the one
+to learn from: I had fixed one of THREE seed sites.** `_edits` is seeded
+from a file in three places — the read, the discard, and the re-seed
+after a save — and only the read had the filter. Discarding showed the
+bug verbatim; saving showed it worse, because the re-seed reads the whole
+written file, so a sheet of one visible row read *"2 of 1 filled"* the
+moment the owner saved it. They share one function now.
+
+And the agreement between reader and writer was still two lists kept in
+step by hand, so it had already drifted twice more: an `added` of the
+wrong shape, and two rows sharing a `ref`, each read as a perfectly good
+sheet and then refused every save. `SessionPatch.unshaped` is now the one
+list, called from both sides, and a test asserts the agreement **from
+both directions** rather than from the reader's alone.
+
+Two more: the band's newest sheet is taken from the unfiltered read, or
+leaving a short day out of the history silently promotes yesterday's
+sheet into the answer to "where do I stand today" — a wrong number rather
+than a missing one. And a test waited a fixed 200 ms for a seed it then
+asserted was EMPTY, which would pass just as happily before the seed had
+run; the fixture now has a visible filled row, so there is a non-empty
+answer to wait for.
+
+Eighteen falsifications in all. One of the new tests failed first time
+for the right-looking wrong reason — a stray quote in my own fixture made
+the file unparseable rather than SHORT — so it now asserts its premise
+before asserting its point.
 
 ## 2026-10-16 — cycle 36: one null key cost a whole day
 

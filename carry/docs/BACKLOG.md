@@ -178,7 +178,9 @@ These are the open paths to one, hardest first.
   so the save does not refuse — it silently misplaces. Verified by the
   #87 review (20 lb typed against one movement written into another,
   outcome `Patched`). Pre-existing: the old whole-document decode accepted
-  that file too *(audit)*
+  that file too. Note that two rows sharing a plain integer ref IS now
+  refused by both halves, so this is the one remaining hole in that
+  guard, and it is the quiet one *(audit)*
 - [ ] **A sheet with no rows blanks the "part way to a bump" band, even
   when older sheets have something to say.** `Growth.of` picks `newest` from
   every parsed session rather than from the ones with rows, so an empty

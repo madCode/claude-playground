@@ -136,7 +136,7 @@ class CarryViewModelTest {
         // changed only an INVISIBLE row refuses a save they can do
         // nothing about.
         val raw = """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-17","sets":[
-            {"ref":0,"line":"10 x squat","canonical":"squat"},
+            {"ref":0,"line":"10 x squat","canonical":"squat","weight":45,"reps":10},
             {"ref":1,"canonical":"row","key":"row","weight":60,"reps":8}
         ]}"""
         val session = SessionFiles.parse(raw)!!
@@ -146,13 +146,22 @@ class CarryViewModelTest {
         model.read = { CarryState.Ready(session, raw, "doc", unreadable = 1) }
         model.refresh()
         advanceUntilIdle()
+        // The visible row carries a number too, so the seed has a NON-EMPTY
+        // answer to wait for. Waiting a fixed time for an empty one would
+        // pass just as happily before the seed had run at all.
+        // The seed runs through Dispatchers.Default, which the test
+        // dispatcher does not drive, so wait for the condition.
         withContext(Dispatchers.Default) {
-            withTimeout(5_000) { while (model.state.value !is CarryState.Ready) delay(5) }
-            // The seed is the thing under test and it may legitimately be
-            // empty, so wait on the read it comes from rather than on it.
-            delay(200)
+            withTimeout(5_000) { while (model.edits.value.isEmpty()) delay(5) }
         }
-        assertEquals("the invisible row was seeded", emptyMap<Int, SessionPatch.Entry>(), model.edits.value)
+        assertEquals(mapOf(0 to SessionPatch.Entry(weight = 45.0, reps = 10)), model.edits.value)
+
+        // The same three seeds, and the first fix caught only the first:
+        // discarding showed the bug verbatim and the post-save re-seed
+        // showed it worse, counting a row nobody can see as filled.
+        model.discardEdits()
+        assertEquals("discard re-seeded the invisible row", 1, model.edits.value.size)
+        assertEquals(setOf(0), model.edits.value.keys)
     }
 
     @Test
@@ -373,12 +382,11 @@ class CarryViewModelTest {
         )
         assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
         assertTrue("the draft is spent once it is on disk", handle.keys().isEmpty())
-        // Not asserted: the re-seed one line further on
-        // (`_edits = entriesIn(text)`). Nothing here can tell it from its
-        // absence -- what was typed and what comes back out of the written
-        // file are the same map -- and no fixture built for this made them
-        // differ. Noted in the backlog rather than pinned by a test that
-        // would pass either way.
+        // The re-seed one line further on is pinned separately, by
+        // `a save does not re-seed the rows the screen never showed`:
+        // nothing HERE can tell it from its absence, because what was
+        // typed and what comes back out of the written file are the same
+        // map. A file with a row that does not decode makes them differ.
     }
 
     @Test
@@ -662,5 +670,31 @@ class CarryViewModelTest {
         // destroyed Activity alive while a blocked provider finishes.
         val model = viewModel()
         assertEquals(false, model.folder.chosen)
+    }
+    @Test
+    fun `a save does not re-seed the rows the screen never showed`() = runTest(dispatcher) {
+        // The worst of the three seeds, and the one with no fixture until
+        // now: after a successful save the form is re-seeded from what was
+        // WRITTEN -- which is the whole file, dropped rows included. The
+        // header then counts a row nobody can see as filled, so a sheet of
+        // one visible row reads "2 of 1 filled" the moment the owner saves
+        // it. The note in `what was written is what the form then shows`
+        // says no fixture made the two differ; this is that fixture.
+        val raw = """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-17","sets":[
+            {"ref":0,"line":"10 x squat","canonical":"squat"},
+            {"ref":1,"canonical":"row","key":"row","weight":60,"reps":8}
+        ]}"""
+        val session = SessionFiles.parse(raw)!!
+        assertEquals("the premise: row 1 does not decode", 1, session.sets.size)
+
+        val model = viewModel()
+        model.read = { CarryState.Ready(session, raw, "doc", unreadable = 1) }
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 45.0, reps = 10))
+
+        val written = saved(model)
+        advanceUntilIdle(); settled(model)
+        assertTrue("row 1 must still be in the file", written!!.contains("\"weight\": 60"))
+        assertEquals("the invisible row came back in the re-seed", setOf(0), model.edits.value.keys)
     }
 }
