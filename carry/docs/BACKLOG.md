@@ -164,6 +164,23 @@ These are the open paths to one, hardest first.
   eleven in silence is the "a row the owner cannot see is a refusal they
   cannot act on" trap this codebase has already fallen into once, so this
   wants a banner and therefore a design, not a one-line patch *(audit)*
+- [ ] **A sheet with no rows blanks the "part way to a bump" band, even
+  when older sheets have something to say.** `Growth.of` picks `newest` from
+  every parsed session rather than from the ones with rows, so an empty
+  newest sheet — a `"sets": []`, or a day the runner wrote before matching
+  anything — takes the band to nothing. Pre-existing, found by the #86
+  review. The band is "where you stand today", so an empty sheet arguably
+  SHOULD empty it; the question is whether "the newest sheet" or "the newest
+  sheet that said anything" is the right reading *(audit)*
+- [ ] **A file with no `schema` key at all is accepted as ours.** `schema`
+  defaults to `"gym-session/1"`, so another tool's JSON carrying `sheet_id`
+  and `date` reads as a session. Pre-existing and narrow — the folder
+  filter already requires the runner's filename — but making `schema`
+  required would reject any older file that omitted it, which is a
+  judgement about what counts as our file rather than a patch. Found
+  alongside: `"schema": 2` unquoted says "wait for the sync" where "update
+  the app" is the better guess, because `looksLikeNewerSchema`'s regex
+  requires the quotes *(audit)*
 - [ ] `prescribed_duration_sec` outside 1..3600 renders no prescription and no
   *done* chip, so a row written on another machine with an absurd duration silently
   loses the only record it could carry. The guard is right; the consequence is not

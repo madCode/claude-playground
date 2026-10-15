@@ -104,11 +104,20 @@ object SessionPatch {
         val doc = runCatching { Session.json.parseToJsonElement(original) as? JsonObject }.getOrNull()
             ?: return Outcome.Refused("That file isn't JSON this app can read, so nothing was changed.")
 
-        val rawSets = doc["sets"]
+        // `null` counts as absent, exactly as the DECODE now treats it --
+        // the two have to agree or the file opens and will not save. A
+        // `"sets": null` parses as a session with no rows, so the screen
+        // offers the added-row form and the Save button; refusing it here
+        // means the owner types a whole borrowed day in and is told the
+        // exercise list is the wrong shape, about a list they are being
+        // shown as empty. `[]` and an absent key always saved fine, which
+        // is what made the asymmetry a bug rather than a policy.
+        val rawSets = doc["sets"].orAbsent()
         if (rawSets != null && rawSets !is JsonArray) {
             return Outcome.Refused("That file's exercise list isn't shaped the way Carry expects.")
         }
-        if (doc["added"] != null && doc["added"] !is JsonArray) {
+        val rawAdded = doc["added"].orAbsent()
+        if (rawAdded != null && rawAdded !is JsonArray) {
             return Outcome.Refused("That file's added-exercise list isn't shaped the way Carry expects.")
         }
         val setsIn = (rawSets as? JsonArray)?.map { it as? JsonObject ?: return Outcome.Refused(
@@ -192,6 +201,11 @@ object SessionPatch {
     }
 
     private fun JsonArray?.orEmptyList(): List<JsonElement> = this?.toList() ?: emptyList()
+
+    /** `null` and a missing key mean the same thing: no list. Everything
+     *  that reads these arrays already agrees (`as? JsonArray` is null for
+     *  both); only the two guards above told them apart. */
+    private fun JsonElement?.orAbsent(): JsonElement? = this?.takeIf { it != JsonNull }
 
     /** The row's own name for itself, when it has a real one. A positional
      *  stand-in is not an identity anything may be matched on. */

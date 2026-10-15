@@ -63,6 +63,27 @@ class SessionPatchTest {
     // ---- what must survive ------------------------------------------------
 
     @Test
+    fun `a null list saves like an absent one, because it reads like one`() {
+        // The decode treats `null` and an absent key alike -- both mean "no
+        // rows" -- so the save path has to as well, or the file opens and
+        // then refuses. That gap is worse than it sounds: a session with no
+        // sheet rows is exactly the borrowed day the owner types entirely
+        // into added rows, so the refusal lands after all the typing, about
+        // a list the screen is showing them as empty.
+        val typed = listOf(AddedSet(id = "a", name = "squat", weight = 20.0))
+        for (shape in listOf(""""sets":null""", """"sets":[]""", """"added":null""")) {
+            val file = """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-17",$shape}"""
+            val out = SessionPatch.apply(file, emptyMap(), typed)
+            assertTrue("$shape was refused: $out", out is SessionPatch.Outcome.Patched)
+            val text = (out as SessionPatch.Outcome.Patched).text
+            assertTrue("$shape wrote nothing", text != null)
+            assertEquals("$shape lost the typed row", "squat",
+                doc(text!!)["added"]!!.jsonArray[0].jsonObject["name"]!!.jsonPrimitive.content)
+        }
+    }
+
+
+    @Test
     fun `a field this app has never heard of survives the write`() {
         val out = patched(original, filled)
         assertEquals("7", set(out, 0)["runner_only"].toString())

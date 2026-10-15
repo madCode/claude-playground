@@ -61,9 +61,19 @@ decoding `sets` row by row — which `splitAdded` already does for the
 deciding first, so it is in the backlog with the table rather than
 patched in passing.
 
-Two falsifications: coercion removed, and `schema` non-nullable again.
-Whole suite green, so nothing else was quietly depending on the
-strictness.
+**And the review found the fix had opened a gap of its own.** Making
+`"sets": null` READ as "no rows" was right; the save path still refused
+it, because its guard tested `!is JsonArray` and `JsonNull` is neither
+absent nor an array. `[]` and a missing key had always saved fine, so the
+asymmetry was a bug rather than a policy — and the session it bites is
+the one that matters most: a sheet with no rows is exactly the borrowed
+day the owner types entirely into added rows, so the refusal lands after
+all the typing, about a list the screen is showing them as empty. Both
+guards now treat `null` as absent, as every reader of those arrays
+already did.
+
+Five falsifications in all. Whole suite green, so nothing else was
+quietly depending on the strictness.
 
 ## 2026-10-16 — cycle 35: the one check before the only way out
 
