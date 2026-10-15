@@ -32,6 +32,72 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 35: the one check before the only way out
+
+**A security pass, and most of its value is what did NOT hold.** Four
+hypotheses, four dead ends, each worth having checked:
+
+- **Notes never reach the post.** Searched; `IntelPost` does not touch
+  the field at all.
+- **Bidi and control characters are already handled.** `post()` runs
+  `readable()`, then cuts at the first control character *or* Unicode line
+  or paragraph separator, collapses whitespace and caps the length — so a
+  name cannot smuggle extra bullets or reorder the preview against what
+  gets sent.
+- **The app has no `INTERNET` permission.** Confirmed in the *merged*
+  manifest rather than the source: what ships carries exactly one
+  permission, AndroidX's own signature-level
+  `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which is a protection and
+  not a capability. The app cannot open a socket.
+- **Backup and device transfer both exclude everything**, and the only
+  exported component is the launcher activity.
+
+So the share sheet is the only way anything leaves this device, and the
+preview above it is the whole of the egress control.
+
+**And that control was carried by colour alone.** The warning says "check
+the lines in red"; the flagged lines differed from the rest only by
+`BrickInk` versus `ChalkDim`, and the preview block had no content
+description, so TalkBack read it as one undifferentiated string. Unusable
+in glare, on a greyscale display, or to anyone with a colour vision
+deficiency — for the one check standing between a hand-typed weight and a
+public subreddit.
+
+**Shipped:** `⚠` on the flagged lines in the text; the caption naming
+that mark rather than the colour; and the count and the names of the
+flagged lines spoken on the CAPTION, which is a short node of its own.
+The mark is on the preview only — `post.text` goes to the share sheet
+untouched, and a test asserts the warning never reaches the subreddit.
+Eight falsifications across the two attempts.
+
+**The first attempt put the spoken label on the preview, and a
+fresh-eyes review found that made TalkBack worse, three ways.** Compose
+offers a text node LINE and PAGE navigation only while its content
+description is empty, so labelling the preview took away the one thing a
+listener most needs there — stepping through the post a bullet at a time
+— and replaced it with character-and-word stepping over a string with no
+newlines in it at all. The label named the flagged lines and then read
+the whole post, so every flagged line was spoken twice and a full post's
+label ran past 3 kB with no way to skim. And joining the lines with
+`", "` turned the blank line under the heading into a bare comma. On top
+of that the caption it was supporting still said "check the lines in
+red", so the sighted reader with no red was told to look for a colour and
+the listener heard neither the colour nor the glyph.
+
+The fix is a split, not a tweak: the preview keeps **no** description and
+is read as what it is, and everything about which lines are flagged is
+said on the caption — where it is a sentence, not a second copy of the
+post. Three flagged lines are named and the rest counted ("and 2 more").
+
+**A second look at that fix found the cutoff itself was a hole**, and it
+is the same mistake one layer down: dropping the names past three handed
+identification back to the `⚠` in the preview — which is the one
+channel this whole change exists because a listener may not get. Named
+plus counted keeps both the bound and the information. It also found
+that `trimStart(' ', '-')` would read a typed `-26 lb curl` as `26 lb
+curl`, renaming a movement while reading it out; the bullet comes off
+with `removePrefix("- ")` now, which is exactly what the post put on.
+
 ## 2026-10-16 — cycle 34: two numbers that were never about the same thing
 
 **Confirmed against the runner before touching anything.** Its

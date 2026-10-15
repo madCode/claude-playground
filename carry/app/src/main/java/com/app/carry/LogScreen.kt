@@ -478,31 +478,62 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
                 .clickable { open = !open }
                 .padding(vertical = 12.dp),
         )
+        // Everything about WHICH lines are flagged is said HERE, on a short
+        // node of its own, and nothing about it is said on the preview --
+        // see [spokenFlags].
+        val flagged = post.text.lines().filter { it in post.suspect }
         Text(
             // The honest version of the claim. A name is typed by hand, so
             // "never your weights" is not something this screen can promise
             // on its own — what it can do is show you the lines where you
             // may have typed one.
-            if (post.suspect.isEmpty()) "The movements only \u2014 never your weights."
-            else "Check the lines in red \u2014 they look like they carry a weight.",
-            color = if (post.suspect.isEmpty()) Look.ChalkFaint else Look.BrickInk,
+            if (flagged.isEmpty()) "The movements only \u2014 never your weights."
+            else "\u26a0 marks the lines that look like they carry a weight.",
+            color = if (flagged.isEmpty()) Look.ChalkFaint else Look.BrickInk,
             fontFamily = Look.Name, fontSize = Look.SmallSize,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                .then(
+                    spokenFlags(flagged)
+                        ?.let { said -> Modifier.semantics { contentDescription = said } }
+                        ?: Modifier
+                ),
         )
         if (open) {
+            // Marked in the TEXT, not only in red. This preview is the
+            // one check standing between a hand-typed weight and a public
+            // subreddit, and until 2026-10-16 which lines were flagged
+            // was carried by colour alone -- unavailable to anyone with a
+            // colour vision deficiency, in glare, or on a greyscale
+            // display, and invisible to TalkBack, which read the whole
+            // block as one undifferentiated string.
+            //
+            // Only the PREVIEW is marked. What goes to the share sheet is
+            // `post.text`, built separately and handed over untouched, so
+            // the mark can never reach the subreddit.
             Text(
                 buildAnnotatedString {
                     post.text.lines().forEachIndexed { i, line ->
                         if (i > 0) append('\n')
                         if (line in post.suspect) {
-                            withStyle(SpanStyle(color = Look.BrickInk)) { append(line) }
+                            withStyle(SpanStyle(color = Look.BrickInk)) { append("⚠ $line") }
                         } else {
                             append(line)
                         }
                     }
                 },
                 color = Look.ChalkDim, fontFamily = Look.Figure, fontSize = 11.sp,
+                // DELIBERATELY no `contentDescription`. One on this node
+                // cost more than it gave, three ways at once: Compose
+                // offers LINE and PAGE navigation only to a text node
+                // whose description is empty, so a listener lost the
+                // ability to step through the post a bullet at a time;
+                // the label named the flagged lines and then read the
+                // whole post, so every flagged line was spoken twice and
+                // a full post's label ran past 3 kB; and joining the
+                // lines with ", " turned the blank line under the heading
+                // into a bare comma. The text itself carries the marks,
+                // and the caption above says how many and which.
                 modifier = Modifier
                     .fillMaxWidth().padding(top = 10.dp)
                     .clip(RoundedCornerShape(4.dp)).background(Look.SlateRaised)
@@ -521,6 +552,52 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
         }
     }
 }
+
+/**
+ * The caption, read out: how many lines are marked, and which.
+ *
+ * On the CAPTION rather than on the preview, which is the whole point.
+ * The caption's own words name a glyph ("`⚠` marks the lines..."), and a
+ * glyph is exactly what a listener does not get -- no bundled font even
+ * carries U+26A0, so it renders through system fallback and is spoken by
+ * whatever name the reader's engine has for it, if any. So this node says
+ * in words what the sighted reader gets from the mark.
+ *
+ * The preview itself keeps NO description, so it is still navigable line
+ * by line and the post is never read out twice. That was the trade the
+ * first version got backwards.
+ *
+ * Returns null when nothing is flagged: the caption's visible text is
+ * already the whole of what there is to say, and a description that
+ * merely repeats it would suppress the node's own text for no gain.
+ *
+ * Past [MAX_SPOKEN_FLAGS] it names the first few and COUNTS the rest,
+ * rather than dropping the names for a bare total. A bare total would
+ * hand identification back to the `⚠` in the preview, which is the one
+ * channel this whole change exists because a listener may not get.
+ */
+private fun spokenFlags(flagged: List<String>): String? {
+    if (flagged.isEmpty()) return null
+    // `removePrefix`, not `trimStart(' ', '-')`: the bullet is exactly what
+    // the post prepends, and trimming every leading hyphen would turn a
+    // typed `-26 lb curl` into `26 lb curl` -- changing a name while
+    // reading it out, on the screen whose job is to show what was typed.
+    val named = flagged.take(MAX_SPOKEN_FLAGS).joinToString("; ") { it.removePrefix("- ") }
+    val rest = flagged.size - MAX_SPOKEN_FLAGS
+    val which = if (rest > 0) "$named; and $rest more" else named
+    return if (flagged.size == 1) {
+        "One line in the post is marked, because it looks like it carries a weight: $which."
+    } else {
+        "${flagged.size} lines in the post are marked, because they look like " +
+            "they carry a weight: $which."
+    }
+}
+
+/** How many flagged lines are named out loud before the rest are counted.
+ *  A label is spoken start to finish with no way to skim, so this is a
+ *  sentence's worth; the names are capped at 80 characters each, which
+ *  bounds the whole label at a few hundred. */
+private const val MAX_SPOKEN_FLAGS = 3
 
 sealed interface SaveState {
     data object Idle : SaveState

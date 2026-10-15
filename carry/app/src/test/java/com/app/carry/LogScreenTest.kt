@@ -18,12 +18,16 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -437,11 +441,93 @@ class LogScreenTest {
         show(SaveState.Saved)
         reach("Post what 2G did")
         compose.onNodeWithText("Post what 2G did").performClick()
-        compose.onNodeWithText("Check the lines in red", substring = true).assertIsDisplayed()
+        // The caption names the MARK, not the colour. "Check the lines in
+        // red" was no use to a reader who has no red -- a colour vision
+        // deficiency, glare, a greyscale display -- which is the whole
+        // reason the mark is in the text, and the caption went on naming
+        // the colour anyway.
+        compose.onNodeWithText("⚠ marks the lines", substring = true).assertIsDisplayed()
+        // The flagged bullet carries the mark and the clean one does not.
+        // Asserted on the same node, because the preview is one Text: an
+        // "is the glyph anywhere in here" check passes just as happily
+        // when EVERY line is marked, which is the other way to be wrong.
+        val preview = compose.onNode(hasText("⚠ - ybell deadlift 26", substring = true))
+        preview.assertIsDisplayed()
+        preview.assert(hasText("\n- pop squat", substring = true))
+        // ...and the one thing said out loud is said on the CAPTION, a
+        // short node, naming the flagged line.
+        compose.onNodeWithContentDescription(
+            "marked, because it looks like it carries a weight: ybell deadlift 26", substring = true
+        ).assertIsDisplayed()
+        // The preview itself must keep NO description. Compose offers a
+        // text node LINE and PAGE navigation only while its description
+        // is empty, so labelling this one took away the listener's
+        // ability to step through the post a bullet at a time -- and the
+        // label it gave them instead read every flagged line twice and
+        // flattened the blank line under the heading into a bare comma.
+        preview.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
         // Scroll past the preview, so the shot shows the flagged bullet
         // and not just the warning above it.
         reach("Send it")
         shoot("21-post-flagged")
+    }
+
+    @Test
+    fun `with nothing flagged the caption speaks for itself`() {
+        // The other half of the caption's description, and the one a
+        // regression could break silently: with nothing to flag there must
+        // be NO description at all, so the caption's own words are what
+        // TalkBack reads. An empty string or a repeat of those words would
+        // suppress them instead -- announcing a blank node where the
+        // promise under the button should be.
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        added.value = listOf(AddedSet(id = "a", name = "pop squat", weight = 15.0))
+        show(SaveState.Saved)
+        reach("Post what 2G did")
+        compose.onNodeWithText("Post what 2G did").performClick()
+        val caption = compose.onNode(hasText("The movements only", substring = true))
+        caption.assertIsDisplayed()
+        caption.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
+    }
+
+    @Test
+    fun `past three flagged lines the rest are counted, not dropped`() {
+        // Naming them all is unbounded and naming none hands the job back
+        // to the glyph in the preview -- which is the channel a listener
+        // may not get, and the reason any of this was written.
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        // The first name starts with a hyphen on purpose: only the post's
+        // own "- " bullet comes off, so a typed name is read as typed. A
+        // blanket trim of leading hyphens would say "26 lb curl" -- an app
+        // that renames a movement while reading it out.
+        added.value = listOf("-26 lb curl", "ybell deadlift 30", "ybell deadlift 35",
+            "ybell deadlift 40", "ybell deadlift 45").mapIndexed { i, n ->
+            AddedSet(id = "a$i", name = n, weight = 20.0)
+        }
+        show(SaveState.Saved)
+        reach("Post what 2G did")
+        compose.onNodeWithText("Post what 2G did").performClick()
+        compose.onNodeWithContentDescription(
+            "5 lines in the post are marked, because they look like they carry a weight: " +
+                "-26 lb curl; ybell deadlift 30; ybell deadlift 35; and 2 more.",
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun `the mark is on the preview only, never on what is sent`() {
+        // The one thing this must not do. `post.text` goes to the share
+        // sheet untouched; the warning lives in the preview that is built
+        // from it separately.
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        added.value = listOf(AddedSet(id = "a", name = "ybell deadlift 26", weight = 26.0))
+        show(SaveState.Saved)
+        reach("Post what 2G did")
+        compose.onNodeWithText("Post what 2G did").performClick()
+        reach("Send it")
+        compose.onNodeWithText("Send it").performClick()
+        assertTrue("nothing was handed over", shared != null)
+        assertFalse("the warning mark must not reach the subreddit", shared!!.contains("⚠"))
+        assertTrue(shared!!, shared!!.contains("ybell deadlift 26"))
     }
 
     private fun shoot(name: String) {

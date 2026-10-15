@@ -333,6 +333,25 @@ ranking.
 
 ## Handing the block over
 
+The preview is the whole of the egress control -- the app has no
+`INTERNET` permission, so the share sheet is the only way anything
+leaves -- and it marks a suspect line in the TEXT as well as in red.
+Colour alone is unreadable in glare, on a greyscale display, or to
+anyone with a colour vision deficiency, and it is silent to TalkBack.
+The caption above the preview names that mark rather than the colour.
+The mark is on the preview only: what goes to the share sheet is the
+post text, handed over untouched.
+
+What is said out loud is said on the CAPTION, and the preview itself
+carries no content description at all. That is deliberate and it is the
+opposite of the obvious move: Compose offers a text node LINE and PAGE
+navigation only while its description is empty, so a label on the
+preview costs a listener the ability to step through the post a bullet
+at a time -- and whatever that label says about the flagged lines, it
+must then read the whole post too, or the post becomes unreachable. The
+caption is short, says how many lines are marked and which, and leaves
+the post to be read as a post.
+
 Intel for the owner's class is posted on a small minority of days, which is
 why most of their history is borrowed from the other class's block. Nobody
 posts theirs. So after the log is saved, Carry composes the post and shows
