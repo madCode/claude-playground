@@ -90,6 +90,19 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      *  through the constructor a ViewModelProvider has to call. */
     internal var read: suspend () -> CarryState = { SessionLoader(folder).load() }
 
+    /**
+     * The same seam for the write.
+     *
+     * `folder` itself stays a [SessionFolder] because the Activity needs
+     * its SAF-only parts, so this is the one call the save makes into it
+     * and the one a test has to be able to stand in for. Everything below
+     * it -- the three outcomes, the "nothing newer arrived" guard, the
+     * draft clear and the re-seed from what was written -- had never
+     * executed in a test until this existed (2026-10-16), on the path
+     * whose stated worst outcome is a wrong number in a training history.
+     */
+    internal var write: (String, String) -> Saved = { id, text -> folder.save(id, text) }
+
     /** The same seam for the folder's history, which is read on its own
      *  schedule: on resume with the sheet, and again whenever a save has
      *  changed what the folder holds. */
@@ -341,25 +354,43 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                         return@launch
                     }
                     val result = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        folder.save(ready.documentId, text)
+                        write(ready.documentId, text)
                     }
                     _saving.value = when (result) {
                         Saved.YES -> {
-                            // Only if nothing newer arrived while we wrote:
-                            // overwriting a fresher read with this one used
-                            // to put an older sheet back on screen.
-                            (_state.value as? CarryState.Ready)?.let { now ->
-                                if (now.documentId == ready.documentId && now.raw == ready.raw) {
-                                    _state.value = ready.copy(raw = text)
-                                }
+                            // ALL of this is "only if nothing newer arrived
+                            // while we wrote". It used to guard the one
+                            // line, and the rest ran regardless -- so when
+                            // the sync dropped the day's other class in
+                            // mid-write (a refresh runs on every resume),
+                            // the form kept Saturday's numbers against
+                            // Tuesday's rows: `text` is the OLD session's
+                            // bytes, and seeding the form from it puts a
+                            // weight the owner never typed on a movement
+                            // they have not done. A wrong number on screen
+                            // in a one-glance app, and `Saved` is still
+                            // tappable, so one tap wrote it into the newer
+                            // file. Found by the review of the tests that
+                            // first drove this path, 2026-10-16.
+                            //
+                            // When it IS someone else's sheet now, nothing
+                            // here applies: `reconcile` has already seeded
+                            // the form from the file that arrived, and the
+                            // warning flag it may have set is its to clear.
+                            val now = _state.value as? CarryState.Ready
+                            if (now != null && now.documentId == ready.documentId && now.raw == ready.raw) {
+                                _state.value = ready.copy(raw = text)
+                                handle.remove<String>(DRAFT)
+                                _fileMovedUnderEdits.value = false
+                                // Re-seed from what was actually written, so
+                                // the next refresh cannot blank the form by
+                                // reading a state captured before the save.
+                                _edits.value = SessionPatch.entriesIn(text)
+                                _added.value = named(SessionPatch.addedIn(text))
                             }
-                            handle.remove<String>(DRAFT)
-                            _fileMovedUnderEdits.value = false
-                            // Re-seed from what was actually written, so the
-                            // next refresh cannot blank the form by reading
-                            // a state captured before the save.
-                            _edits.value = SessionPatch.entriesIn(text)
-                            _added.value = named(SessionPatch.addedIn(text))
+                            // True either way: the bytes reached the file
+                            // they were typed against. What is on screen is
+                            // a separate question, answered above.
                             SaveState.Saved
                         }
                         Saved.NO_FILE_INTACT -> SaveState.Failed(

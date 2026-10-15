@@ -38,6 +38,25 @@ the analysis).
   a day would render "0 lifts" over a list with a weight in it; and `Row.answered`
   ignores the typed name, so a hand-logged row with a name and nothing else is
   written to the file and still counted as never having happened *(audit)*
+- [ ] **Branch coverage is 67% while the Kover floor is 85% on
+  instructions.** The gate is real but it is counting the wrong thing for
+  a codebase this full of fail-closed guards — a third of branches have
+  never been taken. Not a demand for a second gate (a test written only to
+  lift a number is worse than the number), but worth one pass over the
+  classes with the widest gap: `SessionFolder` 78%, `CarryAppKt` 77%
+  *(audit: CI health)*
+- [x] ~~After a successful write, `save()` re-seeds `_edits` from the text
+  it wrote, and nothing can distinguish that line from its absence.~~
+  **Answered, and it was worse than dead.** The #78 review found the
+  re-seed was observable in exactly one case and observably wrong there:
+  the *"only if nothing newer arrived"* guard wrapped one line and the
+  re-seed ran regardless, so a sheet arriving mid-write left the old
+  session's numbers on the new session's rows, with "Saved" still tappable
+  above them. Fixed in #78; the whole tail is inside the guard
+- [ ] `MainActivity` is at **0%** and `LogBinding` at 0%. The first is the
+  SAF plumbing the emulator is honest about and unit tests are not, so it
+  is the one place a device check earns its keep; the second is a plain
+  data holder *(audit: CI health)*
 - [ ] **The intel post still demands a number**, so a wholly bodyweight or timed
   class offers no post at all. `done` is the one marker that states the movement
   WAS in the block, which is this path's publishing criterion — but what goes to

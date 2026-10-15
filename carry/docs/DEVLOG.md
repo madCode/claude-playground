@@ -6,7 +6,8 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** the *done* chip for timed holds, and the Since screen no
+- **Lately:** the save path's own tests, which it had never had (#78); the
+  *done* chip for timed holds, and the Since screen no
   longer dropping a session logged only with markers (#77); opening a past
   session from the Since list (#71); the flaky
   `CarryViewModelTest` fixed and proved with a denser probe (#72); the
@@ -23,6 +24,58 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-16 — cycle 29: the save path had never been driven
+
+**Found.** Kover's line report for `CarryViewModel.kt`: everything below
+`folder.save(...)` had never executed in any test. The three outcomes, the
+"only if nothing newer arrived" guard, the draft clear, the re-seed — all
+of it. `SaveTest` covers the *folder's* write thoroughly; what was missing
+was the ViewModel's handling of what it answers. The two existing
+`save()` calls in `CarryViewModelTest` both return before the write: one
+hits a refusal, the other "already recorded".
+
+That is the path whose stated worst outcome is a wrong number in a
+training history.
+
+**Why it was untestable.** `folder` is a concrete `SessionFolder` because
+the Activity needs its SAF-only parts. There is now an `internal var
+write` seam beside the existing `read` and `readSince` ones — the single
+call the save makes into the folder, and the only production change here.
+
+**Shipped.** Four tests: a clean write puts the written bytes on screen
+and spends the draft; a refused write says the file is unchanged and
+**keeps** the draft, because "try again" is only honest while the numbers
+are still somewhere; a damaged file says so instead; and a newer sheet
+arriving mid-write is not overwritten by what we just wrote. The save
+coroutine went from 29% to 93%.
+
+**And then the review found what they had just made visible.** The *"only
+if nothing newer arrived"* guard wrapped exactly one line. The draft clear,
+the `_edits` re-seed and the "Saved" badge all ran regardless — so when the
+sync dropped the day's other class in mid-write (a refresh runs on every
+resume), the form kept **Saturday's numbers against Tuesday's rows**:
+`text` is the old session's bytes, and seeding the form from it puts a
+weight the owner never typed on a movement they have not done. "Saved" is
+still tappable, so one tap wrote it into the newer file. A wrong number in
+a training history, through the one path with no sheet-identity check.
+
+The whole tail is inside the guard now. When the sheet HAS changed,
+`reconcile` has already seeded the form from the file that arrived and
+nothing here second-guesses it.
+
+Two more branches that were still at zero got tests with it: a row with a
+weight and no name is **refused** and the typing kept (the case CLAUDE.md
+names, which returns before the folder is ever touched), and two taps in
+one frame write once.
+
+**One test had to be rewritten twice.** It first asserted the badge said
+"Saved" after the newer sheet arrived; it does not. Then it asserted
+`Idle` — and the review measured that failing **4 times in 20**, because
+which of the two lands depends on whether the save's resumption or
+`reconcile`'s returns from `Dispatchers.Default` last. It now asserts the
+thing that is both deterministic and the actual damage: the form is not
+holding the old sheet's numbers. 20 clean runs after the fix.
 
 ## 2026-10-16 — cycle 28: a hold you did had nowhere to land
 
