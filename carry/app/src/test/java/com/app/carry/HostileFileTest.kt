@@ -2,6 +2,7 @@ package com.app.carry
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -36,6 +37,25 @@ class HostileFileTest {
         )
         compose.setContent { TodayScreen(session, today) }
         compose.onNodeWithText("45 lb").assertIsDisplayed()
+        // And it does not draw ten lit pips either. Clamping `needed` to
+        // ten while `done` ran past it was the picture of a bump already
+        // earned, for a streak that has not been (found 2026-10-16). Past
+        // ten the row says the numbers instead.
+        // Every row in the fixture carries it, so there are several.
+        compose.onAllNodesWithText("${Int.MAX_VALUE} of ${Int.MAX_VALUE}", substring = true)[0]
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `a streak longer than the pips says the numbers`() {
+        // Twelve of forty used to draw ten lit pips and no unlit ones.
+        // Under a heading that says part way, that is the one thing this
+        // app must not do: a number on screen that is not the number.
+        val session = SampleSession.today.copy(
+            sets = SampleSession.today.sets.map { it.copy(streakNeeded = 40, streakDone = 12) }
+        )
+        compose.setContent { TodayScreen(session, today) }
+        compose.onAllNodesWithText("12 of 40", substring = true)[0].assertIsDisplayed()
     }
 
     @Test

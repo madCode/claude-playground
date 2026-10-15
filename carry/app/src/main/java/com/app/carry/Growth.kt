@@ -265,7 +265,18 @@ object Growth {
             val weight = set.suggestedWeight ?: return@mapNotNull null
             if (done <= 0 || done >= needed) null
             else Bump(set.displayName, set.family, weight, done, needed)
-        }.sortedByDescending { it.done.toDouble() / it.needed }
+            // How many sets away, not how far along. The row's own line is
+            // "another clean set moves it", and under a fraction a row at
+            // 8 of 10 (two sets away) outranks one at 2 of 3 (one set
+            // away) -- so with the band capped, the one movement a single
+            // set would bump could be the one cut. Not reachable while
+            // every `needed` is 3; the runner's rule is free to differ.
+            //
+            // Ties keep the sheet's own order: `sortedWith` is stable, and
+            // the input is the sheet's rows in file order. Most sheets are
+            // one rung all the way down, so this is usually not a ranking
+            // at all -- see the cap's own note.
+        }.sortedWith(compareBy({ it.needed - it.done }, { -(it.done.toDouble() / it.needed) }))
 
         // Over what was actually LIFTED, not over every row on every sheet.
         // Grouped by the runner's own key, or not at all: all of them carry

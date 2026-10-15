@@ -5,10 +5,12 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -125,7 +127,10 @@ class SinceScreenTest {
         // movement fresh, so that is the normal case, not the edge.
         compose.setContent { SinceScreen(since.copy(nearBump = allAtOne(11))) }
         compose.onNodeWithText("Close to a bump".uppercase()).assertDoesNotExist()
-        compose.onNodeWithText("How close each one is".uppercase()).assertIsDisplayed()
+        // And not "how close each one is" either: "each one" read as
+        // every movement trained, when the band is five exclusions deep.
+        // The heading claims only what every row in it is.
+        compose.onNodeWithText("Part way to a bump".uppercase()).assertIsDisplayed()
     }
 
     @Test
@@ -156,6 +161,45 @@ class SinceScreenTest {
         // substring here would fail on a fixture change with nothing wrong
         // in the code.
         compose.onNodeWithText("and ", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a row with no family still renders, and an odd streak still counts`() {
+        // Three shapes the real path produces and this band's fixture
+        // never did: a row whose family the runner did not say (no colour
+        // bar, and the name column starts further left), a `needed` other
+        // than 3, and one past MAX_PIPS -- which would draw a pip per set
+        // across the whole row if it were not clamped.
+        val odd = listOf(
+            Growth.Bump("no family", null, 20.0, 1, 2),
+            Growth.Bump("long haul", "legs", 25.0, 3, 40),
+        )
+        compose.setContent { SinceScreen(since.copy(nearBump = odd)) }
+        compose.onNodeWithText("no family").assertIsDisplayed()
+        compose.onNodeWithContentDescription("no family, 1 of 2 clean sets, 20 pounds")
+            .assertIsDisplayed()
+        compose.onNodeWithContentDescription("long haul, 3 of 40 clean sets, 25 pounds")
+            .assertIsDisplayed()
+        // And it is drawn as the numbers, not as pips. Clamping `needed`
+        // to ten without rescaling `done` made 3 of 40 read as 3 of 10 --
+        // seven sets away instead of thirty-seven -- and 12 of 40 read as
+        // a bump already earned (found by the review, 2026-10-16).
+        compose.onNodeWithText("3 of 40").assertIsDisplayed()
+        // And a 40-set streak does not draw 40 pips. They are unlabelled
+        // Boxes, so nothing in the semantics tree counts them -- what can
+        // be checked is the consequence. The row keeps its width either
+        // way; what the pips eat is the NAME, which has the flexible
+        // column. Unclamped it collapses to about one character wide,
+        // which is the movement the owner is trying to read.
+        val row = compose.onNodeWithContentDescription(
+            "long haul, 3 of 40 clean sets, 25 pounds"
+        ).getUnclippedBoundsInRoot()
+        val name = compose.onNodeWithText("long haul", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        assertTrue(
+            "the pips squeezed the name: $name in $row",
+            (name.right - name.left) >= (row.right - row.left) / 2,
+        )
     }
 
     @Test

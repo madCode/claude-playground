@@ -123,9 +123,16 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
                 // on the same rung, under a heading that said they were
                 // about to go up.
                 //
-                // The pips are worth keeping; the word "close" was not.
-                item { Band("How close each one is") }
-                // Ordered by how far along, and capped so the band cannot
+                // The pips are worth keeping; the word "close" was not --
+                // and nor was "each one", which read as every movement
+                // trained. This band is five exclusions deep: one sheet
+                // (so the second class of a two-class day is absent), rows
+                // not skipped, a streak the runner wrote, one strictly in
+                // progress, a suggested weight (so a bodyweight movement
+                // part way through is dropped), and then five of those.
+                // This claims nothing but what every row in it IS.
+                item { Band("Part way to a bump") }
+                // Fewest sets away first, and capped so the band cannot
                 // take the screen from the ones under it. On a sheet where
                 // everything is on the same rung -- which is the usual case
                 // -- the order is the board's, so the cap says how many are
@@ -227,12 +234,23 @@ private fun BumpRow(bump: Growth.Bump) {
             bump.name, color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.NameSize,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            repeat(bump.needed.coerceAtMost(MAX_PIPS)) { i ->
-                Box(
-                    Modifier.size(5.dp).clip(RoundedCornerShape(50))
-                        .background(if (i < bump.done) Look.AmberDim else Look.RuleStrong)
-                )
+        // Past ten, pips cannot tell the truth and are not countable at a
+        // glance anyway. Clamping `needed` alone LIES: 12 of 40 draws ten
+        // lit pips and no unlit ones -- the picture of a bump already
+        // earned -- under a heading that says part way. Say the numbers.
+        if (bump.needed > MAX_PIPS) {
+            Text(
+                "${bump.done} of ${bump.needed}", color = Look.ChalkDim,
+                fontFamily = Look.Figure, fontSize = 11.sp, maxLines = 1,
+            )
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                repeat(bump.needed) { i ->
+                    Box(
+                        Modifier.size(5.dp).clip(RoundedCornerShape(50))
+                            .background(if (i < bump.done) Look.AmberDim else Look.RuleStrong)
+                    )
+                }
             }
         }
         Text(figure(bump.weight), color = Look.Chalk, fontFamily = Look.Figure,
@@ -434,11 +452,10 @@ private fun Stat(number: String, label: String) {
 private fun figure(weight: Double): String = weight.asWeight()
 
 /** How many rows the progress band may show, so it cannot take the screen
- *  from the three bands under it. NOT "the rest are the least far along":
- *  when every row is on the same rung -- the usual case -- the sort is a
- *  no-op and the five shown are simply the first five the board listed,
- *  which is why the line below counts the others rather than ranking
- *  them. */
+ *  from the three bands under it. NOT "the rest are furthest away": when
+ *  every row is on the same rung -- the usual case -- the sort is a no-op
+ *  and the five shown are simply the first five the board listed, which is
+ *  why the line below counts the others rather than ranking them. */
 private const val MAX_BUMP_ROWS = 5
 private const val MAX_PIPS = 10
 private const val MIN_BAR = 5.0
