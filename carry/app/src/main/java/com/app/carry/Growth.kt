@@ -263,6 +263,18 @@ object Growth {
             val needed = set.streakNeeded ?: return@mapNotNull null
             val done = set.streakDone ?: 0
             val weight = set.suggestedWeight ?: return@mapNotNull null
+            // The count was written before the class and the owner has
+            // since filled the row in, so these two say the streak is
+            // about to break: the runner's own rules are that `hard`
+            // blocks the next bump, and a lighter set is not a set at
+            // this weight. Either way "part way to a bump" is no longer
+            // true of the row, and the band is capped, so it would be
+            // taking a slot from one that is.
+            //
+            // Logged AT the weight is left alone. That count is stale by
+            // one and understates, which is the safe direction -- and
+            // re-deriving it here is the one thing this file must not do.
+            if (set.hard || (set.weight != null && set.weight < weight)) return@mapNotNull null
             if (done <= 0 || done >= needed) null
             else Bump(set.displayName, set.family, weight, done, needed)
             // How many sets away, not how far along. The row's own line is

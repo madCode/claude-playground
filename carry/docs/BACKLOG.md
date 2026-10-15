@@ -44,22 +44,28 @@ the analysis).
   consequence: unclamped, a 40-set streak draws 40 pips and squeezes the
   movement name to about one character. Asserted on the name's width, since
   the pips themselves have no semantics to count.
-- [ ] **The band shows the runner's streak beside the runner's suggested
-  weight, and ignores what the owner logged in the same row.** `Growth.of`
-  consults only `skipped`; `weight`, `hard` and `easier` are in the same
-  JSON object and Carry wrote them. So a row suggested at 40 lb, logged at
-  35 and marked `hard`, still reads "2 of 3 clean sets, 40 pounds" under
-  *part way to a bump* until the runner's next pass. Excluding a row whose
-  logged weight is below its suggested one would close most of it; the
-  streak itself must stay the runner's (`Growth.kt`, "It derives, it never
-  coaches") *(audit)*
+- [x] ~~The band ignores what the owner logged in the same row.~~ Fixed
+  2026-10-16. A row marked `hard`, or logged BELOW its suggested weight,
+  leaves the band: those are the runner's own signals that the next bump
+  is blocked, so "part way to a bump" is no longer true of the row and the
+  band is capped, so it was taking a slot from one that is. Logged *at*
+  the weight stays — that count is stale by one and understates, which is
+  the safe direction — and logged *heavier* stays, because going up
+  unprompted is the thing this app exists to notice. The streak itself is
+  still never re-derived here.
 - [ ] **The streak's weight and the weight shown are different
-  quantities.** `streak_done`/`streak_needed` mean "clean sets held at this
-  weight" (`Session.kt`), and the band pairs them with `suggestedWeight`.
-  When the runner proposes a bump while the streak is unfinished, the row
-  reads "2 of 3 clean sets, 45 pounds" for two sets held at 40.
-  `previousWeight` is on the same set and nothing compares them. Not
-  reachable if the runner only bumps on a finished streak *(audit)*
+  quantities** — and the mechanism the #80 review gave for it was wrong,
+  which is worth recording. It said "when the runner proposes a bump while
+  the streak is unfinished"; checked against the runner, the two branches
+  that propose a bump set no `streak_done` at all, so those rows never
+  reach this band.
+
+  The real route is the runner's **converted streak**: that branch pairs
+  `streak_done` with an *Epley estimate for today's reps*, not with a
+  weight anything was held at. `Session.kt` documents the pair as "clean
+  sets held at this weight", and on that path it is "sets at this level,
+  and a guess at today's equivalent". Either the field's documentation is
+  wrong or the band should say which it is *(audit)*
 - [ ] **Aggregate facts about the owner's training are in this public repo,
   predating tonight.** `CLAUDE.md`'s Privacy section rules them out — "the
   test is whether a stranger learns something about the owner's training

@@ -9,6 +9,9 @@
 - **Lately:** the save that never started, and the view model that opted
   out of teardown (#82); the progress band finished — honest heading,
   sorted by the question its rows answer (#80); first rendered with real numbers and
+- **Lately:** the band stops believing a count the owner has already
+  answered (#81); the progress band finished — honest heading, sorted by
+  the question its rows answer (#80); first rendered with real numbers and
   found to be claiming movements were close to a bump (#79); the save
   path's own tests, which it had never had, and the wrong-number bug they
   exposed (#78); the *done* chip for timed holds, and the Since screen no
@@ -64,6 +67,35 @@ JVM, which makes a leak from another class the first suspect.
 **Not claimed as fixed.** One real defect is gone and the failure now
 diagnoses itself one layer further in. The rest is in BACKLOG.md with the
 reproduction recipe.
+## 2026-10-16 — cycle 32: the band believed a count the owner had already answered
+
+**The top backlog item, and it half held.** *"The band shows the runner's
+streak beside the runner's suggested weight and ignores what the owner
+logged in the same row"* — `Growth.of` consulted only `skipped`, while
+`weight` and `hard` sit in the same JSON object and Carry itself wrote
+them. So a row suggested at 40 lb, logged at 35 and marked *hard*, kept
+reading "2 of 3 clean sets, 40 pounds" under **part way to a bump**.
+
+**Shipped.** A row leaves the band when the owner's own answer
+contradicts it — marked *hard*, or logged **below** the weight the count
+is about. Those are the runner's own signals that the next bump is
+blocked. Two things deliberately stay:
+
+- **Logged at that weight.** The count is then stale by one and
+  *understates*, which is the safe direction, and re-deriving it is the
+  one thing this file must not do.
+- **Logged heavier.** Going up unprompted is the thing this app exists to
+  notice, not a reason to stop counting.
+
+Five falsifications, one per edge of that condition.
+
+**The sibling item did NOT hold as written**, which is worth saying. The
+#80 review gave the mechanism as "when the runner proposes a bump while
+the streak is unfinished" — checked against the runner, the two branches
+that propose a bump set no streak at all, so those rows never reach this
+band. The real route is the converted streak, which pairs the count with
+an *Epley estimate for today's reps* rather than a weight anything was
+held at. Same conclusion, different cause; the backlog now says so.
 
 ## 2026-10-16 — cycle 31: the band, finished
 

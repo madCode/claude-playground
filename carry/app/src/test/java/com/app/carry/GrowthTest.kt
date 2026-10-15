@@ -25,12 +25,12 @@ class GrowthTest {
         ref: Int, name: String, family: String? = null, weight: String = "null",
         reps: String = "null", skipped: Boolean = false, variant: String = "null",
         done: String = "null", needed: String = "null", suggested: String = "null",
-        key: String? = name,
+        key: String? = name, hard: Boolean = false,
     ) = """{"ref":$ref,"line":"10 x $name","canonical":"$name",
             ${key?.let { "\"key\":\"$it\"," } ?: ""}
             "family":${family?.let { "\"$it\"" } ?: "null"},"variant":$variant,
             "streak_done":$done,"streak_needed":$needed,"suggested_weight":$suggested,
-            "weight":$weight,"reps":$reps,"skipped":$skipped}"""
+            "weight":$weight,"reps":$reps,"skipped":$skipped,"hard":$hard}"""
 
     @Test
     fun `every session is listed, newest first, named by its heaviest lift`() {
@@ -198,6 +198,46 @@ class GrowthTest {
             listOf("first on the board", "second", "third"),
             since.nearBump.map { it.name },
         )
+    }
+
+    @Test
+    fun `a row their own answer contradicts leaves the band`() {
+        // The count was written before the class. `hard` is the runner's
+        // own signal that the next bump is blocked, and a lighter set is
+        // not a set at that weight -- so "part way to a bump" is no
+        // longer true of either row, and the band is capped, so each
+        // would be taking a slot from one that is.
+        val since = Growth.of(
+            listOf(
+                file("2026-10-11", sets = listOf(
+                    set(0, "went lighter", "legs", done = "2", needed = "3",
+                        suggested = "40", weight = "35", reps = "8"),
+                    set(1, "found it hard", "legs", done = "2", needed = "3",
+                        suggested = "40", weight = "40", reps = "8", hard = true),
+                    set(2, "did it as asked", "legs", done = "2", needed = "3",
+                        suggested = "40", weight = "40", reps = "8"),
+                ).joinToString(",")),
+            )
+        )
+        // The third stays: that count is stale by one and understates,
+        // which is the safe direction, and re-deriving it here is the one
+        // thing this file must not do.
+        assertEquals(listOf("did it as asked"), since.nearBump.map { it.name })
+    }
+
+    @Test
+    fun `a heavier set than asked for does not leave the band`() {
+        // Only a LIGHTER one breaks it. Going up unprompted is the thing
+        // this app exists to notice, not a reason to stop counting.
+        val since = Growth.of(
+            listOf(
+                file("2026-10-11", sets = listOf(
+                    set(0, "went heavier", "legs", done = "2", needed = "3",
+                        suggested = "40", weight = "45", reps = "8"),
+                ).joinToString(",")),
+            )
+        )
+        assertEquals(listOf("went heavier"), since.nearBump.map { it.name })
     }
 
     @Test
