@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -106,6 +107,70 @@ class SinceScreenTest {
         compose.setContent { SinceScreen(since.copy(movements = null, repeated = null)) }
         compose.onNodeWithText("Why the coach is often quiet".uppercase()).assertDoesNotExist()
         compose.onNodeWithText("Heaviest, by what it trains".uppercase()).assertIsDisplayed()
+    }
+
+    /** Every setup done once, which is what the runner's streak counts
+     *  produce for this owner today: most lines on a sheet written now
+     *  would arrive at 1 of 3. */
+    private fun allAtOne(n: Int) = (1..n).map {
+        Growth.Bump("movement $it", listOf("legs", "push", "pull", "core")[it % 4], 20.0 + it, 1, 3)
+    }
+
+    @Test
+    fun `a movement done once is not called close to a bump`() {
+        // Rendered with real numbers this band was ELEVEN rows, every one a
+        // single lit pip of three, filling the whole screen under a heading
+        // saying they were all about to go up. The runner counts a streak
+        // from the first clean set and this owner starts nearly every
+        // movement fresh, so that is the normal case, not the edge.
+        compose.setContent { SinceScreen(since.copy(nearBump = allAtOne(11))) }
+        compose.onNodeWithText("Close to a bump".uppercase()).assertDoesNotExist()
+        compose.onNodeWithText("How close each one is".uppercase()).assertIsDisplayed()
+    }
+
+    @Test
+    fun `the progress band cannot take the whole screen`() {
+        // Five rows, closest first, and the rest counted rather than
+        // silently dropped -- a list that stops at five with no sign of it
+        // reads as a folder with five things in it.
+        compose.setContent { SinceScreen(since.copy(nearBump = allAtOne(11))) }
+        compose.onNodeWithText("movement 1").assertIsDisplayed()
+        compose.onNodeWithText("movement 5").assertIsDisplayed()
+        compose.onNodeWithText("movement 6").assertDoesNotExist()
+        compose.onNodeWithText("and 6 more").assertIsDisplayed()
+        // And it reads out as what it is. The pips are bare Boxes with no
+        // semantics, so without a row label the band's entire content --
+        // the streak, which is what its heading asks about -- is inaudible.
+        compose.onNodeWithContentDescription("movement 1, 1 of 3 clean sets, 21 pounds")
+            .assertIsDisplayed()
+        compose.onNodeWithContentDescription("and 6 more, not shown").assertIsDisplayed()
+        shoot("23-progress-band")
+    }
+
+    @Test
+    fun `a band that fits says nothing about more`() {
+        compose.setContent { SinceScreen(since.copy(nearBump = allAtOne(3))) }
+        compose.onNodeWithText("movement 3").assertIsDisplayed()
+        // Anchored, not a bare "more": the quiet band says "done more than
+        // once at the same variant" for every `repeated` but 1, so a loose
+        // substring here would fail on a fixture change with nothing wrong
+        // in the code.
+        compose.onNodeWithText("and ", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the cap keeps the head of the list it is given`() {
+        // Deliberately NOT sorting the fixture: that is `Growth.of`'s job
+        // and `GrowthTest` holds it (the first version of this test sorted
+        // its own input and then asserted the screen showed element zero,
+        // which could not fail). What the screen owes is to take the FRONT
+        // of the list, so a row the runner put first is never cut.
+        val mixed = listOf(Growth.Bump("nearly there", "legs", 40.0, 2, 3)) + allAtOne(8)
+        compose.setContent { SinceScreen(since.copy(nearBump = mixed)) }
+        compose.onNodeWithText("nearly there").assertIsDisplayed()
+        compose.onNodeWithText("movement 4").assertIsDisplayed()
+        compose.onNodeWithText("movement 5").assertDoesNotExist()
+        compose.onNodeWithText("and 4 more").assertIsDisplayed()
     }
 
     private fun shoot(name: String) {

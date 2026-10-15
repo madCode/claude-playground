@@ -255,6 +255,11 @@ object Growth {
         // day that has already been and gone.
         val newest = sessions.maxByOrNull { it.date }
         val nearBump = newest?.sets.orEmpty().mapNotNull { set ->
+            // A row they said they did not do, the same exclusion `lifted`
+            // and `liftsOf` make below. The streak behind it is real, but
+            // the band is capped now, so a movement declined today would
+            // take a slot from one they actually worked on.
+            if (set.skipped) return@mapNotNull null
             val needed = set.streakNeeded ?: return@mapNotNull null
             val done = set.streakDone ?: 0
             val weight = set.suggestedWeight ?: return@mapNotNull null

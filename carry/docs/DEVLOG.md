@@ -6,8 +6,10 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** the save path's own tests, which it had never had (#78); the
-  *done* chip for timed holds, and the Since screen no
+- **Lately:** the progress band, first rendered with real numbers and found
+  to be claiming eleven movements were close to a bump (#79); the save
+  path's own tests, which it had never had, and the wrong-number bug they
+  exposed (#78); the *done* chip for timed holds, and the Since screen no
   longer dropping a session logged only with markers (#77); opening a past
   session from the Since list (#71); the flaky
   `CarryViewModelTest` fixed and proved with a denser probe (#72); the
@@ -24,6 +26,61 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-16 — cycle 30: eleven movements that were not close to anything
+
+**Started as a backlog item that turned out to be wrong.** "Write the
+streak into the session file so the dots can light — nothing writes them."
+The runner has written `streak_done`/`streak_needed` all along; what was
+null was the number itself, and the seven session files on disk all predate
+the change that started producing it. Measured against the real history: a
+sheet written **today** would carry dots on **most** of its lines, every one
+at **1 of 3**, because each setup has been done once. (Figures with the
+data, not in a public repository.)
+
+**So the band was rendered with those numbers**, which is the first time
+anyone had seen it with data. Eleven rows, each a single lit pip of three,
+filling the entire screen under the heading **"CLOSE TO A BUMP"** — a claim
+none of the rows supported, on the screen whose job is to say when the
+owner can push themselves. The runner counts a streak from the first clean
+set, and this owner starts nearly every movement fresh because the studio
+changes the setup most classes, so one of three is the normal case rather
+than the edge.
+
+**Shipped.** The pips were worth keeping; the word *close* was not. The
+band is now **"How close each one is"**, showing the five furthest along
+and counting the rest ("and 6 more"). Capped, the three bands underneath
+fit on the same screen again — including *why the coach is often quiet*,
+which explains exactly why every pip is at one.
+
+**Then the review took the same defect out of the fix.** "It shows the five
+furthest along" was itself a claim the rows could not support: when every
+row is on the same rung — the usual case, and the case that motivated all
+this — the sort is a no-op and the five shown are simply the five the board
+listed first. The wording says that now, and the cap counts the others
+rather than ranking them. Three more from the same pass:
+
+- **The band was inaudible.** The pips are bare `Box`es with no semantics,
+  so TalkBack read "movement 1" then "21" — the streak, which is the entire
+  answer to the heading above it, was not read at all, and the weight had
+  no unit. The row has one spoken label now, like the day rows.
+- **Nothing tested that `Growth.of` sorts.** The one ordering test asserted
+  a single-element list and the screen test sorted its own fixture before
+  handing it over, so deleting the sort left every test green.
+- **A movement they skipped could take a slot** from one they worked on,
+  now the band is capped. Excluded, the same way the lift counts in that
+  file already exclude it.
+
+**And figures about the owner's training went into a public repo.** Three
+sentences of them, in this file, `BACKLOG.md` and a test. `CLAUDE.md` rules
+them out by name — the test is whether a stranger learns something about
+their training from the sentence — and says what to write instead. Rewritten
+as "most"; the numbers stay with the data. Four older instances are on
+`main` already and are in `BACKLOG.md` as your call.
+
+**Not decided here:** whether a movement done once belongs in that band at
+all. Cutting to genuinely-close rows empties it on today's data. In
+BACKLOG.md as the owner's call, with both renderings.
 
 ## 2026-10-16 — cycle 29: the save path had never been driven
 
@@ -76,7 +133,6 @@ which of the two lands depends on whether the save's resumption or
 `reconcile`'s returns from `Dispatchers.Default` last. It now asserts the
 thing that is both deterministic and the actual damage: the form is not
 holding the old sheet's numbers. 20 clean runs after the fix.
-
 ## 2026-10-16 — cycle 28: a hold you did had nowhere to land
 
 **Found.** A row the board prescribes in seconds — "45 sec of low plank" —
