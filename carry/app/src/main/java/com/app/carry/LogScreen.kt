@@ -7,6 +7,8 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -154,6 +156,7 @@ fun LogScreen(
                 LogRow(
                     name = set.displayName,
                     prescription = set.prescription,
+                    timed = set.timed,
                     family = set.family,
                     entry = entries[set.ref] ?: SessionPatch.Entry(),
                     key = "$sessionKey-${set.ref}",
@@ -214,6 +217,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexed(
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun LogRow(
     name: String,
     /** "10 total x", "45 sec of" — what the board asked for, which is half
@@ -223,6 +227,9 @@ private fun LogRow(
     family: String?,
     entry: SessionPatch.Entry,
     key: String,
+    /** The board asked for seconds, not reps, so there is no number to give
+     *  and the row needs its own way to say it happened. */
+    timed: Boolean,
     onChange: (SessionPatch.Entry) -> Unit,
 ) {
     // Two lines, not one. On one line the name shared ~400dp with two
@@ -246,10 +253,15 @@ private fun LogRow(
                 maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
             )
         }
-        Row(
+        // Wraps, because a timed row carries a sixth chip and six did not
+        // fit on one 411dp line: the overflow was `skip` sliding off the
+        // right edge, which is the one chip on the row that says a set did
+        // not happen. A second line costs scrolling on the screen where
+        // scrolling is fine; a chip the owner cannot reach costs a fact.
+        FlowRow(
             Modifier.fillMaxWidth().padding(start = 9.dp, top = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             // A skipped row offers no boxes and no feel chips. There is no
             // number to put in them, and no set to have found easy.
@@ -275,6 +287,22 @@ private fun LogRow(
                 // weight to progress, so this is the only axis they have.
                 Chip("mod", entry.easier, Look.ChalkDim) {
                     onChange(entry.copy(easier = !entry.easier))
+                }
+                // Only where there is nothing else to say. A timed hold
+                // prescribes no reps and takes no weight, so the boxes are
+                // empty by definition and every other chip claims something
+                // the owner may not mean -- a finished plank reached history
+                // as nothing at all until this.
+                //
+                // Chalk, the loudest the palette goes, because on these
+                // rows it is not a side note but the thing to tap. The
+                // number boxes stay: the board prescribes no weight, but a
+                // plank with a plate on your back is a real set, and
+                // taking the boxes away would make that unsayable.
+                if (timed) {
+                    Chip("done", entry.done, Look.Chalk) {
+                        onChange(entry.copy(done = !entry.done))
+                    }
                 }
                 Chip("hurt", entry.hurt, Look.Brick) { onChange(entry.copy(hurt = !entry.hurt)) }
             }

@@ -139,7 +139,15 @@ private fun span(since: Growth.Since): String {
         from == to -> from
         else -> "$from – $to"
     }
-    val sets = if (since.sets == 1) "1 set" else "${since.sets} sets"
+    // Omitted at zero rather than printed as "0 sets", which is the one
+    // count that reads as "nothing happened" — and a bodyweight class, or
+    // a hold ticked off with `done`, is a class that happened with no
+    // weighted set in it. The bands below say what there was.
+    val sets = when {
+        since.sets == 0 -> null
+        since.sets == 1 -> "1 set"
+        else -> "${since.sets} sets"
+    }
     return listOfNotNull(dates, sets).joinToString(" · ")
 }
 

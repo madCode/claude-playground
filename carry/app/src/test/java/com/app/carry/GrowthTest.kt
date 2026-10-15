@@ -267,6 +267,28 @@ class GrowthTest {
     }
 
     @Test
+    fun `a hold the owner only ticked off reads back as a hold they did`() {
+        // The whole reason `done` exists is that this row used to come
+        // back as "blank" -- the screen telling them they skipped the one
+        // thing they did say. There is no weight and no rep count to show
+        // for a 45-second plank, so the mark IS the record.
+        val since = Growth.of(
+            listOf(file("2026-09-27", sets =
+                """{"ref":0,"line":"45 sec of low plank","canonical":"low plank",
+                    "key":"low plank","family":"core","variant":null,
+                    "prescribed_duration_sec":45,
+                    "weight":null,"reps":null,"done":true,"skipped":false}"""))
+        )
+        val row = since.days.single().rows.single()
+        assertTrue("a row they ticked off is not blank", row.answered)
+        assertEquals(listOf("done"), row.marks)
+        // Still not a lift and still not a number: nothing here invents
+        // one, which is the other half of the point.
+        assertEquals(null, row.weight)
+        assertEquals(0, since.days.single().lifts)
+    }
+
+    @Test
     fun `two classes in one day are counted apart, not added together`() {
         // Each row in the list, and now the header of the session it
         // opens, states a count and a heaviest lift ALONGSIDE that one

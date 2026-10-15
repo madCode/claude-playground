@@ -43,13 +43,22 @@ object SessionPatch {
          *  The only progression a bodyweight movement has, and a third of
          *  this owner's sets carry no weight at all. */
         val easier: Boolean = false,
+        /**
+         * "I did it, and there is nothing to say about it."
+         *
+         * A timed hold prescribes no reps and takes no weight, so the boxes
+         * are empty by definition and every other chip claims something the
+         * owner may not mean. Before this there was no way to record one at
+         * all, and a finished plank reached history as nothing.
+         */
+        val done: Boolean = false,
         val hurt: Boolean = false,
         val skipped: Boolean = false,
         val note: String? = null,
     ) {
         val blank: Boolean get() =
             weight == null && reps == null && !easy && !hard && !easier &&
-                !hurt && !skipped && note == null
+                !done && !hurt && !skipped && note == null
     }
 
     sealed interface Outcome {
@@ -73,6 +82,7 @@ object SessionPatch {
         put("easy", JsonPrimitive(easy))
         put("hard", JsonPrimitive(hard))
         put("easier", JsonPrimitive(easier))
+        put("done", JsonPrimitive(done))
         put("hurt", JsonPrimitive(hurt))
         put("skipped", JsonPrimitive(skipped))
         put("note", note?.let(::JsonPrimitive) ?: JsonNull)
@@ -263,6 +273,7 @@ object SessionPatch {
                     easy = (set["easy"] as? JsonPrimitive)?.content.toBoolean(),
                     hard = (set["hard"] as? JsonPrimitive)?.content.toBoolean(),
                     easier = (set["easier"] as? JsonPrimitive)?.content.toBoolean(),
+                    done = (set["done"] as? JsonPrimitive)?.content.toBoolean(),
                     hurt = (set["hurt"] as? JsonPrimitive)?.content.toBoolean(),
                     skipped = (set["skipped"] as? JsonPrimitive)?.content.toBoolean(),
                     note = (set["note"] as? JsonPrimitive)?.takeIf { it != JsonNull }?.content,
@@ -407,8 +418,11 @@ object SessionPatch {
     private fun JsonPrimitive.empty(): Boolean =
         this == JsonNull || content.isBlank() || (!isString && content == "false")
 
-    /** The keys [encode] writes, so [holdsNothing] can tell an empty row
-     *  from one carrying something this build cannot read. */
+    /** The keys the ADDED-row [encode] writes, so [holdsNothing] can tell
+     *  an empty row from one carrying something this build cannot read.
+     *  Not the sheet row's keys: `done` and `skipped` belong to a sheet
+     *  row and [AddedSet] has neither, so listing them here would let a
+     *  key nothing writes vouch for a row being empty. */
     private val WRITTEN_KEYS = setOf("id", "name", "weight", "reps", "easy", "hard", "easier", "hurt", "note")
 
     /**

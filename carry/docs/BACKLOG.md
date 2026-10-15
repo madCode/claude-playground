@@ -27,10 +27,32 @@ the analysis).
   lift that day" *(you asked, design:
   [open-a-past-session](designs/open-a-past-session.md))*
 - [ ] A session the owner logged entirely by hand is not listed at all: `Growth.of`
-  decides what counts as a session from `sets`, so a borrowed day whose sheet rows
-  are all blank and whose real content is in `added` never reaches *Every session*.
-  That is the commonest shape of a borrowed day. Changing it moves the session
-  count, the date span and the quiet-band figures, so it is its own decision
+  decides what counts as a session from the SHEET's rows, so a borrowed day whose
+  sheet rows are all blank and whose real content is in `added` never reaches
+  *Every session*. That is the commonest shape of a borrowed day. Changing it moves
+  the session count, the date span and the quiet-band figures, so it is its own
+  decision. (#77 widened the same filter to count markers as well as numbers, and
+  deliberately stopped at the sheet's own rows so as not to answer this in passing.)
+  Two things to fix with it, found by the #77 review:
+  `Day.lifts`/`Day.best` and the `movements` count read `session.sets` only, so such
+  a day would render "0 lifts" over a list with a weight in it; and `Row.answered`
+  ignores the typed name, so a hand-logged row with a name and nothing else is
+  written to the file and still counted as never having happened *(audit)*
+- [ ] **The intel post still demands a number**, so a wholly bodyweight or timed
+  class offers no post at all. `done` is the one marker that states the movement
+  WAS in the block, which is this path's publishing criterion — but what goes to
+  r/orangetheory is the owner's call, so ask before changing it *(audit)*
+- [ ] `ExerciseSet.answered` has no production callers and is the only one of the
+  three definitions of "answered" across the two repos that omits `done`. Delete it
+  or make it the shared one *(audit)*
+- [ ] `prescribed_duration_sec` outside 1..3600 renders no prescription and no
+  *done* chip, so a row written on another machine with an absurd duration silently
+  loses the only record it could carry. The guard is right; the consequence is not
+  *(audit)*
+- [ ] Every boolean on `ExerciseSet` is non-nullable with no `coerceInputValues`,
+  and `SessionFiles.parse` turns a decode failure into "whole file unreadable" — so
+  a `"done": null` from another writer costs the entire day. Carry is the only
+  writer of `done` and writes a real boolean, so this is latent, not live *(audit)*
 - [ ] The bars on *Heaviest by what it trains* encode every weight in that family
   with no scale and no time direction; the bar count varies by how many sets the
   family has, which reads as meaning something it doesn't. Propose cutting them

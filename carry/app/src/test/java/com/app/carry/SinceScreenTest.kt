@@ -75,6 +75,30 @@ class SinceScreenTest {
     }
 
     @Test
+    fun `a class with no weighted set in it is still a class you did`() {
+        // `sets` counts weighted LIFTS, and the screen used to hide itself
+        // entirely when that was zero -- so a bodyweight block, or a
+        // 45-second hold ticked off with `done`, got "Nothing logged yet"
+        // over a date range saying when it happened. The one screen that
+        // can answer "what did I do that day" was unreachable for exactly
+        // the days with the least else to show.
+        val bodyweight = since.copy(
+            sessions = 1, sets = 0, from = "2026-09-27", to = "2026-09-27",
+            peaks = emptyList(), nearBump = emptyList(),
+            days = listOf(Growth.Day("2026-09-27:3G", "2026-09-27", "3G", 0, null)),
+            movements = null, repeated = null,
+        )
+        compose.setContent { SinceScreen(bodyweight) }
+        compose.onNodeWithText("Nothing logged yet", substring = true).assertDoesNotExist()
+        // The band that opens a day, which the early return skipped.
+        compose.onNodeWithText("Every session".uppercase()).assertIsDisplayed()
+        compose.onNodeWithText("3G · Sun 27 Sep", substring = true).assertIsDisplayed()
+        // And the header does not print "0 sets" beside that date, which
+        // is the one count that reads as "nothing happened".
+        compose.onNodeWithText("0 sets", substring = true).assertDoesNotExist()
+    }
+
+    @Test
     fun `a count the files never justified is not shown at all`() {
         // Files from before the runner said what counts as the same
         // exercise. A guess here would be a confident wrong number on the

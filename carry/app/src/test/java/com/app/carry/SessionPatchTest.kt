@@ -2,6 +2,7 @@ package com.app.carry
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -447,6 +448,26 @@ class SessionPatchTest {
         // what the first sitting said.
         assertEquals(SessionPatch.Entry(weight = 45.0, hard = true), SessionPatch.entriesIn(out)[0])
         assertEquals(SessionPatch.Entry(reps = 10, easier = true), SessionPatch.entriesIn(out)[1])
+    }
+
+    @Test
+    fun `a row that only says it happened is still a row that happened`() {
+        // A timed hold prescribes no reps and takes no weight, so both
+        // number boxes are empty by definition and every feel chip claims
+        // something the owner may not mean. Before `done` the only honest
+        // thing they could do was leave it alone -- and a blank row is
+        // written blank, by design, so a finished plank reached history as
+        // nothing at all.
+        val out = patched(original, mapOf(0 to SessionPatch.Entry(done = true)))
+        assertEquals(true, set(out, 0)["done"]!!.jsonPrimitive.boolean)
+        assertNull(set(out, 0)["weight"]!!.jsonPrimitive.contentOrNull)
+        assertNull(set(out, 0)["reps"]!!.jsonPrimitive.contentOrNull)
+        // And it survives the round trip, so a session finished in two
+        // sittings does not lose the first sitting's holds.
+        assertEquals(SessionPatch.Entry(done = true), SessionPatch.entriesIn(out)[0])
+        // The point of the field: this row is no longer blank, which is
+        // what decides whether it is written at all.
+        assertFalse(SessionPatch.Entry(done = true).blank)
     }
 
     @Test

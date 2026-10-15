@@ -57,7 +57,8 @@ Two consequences worth stating, because they look like missing features:
    into a single tail line. Present, not prominent.
 
 **Log** — what you did. One row per exercise, two lines tall: weight,
-reps, and five chips (*easy*, *hard*, *mod*, *hurt*, *skip*). Plus **add a row**, for anything the sheet didn't
+reps, and five chips (*easy*, *hard*, *mod*, *hurt*, *skip*) — six on a timed
+row, which also gets *done*. Plus **add a row**, for anything the sheet didn't
 list.
 
 *skip* is a different kind of thing from the other two: it is not a quality
@@ -88,6 +89,25 @@ to earn "full form 3x in a row, push it", congratulating the owner on form
 they had not used. The ladder itself stays in the owner's head: naming the
 next rung for every movement is a knowledge base we do not have and they
 do not need.
+
+*done* is "I did it, and there is nothing to say about it", and it appears
+only on a row the board prescribed in seconds. Those rows have no rep count
+and take no weight, so both boxes are empty by definition and every other
+chip claims something the owner may not mean — which left them nothing
+honest to tap, and a blank row is written blank by design, so a finished
+45-second plank reached history as nothing at all. It is also the only chip
+that is the *primary* affordance of the row rather than a note on it, which
+is why it is the brightest.
+
+Nothing downstream reads the field by name. What it changes is that the row
+reaches the importer at all, as a complete set — which is what the
+bodyweight rule counts.
+
+The same gap existed one layer up: the *since you started* screen dropped a
+whole session unless some row carried a number, so a class recorded only
+with markers counted as never having happened. It now asks the same
+question the row does — of the sheet's own rows. Whether a session logged
+entirely by hand belongs on that screen is still open.
 
 The other two are the two things that cannot be derived:
 
@@ -245,8 +265,9 @@ rows the owner added by hand come after the sheet's own, which on a borrowed
 day is the whole session.
 
 A row with nothing on it at all reads as blank; a row carrying only a feel
-marker does not, because for the movements that carry no weight the marker
-is the whole record.
+marker, or only *done*, does not, because for the movements that carry no
+weight the marker is the whole record. The same test decides whether the
+session appears on that screen at all.
 
 It is a **record, not a form**, and says so. There is nothing on it to type
 into: the one editable session is today's, on the Log screen, and two ways
