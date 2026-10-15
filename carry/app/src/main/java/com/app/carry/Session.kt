@@ -94,12 +94,26 @@ data class ExerciseSet(
     val easy: Boolean = false,
     val hard: Boolean = false,
     val easier: Boolean = false,
+    /** "I did it, and there is nothing to say about it" -- the only record a
+     *  timed hold can carry, since it prescribes no reps and takes no
+     *  weight. Read back, so a finished plank is not shown blank. */
+    val done: Boolean = false,
     val hurt: Boolean = false,
     val skipped: Boolean = false,
     val note: String? = null,
 ) {
     /** A row the owner actually filled in. Blank stays blank: never "skipped". */
     val answered: Boolean get() = weight != null || reps != null || skipped
+
+    /**
+     * The board asked for seconds, not reps.
+     *
+     * Same bound [prescription] applies, so the one row shape that shows
+     * "45 sec of" is the one row shape offered the `done` chip -- a
+     * nonsense duration must not quietly turn a normal row into a timed
+     * one.
+     */
+    val timed: Boolean get() = prescribedDurationSec?.let { it in 1..MAX_DURATION_SEC } == true
 
     /** The amber case, and the only number you would get wrong from memory --
      *  by feel you repeat last session's weight. */

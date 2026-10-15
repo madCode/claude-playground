@@ -6,12 +6,16 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** opening a past session from the Since list (#71); the flaky
+- **Lately:** the *done* chip for timed holds, and the Since screen no
+  longer dropping a session logged only with markers (#77); opening a past
+  session from the Since list (#71); the flaky
   `CarryViewModelTest` fixed and proved with a denser probe (#72); the
   prescription on every row and the intel post (#60).
 - **Watching:** a session logged entirely by hand is still not listed on the
   Since tab at all — it moves the screen's aggregates, so it is its own
-  decision rather than a bug fix.
+  decision rather than a bug fix. A session logged only with markers *is*
+  listed now (#77); that one was a wrong answer rather than a missing
+  feature.
 - **Waiting on you:** three checks only a real phone can answer (the folder
   grant surviving a reinstall, bottom insets, the Syncthing round trip), and
   the GitHub Support request in the backlog.
@@ -19,6 +23,39 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-16 — cycle 28: a hold you did had nowhere to land
+
+**Found.** A row the board prescribes in seconds — "45 sec of low plank" —
+has no rep count and takes no weight, so both number boxes on the Log
+screen are empty by definition. Every chip on the row claimed something
+else: *easy* and *hard* are a judgement, *mod* says you used an easier
+version, *hurt* is a warning, *skip* says it did not happen. There was
+nothing honest left to tap, and a blank row is written blank by design — so
+a plank the owner finished reached their training history as nothing at
+all.
+
+**Shipped.** A sixth chip, **done** — "I did it, and there is nothing to
+say about it" — offered only on a row the board asked for in seconds. It
+rides the save path, comes back on a second sitting, shows on the read-back
+screen, and reaches the importer as a complete set, which is what the
+bodyweight rule counts. Nothing downstream reads the field by name; what it
+changes is that the row arrives at all.
+
+**And the same gap one layer up.** The *since you started* screen dropped a
+whole session unless some row carried a number or a skip — so a class
+recorded only with markers counted as never having happened, in the session
+count, the date range and the movement counts. It now asks the same
+question the row does. Deliberately of the sheet's own rows only: whether a
+session logged entirely by hand belongs there is a separate open question,
+and answering it in passing is how a decision gets made without anyone
+making it.
+
+**One thing the screenshot caught that the tests did not.** Six chips do
+not fit on one 411dp line, and what slid off the right edge was *skip* — on
+the one row shape with no number to say it with instead. The chip row wraps
+now, and a test asserts that this row's *skip* sits on a line below *done*
+rather than beside it.
 
 ## 2026-10-16 — cycle 27: the Before tab stops blaming the sync
 

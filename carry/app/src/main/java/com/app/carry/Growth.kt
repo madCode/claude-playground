@@ -56,6 +56,7 @@ object Growth {
         val easy: Boolean = false,
         val hard: Boolean = false,
         val easier: Boolean = false,
+        val done: Boolean = false,
         val hurt: Boolean = false,
         val skipped: Boolean = false,
         val note: String? = null,
@@ -77,7 +78,7 @@ object Growth {
          */
         val answered: Boolean get() =
             weight != null || reps != null || skipped ||
-                easy || hard || easier || hurt || !note.isNullOrBlank()
+                easy || hard || easier || done || hurt || !note.isNullOrBlank()
 
         /** The feel markers that are set, in the order the Log screen
          *  offers them, so the two screens read the same way round. */
@@ -85,6 +86,7 @@ object Growth {
             if (easy) add("easy")
             if (hard) add("hard")
             if (easier) add("mod")
+            if (done) add("done")
             if (hurt) add("hurt")
             if (skipped) add("skip")
         }
@@ -178,14 +180,32 @@ object Growth {
     }
 
     /**
+     * One file, read once: what [Session] could parse, the bytes it came
+     * from, and the rows the screen shows.
+     *
+     * All three because they answer different questions and two of them
+     * need the raw text — `added` rows and the `backfilled` flag are both
+     * outside [Session] — and because deciding whether anyone filled the
+     * sheet in means looking at the same rows the screen does.
+     */
+    private data class Read(val session: Session, val text: String, val rows: List<Row>)
+
+    /**
      * @param files the raw text of every session file in the folder, in any
      *   order. Unreadable ones are skipped rather than failing the screen:
      *   a half-synced file is normal in a shared folder, and one bad file
      *   must not cost the owner the whole picture.
      */
     fun of(files: List<String>): Since {
-        val parsed = files.mapNotNull { text -> SessionFiles.parse(text)?.let { it to text } }
-        val sessions = parsed.map { it.first }
+        // Paired with the text it was parsed from, and with its rows, because
+        // the rows the owner ADDED are not part of [Session] — a row with no
+        // `name` key threw during deserialization once and cost the whole
+        // day, so they are read out of the raw JSON by [SessionPatch]. On a
+        // borrowed day those rows are the entire session.
+        val parsed = files.mapNotNull { text ->
+            SessionFiles.parse(text)?.let { Read(it, text, rowsOf(it, text)) }
+        }
+        val sessions = parsed.map { it.session }
         val lifts = sessions.flatMap(::liftsOf)
         // A sheet nobody filled in is not a session they did. One of those
         // was sitting in the real folder — eleven blank rows from an early
@@ -193,15 +213,20 @@ object Growth {
         // movements to the very figure that explains why the coach is
         // quiet. A stat that counts what was never done is worse than none.
         //
-        // Paired with the text it was parsed from, because the rows the
-        // owner ADDED are not part of [Session] — a row with no `name` key
-        // threw during deserialization once and cost the whole day, so
-        // they are read out of the raw JSON by [SessionPatch]. On a
-        // borrowed day those rows are the entire session.
-        val logged = parsed.filter { (s, _) ->
-            s.sets.any { it.weight != null || it.reps != null || it.skipped }
-        }
-        val dates = logged.map { it.first.date }.filter { it.isNotBlank() }.sorted()
+        // But the test is [Row.answered], not "a number was entered", and
+        // the two are not the same thing: a class where every row was
+        // bodyweight and the only record is `mod`, or a 45-second hold
+        // ticked off with `done`, is a class the owner DID. Asking for a
+        // number threw away the whole day, not just the row — which is the
+        // same mistake as calling a marked row blank, one layer up.
+        //
+        // Sheet rows only, deliberately. Whether a session logged ENTIRELY
+        // by hand belongs on this screen is a separate, open question — it
+        // moves the aggregates rather than fixing a wrong one — and
+        // answering it by accident here is how a decision gets made without
+        // anyone deciding it.
+        val logged = parsed.filter { read -> read.rows.any { !it.added && it.answered } }
+        val dates = logged.map { it.session.date }.filter { it.isNotBlank() }.sorted()
 
         val peaks = lifts.filter { it.family != null }
             .groupBy { it.family!! }
@@ -230,12 +255,12 @@ object Growth {
         // Over what was actually LIFTED, not over every row on every sheet.
         // Grouped by the runner's own key, or not at all: all of them carry
         // one or the count is withheld.
-        val lifted = logged.flatMap { (s, _) -> s.sets.filter { !it.skipped && (it.weight ?: 0.0) > 0.0 } }
+        val lifted = logged.flatMap { read -> read.session.sets.filter { !it.skipped && (it.weight ?: 0.0) > 0.0 } }
         val counts = lifted.mapNotNull { it.key }
             .takeIf { it.size == lifted.size }
             ?.groupingBy { it }?.eachCount()
 
-        val days = logged.map { (session, text) ->
+        val days = logged.map { (session, text, rows) ->
             // This session's own lifts, not every lift sharing its date.
             // Two classes in one day is the case `sheet_id` exists for, and
             // the count and the heaviest now sit above that one session's
@@ -249,7 +274,7 @@ object Growth {
                 lifts = mine.size,
                 best = mine.maxByOrNull { it.weight },
                 backfilled = backfilledIn(text),
-                rows = rowsOf(session, text),
+                rows = rows,
             )
         }.sortedByDescending { it.date }
 
@@ -290,7 +315,7 @@ object Growth {
                 weight = set.weight,
                 reps = set.reps,
                 easy = set.easy, hard = set.hard, easier = set.easier,
-                hurt = set.hurt, skipped = set.skipped, note = set.note,
+                done = set.done, hurt = set.hurt, skipped = set.skipped, note = set.note,
             )
         } + SessionPatch.addedIn(text).map { row ->
             Row(

@@ -3,6 +3,7 @@ package com.app.carry
 import android.graphics.Bitmap
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -12,6 +13,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
@@ -291,6 +293,47 @@ class LogScreenTest {
         compose.onAllNodesWithText("mod")[0].performClick()
         compose.onAllNodesWithText("hard")[0].performClick()
         assertEquals(SessionPatch.Entry(easier = true, hard = true), edits.value[0])
+    }
+
+    @Test
+    fun `only a timed row is offered the way to say it just happened`() {
+        // One chip, on one row shape. The weighted rows at the top of the
+        // sheet have a number to give, so "done" there would be a second
+        // way to say what the weight box already says -- and two ways to
+        // record one thing is how the two disagree.
+        show()
+        // The sample's only timed row: 45 seconds of sit-up, no reps, no
+        // weight. Both boxes are empty by definition. Scrolled to, because
+        // a LazyColumn has not composed it yet -- which is also why this
+        // counts "done" against "hurt" rather than asserting it absent at
+        // the top: how far ahead the list composes is not this test's
+        // claim, and "hurt" is on every row.
+        reach("sit-up")
+        val anyRow = compose.onAllNodesWithText("hurt").fetchSemanticsNodes().size
+        assertTrue("expected several rows composed, saw $anyRow", anyRow > 1)
+        compose.onAllNodesWithText("done").assertCountEquals(1)
+        compose.onAllNodesWithText("done")[0].performClick()
+        assertEquals(SessionPatch.Entry(done = true), edits.value[9])
+
+        // And the tally counts it, because the row is no longer blank --
+        // otherwise the form reads as unfinished with nothing left to do.
+        compose.onNodeWithText("1 of 10 filled", substring = true).assertIsDisplayed()
+
+        // Six chips do not fit on one 411dp line, and what slid off the
+        // right edge was `skip` -- the one chip on the row that says a set
+        // did not happen, on the one row shape that has no number to say it
+        // with instead. So the chips wrap, and the proof is that this row's
+        // `skip` sits on a line BELOW `done` rather than beside it.
+        val done = compose.onAllNodesWithText("done")[0].getUnclippedBoundsInRoot()
+        val skips = (0 until compose.onAllNodesWithText("skip").fetchSemanticsNodes().size)
+            .map { compose.onAllNodesWithText("skip")[it].getUnclippedBoundsInRoot() }
+        assertTrue(
+            "no skip chip wrapped below done: $skips vs $done",
+            skips.any { it.top >= done.bottom },
+        )
+
+        reach("+ Add something the sheet missed")
+        shoot("22-timed-row")
     }
 
     @Test

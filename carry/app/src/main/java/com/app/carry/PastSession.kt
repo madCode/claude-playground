@@ -266,6 +266,7 @@ private fun Mark(text: String) {
  *  never sits next to amber on one row; amber here is the Log screen's
  *  "easy", which is the one marker that moves a weight. */
 private fun accent(mark: String) = when (mark) {
+    "done" -> Look.Chalk
     "easy" -> Look.Amber
     "hard" -> Look.BrickInk
     "hurt" -> Look.Brick
