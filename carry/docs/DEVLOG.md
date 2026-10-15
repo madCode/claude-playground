@@ -50,11 +50,32 @@ are still somewhere; a damaged file says so instead; and a newer sheet
 arriving mid-write is not overwritten by what we just wrote. The save
 coroutine went from 29% to 93%.
 
-**One of them had to be rewritten after it failed for the right reason.**
-It asserted the badge still said "Saved" after the newer sheet arrived. It
-does not, and it should not — the tick belongs to the sheet it was earned
-on, and sitting above a different session it would be claiming those
-numbers are in that file. The test now says so.
+**And then the review found what they had just made visible.** The *"only
+if nothing newer arrived"* guard wrapped exactly one line. The draft clear,
+the `_edits` re-seed and the "Saved" badge all ran regardless — so when the
+sync dropped the day's other class in mid-write (a refresh runs on every
+resume), the form kept **Saturday's numbers against Tuesday's rows**:
+`text` is the old session's bytes, and seeding the form from it puts a
+weight the owner never typed on a movement they have not done. "Saved" is
+still tappable, so one tap wrote it into the newer file. A wrong number in
+a training history, through the one path with no sheet-identity check.
+
+The whole tail is inside the guard now. When the sheet HAS changed,
+`reconcile` has already seeded the form from the file that arrived and
+nothing here second-guesses it.
+
+Two more branches that were still at zero got tests with it: a row with a
+weight and no name is **refused** and the typing kept (the case CLAUDE.md
+names, which returns before the folder is ever touched), and two taps in
+one frame write once.
+
+**One test had to be rewritten twice.** It first asserted the badge said
+"Saved" after the newer sheet arrived; it does not. Then it asserted
+`Idle` — and the review measured that failing **4 times in 20**, because
+which of the two lands depends on whether the save's resumption or
+`reconcile`'s returns from `Dispatchers.Default` last. It now asserts the
+thing that is both deterministic and the actual damage: the form is not
+holding the old sheet's numbers. 20 clean runs after the fix.
 
 ## 2026-10-16 — cycle 28: a hold you did had nowhere to land
 

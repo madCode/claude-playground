@@ -235,16 +235,27 @@ class CarryViewModelTest {
      */
     private suspend fun settled(model: CarryViewModel) {
         val scope = model.viewModelScope.coroutineContext.job
-        withContext(Dispatchers.Default) {
-            withTimeout(20_000) {
-                while (scope.children.any { it.isActive }) {
-                    // `runTest` is parked in this `withContext`, so nothing
-                    // else is driving the test dispatcher meanwhile.
-                    dispatcher.scheduler.advanceUntilIdle()
-                    delay(5)
+        val done = runCatching {
+            withContext(Dispatchers.Default) {
+                withTimeout(20_000) {
+                    while (scope.children.any { it.isActive }) {
+                        // NOT the only driver: `runTest` keeps a workRunner
+                        // pumping the scheduler for the whole test body, so
+                        // these tasks mostly run on ITS thread rather than
+                        // this one. The scheduler's own lock makes that
+                        // safe; what it means is that this drives the queue
+                        // forward rather than owning it, which is why the
+                        // loop waits on the jobs and not on a task count.
+                        dispatcher.scheduler.advanceUntilIdle()
+                        delay(5)
+                    }
                 }
             }
-        }
+        }.isSuccess
+        // Named, because a bare TimeoutCancellationException here also
+        // trips tearDown's own check and the pair reads like two unrelated
+        // failures.
+        assertTrue("a coroutine never finished; the save or the refresh is stuck", done)
     }
 
     private suspend fun saved(
@@ -259,6 +270,11 @@ class CarryViewModelTest {
         // watched only for that would read the answer before the write's
         // own result had been applied.
         settled(model)
+        // `save()` returns without launching on several paths and
+        // `settled()` then comes straight back, so a test can assert
+        // happily against a save that never happened -- which is exactly
+        // what these four did on their first run.
+        assertTrue("the write never ran; save() returned before it", written != null)
         return written
     }
 
@@ -318,7 +334,8 @@ class CarryViewModelTest {
         // Different words for different things to do: one of these means
         // "press it again", the other means "go and look at the file
         // before it syncs".
-        val model = viewModel()
+        val handle = SavedStateHandle()
+        val model = viewModel(handle)
         model.read = { ready() }
         model.refresh(); settled(model)
         model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
@@ -329,6 +346,61 @@ class CarryViewModelTest {
         val state = model.saving.value as SaveState.Failed
         assertTrue("the owner has to be told to look at the file", state.damaged)
         assertTrue(state.why, state.why.contains("may be damaged"))
+        // This is where the draft matters most: the file on disk may need
+        // rescuing before a retry is possible, and what the owner typed is
+        // now the only copy of something nothing can re-derive.
+        assertTrue("the numbers must survive a damaged file", handle.keys().isNotEmpty())
+    }
+
+    @Test
+    fun `a row with a weight and no name is refused, and the typing kept`() = runTest(dispatcher) {
+        // The branch CLAUDE.md names: this row used to be filtered out at
+        // the save, so a weight typed into a row the owner had not named
+        // yet was dropped silently under a "Saved" message with no way to
+        // tell afterwards. The patch refuses instead -- and a refusal must
+        // not take the numbers with it, because the row IS on screen and
+        // naming it is one tap away.
+        //
+        // Reached without the write seam at all: this returns before the
+        // folder is touched, which is why it stayed at 0% while the rest
+        // of the path was being covered.
+        val handle = SavedStateHandle()
+        val model = viewModel(handle)
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        model.addRow()
+        model.editAdded(0, model.added.value[0].copy(weight = 20.0))
+
+        var wrote = 0
+        model.write = { _, _ -> wrote++; Saved.YES }
+        model.save()
+        settled(model)
+
+        assertEquals("nothing may reach the folder", 0, wrote)
+        val state = model.saving.value
+        assertTrue("expected a refusal, got $state", state is SaveState.Failed)
+        assertFalse("a refusal is not a damaged file", (state as SaveState.Failed).damaged)
+        assertTrue(state.why, state.why.contains("Name the exercise"))
+        assertEquals("the row stays, so it can be named", 20.0, model.added.value[0].weight)
+        assertTrue("and the typing is still recoverable", handle.keys().isNotEmpty())
+    }
+
+    @Test
+    fun `two taps in one frame write once`() = runTest(dispatcher) {
+        // The composable captures `enabled` before `save()` ever runs, so
+        // the second tap used to start a second write against the same
+        // document and the two could undo each other.
+        val model = viewModel()
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+        var wrote = 0
+        model.write = { _, _ -> wrote++; model.save(); Saved.YES }
+        model.save()
+        settled(model)
+
+        assertEquals("the second tap must find the first still in flight", 1, wrote)
     }
 
     @Test
@@ -355,10 +427,21 @@ class CarryViewModelTest {
             "the newer sheet must still be the one on screen",
             newer, (model.state.value as CarryState.Ready).raw,
         )
-        // And the badge does NOT say "Saved" over it. The tick belongs to
-        // the sheet it was earned on; sitting above a different session it
-        // would be claiming those numbers are in this file.
-        assertEquals(SaveState.Idle, model.saving.value)
+        // And the form must not still be holding the old session's numbers.
+        // Everything after the write used to run whether or not the sheet
+        // had changed under it, so `_edits` was re-seeded from the bytes we
+        // had just written -- Saturday's 95 sitting against Tuesday's
+        // deadlift, on a screen the owner reads in a lobby, with "Saved"
+        // still tappable above it.
+        //
+        // NOT asserted: `saving`. Which of Idle and Saved lands depends on
+        // whether the save's resumption or `reconcile`'s comes back from
+        // its Dispatchers.Default hop last, and pinning one arm of that
+        // made this test fail 4 times in 20 (review, 2026-10-16).
+        assertEquals(
+            "the old sheet's numbers must not be sitting on the new sheet's rows",
+            SessionPatch.entriesIn(newer), model.edits.value,
+        )
     }
 
     @Test

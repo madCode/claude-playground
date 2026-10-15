@@ -45,14 +45,14 @@ the analysis).
   lift a number is worse than the number), but worth one pass over the
   classes with the widest gap: `SessionFolder` 78%, `CarryAppKt` 77%
   *(audit: CI health)*
-- [ ] After a successful write, `save()` re-seeds `_edits` from the text it
-  wrote. **Nothing can distinguish that line from its absence** — what was
-  typed and what comes back out of the written file are the same map, and
-  no fixture built for #78 made them differ. Its comment says it stops the
-  next refresh blanking the form, but the draft is removed two lines above,
-  so `reconcile` seeds from the raw bytes anyway. Either it is dead, or its
-  reason is mis-stated and the real one should be written down *(audit:
-  CI health)*
+- [x] ~~After a successful write, `save()` re-seeds `_edits` from the text
+  it wrote, and nothing can distinguish that line from its absence.~~
+  **Answered, and it was worse than dead.** The #78 review found the
+  re-seed was observable in exactly one case and observably wrong there:
+  the *"only if nothing newer arrived"* guard wrapped one line and the
+  re-seed ran regardless, so a sheet arriving mid-write left the old
+  session's numbers on the new session's rows, with "Saved" still tappable
+  above them. Fixed in #78; the whole tail is inside the guard
 - [ ] `MainActivity` is at **0%** and `LogBinding` at 0%. The first is the
   SAF plumbing the emulator is honest about and unit tests are not, so it
   is the one place a device check earns its keep; the second is a plain
