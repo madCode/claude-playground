@@ -100,6 +100,48 @@ class CarryStateTest {
     }
 
     @Test
+    fun `a null flag costs that flag, not the whole day`() {
+        // The file is written on another machine. A `null` where this build
+        // expects a plain value used to throw, which `parse` turned into
+        // "Can't read that session" -- so one odd key cost a day whose
+        // every number was intact, with nothing the owner could do from
+        // the phone.
+        fun day(row: String) = SessionFiles.parse(
+            """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-17","sets":[$row]}"""
+        )
+
+        val nulled = day("""{"ref":0,"line":"10 x squat","done":null,"easy":null,
+            "hard":null,"easier":null,"hurt":null,"skipped":null}""")
+        assertEquals("the day still reads", 1, nulled?.sets?.size)
+        val set = nulled!!.sets.first()
+        // And `false` is not a guess: an unset flag means the owner did not
+        // say that about the set, which is what each of these records.
+        assertEquals("10 x squat", set.line)
+        assertTrue("no flag is claimed",
+            !set.done && !set.easy && !set.hard && !set.easier && !set.hurt && !set.skipped)
+
+        // A null `sets` now reads the same as an absent one, which it
+        // always should have: both mean "no rows", and only one of them
+        // used to lose the file.
+        assertEquals(
+            0,
+            SessionFiles.parse(
+                """{"schema":"gym-session/1","sheet_id":"s","date":"d","sets":null}"""
+            )?.sets?.size,
+        )
+    }
+
+    @Test
+    fun `coercion must not vouch for another tool's file`() {
+        // The hazard the fix brings with it. `schema` decides whether this
+        // file is ours at all; if it were non-nullable with a default,
+        // coercion would turn some other tool's `"schema": null` INTO
+        // "gym-session/1" and the gate would pass its own default back to
+        // itself.
+        assertNull(SessionFiles.parse("""{"schema":null,"sheet_id":"a","date":"b","sets":[]}"""))
+    }
+
+    @Test
     fun `no folder means the picker`() {
         assertEquals(CarryState.NeedsFolder(), carryState(FakeFolder(chosen = false)))
     }

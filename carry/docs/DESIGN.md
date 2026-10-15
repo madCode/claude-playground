@@ -510,3 +510,16 @@ script. Carry does not define the schema and must not extend it locally: the
 runner writes the sets with their identities and `weight: null`, Carry fills
 them in, the runner imports the result. A field Carry invents is a field the
 importer drops.
+
+**Reading it is lenient in two named ways and strict everywhere else.** An
+unknown key is ignored, so a newer runner can add fields without breaking
+an older build; and a `null` where a plain value is expected falls back to
+that field's default, so one odd key cannot cost a whole day's numbers.
+`schema` is the exception and is deliberately nullable: it is what decides
+the file is ours at all, and a non-nullable `schema` would have coercion
+hand the gate its own default back.
+
+Anything else unreadable still costs the file, which the screen says
+plainly rather than guessing: a value of the wrong type, or a missing
+`ref`, takes the whole session to "Can't read that session". That is too
+blunt and is on the backlog.

@@ -22,7 +22,15 @@ import kotlinx.serialization.json.JsonObject
  */
 @Serializable
 data class Session(
-    val schema: String = SCHEMA,
+    /**
+     * Nullable so that coercion cannot vouch for a file.
+     *
+     * [SessionFiles.parse] decides a file is ours by comparing this to
+     * [SCHEMA]. Were it non-nullable with a default, `coerceInputValues`
+     * would turn some other tool's `"schema": null` INTO "gym-session/1"
+     * and the gate would pass its own default back to itself.
+     */
+    val schema: String? = SCHEMA,
     @SerialName("sheet_id") val sheetId: String,
     val date: String,
     @SerialName("class") val classTag: String? = null,
@@ -39,6 +47,19 @@ data class Session(
             encodeDefaults = true
             explicitNulls = true
             prettyPrint = true
+            // A `null` where this build expects a plain value falls back to
+            // the default instead of throwing. Without it a single
+            // `"done": null` from another writer took down the WHOLE day --
+            // the decode threw, `SessionFiles.parse` turned that into null,
+            // and the owner got "Can't read that session" for a file whose
+            // every number was intact. For these fields the fallback is
+            // also the right answer: `false` is exactly what an unset flag
+            // means, and a null `sets` then reads the same as an absent one.
+            //
+            // It does NOT rescue a value of the wrong type -- `"done":
+            // "yes"` still costs the day -- which is the wider version of
+            // this and is on the backlog with its own evidence.
+            coerceInputValues = true
         }
     }
 }
