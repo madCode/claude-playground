@@ -205,7 +205,7 @@ object SessionPatch {
     /** `null` and a missing key mean the same thing: no list. Everything
      *  that reads these arrays already agrees (`as? JsonArray` is null for
      *  both); only the two guards above told them apart. */
-    private fun JsonElement?.orAbsent(): JsonElement? = this?.takeIf { it != JsonNull }
+    private fun JsonElement?.orAbsent(): JsonElement? = this?.takeIf { it !is JsonNull }
 
     /** The row's own name for itself, when it has a real one. A positional
      *  stand-in is not an identity anything may be matched on. */
