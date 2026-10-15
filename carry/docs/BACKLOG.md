@@ -18,6 +18,11 @@ to know it worked; written 2026-10-14 so a session can start without re-deriving
 the analysis).
 
 ### Screens
+- [ ] **Write the streak into the session file so the dots can light.**
+  `streak_done`/`streak_needed` are read by both the Before tab's pips and the
+  Since tab's "close to a bump" band, and **nothing writes them** — zero rows
+  across all seven session files — so both have been implemented and empty
+  since they shipped. Pairs with the runner-side change *(you asked)*
 - [x] **Open a past session from the Since list** — no screen answers "what did I
   lift that day" *(you asked, design:
   [open-a-past-session](designs/open-a-past-session.md))*
@@ -35,6 +40,17 @@ the analysis).
   *(you asked)*
 
 ### The lobby glance
+- [ ] **The Before tab lands on a stale sheet, and the warning is wrong.**
+  It always shows the newest session file and warns "your folder may not have
+  synced" — but at one or two classes a week there simply is no class most
+  days, so the sync is fine and the warning is a false alarm in the primary
+  position every time the app opens. Say "no sheet for today" and make a past
+  day's sheet secondary *(you asked)*
+- [ ] **No way to say "did it, nothing notable" on a timed row.** A 45-second
+  plank has no number to give and no chip that means plain done, so a
+  completed hold cannot reach history at all. The runner now counts a feel
+  marker or a note as an answer; this is the half that needs an affordance
+  here *(audit)*
 - [ ] **Notify when a new session file lands** — the glance still depends on
   remembering to open the app. Forces a decision: the app currently declares no
   Android permissions at all *(design:
