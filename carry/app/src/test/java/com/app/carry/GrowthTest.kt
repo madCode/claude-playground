@@ -179,6 +179,45 @@ class GrowthTest {
     }
 
     @Test
+    fun `a movement they skipped does not take a slot in the band`() {
+        // The band is capped on screen, so a row they said they did not do
+        // would push out one they worked on. The same exclusion the lift
+        // counts in this file already make.
+        val since = Growth.of(
+            listOf(
+                file("2026-10-11", sets = listOf(
+                    set(0, "skipped one", "legs", done = "2", needed = "3",
+                        suggested = "20", skipped = true),
+                    set(1, "did it", "legs", done = "1", needed = "3", suggested = "20"),
+                ).joinToString(",")),
+            )
+        )
+        assertEquals(listOf("did it"), since.nearBump.map { it.name })
+    }
+
+    @Test
+    fun `the rows nearest a bump come first`() {
+        // The screen caps this band, so the order decides which rows the
+        // owner sees at all. Nothing held it until 2026-10-16: the one
+        // ordering test above asserted a ONE-element list, and the screen
+        // test sorted its own fixture before handing it over -- so deleting
+        // the sort here left every test in the project green while the
+        // screen silently showed an arbitrary five.
+        val since = Growth.of(
+            listOf(
+                file("2026-10-11", sets = listOf(
+                    set(0, "a", "legs", done = "1", needed = "3", suggested = "20"),
+                    set(1, "b", "legs", done = "1", needed = "2", suggested = "20"),
+                    set(2, "c", "legs", done = "2", needed = "3", suggested = "20"),
+                ).joinToString(",")),
+            )
+        )
+        // Two thirds, one half, one third: how far along, not how many
+        // sets are left.
+        assertEquals(listOf("c", "b", "a"), since.nearBump.map { it.name })
+    }
+
+    @Test
     fun `nothing is invented when the runner said nothing`() {
         // A back-filled day has no sheet behind it, so it has no streaks.
         // Working them out here would be a second implementation of a rule

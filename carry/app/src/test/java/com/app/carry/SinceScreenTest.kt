@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -109,8 +110,8 @@ class SinceScreenTest {
     }
 
     /** Every setup done once, which is what the runner's streak counts
-     *  produce for this owner today: of 32 distinct (setup, rep-count)
-     *  lines in their history, most would arrive at 1 of 3. */
+     *  produce for this owner today: most lines on a sheet written now
+     *  would arrive at 1 of 3. */
     private fun allAtOne(n: Int) = (1..n).map {
         Growth.Bump("movement $it", listOf("legs", "push", "pull", "core")[it % 4], 20.0 + it, 1, 3)
     }
@@ -137,9 +138,12 @@ class SinceScreenTest {
         compose.onNodeWithText("movement 5").assertIsDisplayed()
         compose.onNodeWithText("movement 6").assertDoesNotExist()
         compose.onNodeWithText("and 6 more").assertIsDisplayed()
-        // The bands under it are what the screen is otherwise for, and they
-        // were below the fold with eleven rows above them.
-        compose.onNodeWithText("Heaviest, by what it trains".uppercase()).assertIsDisplayed()
+        // And it reads out as what it is. The pips are bare Boxes with no
+        // semantics, so without a row label the band's entire content --
+        // the streak, which is what its heading asks about -- is inaudible.
+        compose.onNodeWithContentDescription("movement 1, 1 of 3 clean sets, 21 pounds")
+            .assertIsDisplayed()
+        compose.onNodeWithContentDescription("and 6 more, not shown").assertIsDisplayed()
         shoot("23-progress-band")
     }
 
@@ -147,17 +151,26 @@ class SinceScreenTest {
     fun `a band that fits says nothing about more`() {
         compose.setContent { SinceScreen(since.copy(nearBump = allAtOne(3))) }
         compose.onNodeWithText("movement 3").assertIsDisplayed()
-        compose.onNodeWithText("more", substring = true).assertDoesNotExist()
+        // Anchored, not a bare "more": the quiet band says "done more than
+        // once at the same variant" for every `repeated` but 1, so a loose
+        // substring here would fail on a fixture change with nothing wrong
+        // in the code.
+        compose.onNodeWithText("and ", substring = true).assertDoesNotExist()
     }
 
     @Test
-    fun `the one closest to a bump leads`() {
-        // The cap can only be honest if the sort is: five rows chosen from
-        // eleven must be the five furthest along, not the first five the
-        // sheet happened to list.
-        val mixed = allAtOne(6) + listOf(Growth.Bump("nearly there", "legs", 40.0, 2, 3))
-        compose.setContent { SinceScreen(since.copy(nearBump = mixed.sortedByDescending { it.done.toDouble() / it.needed })) }
+    fun `the cap keeps the head of the list it is given`() {
+        // Deliberately NOT sorting the fixture: that is `Growth.of`'s job
+        // and `GrowthTest` holds it (the first version of this test sorted
+        // its own input and then asserted the screen showed element zero,
+        // which could not fail). What the screen owes is to take the FRONT
+        // of the list, so a row the runner put first is never cut.
+        val mixed = listOf(Growth.Bump("nearly there", "legs", 40.0, 2, 3)) + allAtOne(8)
+        compose.setContent { SinceScreen(since.copy(nearBump = mixed)) }
         compose.onNodeWithText("nearly there").assertIsDisplayed()
+        compose.onNodeWithText("movement 4").assertIsDisplayed()
+        compose.onNodeWithText("movement 5").assertDoesNotExist()
+        compose.onNodeWithText("and 4 more").assertIsDisplayed()
     }
 
     private fun shoot(name: String) {

@@ -114,19 +114,22 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
 
         LazyColumn(Modifier.weight(1f), state = list) {
             if (since.nearBump.isNotEmpty()) {
-                // "Close to a bump" was a claim the rows could not support.
-                // The runner counts a streak from the first clean set, so a
-                // movement done ONCE arrives here at 1 of 3 -- and this
-                // owner starts nearly every movement fresh, because the
-                // studio changes the setup most classes. Rendered with real
-                // numbers the band was eleven rows, every one a single lit
-                // pip, filling the whole screen under a heading saying they
-                // were all about to go up.
+                // "Close to a bump" was a claim the rows could not
+                // support. The runner counts a streak from the first clean
+                // set, so a movement done ONCE arrives here at 1 of 3 --
+                // and this owner starts nearly every movement fresh,
+                // because the studio changes the setup most classes. So
+                // most of a real sheet lands here at one pip of three, all
+                // on the same rung, under a heading that said they were
+                // about to go up.
                 //
                 // The pips are worth keeping; the word "close" was not.
                 item { Band("How close each one is") }
-                // Closest first, which the sort already does, and only as
-                // many as leave room for the bands under it.
+                // Ordered by how far along, and capped so the band cannot
+                // take the screen from the ones under it. On a sheet where
+                // everything is on the same rung -- which is the usual case
+                // -- the order is the board's, so the cap says how many are
+                // not shown rather than claiming the rest are behind.
                 items(since.nearBump.take(MAX_BUMP_ROWS)) { BumpRow(it) }
                 if (since.nearBump.size > MAX_BUMP_ROWS) {
                     item { More(since.nearBump.size - MAX_BUMP_ROWS) }
@@ -175,22 +178,45 @@ private fun Band(text: String) {
     )
 }
 
-/** What the cap left out, said rather than silently dropped: a count that
- *  stops at five looks like a folder with five things in it. */
+/** What the cap left out, said rather than silently dropped: a list that
+ *  stops at five looks like a folder with five things in it.
+ *
+ *  Its own semantics node, because out of its row this reads as a fragment
+ *  -- TalkBack lands on "and 6 more" with nothing to attach it to. */
 @Composable
 private fun More(rest: Int) {
     Text(
         "and $rest more",
         color = Look.ChalkFaint, fontFamily = Look.Name, fontSize = Look.SmallSize,
-        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
+        modifier = Modifier
+            .semantics { contentDescription = "and $rest more, not shown" }
+            .padding(top = 8.dp, bottom = 2.dp),
     )
 }
+
+/** How a progress row reads out: the pips are the content, and they are
+ *  drawn, not written. "pounds" said explicitly, for the same reason the
+ *  day rows say it -- the column header the sighted layout relies on is
+ *  not read. */
+private fun spoken(bump: Growth.Bump): String = listOfNotNull(
+    bump.name,
+    "${bump.done} of ${bump.needed} clean sets",
+    "${figure(bump.weight)} pounds",
+).joinToString(", ")
 
 /** The one actionable thing in the data: another clean set moves it. */
 @Composable
 private fun BumpRow(bump: Growth.Bump) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        Modifier
+            .fillMaxWidth()
+            // One label for the whole row, as the day rows have. The pips
+            // are bare Boxes with no semantics, so unlabelled this row
+            // reads as "movement 1" then "21" -- the streak, which is the
+            // entire answer to the heading above it, is inaudible, and the
+            // weight is a bare number with no unit.
+            .semantics(mergeDescendants = true) { contentDescription = spoken(bump) }
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -407,8 +433,12 @@ private fun Stat(number: String, label: String) {
 
 private fun figure(weight: Double): String = weight.asWeight()
 
-/** How many rows the progress band may show. The rest are the least far
- *  along, and the screen has three other bands to get to. */
+/** How many rows the progress band may show, so it cannot take the screen
+ *  from the three bands under it. NOT "the rest are the least far along":
+ *  when every row is on the same rung -- the usual case -- the sort is a
+ *  no-op and the five shown are simply the first five the board listed,
+ *  which is why the line below counts the others rather than ranking
+ *  them. */
 private const val MAX_BUMP_ROWS = 5
 private const val MAX_PIPS = 10
 private const val MIN_BAR = 5.0

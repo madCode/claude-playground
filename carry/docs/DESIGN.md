@@ -291,19 +291,21 @@ what earns a bump, that rule lives in the runner, and a second
 implementation here would eventually disagree with it about someone's
 training. So *how close each one is* carries the runner's own numbers
 through, and what counts as *the same exercise* is a key the runner writes.
+A first version that worked that out locally, by hashing the whole variant,
+made every lift on a sheet look distinct when one pair was the same
+movement — it was including the fields the runner deliberately leaves out
+of the key. Where a file carries no key, the count is withheld rather than
+guessed.
 
-That band was called **"close to a bump"** until 2026-10-16, when it was
-first rendered with the numbers the runner now produces: eleven rows, each
-a single lit pip of three, filling the screen under a heading saying they
-were all about to go up. The runner counts a streak from the first clean
-set, and this owner starts nearly every movement fresh — the studio changes
-the setup most classes — so one of three is the normal case, not the edge.
-The pips were worth keeping; the word *close* was not. It shows the five
-furthest along and counts the rest. A first
-version that worked that out locally, by hashing the whole variant, made 20
-of 20 lifts look distinct when one pair was the same movement — it was
-including the fields the runner deliberately leaves out of the key. Where
-a file carries no key, the count is withheld rather than guessed.
+**That band is named for what it can answer.** The runner counts a streak
+from the first clean set, and this owner starts nearly every movement fresh
+because the studio changes the setup most classes — so most of a real sheet
+arrives on the same rung, one clean set of the three a bump needs. A
+heading claiming they were *close* to anything was a claim the rows could
+not support. It is capped as well, because a band of a dozen rows takes the
+screen from the three underneath; what the cap leaves out is counted, not
+dropped, and on a sheet where everything is on the same rung the order is
+the board's rather than a ranking.
 
 ## Handing the block over
 

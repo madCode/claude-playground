@@ -21,15 +21,45 @@ the analysis).
 - [x] ~~**Write the streak into the session file so the dots can light.**~~
   **The diagnosis was wrong and nothing needed writing.** `session_file.py`
   has written `streak_done`/`streak_needed` all along; what was null was
-  `Suggestion.streak_done` itself, and the seven files on disk were all
-  written before the runner learned to count the converted streak. Measured
+  `Suggestion.streak_done` itself, and the files on disk were all written
+  before the runner learned to count the converted streak. Measured
   2026-10-16 against the real history: a sheet written **today** would carry
-  dots on **15 of 32** distinct (setup, rep-count) lines — every one of them
-  at **1 of 3**, because each setup has been done once.
-  `gym-coach/eval_reports/2026-10-16-the-dots-are-already-written.md`.
+  dots on **most** of its lines — and **every one of them at 1 of 3**,
+  because each setup has been done once. The figures stay with the data, in
+  the companion repository's eval report, not here (see "Privacy" in
+  `CLAUDE.md`).
   What that revealed instead is in #79: rendered with those numbers the
   Since band was eleven rows of one lit pip under the heading "close to a
   bump" *(you asked)*
+- [ ] **"How close each one is" over-claims in the quantifier.** "Each one"
+  reads as every movement trained; the band is three filters deep — only the
+  newest sheet, only streaks strictly in progress, and now only five of
+  those — and "and N more" implies that N+5 is the total. A movement at
+  0 of 3, or one not on today's sheet, is absent *(audit)*
+- [ ] The progress band sorts by `done/needed`, which matches its heading,
+  but its row KDoc says "another clean set moves it" — a different question.
+  With a varying `needed` (the runner's rule is free to differ per movement
+  and `MAX_PIPS` is 10), five rows at 8 of 10 outrank one at 2 of 3, so the
+  one row a single set would bump lands in "and N more". Not reachable while
+  every `needed` is 3 *(audit)*
+- [ ] The progress-band fixture never produces three shapes the real path
+  does: `family = null` (so the row without its colour bar is never
+  rendered in a test), `needed` other than 3, and a `needed` big enough to
+  hit `coerceAtMost(MAX_PIPS)`. A `Growth.of`-level fixture would cover all
+  three *(audit)*
+- [ ] **Aggregate facts about the owner's training are in this public repo,
+  predating tonight.** `CLAUDE.md`'s Privacy section rules them out — "the
+  test is whether a stranger learns something about the owner's training
+  from the sentence" — and names the fix: say "most" or "a small minority".
+  Four that are already on `main`: `SinceScreen.kt` ("26 distinct movements
+  across 32 sets and exactly one of them done twice"), `DESIGN.md`
+  ("20 of 20 lifts"), `GrowthTest.kt` ("19 of 20 distinct"), and the
+  "a third of this owner's logged sets" line repeated in `DESIGN.md`,
+  `LogScreen.kt`, `LogScreenTest.kt` and `PastSessionScreenTest.kt`. #79
+  removed the ones it had just added and left these, because they are
+  load-bearing reasoning in several places and converting them is a pass of
+  its own — **and it may be a deliberate exception you want kept** *(audit)*
+
 - [ ] **Should a movement done once appear in the progress band at all?**
   #79 kept it and fixed the heading — *how close each one is*, five rows,
   the rest counted. The alternative is to show only what is genuinely close
