@@ -214,6 +214,153 @@ class CarryViewModelTest {
     private fun ready(raw: String = sheet, id: String = "doc") =
         CarryState.Ready(Session.json.decodeFromString(raw), raw, id)
 
+    /**
+     * A save driven all the way through the write.
+     *
+     * Everything below `folder.save(...)` -- the three outcomes, the
+     * "nothing newer arrived" guard, the draft clear and the re-seed from
+     * what was written -- had never executed in any test: the two existing
+     * `save()` calls here reach a refusal and an "already recorded", both
+     * of which return before the write. Found by reading Kover's line
+     * report for CarryViewModel.kt, 2026-10-16.
+     */
+    /**
+     * Waits for a refresh to be completely finished, seed included.
+     *
+     * `advanceUntilIdle` is not enough: `reconcile` seeds through
+     * `Dispatchers.Default`, which the test dispatcher does not drive, so
+     * the seed can land AFTER a test's first `edit()` and overwrite it --
+     * which is what made the four save tests below reach "already
+     * recorded" with nothing to write (2026-10-16).
+     */
+    private suspend fun settled(model: CarryViewModel) {
+        val scope = model.viewModelScope.coroutineContext.job
+        withContext(Dispatchers.Default) {
+            withTimeout(20_000) {
+                while (scope.children.any { it.isActive }) {
+                    // `runTest` is parked in this `withContext`, so nothing
+                    // else is driving the test dispatcher meanwhile.
+                    dispatcher.scheduler.advanceUntilIdle()
+                    delay(5)
+                }
+            }
+        }
+    }
+
+    private suspend fun saved(
+        model: CarryViewModel, outcome: Saved = Saved.YES,
+        onWrite: (String) -> Unit = {},
+    ): String? {
+        var written: String? = null
+        model.write = { _, text -> written = text; onWrite(text); outcome }
+        model.save()
+        // Settled, not "no longer Saving": a refresh landing during the
+        // write flips the state to Idle on its way past, and a wait that
+        // watched only for that would read the answer before the write's
+        // own result had been applied.
+        settled(model)
+        return written
+    }
+
+    @Test
+    fun `what was written is what the form then shows`() = runTest(dispatcher) {
+        // The re-seed. Without it the next refresh reads a state captured
+        // before the save and blanks the form the owner just filled in.
+        val handle = SavedStateHandle()
+        val model = viewModel(handle)
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        assertTrue("a draft is expected before the save", handle.keys().isNotEmpty())
+
+        val written = saved(model)
+        advanceUntilIdle()
+
+        assertEquals(SaveState.Saved, model.saving.value)
+        assertTrue("the numbers must be in what went to the folder", written!!.contains("95"))
+        assertEquals(
+            "the screen must hold the bytes that were written, not the ones read before",
+            written, (model.state.value as CarryState.Ready).raw,
+        )
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+        assertTrue("the draft is spent once it is on disk", handle.keys().isEmpty())
+        // Not asserted: the re-seed one line further on
+        // (`_edits = entriesIn(text)`). Nothing here can tell it from its
+        // absence -- what was typed and what comes back out of the written
+        // file are the same map -- and no fixture built for this made them
+        // differ. Noted in the backlog rather than pinned by a test that
+        // would pass either way.
+    }
+
+    @Test
+    fun `a refused write says the file is unchanged, and keeps the draft`() = runTest(dispatcher) {
+        // "Try again" is only honest while the numbers are still somewhere,
+        // and the draft is the only place they are.
+        val handle = SavedStateHandle()
+        val model = viewModel(handle)
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+        saved(model, Saved.NO_FILE_INTACT)
+        advanceUntilIdle()
+
+        val state = model.saving.value
+        assertTrue("expected a failure, got $state", state is SaveState.Failed)
+        assertFalse("an intact file is not a damaged one", (state as SaveState.Failed).damaged)
+        assertTrue(state.why, state.why.contains("unchanged"))
+        assertTrue("the numbers must survive a refusal", handle.keys().isNotEmpty())
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+    }
+
+    @Test
+    fun `a damaged file is reported as damaged, not as a retry`() = runTest(dispatcher) {
+        // Different words for different things to do: one of these means
+        // "press it again", the other means "go and look at the file
+        // before it syncs".
+        val model = viewModel()
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+        saved(model, Saved.NO_FILE_DAMAGED)
+        advanceUntilIdle()
+
+        val state = model.saving.value as SaveState.Failed
+        assertTrue("the owner has to be told to look at the file", state.damaged)
+        assertTrue(state.why, state.why.contains("may be damaged"))
+    }
+
+    @Test
+    fun `a newer sheet that arrived during the write is not overwritten`() = runTest(dispatcher) {
+        // The folder is shared with a syncing machine, so the runner can
+        // replace the sheet while the owner is mid-save. Putting the text
+        // we wrote on screen regardless would put the older session back
+        // in front of them.
+        val newer = sheet.replace("2026-10-17", "2026-10-18")
+        val model = viewModel()
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+        val written = saved(model) {
+            // Arrives while the write is in flight.
+            model.read = { ready(newer, id = "doc2") }
+            model.refresh()
+        }
+        advanceUntilIdle()
+
+        assertTrue("the write itself must still have happened", written!!.contains("95"))
+        assertEquals(
+            "the newer sheet must still be the one on screen",
+            newer, (model.state.value as CarryState.Ready).raw,
+        )
+        // And the badge does NOT say "Saved" over it. The tick belongs to
+        // the sheet it was earned on; sitting above a different session it
+        // would be claiming those numbers are in this file.
+        assertEquals(SaveState.Idle, model.saving.value)
+    }
+
     @Test
     fun `a half-filled form survives the process dying`() = runTest(dispatcher) {
         // The likeliest real loss in the app: ten rows filled in the car,

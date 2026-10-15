@@ -6,7 +6,8 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** the *done* chip for timed holds, and the Since screen no
+- **Lately:** the save path's own tests, which it had never had (#78); the
+  *done* chip for timed holds, and the Since screen no
   longer dropping a session logged only with markers (#77); opening a past
   session from the Since list (#71); the flaky
   `CarryViewModelTest` fixed and proved with a denser probe (#72); the
@@ -23,6 +24,37 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-16 — cycle 29: the save path had never been driven
+
+**Found.** Kover's line report for `CarryViewModel.kt`: everything below
+`folder.save(...)` had never executed in any test. The three outcomes, the
+"only if nothing newer arrived" guard, the draft clear, the re-seed — all
+of it. `SaveTest` covers the *folder's* write thoroughly; what was missing
+was the ViewModel's handling of what it answers. The two existing
+`save()` calls in `CarryViewModelTest` both return before the write: one
+hits a refusal, the other "already recorded".
+
+That is the path whose stated worst outcome is a wrong number in a
+training history.
+
+**Why it was untestable.** `folder` is a concrete `SessionFolder` because
+the Activity needs its SAF-only parts. There is now an `internal var
+write` seam beside the existing `read` and `readSince` ones — the single
+call the save makes into the folder, and the only production change here.
+
+**Shipped.** Four tests: a clean write puts the written bytes on screen
+and spends the draft; a refused write says the file is unchanged and
+**keeps** the draft, because "try again" is only honest while the numbers
+are still somewhere; a damaged file says so instead; and a newer sheet
+arriving mid-write is not overwritten by what we just wrote. The save
+coroutine went from 29% to 93%.
+
+**One of them had to be rewritten after it failed for the right reason.**
+It asserted the badge still said "Saved" after the newer sheet arrived. It
+does not, and it should not — the tick belongs to the sheet it was earned
+on, and sitting above a different session it would be claiming those
+numbers are in that file. The test now says so.
 
 ## 2026-10-16 — cycle 28: a hold you did had nowhere to land
 

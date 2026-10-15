@@ -90,6 +90,19 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      *  through the constructor a ViewModelProvider has to call. */
     internal var read: suspend () -> CarryState = { SessionLoader(folder).load() }
 
+    /**
+     * The same seam for the write.
+     *
+     * `folder` itself stays a [SessionFolder] because the Activity needs
+     * its SAF-only parts, so this is the one call the save makes into it
+     * and the one a test has to be able to stand in for. Everything below
+     * it -- the three outcomes, the "nothing newer arrived" guard, the
+     * draft clear and the re-seed from what was written -- had never
+     * executed in a test until this existed (2026-10-16), on the path
+     * whose stated worst outcome is a wrong number in a training history.
+     */
+    internal var write: (String, String) -> Saved = { id, text -> folder.save(id, text) }
+
     /** The same seam for the folder's history, which is read on its own
      *  schedule: on resume with the sheet, and again whenever a save has
      *  changed what the folder holds. */
@@ -341,7 +354,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                         return@launch
                     }
                     val result = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        folder.save(ready.documentId, text)
+                        write(ready.documentId, text)
                     }
                     _saving.value = when (result) {
                         Saved.YES -> {
