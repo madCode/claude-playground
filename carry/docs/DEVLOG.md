@@ -20,6 +20,31 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 27: the Before tab stops blaming the sync
+
+**From you.** "I don't really understand why the first page I land on is a
+non-existent cheat sheet for a past day."
+
+**Found.** The tab always showed the newest session file and, when it was
+not today's, warned *"your folder may not have synced"*. At one or two
+classes a week there is simply no class most days, so the sync was fine and
+the warning was a false alarm in the primary position nearly every time the
+app opened — under the instruction "Carry these in", over another day's
+weights.
+
+**Shipped.** A past sheet now leads with the answer rather than the
+instruction: the headline is **"No sheet for today"** and the line under it
+is "Showing the most recent: 2G · Sat 17 Oct". The numbers stay below,
+because looking back is reasonable; what is gone is the instruction to
+carry them in and the warning asserting a cause that was wrong most of the
+time it appeared.
+
+A sheet dated *ahead*, or with an unreadable date, keeps its warning —
+those are genuine anomalies rather than the ordinary state of a rest day.
+
+**Tested.** Both directions falsified: forcing stale off reddens the new
+test, forcing it on reddens today's-sheet-still-instructs and one other.
+
 ## 2026-10-16 — cycle 26: what the app is for, written down
 
 **From you.** "We want *me* to have the information to know when to push

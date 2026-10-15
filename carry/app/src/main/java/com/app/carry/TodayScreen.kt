@@ -50,23 +50,34 @@ fun TodayScreen(
     val noNumber = session.sets.filter { it.suggestedWeight == null }
 
     Column(modifier.fillMaxSize().background(Look.Slate).padding(horizontal = 14.dp)) {
+        // On a past sheet the headline is the ANSWER to "why am I looking at
+        // this", not the sheet's own name. The owner opens this tab on days
+        // they are not training far more often than on days they are, and
+        // the screen used to greet them with another day's numbers under the
+        // instruction "Carry these in" (owner, 2026-10-15: "I don't really
+        // understand why the first page I land on is a non-existent cheat
+        // sheet for a past day").
+        val stale = day == SessionFiles.Day.PAST
+        val sheetName = listOfNotNull(session.classTag, SessionFiles.formatDate(session.date))
+            .joinToString(" · ")
         Text(
-            listOfNotNull(session.classTag, SessionFiles.formatDate(session.date))
-                .joinToString(" · "),
+            if (stale) "No sheet for today" else sheetName,
             color = Look.Chalk, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
             fontSize = Look.TitleSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 16.dp),
         )
         Text(
-            "Carry these in", color = Look.ChalkDim, fontFamily = Look.Name,
-            fontSize = Look.SmallSize, modifier = Modifier.padding(top = 3.dp, bottom = 10.dp),
+            if (stale) "Showing the most recent: $sheetName" else "Carry these in",
+            color = Look.ChalkDim, fontFamily = Look.Name,
+            fontSize = Look.SmallSize, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 3.dp, bottom = 10.dp),
         )
-        // Above the numbers, in the same place and the same voice as the
-        // borrowed-block warning: a sheet that is not today's is the one
-        // way this screen can put a wrong weight in someone's head, and the
-        // likeliest cause is simply that the sync has not run.
+        // The other two are genuine anomalies and keep their warning. PAST is
+        // not: it is the ordinary state of a rest day, and the old wording
+        // ("your folder may not have synced") asserted a cause that is wrong
+        // most of the time it appeared.
         when (day) {
-            SessionFiles.Day.PAST -> Warning("This is an older session, not today's. Your folder may not have synced.")
+            SessionFiles.Day.PAST -> Unit
             SessionFiles.Day.FUTURE -> Warning("This session is dated ahead of today.")
             SessionFiles.Day.UNKNOWN -> Warning("Carry can't tell what day this session is for.")
             SessionFiles.Day.TODAY -> Unit

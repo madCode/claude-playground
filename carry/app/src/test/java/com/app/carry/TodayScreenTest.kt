@@ -111,12 +111,27 @@ class TodayScreenTest {
     }
 
     @Test
-    fun `an older session is marked above the numbers`() {
+    fun `a past sheet leads with the reason, not with another day's numbers`() {
+        // The owner opens this tab on days they are not training far more
+        // often than on days they are, and it used to greet them with the
+        // last session's weights under "Carry these in" plus a warning
+        // blaming the sync -- a cause that was wrong most of the time it
+        // appeared (owner, 2026-10-15).
         compose.setContent { TodayScreen(SampleSession.today, java.time.LocalDate.of(2026, 10, 19)) }
-        compose.onNodeWithText(
-            "\u26a0 This is an older session, not today's. Your folder may not have synced."
-        ).assertIsDisplayed()
+        compose.onNodeWithText("No sheet for today").assertIsDisplayed()
+        compose.onNodeWithText("Showing the most recent", substring = true).assertIsDisplayed()
+        // The instruction is gone, and so is the false alarm.
+        compose.onNodeWithText("Carry these in").assertDoesNotExist()
+        compose.onNodeWithText("may not have synced", substring = true).assertDoesNotExist()
         shoot("10-stale")
+    }
+
+    @Test
+    fun `today's sheet still instructs`() {
+        // The guard for the above: the change must not reach a current sheet.
+        compose.setContent { TodayScreen(SampleSession.today, java.time.LocalDate.of(2026, 10, 17)) }
+        compose.onNodeWithText("Carry these in").assertIsDisplayed()
+        compose.onNodeWithText("No sheet for today").assertDoesNotExist()
     }
 
     @Test
