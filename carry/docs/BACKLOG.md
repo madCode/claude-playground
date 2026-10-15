@@ -10,14 +10,153 @@ Feature proposals are ideas, not commitments.
 
 ## Next
 
-Grouped by part of the app. The tag says where each item came from: *(you asked)*
-(the owner), *(device)* (real-phone testing), *(audit)* (the security pass or the
-weekly coach audit), *(design)* (has a design doc in
-[docs/designs/](designs/) — what it is, why, what makes it non-trivial, and how
-to know it worked; written 2026-10-14 so a session can start without re-deriving
-the analysis).
+**Read in order.** *Your call* first — those are decisions, not work. Then
+the paths to a wrong number, then what would say more, then health, then
+what only a phone can answer. A cycle taking "the top unfinished item"
+should start at the first line of *Wrong numbers*.
 
-### Screens
+
+### Your call — nothing moves until you decide
+
+Four decisions. Each is a question about what you want the app to claim,
+not a thing anyone is blocked from building.
+- [ ] **Aggregate facts about the owner's training are in this public repo,
+  predating tonight.** `CLAUDE.md`'s Privacy section rules them out — "the
+  test is whether a stranger learns something about the owner's training
+  from the sentence" — and names the fix: say "most" or "a small minority".
+  Four that are already on `main`: `SinceScreen.kt` ("26 distinct movements
+  across 32 sets and exactly one of them done twice"), `DESIGN.md`
+  ("20 of 20 lifts"), `GrowthTest.kt` ("19 of 20 distinct"), and the
+  "a third of this owner's logged sets" line repeated in `DESIGN.md`,
+  `LogScreen.kt`, `LogScreenTest.kt` and `PastSessionScreenTest.kt`. #79
+  removed the ones it had just added and left these, because they are
+  load-bearing reasoning in several places and converting them is a pass of
+  its own — **and it may be a deliberate exception you want kept**.
+  Three more the #80 review found that the list above would have missed:
+  "eleven rows of one lit pip" in this file, and the same figure in
+  `DEVLOG.md` twice, once in a section heading *(audit)*
+
+- [ ] **Should a movement done once appear in the progress band at all?**
+  #79 kept it and capped the band to five rows with the rest counted; #80
+  settled the heading at *part way to a bump*. The alternative is to show only what is genuinely close
+  (2 of 3), which on today's data empties the band. Keeping it shows
+  progress; cutting it keeps the screen to signals you can act on. The
+  "why the coach is often quiet" band already explains why they all sit at
+  one, which argues for keeping *(you asked — your call)*
+- [ ] **The intel post still demands a number**, so a wholly bodyweight or timed
+  class offers no post at all. `done` is the one marker that states the movement
+  WAS in the block, which is this path's publishing criterion — but what goes to
+  r/orangetheory is the owner's call, so ask before changing it *(audit)*
+- [ ] A session the owner logged entirely by hand is not listed at all: `Growth.of`
+  decides what counts as a session from the SHEET's rows, so a borrowed day whose
+  sheet rows are all blank and whose real content is in `added` never reaches
+  *Every session*. That is the commonest shape of a borrowed day. Changing it moves
+  the session count, the date span and the quiet-band figures, so it is its own
+  decision. (#77 widened the same filter to count markers as well as numbers, and
+  deliberately stopped at the sheet's own rows so as not to answer this in passing.)
+  Two things to fix with it, found by the #77 review:
+  `Day.lifts`/`Day.best` and the `movements` count read `session.sets` only, so such
+  a day would render "0 lifts" over a list with a weight in it; and `Row.answered`
+  ignores the typed name, so a hand-logged row with a name and nothing else is
+  written to the file and still counted as never having happened *(audit)*
+
+### Wrong numbers, or a road to one
+
+The app's stated worst outcome is a wrong number in a training history.
+These are the open paths to one, hardest first.
+- [ ] **The streak's weight and the weight shown are different
+  quantities** — and the mechanism the #80 review gave for it was wrong,
+  which is worth recording. It said "when the runner proposes a bump while
+  the streak is unfinished"; checked against the runner, the two branches
+  that propose a bump set no `streak_done` at all, so those rows never
+  reach this band.
+
+  The real route is the runner's **converted streak**: that branch pairs
+  `streak_done` with an *Epley estimate for today's reps*, not with a
+  weight anything was held at. `Session.kt` documents the pair as "clean
+  sets held at this weight", and on that path it is "sets at this level,
+  and a guess at today's equivalent". Either the field's documentation is
+  wrong or the band should say which it is *(audit)*
+- [ ] Every boolean on `ExerciseSet` is non-nullable with no `coerceInputValues`,
+  and `SessionFiles.parse` turns a decode failure into "whole file unreadable" — so
+  a `"done": null` from another writer costs the entire day. Carry is the only
+  writer of `done` and writes a real boolean, so this is latent, not live *(audit)*
+- [ ] `prescribed_duration_sec` outside 1..3600 renders no prescription and no
+  *done* chip, so a row written on another machine with an absurd duration silently
+  loses the only record it could carry. The guard is right; the consequence is not
+  *(audit)*
+- [ ] **`CarryViewModelTest`'s save wait fails about one run in six**, and
+  #82 got it one layer closer rather than fixing it. What is now known:
+  the state at failure is **`Idle`, not `Saving`** — so `save()` returned
+  at its first line because the screen was not `Ready`, and the twenty
+  seconds that follow are a wait for something that was never started.
+  It reproduces only when the **whole suite** runs, not that class alone
+  (0 in 20 class-only runs, 0 in 8 more under CPU load, then once in six
+  full-suite runs) — and `app/build.gradle.kts` sets neither `forkEvery`
+  nor `maxParallelForks`, so every test class shares one JVM.
+
+  That makes a leak from another class the first suspect. #82 removed the
+  one real instance it could find — a model built outside the teardown
+  registry — and added a guard so it cannot come back, plus the two
+  assertions that made the diagnosis possible. Next steps, in order: find
+  what another class leaves behind, and weigh `forkEvery(1)` against what
+  it costs 233 tests in CI *(audit)*
+
+### Says more, or says it better
+- [ ] The bars on *Heaviest by what it trains* encode every weight in that family
+  with no scale and no time direction; the bar count varies by how many sets the
+  family has, which reads as meaning something it doesn't. Propose cutting them
+  and keeping the number *(you asked)*
+- [ ] **Notify when a new session file lands** — the glance still depends on
+  remembering to open the app. Forces a decision: the app currently declares no
+  Android permissions at all *(design:
+  [new-session-notification](designs/new-session-notification.md))*
+- [ ] **Read the class from the phone's own calendar** — frees the coach from its
+  own calendar config. Bigger than it looks: needs a protocol change agreed on the
+  runner side first *(design:
+  [read-class-from-calendar](designs/read-class-from-calendar.md))*
+
+- [ ] **A logo** — chalk on slate, and it has to work as a one-colour launcher
+  icon at 48dp *(you asked, design: [logo](designs/logo.md))*
+
+
+### Health and tidying
+- [ ] **Branch coverage is 67% while the Kover floor is 85% on
+  instructions.** The gate is real but it is counting the wrong thing for
+  a codebase this full of fail-closed guards — a third of branches have
+  never been taken. Not a demand for a second gate (a test written only to
+  lift a number is worse than the number), but worth one pass over the
+  classes with the widest gap: `SessionFolder` 78%, `CarryAppKt` 77%
+  *(audit: CI health)*
+- [ ] `MainActivity` is at **0%** and `LogBinding` at 0%. The first is the
+  SAF plumbing the emulator is honest about and unit tests are not, so it
+  is the one place a device check earns its keep; the second is a plain
+  data holder *(audit: CI health)*
+- [ ] `ExerciseSet.answered` has no production callers and is the only one of the
+  three definitions of "answered" across the two repos that omits `done`. Delete it
+  or make it the shared one *(audit)*
+
+### Owed on a device
+
+Only a real phone can answer these.
+- [ ] A persisted tree permission surviving `adb install -r`, which can revoke it
+  and look exactly like a first run. Partly done 2026-10-12 **on an emulator**: the
+  grant was taken through the real picker and held across a force-stop and
+  relaunch. **A phone and a reinstall are still owed** *(device)*
+- [ ] Bottom-edge insets against the navigation bar with a long session *(device)*
+- [ ] The round trip through Syncthing, end to end *(device)*
+
+
+## Feature proposals
+
+Ideas worth doing, not yet planned. Each gets a sketch before it moves to Next.
+
+### Quick-add from the lobby
+Nothing exists for "the sheet is wrong and I know it now". Adding a row currently
+means the After tab, which is a form built for afterwards. Unsketched.
+
+## Done
+
 - [x] ~~**Write the streak into the session file so the dots can light.**~~
   **The diagnosis was wrong and nothing needed writing.** `session_file.py`
   has written `streak_done`/`streak_needed` all along; what was null was
@@ -53,80 +192,9 @@ the analysis).
   the safe direction — and logged *heavier* stays, because going up
   unprompted is the thing this app exists to notice. The streak itself is
   still never re-derived here.
-- [ ] **The streak's weight and the weight shown are different
-  quantities** — and the mechanism the #80 review gave for it was wrong,
-  which is worth recording. It said "when the runner proposes a bump while
-  the streak is unfinished"; checked against the runner, the two branches
-  that propose a bump set no `streak_done` at all, so those rows never
-  reach this band.
-
-  The real route is the runner's **converted streak**: that branch pairs
-  `streak_done` with an *Epley estimate for today's reps*, not with a
-  weight anything was held at. `Session.kt` documents the pair as "clean
-  sets held at this weight", and on that path it is "sets at this level,
-  and a guess at today's equivalent". Either the field's documentation is
-  wrong or the band should say which it is *(audit)*
-- [ ] **Aggregate facts about the owner's training are in this public repo,
-  predating tonight.** `CLAUDE.md`'s Privacy section rules them out — "the
-  test is whether a stranger learns something about the owner's training
-  from the sentence" — and names the fix: say "most" or "a small minority".
-  Four that are already on `main`: `SinceScreen.kt` ("26 distinct movements
-  across 32 sets and exactly one of them done twice"), `DESIGN.md`
-  ("20 of 20 lifts"), `GrowthTest.kt` ("19 of 20 distinct"), and the
-  "a third of this owner's logged sets" line repeated in `DESIGN.md`,
-  `LogScreen.kt`, `LogScreenTest.kt` and `PastSessionScreenTest.kt`. #79
-  removed the ones it had just added and left these, because they are
-  load-bearing reasoning in several places and converting them is a pass of
-  its own — **and it may be a deliberate exception you want kept**.
-  Three more the #80 review found that the list above would have missed:
-  "eleven rows of one lit pip" in this file, and the same figure in
-  `DEVLOG.md` twice, once in a section heading *(audit)*
-
-- [ ] **Should a movement done once appear in the progress band at all?**
-  #79 kept it and capped the band to five rows with the rest counted; #80
-  settled the heading at *part way to a bump*. The alternative is to show only what is genuinely close
-  (2 of 3), which on today's data empties the band. Keeping it shows
-  progress; cutting it keeps the screen to signals you can act on. The
-  "why the coach is often quiet" band already explains why they all sit at
-  one, which argues for keeping *(you asked — your call)*
 - [x] **Open a past session from the Since list** — no screen answers "what did I
   lift that day" *(you asked, design:
   [open-a-past-session](designs/open-a-past-session.md))*
-- [ ] A session the owner logged entirely by hand is not listed at all: `Growth.of`
-  decides what counts as a session from the SHEET's rows, so a borrowed day whose
-  sheet rows are all blank and whose real content is in `added` never reaches
-  *Every session*. That is the commonest shape of a borrowed day. Changing it moves
-  the session count, the date span and the quiet-band figures, so it is its own
-  decision. (#77 widened the same filter to count markers as well as numbers, and
-  deliberately stopped at the sheet's own rows so as not to answer this in passing.)
-  Two things to fix with it, found by the #77 review:
-  `Day.lifts`/`Day.best` and the `movements` count read `session.sets` only, so such
-  a day would render "0 lifts" over a list with a weight in it; and `Row.answered`
-  ignores the typed name, so a hand-logged row with a name and nothing else is
-  written to the file and still counted as never having happened *(audit)*
-- [ ] **`CarryViewModelTest`'s save wait fails about one run in six**, and
-  #82 got it one layer closer rather than fixing it. What is now known:
-  the state at failure is **`Idle`, not `Saving`** — so `save()` returned
-  at its first line because the screen was not `Ready`, and the twenty
-  seconds that follow are a wait for something that was never started.
-  It reproduces only when the **whole suite** runs, not that class alone
-  (0 in 20 class-only runs, 0 in 8 more under CPU load, then once in six
-  full-suite runs) — and `app/build.gradle.kts` sets neither `forkEvery`
-  nor `maxParallelForks`, so every test class shares one JVM.
-
-  That makes a leak from another class the first suspect. #82 removed the
-  one real instance it could find — a model built outside the teardown
-  registry — and added a guard so it cannot come back, plus the two
-  assertions that made the diagnosis possible. Next steps, in order: find
-  what another class leaves behind, and weigh `forkEvery(1)` against what
-  it costs 233 tests in CI *(audit)*
-- [ ] **Branch coverage is 67% while the Kover floor is 85% on
-  instructions.** The gate is real but it is counting the wrong thing for
-  a codebase this full of fail-closed guards — a third of branches have
-  never been taken. Not a demand for a second gate (a test written only to
-  lift a number is worse than the number), but worth one pass over the
-  classes with the widest gap: `SessionFolder` 78%, `CarryAppKt` 77%
-  *(audit: CI health)*
 - [x] ~~After a successful write, `save()` re-seeds `_edits` from the text
   it wrote, and nothing can distinguish that line from its absence.~~
   **Answered, and it was worse than dead.** The #78 review found the
@@ -135,76 +203,13 @@ the analysis).
   re-seed ran regardless, so a sheet arriving mid-write left the old
   session's numbers on the new session's rows, with "Saved" still tappable
   above them. Fixed in #78; the whole tail is inside the guard
-- [ ] `MainActivity` is at **0%** and `LogBinding` at 0%. The first is the
-  SAF plumbing the emulator is honest about and unit tests are not, so it
-  is the one place a device check earns its keep; the second is a plain
-  data holder *(audit: CI health)*
-- [ ] **The intel post still demands a number**, so a wholly bodyweight or timed
-  class offers no post at all. `done` is the one marker that states the movement
-  WAS in the block, which is this path's publishing criterion — but what goes to
-  r/orangetheory is the owner's call, so ask before changing it *(audit)*
-- [ ] `ExerciseSet.answered` has no production callers and is the only one of the
-  three definitions of "answered" across the two repos that omits `done`. Delete it
-  or make it the shared one *(audit)*
-- [ ] `prescribed_duration_sec` outside 1..3600 renders no prescription and no
-  *done* chip, so a row written on another machine with an absurd duration silently
-  loses the only record it could carry. The guard is right; the consequence is not
-  *(audit)*
-- [ ] Every boolean on `ExerciseSet` is non-nullable with no `coerceInputValues`,
-  and `SessionFiles.parse` turns a decode failure into "whole file unreadable" — so
-  a `"done": null` from another writer costs the entire day. Carry is the only
-  writer of `done` and writes a real boolean, so this is latent, not live *(audit)*
-- [ ] The bars on *Heaviest by what it trains* encode every weight in that family
-  with no scale and no time direction; the bar count varies by how many sets the
-  family has, which reads as meaning something it doesn't. Propose cutting them
-  and keeping the number *(you asked)*
 - [x] *Every session* answers no question a person would ask. Either each row
   opens that session (above) or the band goes — each row now opens that session
   *(you asked)*
-
-### The lobby glance
-- [ ] **The Before tab lands on a stale sheet, and the warning is wrong.**
-  It always shows the newest session file and warns "your folder may not have
-  synced" — but at one or two classes a week there simply is no class most
-  days, so the sync is fine and the warning is a false alarm in the primary
-  position every time the app opens. Say "no sheet for today" and make a past
-  day's sheet secondary *(you asked)*
-- [ ] **No way to say "did it, nothing notable" on a timed row.** A 45-second
-  plank has no number to give and no chip that means plain done, so a
-  completed hold cannot reach history at all. The runner now counts a feel
-  marker or a note as an answer; this is the half that needs an affordance
-  here *(audit)*
-- [ ] **Notify when a new session file lands** — the glance still depends on
-  remembering to open the app. Forces a decision: the app currently declares no
-  Android permissions at all *(design:
-  [new-session-notification](designs/new-session-notification.md))*
-- [ ] **Read the class from the phone's own calendar** — frees the coach from its
-  own calendar config. Bigger than it looks: needs a protocol change agreed on the
-  runner side first *(design:
-  [read-class-from-calendar](designs/read-class-from-calendar.md))*
-
-### Identity
-- [ ] **A logo** — chalk on slate, and it has to work as a one-colour launcher
-  icon at 48dp *(you asked, design: [logo](designs/logo.md))*
-
-### Owed on a device
-Things a JVM cannot answer honestly, to check on a real phone.
-- [ ] A persisted tree permission surviving `adb install -r`, which can revoke it
-  and look exactly like a first run. Partly done 2026-10-12 **on an emulator**: the
-  grant was taken through the real picker and held across a force-stop and
-  relaunch. **A phone and a reinstall are still owed** *(device)*
-- [ ] Bottom-edge insets against the navigation bar with a long session *(device)*
-- [ ] The round trip through Syncthing, end to end *(device)*
-
-## Feature proposals
-
-Ideas worth doing, not yet planned. Each gets a sketch before it moves to Next.
-
-### Quick-add from the lobby
-Nothing exists for "the sheet is wrong and I know it now". Adding a row currently
-means the After tab, which is a form built for afterwards. Unsketched.
-
-## Done
+- [x] ~~**The Before tab lands on a stale sheet, and the warning is wrong.**~~
+  Shipped in #76: the tab leads with "No sheet for today" and shows the most recent below it, with no warning about the sync.
+- [x] ~~**No way to say "did it, nothing notable" on a timed row.** A 45-second~~
+  Shipped in #77: the *done* chip, offered only on a row the board asked for in seconds.
 
 - [x] **The flaky ViewModel test** — `CarryViewModelTest` left `viewModelScope`
   jobs running past the test that launched them, so one could dispatch to
