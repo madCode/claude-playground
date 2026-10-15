@@ -235,22 +235,35 @@ These are the open paths to one, hardest first.
   *done* chip, so a row written on another machine with an absurd duration silently
   loses the only record it could carry. The guard is right; the consequence is not
   *(audit)*
-- [ ] **`CarryViewModelTest`'s save wait fails about one run in six**, and
-  #82 got it one layer closer rather than fixing it. What is now known:
-  the state at failure is **`Idle`, not `Saving`** — so `save()` returned
-  at its first line because the screen was not `Ready`, and the twenty
-  seconds that follow are a wait for something that was never started.
-  It reproduces only when the **whole suite** runs, not that class alone
-  (0 in 20 class-only runs, 0 in 8 more under CPU load, then once in six
-  full-suite runs) — and `app/build.gradle.kts` sets neither `forkEvery`
-  nor `maxParallelForks`, so every test class shares one JVM.
+- [x] ~~**`CarryViewModelTest`'s save wait fails about one run in six.**~~
+  **#82 fixed it. The "one in six" was measured BEFORE #82's own fix and
+  never re-taken**, so this item has been describing a state that stopped
+  existing the moment it was written. Measured properly 2026-10-16,
+  before and after, in separate directories:
 
-  That makes a leak from another class the first suspect. #82 removed the
-  one real instance it could find — a model built outside the teardown
-  registry — and added a guard so it cannot come back, plus the two
-  assertions that made the diagnosis possible. Next steps, in order: find
-  what another class leaves behind, and weigh `forkEvery(1)` against what
-  it costs 233 tests in CI *(audit)*
+  | | full-suite runs | failures |
+  |---|---|---|
+  | **before** — `0c3f96b`, a worktree of the commit #82 branched from | 14 | **1** |
+  | **after** — this branch, same machine | 28 | 0 |
+  | **after** — CI, every Carry run since #82 merged | 27 | 0 |
+
+  The pre-fix failure carried the OLD assertion text ("the save never
+  finished", with no state named), which is the check that the worktree
+  really was pre-#82 — that suffix was added by #82 itself.
+
+  Pooling the pre-fix runs with #82's own (1 in 6) gives 2 in 20. Against
+  that rate, 55 clean runs after is a 0.3% outcome; against the 1 in 14
+  seen here, 1.7%. So the fix is the cause rather than a coincidence of
+  timing, with the uncertainty stated rather than rounded away.
+
+  **What fixed it:** `tearDown` keeps a registry of every ViewModel a test
+  builds so their scopes are cancelled, and ONE test built its model with
+  the constructor directly — the test whose own comment named the
+  intermittent failure had opted out of the guard against it. Its scope
+  outlived its test and ran into the next one.
+
+  **Do not add `forkEvery(1)`**, which this item used to propose. It would
+  slow all 233 tests to fix nothing.
 
 ### Says more, or says it better
 - [ ] The bars on *Heaviest by what it trains* encode every weight in that family

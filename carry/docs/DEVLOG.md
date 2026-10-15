@@ -6,19 +6,17 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** the save that never started, and the view model that opted
-  out of teardown (#82); the progress band finished — honest heading,
-  sorted by the question its rows answer (#80); first rendered with real numbers and
-- **Lately:** the band stops believing a count the owner has already
-  answered (#81); the progress band finished — honest heading, sorted by
-  the question its rows answer (#80); first rendered with real numbers and
-  found to be claiming movements were close to a bump (#79); the save
-  path's own tests, which it had never had, and the wrong-number bug they
-  exposed (#78); the *done* chip for timed holds, and the Since screen no
-  longer dropping a session logged only with markers (#77); opening a past
-  session from the Since list (#71); the flaky
-  `CarryViewModelTest` fixed and proved with a denser probe (#72); the
-  prescription on every row and the intel post (#60).
+- **Lately:** the bump band withheld rather than quietly becoming
+  yesterday's answer (#89); a day missing from the Since totals without a
+  word (#88); one bad ROW no longer costing a whole day, and both tabs
+  saying how many did not read (#87); one null key no longer costing one
+  either (#86); the post preview's flagged lines marked in the text and
+  spoken on the caption, not by colour alone (#85); the band no longer
+  believing a count the owner has already answered (#81); the progress
+  band finished — honest heading, sorted by the question its rows answer
+  (#80); the save path's own tests, which it had never had, and the
+  wrong-number bug they exposed (#78); the *done* chip for timed holds
+  (#77); the prescription on every row and the intel post (#60).
 - **Watching:** a session logged entirely by hand is still not listed on the
   Since tab at all — it moves the screen's aggregates, so it is its own
   decision rather than a bug fix. A session logged only with markers *is*
@@ -31,6 +29,48 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-16 — cycle 40: the flake that was already fixed
+
+**No code changed. The deliverable is a number, and it closes an item
+that had been describing a state which stopped existing the moment it was
+written.**
+
+`CarryViewModelTest`'s save wait was recorded as failing "about one run
+in six", with next steps that proposed `forkEvery(1)`. Checking the
+timestamps first: the only two CI failures of that test were at 13:39 and
+15:05 UTC on 2026-10-15, and #82 merged at **15:28** — both before the
+fix. Every Carry CI run since: green.
+
+Measured properly, before and after, in separate directories:
+
+| | full-suite runs | failures |
+|---|---|---|
+| before — a worktree of `0c3f96b`, the commit #82 branched from | 14 | **1** |
+| after — this tree, same machine | 28 | 0 |
+| after — CI, every Carry run since #82 merged | 27 | 0 |
+
+The pre-fix failure arrived on run 6, and carried the OLD assertion text
+— "the save never finished", with no state named. That suffix was added
+BY #82, so its absence is the check that the worktree really was pre-fix
+rather than a stale build. The local build needed `local.properties`
+copied in, which is the Android version of the same trap the Python
+measurements have: a fresh checkout silently lacks what `.gitignore`
+holds back.
+
+Pooled with #82's own measurement the pre-fix rate is 2 in 20. Against
+that, 55 clean runs after is a 0.3% outcome; against the 1 in 14 seen
+here, 1.7%. Stated with the uncertainty rather than rounded to
+"fixed".
+
+**What fixed it** was #82's own change: `tearDown` keeps a registry of
+every ViewModel a test builds so their scopes get cancelled, and one test
+built its model with the constructor directly — the test whose own
+comment named the intermittent failure had opted out of the guard against
+it. Its scope outlived its test and ran into the next one.
+
+**`forkEvery(1)` is now explicitly ruled out** in the backlog rather than
+proposed: it would slow all 233 tests to fix nothing.
 
 ## 2026-10-16 — cycle 39: yesterday's answer wearing today's label
 
