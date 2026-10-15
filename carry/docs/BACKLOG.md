@@ -182,11 +182,15 @@ These are the open paths to one, hardest first.
   short day never reaches `days`, so there is no detail view to mark.
 - [x] ~~**A newest file that will not parse at all silently hands the bump
   band to yesterday.**~~ Fixed 2026-10-16. The band is WITHHELD rather
-  than inherited, and says so where it would have been: *"Today's sheet
-  didn't read. Rather than show an older day's, this is blank."* — the
-  heading with one line under it, which the band shows in no other case,
-  because "nothing is close" and "we cannot tell" are different answers
-  and a band that simply disappears gives the first.
+  than inherited, and says so where it would have been: *"The newest
+  sheet didn't read. Rather than show an older day's, this is blank."*,
+  or *"The newest sheet needs a newer Carry..."* when the file is intact
+  and the app is what is behind — the heading with one line under it,
+  which the band shows in no other case, because "nothing is close" and
+  "we cannot tell" are different answers and a band that simply
+  disappears gives the first. It says *the newest sheet*, never "today's":
+  the newest file is the newest by NAME, which on a rest day is last
+  week's and can be dated ahead.
 
   `Growth.of` could not have decided this alone: it sees text and nothing
   else, so it cannot tell a newest sheet that failed to parse from a
@@ -273,6 +277,20 @@ These are the open paths to one, hardest first.
   would take the band while the gate called the folder fine. Found by the
   #89 review. The fix is to pick by one rule — most likely by passing the
   newest text in rather than letting `Growth.of` choose *(audit)*
+
+- [ ] **A file whose `read` comes back null is invisible to
+  `Since.short`.** `growthOf` drops it from `texts` before `Growth.of`
+  can count it as unparsed, so a session the folder could not hand over
+  at all is the one kind of loss the Since tab still does not mention.
+  Pre-existing; found by the #89 review *(audit)*
+- [ ] **Two classes at the newest date, the readable one with no bump
+  rows and the damaged one holding the streaks: the band disappears with
+  no "we cannot tell" marker.** The date-based gate says that day read
+  fine, which it did — just not the half with the streaks in it. The top
+  line still says a session is missing, so it is not silent, but it is a
+  quieter signal than the name-based gate gave. The trade was taken
+  deliberately in #89; worth revisiting if a two-class day ever breaks
+  this way *(audit)*
 
 ### Health and tidying
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on

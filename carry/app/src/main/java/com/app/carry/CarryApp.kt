@@ -112,6 +112,10 @@ fun carryState(folder: Folder): CarryState {
  * because they all handed file TEXT straight to [Growth] and never went
  * through a folder at all.
  */
+/** One file of the folder, named so that `(id, name)` and `(name, text)`
+ *  cannot be confused for each other -- see [growthOf]. */
+private data class Sheet(val name: String, val text: String?)
+
 fun growthOf(folder: Folder): Growth.Since {
     // ONE read per file, paired with its name. Reading the newest a
     // second time to ask about it opened a window a sync can land in --
@@ -122,8 +126,15 @@ fun growthOf(folder: Folder): Growth.Since {
     // below a band saying today's sheet did not read.
     val sheets = folder.list()
         .filter { (_, name) -> SessionFiles.isSessionFile(name) }
-        .map { (id, name) -> name to folder.read(id) }
-    val texts = sheets.mapNotNull { it.second }
+        // NAMED, not a Pair. `folder.list()` hands back (id, name) and
+        // this holds (name, text), so `.first` would mean an id two lines
+        // up and a name here -- both String, so the compiler would not
+        // say a word, and `folder.read(it.first)` would return null for
+        // every file and drive the band to DAMAGED on a healthy folder.
+        // That is the mistake the comment above this function exists
+        // because of; a field name is what makes it unavailable.
+        .map { (id, name) -> Sheet(name, folder.read(id)) }
+    val texts = sheets.mapNotNull { it.text }
 
     // The names are kept this far for one question only: did ANYTHING at
     // the newest date read? [Growth.of] sees text and nothing else, so it
@@ -136,17 +147,19 @@ fun growthOf(folder: Folder): Growth.Since {
     // from -- `Growth.of` picks the newest session by its own date, so
     // asking about one named file would withhold a band the other file
     // could legitimately supply.
-    val newestDate = sheets.mapNotNull { SessionFiles.dateIn(it.first) }.maxOrNull()
-    val atNewest = sheets.filter { SessionFiles.dateIn(it.first) == newestDate }
-    val readAtNewest = atNewest.filter { SessionFiles.parse(it.second.orEmpty()) != null }
+    val newestDate = sheets.mapNotNull { SessionFiles.dateIn(it.name) }.maxOrNull()
+    val atNewest = sheets.filter { SessionFiles.dateIn(it.name) == newestDate }
     return Growth.of(
         texts,
         newestRead = when {
-            newestDate == null || readAtNewest.isNotEmpty() -> Growth.NewestRead.FINE
+            // `any`, so a readable first file stops the rest being
+            // parsed again for an answer already known.
+            newestDate == null || atNewest.any { SessionFiles.parse(it.text.orEmpty()) != null } ->
+                Growth.NewestRead.FINE
             // Wording, not severity: the Before tab says "update Carry"
             // about this same file, and two screens describing one intact
             // file differently is worse than either alone.
-            atNewest.all { SessionFiles.looksLikeNewerSchema(it.second.orEmpty()) } ->
+            atNewest.all { SessionFiles.looksLikeNewerSchema(it.text.orEmpty()) } ->
                 Growth.NewestRead.NEWER_SCHEMA
             else -> Growth.NewestRead.DAMAGED
         },

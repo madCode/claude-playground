@@ -108,7 +108,29 @@ This line is reached when the app already has a good state and a sync
 lands under it — `keepLastGood` — which is also when the Before tab is
 showing a sheet, so the two screens disagreeing matters most there.
 
-Twelve falsifications.
+**A short second look found three more, all mine and all narrow.** The
+commit message said it had removed a second `@param` block that detached
+`of`'s KDoc — and then I inserted the new enum between that merged block
+and the function, so BOTH doc comments bound to the enum and `of` had no
+documentation at all. Worse than the shape it replaced, and on the one
+parameter whose whole justification is that `of` cannot derive it. The
+enum goes above the KDoc now.
+
+`BACKLOG.md` still quoted the sentence this cycle deleted — the
+"Today's sheet" wording, in the item that ticks off the change whose
+argument is that "today's" is a claim this app refuses to make. The
+NEWER_SCHEMA sentence had no record anywhere; both are there now.
+
+And the one worth the most: `folder.list()` hands back **(id, name)**,
+and my `sheets` held **(name, text)**, so `.first` meant an id two lines
+up and a name below — both `String`, so the compiler says nothing, and a
+future `folder.read(it.first)` would return null for every file and
+drive the band to DAMAGED on a healthy folder. That is the exact mistake
+`growthOf`'s own comment exists because of ("0 sessions over a folder
+holding nine"). A named `Sheet(name, text)` makes `.first` unavailable;
+building it the wrong way round now takes five tests red.
+
+Fifteen falsifications.
 
 ## 2026-10-16 — cycle 38: the day that was missing without a word
 

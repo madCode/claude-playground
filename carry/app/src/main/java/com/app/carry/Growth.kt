@@ -257,6 +257,18 @@ object Growth {
      */
     private data class Read(val session: Session, val text: String, val rows: List<Row>)
 
+    /** How the newest day's sheets read, which this function cannot work
+     *  out for itself -- see [of]'s `newestRead` parameter. */
+    enum class NewestRead {
+        FINE,
+        /** Nothing at the newest date would parse. */
+        DAMAGED,
+        /** ...and the reason is a schema this build does not know, which
+         *  is a different thing to tell someone: the file is intact and
+         *  the app is the thing that is out of date. */
+        NEWER_SCHEMA,
+    }
+
     /**
      * @param files the raw text of every session file in the folder, in any
      *   order. Unreadable ones are skipped rather than failing the screen:
@@ -270,18 +282,6 @@ object Growth {
      *   difference decides whether [Since.nearBump] is an answer about
      *   now or an older day's answer wearing today's label.
      */
-    /** How the newest day's sheets read, which this function cannot work
-     *  out for itself -- see [of]'s `newestRead` parameter. */
-    enum class NewestRead {
-        FINE,
-        /** Nothing at the newest date would parse. */
-        DAMAGED,
-        /** ...and the reason is a schema this build does not know, which
-         *  is a different thing to tell someone: the file is intact and
-         *  the app is the thing that is out of date. */
-        NEWER_SCHEMA,
-    }
-
     fun of(files: List<String>, newestRead: NewestRead = NewestRead.FINE): Since {
         // Paired with the text it was parsed from, and with its rows, because
         // the rows the owner ADDED are not part of [Session] — a row with no

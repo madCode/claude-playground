@@ -386,6 +386,29 @@ class CarryStateTest {
     }
 
     @Test
+    fun `a mixed failure at the newest date is damage, not an out-of-date app`() {
+        // `all`, not `any`. If one file at the newest date is merely a
+        // newer schema and the other is genuinely broken, "update Carry"
+        // is the wrong instruction -- updating would not rescue the
+        // truncated one. Only when EVERY file there is a newer schema is
+        // the app the thing that is behind.
+        val newer = """{"schema":"gym-session/2","sheet_id":"a","date":"2026-10-14","sets":[]}"""
+        val truncated = """{"schema":"gym-session/1","sheet_id":"b","date":"2026-10-14","""
+        val mixed = growthOf(FakeFolder(
+            files = listOf("d1" to "session-2026-10-14-2G.json", "d2" to "session-2026-10-14-3G.json"),
+            contents = mapOf("d1" to newer, "d2" to truncated),
+        ))
+        assertEquals(Growth.NewestRead.DAMAGED, mixed.newestRead)
+
+        // ...and with BOTH a newer schema it is the app, not the files.
+        val bothNewer = growthOf(FakeFolder(
+            files = listOf("d1" to "session-2026-10-14-2G.json", "d2" to "session-2026-10-14-3G.json"),
+            contents = mapOf("d1" to newer, "d2" to newer.replace(""""a"""", """"b"""")),
+        ))
+        assertEquals(Growth.NewestRead.NEWER_SCHEMA, bothNewer.newestRead)
+    }
+
+    @Test
     fun `the newest file is read once, not twice`() {
         // The second read opened a window a sync can land in -- and the
         // file a sync is replacing is by definition the newest one. The
