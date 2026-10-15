@@ -162,6 +162,37 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
                 if (since.nearBump.size > MAX_BUMP_ROWS) {
                     item { More(since.nearBump.size - MAX_BUMP_ROWS) }
                 }
+            } else if (since.newestRead != Growth.NewestRead.FINE) {
+                // The heading with nothing under it, which the band never
+                // shows otherwise. It is the difference between "nothing
+                // is close" and "we cannot tell", and only one of those is
+                // true here. Said where the band would have been rather
+                // than in the line above the list, because the line above
+                // is about the TOTALS and this is the one figure on the
+                // screen that is a claim about today.
+                item { Band("Part way to a bump") }
+                item {
+                    Text(
+                        // "The newest sheet", not "today's": the newest
+                        // file is the newest BY NAME, which on a rest day
+                        // is last week's and can be dated ahead. The
+                        // Before tab is careful about exactly this, and
+                        // was made so because the owner complained about
+                        // "a cheat sheet for a past day".
+                        //
+                        // And a newer schema is not damage -- the file is
+                        // intact and the APP is what is out of date,
+                        // which is what the other screen says about the
+                        // same file.
+                        if (since.newestRead == Growth.NewestRead.NEWER_SCHEMA) {
+                            "The newest sheet needs a newer Carry. Rather than show an older day's, this is blank."
+                        } else {
+                            "The newest sheet didn't read. Rather than show an older day's, this is blank."
+                        },
+                        color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                        modifier = Modifier.padding(vertical = 10.dp),
+                    )
+                }
             }
             if (since.peaks.isNotEmpty()) {
                 item { Band("Heaviest, by what it trains") }

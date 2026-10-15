@@ -554,6 +554,23 @@ is the newest sheet behind "part way to a bump", because dropping a
 short day there would not leave a gap — it would promote yesterday's
 sheet into the answer to "where do I stand today".
 
+A newest sheet that will not parse AT ALL is not in that read either, so
+the band is **withheld** and says so, rather than quietly becoming the
+previous session's. That needs the filenames, which `Growth` never sees:
+it cannot tell a newest sheet that failed from a folder that ends earlier
+— they are the same input — so the question is answered one layer up and
+passed in. An older file failing costs the band nothing.
+
+The question asked there is about the newest **date**, not the newest
+file: two classes on one day are two files, and if either read there is a
+sheet for that day to take the band from. And a newer schema gets its own
+wording, because the file is intact and the app is what is out of date —
+which is what the Before tab says about the same file.
+
+The sentence says *the newest sheet*, never *today's*. The newest file is
+the newest by name, which on a rest day is last week's and can be dated
+ahead; the Before tab is careful about exactly this.
+
 Left out, but not left out quietly: the tab says how many sessions are
 not in its totals, above the figures they are missing from. This is the
 screen that exists to explain why the numbers are thin, so a session

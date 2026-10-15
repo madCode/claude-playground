@@ -32,6 +32,106 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 39: yesterday's answer wearing today's label
+
+**Top of *Wrong numbers*, and the last hole the #88 review left open.**
+"Part way to a bump" is the one figure on the Since tab that is a claim
+about TODAY. It is taken from the newest sheet whether that sheet read
+short or not — deliberately, because dropping a short day there would
+promote yesterday's into the answer. But a newest file that will not
+parse AT ALL is not in the list the band is taken from, so the same
+substitution happened by the back door, and silently: an older day's
+streak is a perfectly well-formed number.
+
+**Probed first.** Two sheets, the older at 1 of 3 and today's at 2 of 3:
+with today's truncated the band reads **1 of 3**, under a heading that
+says it is about now. Same for a newer-schema file, which is the case
+that does not settle on its own.
+
+**Shipped:** the band is withheld, and says so where it would have been
+— the heading with one line under it, which it shows in no other case.
+"Nothing is close" and "we cannot tell" are different answers, and a band
+that simply disappears gives the first.
+
+**The interesting part is that `Growth` could not decide this alone.** It
+is handed text and nothing else, so it cannot tell a newest sheet that
+failed to parse from a folder that ends earlier. Only the FILENAMES
+answer that, and `growthOf` was dropping them one line before. So the
+question is answered a layer up and passed in — which is also why the
+test for it has to go through a real folder read.
+
+Six falsifications, each red on exactly the test that names it. The pair
+worth having is the wiring in both directions: stubbing it out, AND
+making it too broad (`sheets.size != texts.size`, so any broken file
+kills the band). The second is the plausible wrong implementation, and
+the second half of that test is the only thing that catches it.
+
+**And one caught by a failing test rather than by review:** `Band`
+renders its heading upper case, so `onNodeWithText("Part way to a bump")`
+matches nothing — which would have made the `assertDoesNotExist` in the
+sibling test pass whatever the code did. The first assertion failed
+loudly; the second would have passed silently for ever.
+
+**The review then found the fix had opened a race that reinstates the
+bug.** Asking "did the newest file parse?" meant reading it a SECOND
+time — and the file a sync is replacing is, by definition, the newest
+one. The two answers disagree in both directions: a truncated first read
+and a whole second one puts the older day's band back with no marker at
+all, and the other way round lists today's session under a band saying
+today's sheet did not read. One read now, paired with its name. A test
+counts the reads.
+
+Three more from the same pass:
+
+- **The gate asked about the newest FILE; it should ask about the newest
+  DATE.** `SessionFiles.newest` breaks a date tie on the name and
+  `Growth.of` keeps the first session at the newest date, so with two
+  classes on one day — which is what `sheet_id` exists for — one broken
+  file withheld a band the other supplied perfectly well.
+- **A newer schema was called "didn't read"**, directly under a warning
+  saying "update Carry" about the same file. That is the inconsistency
+  the previous cycle added `newerSchema` to prevent, reintroduced one
+  band lower, and it is the case that does not settle on its own.
+- **"Today's sheet" is a claim this app refuses to make elsewhere.** The
+  newest file is the newest by NAME: on a rest day that is last week's,
+  and it can be dated ahead. The Before tab says "No sheet for today" for
+  exactly this reason. It says *the newest sheet* now.
+
+Two stale doc blocks of mine went with them — one asserting the very bug
+this cycle fixed, and a second `@param` block that detached the existing
+KDoc from the function.
+
+**Worth knowing about reachability**, which the first write-up
+overstated: if the newest file is unreadable on a cold start,
+`carryState` shows "Can't read that session" and the tabs never render.
+This line is reached when the app already has a good state and a sync
+lands under it — `keepLastGood` — which is also when the Before tab is
+showing a sheet, so the two screens disagreeing matters most there.
+
+**A short second look found three more, all mine and all narrow.** The
+commit message said it had removed a second `@param` block that detached
+`of`'s KDoc — and then I inserted the new enum between that merged block
+and the function, so BOTH doc comments bound to the enum and `of` had no
+documentation at all. Worse than the shape it replaced, and on the one
+parameter whose whole justification is that `of` cannot derive it. The
+enum goes above the KDoc now.
+
+`BACKLOG.md` still quoted the sentence this cycle deleted — the
+"Today's sheet" wording, in the item that ticks off the change whose
+argument is that "today's" is a claim this app refuses to make. The
+NEWER_SCHEMA sentence had no record anywhere; both are there now.
+
+And the one worth the most: `folder.list()` hands back **(id, name)**,
+and my `sheets` held **(name, text)**, so `.first` meant an id two lines
+up and a name below — both `String`, so the compiler says nothing, and a
+future `folder.read(it.first)` would return null for every file and
+drive the band to DAMAGED on a healthy folder. That is the exact mistake
+`growthOf`'s own comment exists because of ("0 sessions over a folder
+holding nine"). A named `Sheet(name, text)` makes `.first` unavailable;
+building it the wrong way round now takes five tests red.
+
+Fifteen falsifications.
+
 ## 2026-10-16 — cycle 38: the day that was missing without a word
 
 **Small, and it closes something the previous cycle opened.** A day whose

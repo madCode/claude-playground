@@ -180,12 +180,24 @@ These are the open paths to one, hardest first.
   parse AT ALL as well as one that read short, and only the short ones
   that have evidence a session happened. The day detail needs nothing: a
   short day never reaches `days`, so there is no detail view to mark.
-- [ ] **A newest file that will not parse at all silently hands the bump
-  band to yesterday.** The band is taken from the newest sheet whether it
-  read SHORT or not, deliberately — but a file that does not parse is not
-  in the list it is taken from, so the substitution the three lines on
-  `newest` exist to prevent happens anyway, for that one case. Nothing on
-  screen marks it. Pre-existing; found by the #88 review *(audit)*
+- [x] ~~**A newest file that will not parse at all silently hands the bump
+  band to yesterday.**~~ Fixed 2026-10-16. The band is WITHHELD rather
+  than inherited, and says so where it would have been: *"The newest
+  sheet didn't read. Rather than show an older day's, this is blank."*,
+  or *"The newest sheet needs a newer Carry..."* when the file is intact
+  and the app is what is behind — the heading with one line under it,
+  which the band shows in no other case, because "nothing is close" and
+  "we cannot tell" are different answers and a band that simply
+  disappears gives the first. It says *the newest sheet*, never "today's":
+  the newest file is the newest by NAME, which on a rest day is last
+  week's and can be dated ahead.
+
+  `Growth.of` could not have decided this alone: it sees text and nothing
+  else, so it cannot tell a newest sheet that failed to parse from a
+  folder that ends earlier. Only the FILENAMES answer that, and `growthOf`
+  was dropping them — and the question is about the newest DATE, since
+  two classes on one day are two files and either reading is enough.
+  Pinned from both sides: an older broken file must not cost the band.
 - [ ] **Showing a short day's rows on the Since tab, rather than omitting
   the day.** The genuinely better answer, and the one the Before and After
   tabs got. It needs more than a count: `sets`, `movements`, `repeated`
@@ -257,6 +269,28 @@ These are the open paths to one, hardest first.
 - [ ] **A logo** — chalk on slate, and it has to work as a one-colour launcher
   icon at 48dp *(you asked, design: [logo](designs/logo.md))*
 
+
+- [ ] **`Growth.of` picks the newest session by the date INSIDE the file,
+  while the gate that decides whether to trust it reads the date from the
+  FILENAME.** They agree on everything the runner writes, so this is
+  latent: a file whose content date is blank or older than its name's
+  would take the band while the gate called the folder fine. Found by the
+  #89 review. The fix is to pick by one rule — most likely by passing the
+  newest text in rather than letting `Growth.of` choose *(audit)*
+
+- [ ] **A file whose `read` comes back null is invisible to
+  `Since.short`.** `growthOf` drops it from `texts` before `Growth.of`
+  can count it as unparsed, so a session the folder could not hand over
+  at all is the one kind of loss the Since tab still does not mention.
+  Pre-existing; found by the #89 review *(audit)*
+- [ ] **Two classes at the newest date, the readable one with no bump
+  rows and the damaged one holding the streaks: the band disappears with
+  no "we cannot tell" marker.** The date-based gate says that day read
+  fine, which it did — just not the half with the streaks in it. The top
+  line still says a session is missing, so it is not silent, but it is a
+  quieter signal than the name-based gate gave. The trade was taken
+  deliberately in #89; worth revisiting if a two-class day ever breaks
+  this way *(audit)*
 
 ### Health and tidying
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on
