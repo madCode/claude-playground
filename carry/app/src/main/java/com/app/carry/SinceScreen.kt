@@ -103,9 +103,30 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(top = 3.dp, bottom = 4.dp),
         )
 
+        // ABOVE the empty check, deliberately: if every file in the folder
+        // read short there are no days at all, and "Nothing logged yet" on
+        // its own would be a flat lie about a folder full of sessions.
+        listOfNotNull(shortNote(since.short), newerSchemaNote(since.newerSchema)).forEach {
+            Text(
+                "\u26a0 $it", color = Look.BrickInk, fontFamily = Look.Name,
+                fontSize = Look.SmallSize,
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
+            )
+        }
         if (since.empty) {
             Text(
-                "Nothing logged yet. This fills in as you save sessions.",
+                // Not the never-used-folder copy when the folder is full of
+                // sessions that would not read: "this fills in as you save
+                // sessions" is advice that cannot work, and it is the
+                // sentence that tells the owner what to do next.
+                // "Nothing read cleanly" would be a lie whenever one of
+                // the files read perfectly and simply had nothing in it --
+                // a blank sheet is a real shape, eleven of its rows sat in
+                // the real folder once. "Could not be counted" is true of
+                // both, and this is the sentence that tells the owner what
+                // to do next, so it has to survive the mixed case.
+                if (since.short > 0 || since.newerSchema > 0) "Nothing in that folder could be counted."
+                else "Nothing logged yet. This fills in as you save sessions.",
                 color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
                 modifier = Modifier.padding(top = 14.dp),
             )
@@ -468,3 +489,54 @@ private const val MAX_BUMP_ROWS = 5
 private const val MAX_PIPS = 10
 private const val MIN_BAR = 5.0
 private const val MAX_BAR = 20.0
+
+/**
+ * What to say about sessions left out of the totals, or null when none
+ * were.
+ *
+ * Not the same sentence as the sheet's, and not shared with it. There the
+ * missing thing is a ROW and the screen still shows the rest of the sheet;
+ * here it is a whole SESSION, absent from totals the owner has no other
+ * way to check. Saying "a row didn't read" on a screen that never shows
+ * rows would explain the wrong thing.
+ *
+ * Three words in it are load-bearing and were all wrong first time.
+ * "Sessions", not days: two classes on one date are two files, and
+ * "session" is the word the rest of this screen uses. "These totals", not
+ * "here": the band above IS drawn from a short newest sheet on purpose,
+ * so "isn't counted here" would be contradicted by the first thing under
+ * it. And no "part of": a file where EVERY row failed still parses, so
+ * "part" is false in exactly the worst case, and there is no sheet beside
+ * it to tell the owner otherwise.
+ */
+internal fun shortNote(sessions: Int): String? = when {
+    sessions <= 0 -> null
+    sessions == 1 -> "1 session isn't in these totals: its sheet didn't read cleanly. " + SETTLES
+    else -> "$sessions sessions aren't in these totals: their sheets didn't read cleanly. " + SETTLES
+}
+
+/**
+ * The half the Before tab says and this one was leaving out.
+ *
+ * A file being replaced by a sync is readable as zero bytes for a moment,
+ * and the history is re-read on every resume -- so this line can fire on
+ * something that will be fine by the time the owner looks again. Without
+ * this clause a red warning asserts permanent loss about a file that is
+ * merely mid-write, which is the false alarm this project already learned
+ * the cost of on the Before tab.
+ */
+private const val SETTLES = "A sync part way through can do that."
+
+/**
+ * Said apart from [shortNote] because a newer schema is not damage.
+ *
+ * The Before tab says "Carry is out of date ... update Carry" about the
+ * same file. Folding it into the damage count had this screen calling an
+ * intact file broken while the other screen told the owner to update the
+ * app, and unlike the rest of [shortNote] it does not settle on its own.
+ */
+internal fun newerSchemaNote(sessions: Int): String? = when {
+    sessions <= 0 -> null
+    sessions == 1 -> "1 session was written by a newer coach than this app understands. Update Carry."
+    else -> "$sessions sessions were written by a newer coach than this app understands. Update Carry."
+}

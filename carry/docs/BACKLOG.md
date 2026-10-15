@@ -33,7 +33,12 @@ not a thing anyone is blocked from building.
   list — `SessionPatch.kt`. Three more in `TodayScreenTest.kt`, found
   while working nearby: "78% of the real history was logged this way",
   "a sheet repeats a movement on 42% of days", "the repeats use the same
-  implement 78% of the time". #79
+  implement 78% of the time". And one in `DEVLOG.md` (cycle 20): "37% of
+  your logged sets carry no weight at all". A regex sweep of `docs/` and
+  `app/src/` for this shape now returns only these, so the list is
+  complete as of 2026-10-16 — what it cannot find is a figure phrased
+  without a percent sign or an "of N", which is how the `SessionPatch.kt`
+  one hid. #79
   removed the ones it had just added and left these, because they are
   load-bearing reasoning in several places and converting them is a pass of
   its own — **and it may be a deliberate exception you want kept**.
@@ -163,15 +168,31 @@ These are the open paths to one, hardest first.
   the sixth — `carryState` not counting — passed every test until a case
   that goes through a real folder read was added.
 
-- [ ] **A day that read short is left out of the history entirely.** The
-  #87 review found the alternative was worse: `Growth.Day.best` and
-  `lifts` are claims, so "4 lifts, heaviest 50" over a day whose heaviest
-  row did not decode is a confident WRONG number and nothing downstream
-  could tell. Omitting it is what this screen already did when a bad row
-  cost the whole file, and it is a missing figure rather than a wrong one.
-  The better answer is the one the Before and After tabs got — show what
-  read and say what did not — which needs `Growth.Since`/`Day` to carry
-  the count and the Since tab and day detail to say it *(audit)*
+- [x] ~~**A day that read short is left out of the history entirely**, and
+  silently.~~ The exclusion stays — the #87 review established the
+  alternative is worse, because these figures are CLAIMS and "4 lifts,
+  heaviest 50" over a day whose heaviest row did not decode is a confident
+  wrong number nothing downstream could tell. What is fixed 2026-10-16 is
+  the silence: `Since.short` counts them and the tab says *"2 sessions
+  aren't in these totals: their sheets didn't read cleanly."*, above the
+  figures it qualifies and above the empty check — and the empty copy
+  stops offering advice that cannot work. It counts a file that would not
+  parse AT ALL as well as one that read short, and only the short ones
+  that have evidence a session happened. The day detail needs nothing: a
+  short day never reaches `days`, so there is no detail view to mark.
+- [ ] **A newest file that will not parse at all silently hands the bump
+  band to yesterday.** The band is taken from the newest sheet whether it
+  read SHORT or not, deliberately — but a file that does not parse is not
+  in the list it is taken from, so the substitution the three lines on
+  `newest` exist to prevent happens anyway, for that one case. Nothing on
+  screen marks it. Pre-existing; found by the #88 review *(audit)*
+- [ ] **Showing a short day's rows on the Since tab, rather than omitting
+  the day.** The genuinely better answer, and the one the Before and After
+  tabs got. It needs more than a count: `sets`, `movements`, `repeated`
+  and `peaks` would all silently undercount, and `Day.best`/`lifts` would
+  have to be withheld for that day the way `movements` is already withheld
+  when a lifted set has no `key`. Worth doing only if this ever happens to
+  a real file *(audit)*
 - [ ] **A `sets` holding both `"ref": 3` and `"ref": "3"` shows two rows
   that share a ref, and an edit typed against the second is written onto
   the first.** `refOf` excludes the string one from duplicate detection,

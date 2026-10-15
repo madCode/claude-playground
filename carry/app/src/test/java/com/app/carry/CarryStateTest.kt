@@ -259,6 +259,140 @@ class CarryStateTest {
     }
 
     @Test
+    fun `a day left out of the history is not left out silently`() {
+        // This is the screen that explains why the numbers are thin, so a
+        // day missing from it without a word is the same failure as a
+        // confident wrong total, one step quieter.
+        fun day(date: String, extra: String = "") =
+            """{"schema":"gym-session/1","sheet_id":"$date","date":"$date","sets":[
+              {"ref":0,"line":"10 x squat","canonical":"squat","key":"squat","family":"legs",
+               "weight":45,"reps":10}$extra
+            ]}"""
+        val whole = day("2026-10-01")
+        val short = day("2026-10-14", """,{"ref":1,"line":"10 x row","weight":"60 lb"}""")
+        // The premise, asserted rather than assumed.
+        val parsedShort = SessionFiles.parse(short)
+        assertEquals("the short file does not read at all", 1, parsedShort?.sets?.size)
+        assertEquals("the short file is not short", 1, SessionFiles.unreadableRows(short, parsedShort!!))
+
+        val since = Growth.of(listOf(whole, short))
+        assertEquals("the short day must stay out of the totals", 1, since.sessions)
+        assertEquals("and must be counted as left out", 1, since.short)
+        assertEquals("1 session isn't in these totals: its sheet didn't read cleanly. A sync part way through can do that.", shortNote(since.short))
+
+        // Nothing to say when every file read whole.
+        assertEquals(0, Growth.of(listOf(whole)).short)
+        assertNull(shortNote(0))
+    }
+
+    @Test
+    fun `a sheet where no row read is counted, not treated as having nothing in it`() {
+        // The case the whole rewording was about, and the first version
+        // did not reach it. Every row failing still PARSES, so the file
+        // was neither "did not parse" nor "read short with evidence" --
+        // it fell between the two halves of the count and said nothing.
+        // A folder of these rendered "Nothing logged yet" over a folder
+        // of well-formed session files whose dates the app can read.
+        //
+        // `wasDone` guards against a BLANK sheet, and a blank sheet is
+        // eleven rows that read fine. Zero rows read is not evidence of
+        // nothing; it is the absence of evidence.
+        val none = """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-14","sets":[
+            {"ref":0,"line":"10 x squat","weight":"45 lb"},
+            {"ref":1,"line":"10 x row","done":"yes"}
+        ]}"""
+        val parsed = SessionFiles.parse(none)
+        assertEquals("the premise: it parses with no rows", 0, parsed?.sets?.size)
+        assertEquals("the premise: both rows failed", 2, SessionFiles.unreadableRows(none, parsed!!))
+
+        val since = Growth.of(listOf(none))
+        assertEquals(1, since.short)
+        assertTrue("a file that parsed is not a schema problem", since.newerSchema == 0)
+    }
+
+    @Test
+    fun `a newer schema is told apart from damage, because the other tab tells them to update`() {
+        // One screen calling an intact file broken while the other says
+        // "Carry is out of date -- update Carry" is worse than either
+        // message alone. And this is the one case in the group that does
+        // NOT settle on its own.
+        val newer = """{"schema":"gym-session/2","sheet_id":"c","date":"2026-10-03","sets":[]}"""
+        val truncated = """{"schema":"gym-session/1","sheet_id":"b","date":"2026-10-02","""
+        val since = Growth.of(listOf(newer, truncated))
+        assertEquals("a newer schema is not damage", 1, since.short)
+        assertEquals(1, since.newerSchema)
+        assertEquals(
+            "1 session was written by a newer coach than this app understands. Update Carry.",
+            newerSchemaNote(since.newerSchema),
+        )
+        assertNull(newerSchemaNote(0))
+    }
+
+    @Test
+    fun `the damage line says a sync can cause it, as the other tab does`() {
+        // A file being replaced by a sync reads as zero bytes for a
+        // moment, and the history is re-read on every resume -- so a red
+        // warning asserting permanent loss can land on a file that will
+        // be fine by the next glance.
+        assertTrue(
+            shortNote(1)!!.endsWith("A sync part way through can do that."),
+        )
+    }
+
+    @Test
+    fun `a short sheet nobody filled in is not reported as a loss`() {
+        // The difference between reporting a loss and inventing one. A
+        // sheet of blank rows was never going to count -- eleven of them
+        // sat in the real folder once -- so damage to it costs the history
+        // nothing, and claiming a day was lost asserts something the data
+        // cannot support. On the one screen whose job is explaining thin
+        // numbers, that is a manufactured loss.
+        fun sheet(rows: String) =
+            """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-14","sets":[$rows]}"""
+        val answered = """{"ref":0,"line":"10 x squat","canonical":"squat","key":"squat","family":"legs","weight":45,"reps":10}"""
+        val blank = """{"ref":0,"line":"10 x squat","canonical":"squat"}"""
+        val broken = """{"ref":9,"line":"10 x row","weight":"60 lb"}"""
+
+        // Blank + damaged: identical history with or without the damage.
+        val blankShort = sheet("$blank,$broken")
+        assertEquals("the premise: it reads short", 1,
+            SessionFiles.unreadableRows(blankShort, SessionFiles.parse(blankShort)!!))
+        assertEquals(0, Growth.of(listOf(blankShort)).short)
+        assertEquals(0, Growth.of(listOf(sheet(blank))).sessions)
+
+        // Answered + damaged: a real loss, and counted.
+        val realShort = sheet("$answered,$broken")
+        assertEquals(1, Growth.of(listOf(realShort)).short)
+        assertEquals("the damaged day must stay out of the totals", 0,
+            Growth.of(listOf(realShort)).sessions)
+    }
+
+    @Test
+    fun `a file that did not parse at all is counted too, not dropped in silence`() {
+        // The louder half of the same silence. `Growth.of` only ever saw
+        // the files that parsed, so a truncated one, a newer schema and a
+        // file with duplicate refs all vanished without a word -- and a
+        // folder of nothing but those said "Nothing logged yet" over a
+        // folder full of sessions.
+        val whole = """{"schema":"gym-session/1","sheet_id":"a","date":"2026-10-01","sets":[
+            {"ref":0,"line":"10 x squat","canonical":"squat","key":"squat","family":"legs","weight":45,"reps":10}
+        ]}"""
+        val truncated = """{"schema":"gym-session/1","sheet_id":"b","date":"2026-10-02","""
+        val newer = """{"schema":"gym-session/2","sheet_id":"c","date":"2026-10-03","sets":[]}"""
+        val since = Growth.of(listOf(whole, truncated, newer))
+        assertEquals(1, since.sessions)
+        // The newer schema is counted apart: it is not damage, and the
+        // Before tab says "update Carry" about the same file.
+        assertEquals(1, since.short)
+        assertEquals(1, since.newerSchema)
+        assertEquals(
+            "1 session isn't in these totals: its sheet didn't read cleanly. A sync part way through can do that.",
+            shortNote(since.short),
+        )
+    }
+
+
+    @Test
     fun `a short newest sheet does not hand the band to yesterday`() {
         // The one figure that must NOT come from the filtered history.
         // "Part way to a bump" is a statement about where the owner stands

@@ -554,6 +554,47 @@ is the newest sheet behind "part way to a bump", because dropping a
 short day there would not leave a gap — it would promote yesterday's
 sheet into the answer to "where do I stand today".
 
+Left out, but not left out quietly: the tab says how many sessions are
+not in its totals, above the figures they are missing from. This is the
+screen that exists to explain why the numbers are thin, so a session
+absent from it without a word is the same failure as a confident wrong
+total, one step quieter. It is a different sentence from the sheet's,
+because what is missing there is a row on a list the owner can still see,
+and what is missing here is a whole session from totals they have no
+other way to check.
+
+Three words in that sentence are load-bearing. **Sessions**, not days:
+two classes on one date are two files. **These totals**, not "here": the
+bump band above is drawn from the newest sheet whether it read short or
+not, so "isn't counted here" would be contradicted by the first thing
+under it. And no **part of**: a file where every row failed still parses,
+so "part" is false in exactly the worst case. It ends with the clause the
+Before tab has and this one was missing — *"a sync part way through can
+do that"* — because a file being replaced reads as zero bytes for a
+moment and the history is re-read on every resume, so a red warning
+asserting permanent loss can land on a file that will be fine by the next
+glance.
+
+It counts three shapes, because to the owner they are one thing: a file
+that would not parse at all; one that read short **and** has evidence a
+session happened; and one where **no** row read, which is neither of the
+first two and fell through the gap between them. That middle test is the
+same one the history itself uses, and it is the difference between
+reporting a loss and inventing one — a blank sheet whose rows all read
+fine would not have counted undamaged, so calling it a casualty asserts
+what the data cannot support. Zero rows read is the opposite case: not
+evidence of nothing, but the absence of evidence.
+
+**A newer schema is counted apart and gets its own sentence**, because it
+is not damage. The Before tab says *"Carry is out of date — update
+Carry"* about the same file; one screen calling an intact file broken
+while the other says to update the app is worse than either message
+alone, and unlike the rest it does not settle on its own.
+
+And the empty copy says "could not be counted" rather than "did not
+read": a blank sheet reads perfectly and still leaves the list empty, so
+the stronger claim is false exactly when the folder holds one.
+
 Dropping a row is safe because the save path never sees the decode: it
 patches the raw JSON and copies every row it did not edit through byte
 for byte, so a row missing from the screen is still written back

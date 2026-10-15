@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertTrue
 import org.junit.Rule
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -58,6 +59,82 @@ class SinceScreenTest {
         compose.onNodeWithText("Sun 27 Sep", substring = true).assertIsDisplayed()
         compose.onNodeWithText("6 lifts").assertIsDisplayed()
         shoot("17-since")
+    }
+
+    @Test
+    fun `a day left out of the totals is named above them`() {
+        // This screen's figures are the ones the owner has no other way to
+        // check, so a day quietly absent from them is worse here than
+        // anywhere else in the app.
+        compose.setContent { SinceScreen(since.copy(short = 2)) }
+        compose.onNodeWithText(
+            "⚠ 2 sessions aren't in these totals: their sheets didn't read cleanly. "
+                + "A sync part way through can do that."
+        ).assertIsDisplayed()
+        shoot("25-since-short")
+    }
+
+    @Test
+    fun `a folder where one sheet read fine but held nothing is not called unreadable`() {
+        // Built through the real `Growth.of`, not hand-assembled: the
+        // combination that makes the sentence false is unreachable from a
+        // hand-built `Since`, which is why the first version of this
+        // check could not have caught it. A blank sheet reads perfectly
+        // and still leaves `days` empty.
+        val blank = """{"schema":"gym-session/1","sheet_id":"a","date":"2026-10-01","sets":[
+            {"ref":0,"line":"10 x squat","canonical":"squat"}
+        ]}"""
+        val truncated = """{"schema":"gym-session/1","sheet_id":"b","date":"2026-10-02","""
+        val since = Growth.of(listOf(blank, truncated))
+        assertEquals("the premise: nothing to list, but something read", 0, since.days.size)
+        assertEquals(1, since.short)
+
+        compose.setContent { SinceScreen(since) }
+        // One of those two files read perfectly, so "nothing read
+        // cleanly" would send the owner to rescue a file that is fine --
+        // and this is the sentence that tells them what to do next.
+        compose.onNodeWithText("Nothing in that folder could be counted.").assertIsDisplayed()
+        compose.onNodeWithText("Nothing in that folder read cleanly", substring = true).assertDoesNotExist()
+        // The ⚠ line above it is right and stays: ONE of the two files
+        // genuinely did not read. It is the empty copy that must not
+        // generalise from it to the whole folder.
+        compose.onNodeWithText("didn't read cleanly", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a newer schema says update the app, not that the sheet is damaged`() {
+        compose.setContent { SinceScreen(since.copy(newerSchema = 1)) }
+        compose.onNodeWithText(
+            "⚠ 1 session was written by a newer coach than this app understands. Update Carry."
+        ).assertIsDisplayed()
+        compose.onNodeWithText("didn't read cleanly", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a history that read cleanly says nothing about it`() {
+        compose.setContent { SinceScreen(since) }
+        compose.onNodeWithText("aren't in these totals", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("isn't in these totals", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a folder where every sheet read short does not claim nothing was logged`() {
+        // The one case the line has to appear ABOVE the empty check. With
+        // no days at all, "Nothing logged yet" on its own is a flat lie
+        // about a folder full of sessions.
+        val none = since.copy(
+            sessions = 0, sets = 0, from = null, to = null,
+            peaks = emptyList(), nearBump = emptyList(), days = emptyList(),
+            movements = null, repeated = null, short = 3,
+        )
+        compose.setContent { SinceScreen(none) }
+        compose.onNodeWithText("aren't in these totals", substring = true).assertIsDisplayed()
+        // And NOT the never-used-folder copy. "This fills in as you save
+        // sessions" is advice that cannot work here -- the owner has saved
+        // these, and saving more will not recover them -- and it is the
+        // sentence that tells them what to do next.
+        compose.onNodeWithText("Nothing in that folder could be counted.").assertIsDisplayed()
+        compose.onNodeWithText("Nothing logged yet", substring = true).assertDoesNotExist()
     }
 
     @Test

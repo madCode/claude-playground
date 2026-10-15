@@ -32,6 +32,109 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 38: the day that was missing without a word
+
+**Small, and it closes something the previous cycle opened.** A day whose
+sheet read short is left out of every figure on the Since tab. That
+exclusion is right and the #87 review established why — these figures are
+claims, and "4 lifts, heaviest 50" over a day whose heaviest row did not
+decode is a confident wrong number nothing downstream could tell from a
+right one. What was wrong was that it happened in silence, on the one
+screen whose whole job is to explain why the numbers are thin. A day
+absent from it without a word is the same failure as a confident wrong
+total, one step quieter.
+
+**Shipped:** `Since.short` counts them and the tab says *"2 days aren't
+counted here: part of their sheets didn't read."* — above the figures it
+qualifies, and above the empty check. That last placement is the one that
+needed a test: if every file in the folder read short there are no days
+at all, and "Nothing logged yet" on its own is a flat lie about a folder
+full of sessions.
+
+**A different sentence from the sheet's, deliberately, and not shared with
+it.** There the missing thing is a row on a list the owner can still see;
+here it is a whole day missing from totals they have no other way to
+check. Saying "a row didn't read" on a screen that never shows rows would
+explain the wrong thing.
+
+The day detail needed nothing, which is worth saying because the backlog
+item asked for it: a short day never reaches `days`, so there is no
+detail view to mark.
+
+Four falsifications, including a genuine MOVE of the warning to below the
+empty check — which fails only the one test that is about placement, and
+leaves the other two green. A deletion would have failed all three and
+proved less.
+
+**The review then found that almost every word of the sentence was
+wrong**, which is a fair verdict on a change whose whole content is a
+sentence:
+
+- **"here" was contradicted by the first thing under it.** The bump band
+  is drawn from the newest sheet whether it read cleanly or not — cycle
+  30's deliberate asymmetry — so "isn't counted here" sat directly above
+  a band computed from the excluded day. It says **"these totals"** now,
+  and the field's KDoc lists which figures rather than claiming all of
+  them.
+- **"days" counts files.** Two classes on one date are two files, which
+  `Growth.Day`'s own doc says in as many words. The rest of this screen
+  says *session*; so does this now.
+- **"part of its sheet didn't read" is false when NONE of it did.** Rows
+  are decoded one at a time, so a file where every row fails still
+  parses. There is no sheet beside the sentence to correct it, so "part"
+  was the owner's only information about scale and it was wrong in the
+  worst case.
+
+And two counting faults, one in each direction. **A short sheet nobody
+filled in was reported as a loss** — but a blank sheet was never going to
+count, so damage to it costs nothing and calling it a casualty asserts
+what the data cannot support. It is now gated on the same test the
+history itself uses. **And a file that would not parse at all was still
+dropped in silence** — the exact thing this cycle was closing, through a
+different door: a folder of nothing but truncated files said "Nothing
+logged yet". Both are counted now, and the empty copy stops offering
+advice that cannot work.
+
+**The short second look found five more, and the first is the one that
+matters: the worst case the rewording was ABOUT never reached the
+sentence.** A file where every row fails still parses — so it is not
+"did not parse", and with no rows read `wasDone` is false, so it is not
+"read short with evidence" either. It fell through the gap between the
+two halves of the count and said nothing, and a folder of them rendered
+"Nothing logged yet" over well-formed session files whose dates the app
+can read perfectly well.
+
+**And my own test had locked that in.** It was named *"the sentence does
+not claim part of a sheet read when none of it did"*, built exactly that
+fixture, and then asserted `shortNote(Growth.of(listOf(none)).short + 1)`
+— the `+ 1` making the count irrelevant and pinning it at zero, under a
+name that says the opposite. It is deleted and replaced by one that
+asserts the count. Zero rows read is not evidence of nothing; it is the
+absence of evidence, and the blank-sheet scar `wasDone` guards against
+was eleven rows that read FINE.
+
+Three more, all about telling different things apart:
+
+- **A newer schema was reported as damage**, while the Before tab says
+  "update Carry" about the same file. It is counted apart now with its
+  own sentence — and it is the one case in the group that does not
+  settle on its own.
+- **"Nothing in that folder read cleanly" was false whenever a blank but
+  perfectly readable sheet was in it**, which is a real shape rather than
+  a hypothetical. It says "could not be counted" now, which is true of
+  both.
+- **The damage line was missing the clause the Before tab has**: a file
+  being replaced by a sync reads as zero bytes for a moment, and the
+  history is re-read on every resume, so the line could assert permanent
+  loss about a file that will be fine by the next glance.
+
+The fifth is a KDoc overclaim of my own: `nearBump` survives a short
+newest sheet, but NOT one that will not parse, so "whether it read
+cleanly or not" was wrong. Corrected, and the band's remaining hole is
+backlogged.
+
+Fifteen falsifications in all.
+
 ## 2026-10-16 — cycle 37: one bad row cost a whole day
 
 **The other half of the previous cycle, and the half that needed a

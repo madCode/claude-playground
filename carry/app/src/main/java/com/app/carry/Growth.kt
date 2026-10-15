@@ -157,6 +157,53 @@ object Growth {
          */
         val movements: Int?,
         val repeated: Int?,
+        /**
+         * Sessions left out of [sessions], [sets], [from], [to], [peaks],
+         * [days], [movements] and [repeated] because their file did not
+         * read cleanly.
+         *
+         * NOT [nearBump], which is taken from the newest sheet whether it
+         * read SHORT or not — dropping a short day there would not leave
+         * a gap, it would promote yesterday's sheet into the answer to
+         * "where do I stand today". The band is deliberately the one
+         * figure here that is about today rather than about the record,
+         * so the sentence on screen says "these totals" rather than
+         * "here".
+         *
+         * The band does lose a newest file that will not parse AT ALL,
+         * because there is nothing to take a streak from — so that case
+         * gets the substitution anyway, silently. Pre-existing rather
+         * than introduced here, and on the backlog.
+         *
+         * They are left out of the rest rather than counted short because
+         * those figures are CLAIMS: "4 lifts, heaviest 50" over a day
+         * whose heaviest row did not decode is a confident wrong number
+         * and nothing downstream could tell it from a right one. The
+         * Before and After tabs can do better — they show the rows that
+         * read and say how many did not — because a sheet is a list
+         * rather than a total.
+         *
+         * But excluding them SILENTLY is the thing this screen exists not
+         * to do. It is the screen that explains why the numbers are thin,
+         * so a session missing from it without a word is the same failure
+         * as a confident wrong total, one step quieter.
+         *
+         * Counted in SESSIONS, not days: two classes on one date are two
+         * files and two sessions, which is the word the rest of this
+         * screen uses.
+         */
+        val short: Int = 0,
+        /**
+         * Sessions written by a coach newer than this build, counted
+         * apart from [short] because they are not damaged.
+         *
+         * The Before tab already says "Carry is out of date ... update
+         * Carry" about such a file. Folding them into [short] had this
+         * screen calling the same intact file broken, which is worse than
+         * either message alone — and unlike the rest of [short] it does
+         * not settle on its own.
+         */
+        val newerSchema: Int = 0,
     ) {
         /**
          * There is nothing to show at all.
@@ -244,8 +291,45 @@ object Growth {
         // moves the aggregates rather than fixing a wrong one — and
         // answering it by accident here is how a decision gets made without
         // anyone deciding it.
-        val logged = parsed.filter { read -> read.rows.any { !it.added && it.answered } }
+        val wasDone = { r: Read -> r.rows.any { !it.added && it.answered } }
+        val logged = parsed.filter(wasDone)
         val dates = logged.map { it.session.date }.filter { it.isNotBlank() }.sorted()
+
+        // Sessions missing from the totals because their file did not read
+        // cleanly. Two sources, one sentence, because to the owner they
+        // are the same thing: a file that would not parse AT ALL, and one
+        // that read short AND has evidence a session happened.
+        //
+        // That second test is `wasDone`, the same one `logged` uses, and it
+        // is the difference between reporting a loss and inventing one. A
+        // short sheet with no answered row among the rows that DID read
+        // would not have been counted even undamaged -- eleven blank rows
+        // from an early test is a real file in the real folder -- so
+        // calling it a casualty asserts something the data cannot support,
+        // on the one screen whose job is explaining thin numbers. What
+        // cannot be known either way is whether the row that did NOT read
+        // was the answered one; the quiet choice is the right one there.
+        val unparsed = files.filterNot { it in read.map(Read::text) }
+        val short = unparsed.count { !SessionFiles.looksLikeNewerSchema(it) } +
+            read.count {
+                SessionFiles.unreadableRows(it.text, it.session) > 0 &&
+                    // ...or NO row read at all, which is not the same thing
+                    // as no evidence. The blank-sheet scar `wasDone` guards
+                    // against was eleven rows that read FINE; a file where
+                    // every row failed carries no evidence either way, and
+                    // treating "we could not look" as "nothing to see"
+                    // reproduces exactly the silence this count exists to
+                    // break -- on a well-formed session file whose date and
+                    // class tag the app can read perfectly well.
+                    (wasDone(it) || it.session.sets.isEmpty())
+            }
+        // A newer schema is not damage, and saying so matters because the
+        // Before tab says the opposite about the same file: "Carry is out
+        // of date ... update Carry". One screen telling the owner their
+        // sheets are broken while the other tells them to update the app
+        // is worse than either message alone, and this is the one case in
+        // this group that is PERSISTENT rather than a sync settling.
+        val newerSchema = unparsed.count(SessionFiles::looksLikeNewerSchema)
 
         val peaks = lifts.filter { it.family != null }
             .groupBy { it.family!! }
@@ -342,6 +426,8 @@ object Growth {
             days = days,
             movements = counts?.size,
             repeated = counts?.count { it.value > 1 },
+            short = short,
+            newerSchema = newerSchema,
         )
     }
 
