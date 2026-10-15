@@ -278,11 +278,65 @@ class CarryStateTest {
         val since = Growth.of(listOf(whole, short))
         assertEquals("the short day must stay out of the totals", 1, since.sessions)
         assertEquals("and must be counted as left out", 1, since.short)
-        assertEquals("1 session isn't in these totals: its sheet didn't read cleanly.", shortNote(since.short))
+        assertEquals("1 session isn't in these totals: its sheet didn't read cleanly. A sync part way through can do that.", shortNote(since.short))
 
         // Nothing to say when every file read whole.
         assertEquals(0, Growth.of(listOf(whole)).short)
         assertNull(shortNote(0))
+    }
+
+    @Test
+    fun `a sheet where no row read is counted, not treated as having nothing in it`() {
+        // The case the whole rewording was about, and the first version
+        // did not reach it. Every row failing still PARSES, so the file
+        // was neither "did not parse" nor "read short with evidence" --
+        // it fell between the two halves of the count and said nothing.
+        // A folder of these rendered "Nothing logged yet" over a folder
+        // of well-formed session files whose dates the app can read.
+        //
+        // `wasDone` guards against a BLANK sheet, and a blank sheet is
+        // eleven rows that read fine. Zero rows read is not evidence of
+        // nothing; it is the absence of evidence.
+        val none = """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-14","sets":[
+            {"ref":0,"line":"10 x squat","weight":"45 lb"},
+            {"ref":1,"line":"10 x row","done":"yes"}
+        ]}"""
+        val parsed = SessionFiles.parse(none)
+        assertEquals("the premise: it parses with no rows", 0, parsed?.sets?.size)
+        assertEquals("the premise: both rows failed", 2, SessionFiles.unreadableRows(none, parsed!!))
+
+        val since = Growth.of(listOf(none))
+        assertEquals(1, since.short)
+        assertTrue("a file that parsed is not a schema problem", since.newerSchema == 0)
+    }
+
+    @Test
+    fun `a newer schema is told apart from damage, because the other tab tells them to update`() {
+        // One screen calling an intact file broken while the other says
+        // "Carry is out of date -- update Carry" is worse than either
+        // message alone. And this is the one case in the group that does
+        // NOT settle on its own.
+        val newer = """{"schema":"gym-session/2","sheet_id":"c","date":"2026-10-03","sets":[]}"""
+        val truncated = """{"schema":"gym-session/1","sheet_id":"b","date":"2026-10-02","""
+        val since = Growth.of(listOf(newer, truncated))
+        assertEquals("a newer schema is not damage", 1, since.short)
+        assertEquals(1, since.newerSchema)
+        assertEquals(
+            "1 session was written by a newer coach than this app understands. Update Carry.",
+            newerSchemaNote(since.newerSchema),
+        )
+        assertNull(newerSchemaNote(0))
+    }
+
+    @Test
+    fun `the damage line says a sync can cause it, as the other tab does`() {
+        // A file being replaced by a sync reads as zero bytes for a
+        // moment, and the history is re-read on every resume -- so a red
+        // warning asserting permanent loss can land on a file that will
+        // be fine by the next glance.
+        assertTrue(
+            shortNote(1)!!.endsWith("A sync part way through can do that."),
+        )
     }
 
     @Test
@@ -327,31 +381,16 @@ class CarryStateTest {
         val newer = """{"schema":"gym-session/2","sheet_id":"c","date":"2026-10-03","sets":[]}"""
         val since = Growth.of(listOf(whole, truncated, newer))
         assertEquals(1, since.sessions)
-        assertEquals(2, since.short)
+        // The newer schema is counted apart: it is not damage, and the
+        // Before tab says "update Carry" about the same file.
+        assertEquals(1, since.short)
+        assertEquals(1, since.newerSchema)
         assertEquals(
-            "2 sessions aren't in these totals: their sheets didn't read cleanly.",
+            "1 session isn't in these totals: its sheet didn't read cleanly. A sync part way through can do that.",
             shortNote(since.short),
         )
     }
 
-    @Test
-    fun `the sentence does not claim part of a sheet read when none of it did`() {
-        // Every row failing still PARSES -- the rows are decoded one at a
-        // time -- so a sentence saying "part of its sheet didn't read" is
-        // false in exactly the worst case, and there is no sheet beside it
-        // to tell the owner otherwise.
-        val none = """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-14","sets":[
-            {"ref":0,"line":"10 x squat","weight":"45 lb"},
-            {"ref":1,"line":"10 x row","done":"yes"}
-        ]}"""
-        val parsed = SessionFiles.parse(none)
-        assertEquals("the premise: it parses with no rows", 0, parsed?.sets?.size)
-        assertEquals(2, SessionFiles.unreadableRows(none, parsed!!))
-        assertEquals(
-            "1 session isn't in these totals: its sheet didn't read cleanly.",
-            shortNote(Growth.of(listOf(none)).short + 1),
-        )
-    }
 
     @Test
     fun `a short newest sheet does not hand the band to yesterday`() {

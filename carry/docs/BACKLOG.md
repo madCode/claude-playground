@@ -180,6 +180,12 @@ These are the open paths to one, hardest first.
   parse AT ALL as well as one that read short, and only the short ones
   that have evidence a session happened. The day detail needs nothing: a
   short day never reaches `days`, so there is no detail view to mark.
+- [ ] **A newest file that will not parse at all silently hands the bump
+  band to yesterday.** The band is taken from the newest sheet whether it
+  read SHORT or not, deliberately — but a file that does not parse is not
+  in the list it is taken from, so the substitution the three lines on
+  `newest` exist to prevent happens anyway, for that one case. Nothing on
+  screen marks it. Pre-existing; found by the #88 review *(audit)*
 - [ ] **Showing a short day's rows on the Since tab, rather than omitting
   the day.** The genuinely better answer, and the one the Before and After
   tabs got. It needs more than a count: `sets`, `movements`, `repeated`

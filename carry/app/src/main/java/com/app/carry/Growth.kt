@@ -163,12 +163,17 @@ object Growth {
          * read cleanly.
          *
          * NOT [nearBump], which is taken from the newest sheet whether it
-         * read cleanly or not — dropping a short day there would not
-         * leave a gap, it would promote yesterday's sheet into the answer
-         * to "where do I stand today". The band is deliberately the one
+         * read SHORT or not — dropping a short day there would not leave
+         * a gap, it would promote yesterday's sheet into the answer to
+         * "where do I stand today". The band is deliberately the one
          * figure here that is about today rather than about the record,
          * so the sentence on screen says "these totals" rather than
          * "here".
+         *
+         * The band does lose a newest file that will not parse AT ALL,
+         * because there is nothing to take a streak from — so that case
+         * gets the substitution anyway, silently. Pre-existing rather
+         * than introduced here, and on the backlog.
          *
          * They are left out of the rest rather than counted short because
          * those figures are CLAIMS: "4 lifts, heaviest 50" over a day
@@ -188,6 +193,17 @@ object Growth {
          * screen uses.
          */
         val short: Int = 0,
+        /**
+         * Sessions written by a coach newer than this build, counted
+         * apart from [short] because they are not damaged.
+         *
+         * The Before tab already says "Carry is out of date ... update
+         * Carry" about such a file. Folding them into [short] had this
+         * screen calling the same intact file broken, which is worse than
+         * either message alone — and unlike the rest of [short] it does
+         * not settle on its own.
+         */
+        val newerSchema: Int = 0,
     ) {
         /**
          * There is nothing to show at all.
@@ -293,8 +309,27 @@ object Growth {
         // on the one screen whose job is explaining thin numbers. What
         // cannot be known either way is whether the row that did NOT read
         // was the answered one; the quiet choice is the right one there.
-        val short = (files.size - read.size) +
-            read.count { SessionFiles.unreadableRows(it.text, it.session) > 0 && wasDone(it) }
+        val unparsed = files.filterNot { it in read.map(Read::text) }
+        val short = unparsed.count { !SessionFiles.looksLikeNewerSchema(it) } +
+            read.count {
+                SessionFiles.unreadableRows(it.text, it.session) > 0 &&
+                    // ...or NO row read at all, which is not the same thing
+                    // as no evidence. The blank-sheet scar `wasDone` guards
+                    // against was eleven rows that read FINE; a file where
+                    // every row failed carries no evidence either way, and
+                    // treating "we could not look" as "nothing to see"
+                    // reproduces exactly the silence this count exists to
+                    // break -- on a well-formed session file whose date and
+                    // class tag the app can read perfectly well.
+                    (wasDone(it) || it.session.sets.isEmpty())
+            }
+        // A newer schema is not damage, and saying so matters because the
+        // Before tab says the opposite about the same file: "Carry is out
+        // of date ... update Carry". One screen telling the owner their
+        // sheets are broken while the other tells them to update the app
+        // is worse than either message alone, and this is the one case in
+        // this group that is PERSISTENT rather than a sync settling.
+        val newerSchema = unparsed.count(SessionFiles::looksLikeNewerSchema)
 
         val peaks = lifts.filter { it.family != null }
             .groupBy { it.family!! }
@@ -392,6 +427,7 @@ object Growth {
             movements = counts?.size,
             repeated = counts?.count { it.value > 1 },
             short = short,
+            newerSchema = newerSchema,
         )
     }
 

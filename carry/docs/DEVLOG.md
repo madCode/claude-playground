@@ -95,7 +95,45 @@ different door: a folder of nothing but truncated files said "Nothing
 logged yet". Both are counted now, and the empty copy stops offering
 advice that cannot work.
 
-Nine falsifications in all.
+**The short second look found five more, and the first is the one that
+matters: the worst case the rewording was ABOUT never reached the
+sentence.** A file where every row fails still parses — so it is not
+"did not parse", and with no rows read `wasDone` is false, so it is not
+"read short with evidence" either. It fell through the gap between the
+two halves of the count and said nothing, and a folder of them rendered
+"Nothing logged yet" over well-formed session files whose dates the app
+can read perfectly well.
+
+**And my own test had locked that in.** It was named *"the sentence does
+not claim part of a sheet read when none of it did"*, built exactly that
+fixture, and then asserted `shortNote(Growth.of(listOf(none)).short + 1)`
+— the `+ 1` making the count irrelevant and pinning it at zero, under a
+name that says the opposite. It is deleted and replaced by one that
+asserts the count. Zero rows read is not evidence of nothing; it is the
+absence of evidence, and the blank-sheet scar `wasDone` guards against
+was eleven rows that read FINE.
+
+Three more, all about telling different things apart:
+
+- **A newer schema was reported as damage**, while the Before tab says
+  "update Carry" about the same file. It is counted apart now with its
+  own sentence — and it is the one case in the group that does not
+  settle on its own.
+- **"Nothing in that folder read cleanly" was false whenever a blank but
+  perfectly readable sheet was in it**, which is a real shape rather than
+  a hypothetical. It says "could not be counted" now, which is true of
+  both.
+- **The damage line was missing the clause the Before tab has**: a file
+  being replaced by a sync reads as zero bytes for a moment, and the
+  history is re-read on every resume, so the line could assert permanent
+  loss about a file that will be fine by the next glance.
+
+The fifth is a KDoc overclaim of my own: `nearBump` survives a short
+newest sheet, but NOT one that will not parse, so "whether it read
+cleanly or not" was wrong. Corrected, and the band's remaining hole is
+backlogged.
+
+Fifteen falsifications in all.
 
 ## 2026-10-16 — cycle 37: one bad row cost a whole day
 

@@ -106,7 +106,7 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
         // ABOVE the empty check, deliberately: if every file in the folder
         // read short there are no days at all, and "Nothing logged yet" on
         // its own would be a flat lie about a folder full of sessions.
-        shortNote(since.short)?.let {
+        listOfNotNull(shortNote(since.short), newerSchemaNote(since.newerSchema)).forEach {
             Text(
                 "\u26a0 $it", color = Look.BrickInk, fontFamily = Look.Name,
                 fontSize = Look.SmallSize,
@@ -119,7 +119,13 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
                 // sessions that would not read: "this fills in as you save
                 // sessions" is advice that cannot work, and it is the
                 // sentence that tells the owner what to do next.
-                if (since.short > 0) "Nothing in that folder read cleanly."
+                // "Nothing read cleanly" would be a lie whenever one of
+                // the files read perfectly and simply had nothing in it --
+                // a blank sheet is a real shape, eleven of its rows sat in
+                // the real folder once. "Could not be counted" is true of
+                // both, and this is the sentence that tells the owner what
+                // to do next, so it has to survive the mixed case.
+                if (since.short > 0 || since.newerSchema > 0) "Nothing in that folder could be counted."
                 else "Nothing logged yet. This fills in as you save sessions.",
                 color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
                 modifier = Modifier.padding(top = 14.dp),
@@ -505,6 +511,32 @@ private const val MAX_BAR = 20.0
  */
 internal fun shortNote(sessions: Int): String? = when {
     sessions <= 0 -> null
-    sessions == 1 -> "1 session isn't in these totals: its sheet didn't read cleanly."
-    else -> "$sessions sessions aren't in these totals: their sheets didn't read cleanly."
+    sessions == 1 -> "1 session isn't in these totals: its sheet didn't read cleanly. " + SETTLES
+    else -> "$sessions sessions aren't in these totals: their sheets didn't read cleanly. " + SETTLES
+}
+
+/**
+ * The half the Before tab says and this one was leaving out.
+ *
+ * A file being replaced by a sync is readable as zero bytes for a moment,
+ * and the history is re-read on every resume -- so this line can fire on
+ * something that will be fine by the time the owner looks again. Without
+ * this clause a red warning asserts permanent loss about a file that is
+ * merely mid-write, which is the false alarm this project already learned
+ * the cost of on the Before tab.
+ */
+private const val SETTLES = "A sync part way through can do that."
+
+/**
+ * Said apart from [shortNote] because a newer schema is not damage.
+ *
+ * The Before tab says "Carry is out of date ... update Carry" about the
+ * same file. Folding it into the damage count had this screen calling an
+ * intact file broken while the other screen told the owner to update the
+ * app, and unlike the rest of [shortNote] it does not settle on its own.
+ */
+internal fun newerSchemaNote(sessions: Int): String? = when {
+    sessions <= 0 -> null
+    sessions == 1 -> "1 session was written by a newer coach than this app understands. Update Carry."
+    else -> "$sessions sessions were written by a newer coach than this app understands. Update Carry."
 }
