@@ -6,8 +6,9 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** the progress band finished — honest heading, sorted by the
-  question its rows answer (#80); first rendered with real numbers and
+- **Lately:** the save that never started, and the view model that opted
+  out of teardown (#82); the progress band finished — honest heading,
+  sorted by the question its rows answer (#80); first rendered with real numbers and
   found to be claiming movements were close to a bump (#79); the save
   path's own tests, which it had never had, and the wrong-number bug they
   exposed (#78); the *done* chip for timed holds, and the Since screen no
@@ -27,6 +28,42 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-16 — cycle 33: the save that never started
+
+**CI went red on a PR that could not have caused it.** `CarryViewModelTest
+> a save re-reads the folder, once the button already says Saved` timed
+out. The branch touched neither that file nor the save path — and the
+**same test, the same assertion, had failed on `main` ninety minutes
+earlier**. A pre-existing flake, surfacing on someone else's PR.
+
+**First, a real defect found by reading.** `tearDown` keeps a registry of
+every ViewModel a test builds so their scopes can be cancelled, and its
+KDoc says why: a scope that outlives its test runs into the next one,
+which is this class's documented intermittent failure (#72). That test
+was **the one model in the file built with the constructor directly** —
+the test whose own comment names the intermittent failure had opted out
+of the guard against it. It goes through `viewModel()` now, with a guard
+test that reads the source and fails if a direct construction comes back,
+because an unregistered model is invisible at runtime by definition.
+
+**Then the diagnosis, from an assertion message.** `awaitSaved` said only
+"the save never finished". It now names the state it saw — and the next
+failure, minutes later, said **"(saving was Idle)"**. Not `Saving`:
+`save()` had returned at its first line because the screen was not
+`Ready`, and the twenty seconds after that were a wait for a coroutine
+that never started. The test asserts that precondition directly now, so
+the fault reports itself instead of timing out.
+
+**And the probe was wrong.** Twenty class-only runs passed, and eight
+more under CPU load. It reproduces when the **whole suite** runs — which
+is what CI does — about one run in six. `app/build.gradle.kts` sets
+neither `forkEvery` nor `maxParallelForks`, so every class shares one
+JVM, which makes a leak from another class the first suspect.
+
+**Not claimed as fixed.** One real defect is gone and the failure now
+diagnoses itself one layer further in. The rest is in BACKLOG.md with the
+reproduction recipe.
 
 ## 2026-10-16 — cycle 31: the band, finished
 

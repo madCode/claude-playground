@@ -78,6 +78,28 @@ class CarryViewModelTest {
     }
 
     @Test
+    fun `every view model in this file is registered for teardown`() {
+        // Not a behaviour test: a guard on the one mistake this file's
+        // teardown cannot survive. A model built with the constructor
+        // directly is never cancelled, so its coroutines run on into the
+        // next test -- which is this class's documented intermittent
+        // failure, and exactly what one test did until 2026-10-16.
+        //
+        // Read off the source because there is nothing at runtime to ask:
+        // an unregistered model is invisible by definition.
+        val src = java.io.File("src/test/java/com/app/carry/CarryViewModelTest.kt")
+            .takeIf { it.exists() }
+            ?: java.io.File("app/src/test/java/com/app/carry/CarryViewModelTest.kt")
+        val built = src.readLines().withIndex().filter { (_, l) ->
+            l.contains("CarryViewModel(app") && !l.contains("models +=")
+        }
+        assertTrue(
+            "build it with viewModel(), not the constructor: ${built.map { it.index + 1 }}",
+            built.isEmpty(),
+        )
+    }
+
+    @Test
     fun `a row from a file with no ids gets a real one on the way in`() = runTest(dispatcher) {
         // The stand-in `addedIn` hands back is the old index identity
         // under a new name: drop a blank row and the next row inherits
@@ -148,13 +170,29 @@ class CarryViewModelTest {
         // save finishes on `Dispatchers.Default`, which the test dispatcher
         // does not drive, and waiting on that is the shape of this class's
         // one known intermittent failure.
-        val model = CarryViewModel(app, SavedStateHandle())
+        // Through `viewModel()`, which is what registers it for teardown.
+        // This was the one model in the file built directly, so its
+        // viewModelScope was never cancelled and its coroutines ran on
+        // into whatever test came next -- the exact race the registry
+        // above exists to close, opted out of by the test whose own
+        // comment calls this class's intermittent failure by name.
+        val model = viewModel()
         model.read = { readyFor() }
         var reads = 0
         var sayingWhenRead: SaveState? = null
         model.readSince = { reads++; sayingWhenRead = model.saving.value; Growth.of(emptyList()) }
         model.refresh()
         advanceUntilIdle()
+        // Asserted, because `save()` returns at its first line when the
+        // state is not Ready and the only evidence downstream is a wait
+        // that times out twenty seconds later saying nothing. Reproduced
+        // 2026-10-16: "the save never finished (saving was Idle)" --
+        // Idle, not Saving, so the coroutine never started.
+        assertTrue(
+            "refresh did not leave the screen Ready, so save() will do nothing: " +
+                "${model.state.value}",
+            model.state.value is CarryState.Ready,
+        )
         val onOpening = reads
 
         model.save()
@@ -186,7 +224,12 @@ class CarryViewModelTest {
                 withTimeout(20_000) { while (model.saving.value != SaveState.Saved) delay(5) }
             }
         }.isSuccess
-        assertTrue(why, reached)
+        // Naming the state it actually saw, because this wait is the one
+        // that has timed out in CI and "the save never finished" says
+        // nothing a later reader can act on -- Saving means the coroutine
+        // never resumed, Idle means `save()` returned before launching,
+        // Failed means it got an answer nobody expected.
+        assertTrue("$why (saving was ${model.saving.value})", reached)
     }
 
     @Test

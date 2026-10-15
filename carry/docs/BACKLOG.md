@@ -98,6 +98,22 @@ the analysis).
   a day would render "0 lifts" over a list with a weight in it; and `Row.answered`
   ignores the typed name, so a hand-logged row with a name and nothing else is
   written to the file and still counted as never having happened *(audit)*
+- [ ] **`CarryViewModelTest`'s save wait fails about one run in six**, and
+  #82 got it one layer closer rather than fixing it. What is now known:
+  the state at failure is **`Idle`, not `Saving`** — so `save()` returned
+  at its first line because the screen was not `Ready`, and the twenty
+  seconds that follow are a wait for something that was never started.
+  It reproduces only when the **whole suite** runs, not that class alone
+  (0 in 20 class-only runs, 0 in 8 more under CPU load, then once in six
+  full-suite runs) — and `app/build.gradle.kts` sets neither `forkEvery`
+  nor `maxParallelForks`, so every test class shares one JVM.
+
+  That makes a leak from another class the first suspect. #82 removed the
+  one real instance it could find — a model built outside the teardown
+  registry — and added a guard so it cannot come back, plus the two
+  assertions that made the diagnosis possible. Next steps, in order: find
+  what another class leaves behind, and weigh `forkEvery(1)` against what
+  it costs 233 tests in CI *(audit)*
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on
   instructions.** The gate is real but it is counting the wrong thing for
   a codebase this full of fail-closed guards — a third of branches have
