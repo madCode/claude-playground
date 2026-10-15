@@ -108,6 +108,58 @@ class SinceScreenTest {
         compose.onNodeWithText("Heaviest, by what it trains".uppercase()).assertIsDisplayed()
     }
 
+    /** Every setup done once, which is what the runner's streak counts
+     *  produce for this owner today: of 32 distinct (setup, rep-count)
+     *  lines in their history, most would arrive at 1 of 3. */
+    private fun allAtOne(n: Int) = (1..n).map {
+        Growth.Bump("movement $it", listOf("legs", "push", "pull", "core")[it % 4], 20.0 + it, 1, 3)
+    }
+
+    @Test
+    fun `a movement done once is not called close to a bump`() {
+        // Rendered with real numbers this band was ELEVEN rows, every one a
+        // single lit pip of three, filling the whole screen under a heading
+        // saying they were all about to go up. The runner counts a streak
+        // from the first clean set and this owner starts nearly every
+        // movement fresh, so that is the normal case, not the edge.
+        compose.setContent { SinceScreen(since.copy(nearBump = allAtOne(11))) }
+        compose.onNodeWithText("Close to a bump".uppercase()).assertDoesNotExist()
+        compose.onNodeWithText("How close each one is".uppercase()).assertIsDisplayed()
+    }
+
+    @Test
+    fun `the progress band cannot take the whole screen`() {
+        // Five rows, closest first, and the rest counted rather than
+        // silently dropped -- a list that stops at five with no sign of it
+        // reads as a folder with five things in it.
+        compose.setContent { SinceScreen(since.copy(nearBump = allAtOne(11))) }
+        compose.onNodeWithText("movement 1").assertIsDisplayed()
+        compose.onNodeWithText("movement 5").assertIsDisplayed()
+        compose.onNodeWithText("movement 6").assertDoesNotExist()
+        compose.onNodeWithText("and 6 more").assertIsDisplayed()
+        // The bands under it are what the screen is otherwise for, and they
+        // were below the fold with eleven rows above them.
+        compose.onNodeWithText("Heaviest, by what it trains".uppercase()).assertIsDisplayed()
+        shoot("23-progress-band")
+    }
+
+    @Test
+    fun `a band that fits says nothing about more`() {
+        compose.setContent { SinceScreen(since.copy(nearBump = allAtOne(3))) }
+        compose.onNodeWithText("movement 3").assertIsDisplayed()
+        compose.onNodeWithText("more", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the one closest to a bump leads`() {
+        // The cap can only be honest if the sort is: five rows chosen from
+        // eleven must be the five furthest along, not the first five the
+        // sheet happened to list.
+        val mixed = allAtOne(6) + listOf(Growth.Bump("nearly there", "legs", 40.0, 2, 3))
+        compose.setContent { SinceScreen(since.copy(nearBump = mixed.sortedByDescending { it.done.toDouble() / it.needed })) }
+        compose.onNodeWithText("nearly there").assertIsDisplayed()
+    }
+
     private fun shoot(name: String) {
         compose.waitForIdle()
         val shot = compose.onRoot().captureToImage().asAndroidBitmap()

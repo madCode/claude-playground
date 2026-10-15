@@ -76,6 +76,34 @@ which of the two lands depends on whether the save's resumption or
 `reconcile`'s returns from `Dispatchers.Default` last. It now asserts the
 thing that is both deterministic and the actual damage: the form is not
 holding the old sheet's numbers. 20 clean runs after the fix.
+## 2026-10-16 — cycle 30: eleven movements that were not close to anything
+
+**Started as a backlog item that turned out to be wrong.** "Write the
+streak into the session file so the dots can light — nothing writes them."
+The runner has written `streak_done`/`streak_needed` all along; what was
+null was the number itself, and the seven session files on disk all predate
+the change that started producing it. Measured against the real history: a
+sheet written **today** would carry dots on 15 of 32 distinct lines, every
+one at **1 of 3**, because each setup has been done once.
+
+**So the band was rendered with those numbers**, which is the first time
+anyone had seen it with data. Eleven rows, each a single lit pip of three,
+filling the entire screen under the heading **"CLOSE TO A BUMP"** — a claim
+none of the rows supported, on the screen whose job is to say when the
+owner can push themselves. The runner counts a streak from the first clean
+set, and this owner starts nearly every movement fresh because the studio
+changes the setup most classes, so one of three is the normal case rather
+than the edge.
+
+**Shipped.** The pips were worth keeping; the word *close* was not. The
+band is now **"How close each one is"**, showing the five furthest along
+and counting the rest ("and 6 more"). Capped, the three bands underneath
+fit on the same screen again — including *why the coach is often quiet*,
+which explains exactly why every pip is at one.
+
+**Not decided here:** whether a movement done once belongs in that band at
+all. Cutting to genuinely-close rows empties it on today's data. In
+BACKLOG.md as the owner's call, with both renderings.
 
 ## 2026-10-16 — cycle 28: a hold you did had nowhere to land
 

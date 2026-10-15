@@ -114,8 +114,23 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
 
         LazyColumn(Modifier.weight(1f), state = list) {
             if (since.nearBump.isNotEmpty()) {
-                item { Band("Close to a bump") }
-                items(since.nearBump) { BumpRow(it) }
+                // "Close to a bump" was a claim the rows could not support.
+                // The runner counts a streak from the first clean set, so a
+                // movement done ONCE arrives here at 1 of 3 -- and this
+                // owner starts nearly every movement fresh, because the
+                // studio changes the setup most classes. Rendered with real
+                // numbers the band was eleven rows, every one a single lit
+                // pip, filling the whole screen under a heading saying they
+                // were all about to go up.
+                //
+                // The pips are worth keeping; the word "close" was not.
+                item { Band("How close each one is") }
+                // Closest first, which the sort already does, and only as
+                // many as leave room for the bands under it.
+                items(since.nearBump.take(MAX_BUMP_ROWS)) { BumpRow(it) }
+                if (since.nearBump.size > MAX_BUMP_ROWS) {
+                    item { More(since.nearBump.size - MAX_BUMP_ROWS) }
+                }
             }
             if (since.peaks.isNotEmpty()) {
                 item { Band("Heaviest, by what it trains") }
@@ -157,6 +172,17 @@ private fun Band(text: String) {
         text.uppercase(), color = Look.ChalkFaint, fontFamily = Look.Figure,
         fontSize = Look.LabelSize, letterSpacing = 1.2.sp,
         modifier = Modifier.padding(top = 18.dp, bottom = 4.dp),
+    )
+}
+
+/** What the cap left out, said rather than silently dropped: a count that
+ *  stops at five looks like a folder with five things in it. */
+@Composable
+private fun More(rest: Int) {
+    Text(
+        "and $rest more",
+        color = Look.ChalkFaint, fontFamily = Look.Name, fontSize = Look.SmallSize,
+        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
     )
 }
 
@@ -381,6 +407,9 @@ private fun Stat(number: String, label: String) {
 
 private fun figure(weight: Double): String = weight.asWeight()
 
+/** How many rows the progress band may show. The rest are the least far
+ *  along, and the screen has three other bands to get to. */
+private const val MAX_BUMP_ROWS = 5
 private const val MAX_PIPS = 10
 private const val MIN_BAR = 5.0
 private const val MAX_BAR = 20.0

@@ -18,11 +18,25 @@ to know it worked; written 2026-10-14 so a session can start without re-deriving
 the analysis).
 
 ### Screens
-- [ ] **Write the streak into the session file so the dots can light.**
-  `streak_done`/`streak_needed` are read by both the Before tab's pips and the
-  Since tab's "close to a bump" band, and **nothing writes them** — zero rows
-  across all seven session files — so both have been implemented and empty
-  since they shipped. Pairs with the runner-side change *(you asked)*
+- [x] ~~**Write the streak into the session file so the dots can light.**~~
+  **The diagnosis was wrong and nothing needed writing.** `session_file.py`
+  has written `streak_done`/`streak_needed` all along; what was null was
+  `Suggestion.streak_done` itself, and the seven files on disk were all
+  written before the runner learned to count the converted streak. Measured
+  2026-10-16 against the real history: a sheet written **today** would carry
+  dots on **15 of 32** distinct (setup, rep-count) lines — every one of them
+  at **1 of 3**, because each setup has been done once.
+  `gym-coach/eval_reports/2026-10-16-the-dots-are-already-written.md`.
+  What that revealed instead is in #79: rendered with those numbers the
+  Since band was eleven rows of one lit pip under the heading "close to a
+  bump" *(you asked)*
+- [ ] **Should a movement done once appear in the progress band at all?**
+  #79 kept it and fixed the heading — *how close each one is*, five rows,
+  the rest counted. The alternative is to show only what is genuinely close
+  (2 of 3), which on today's data empties the band. Keeping it shows
+  progress; cutting it keeps the screen to signals you can act on. The
+  "why the coach is often quiet" band already explains why they all sit at
+  one, which argues for keeping *(you asked — your call)*
 - [x] **Open a past session from the Since list** — no screen answers "what did I
   lift that day" *(you asked, design:
   [open-a-past-session](designs/open-a-past-session.md))*

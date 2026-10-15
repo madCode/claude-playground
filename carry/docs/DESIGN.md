@@ -289,8 +289,17 @@ when the file comes back.
 rows already in the files. A streak is not — it comes from a rule about
 what earns a bump, that rule lives in the runner, and a second
 implementation here would eventually disagree with it about someone's
-training. So "close to a bump" carries the runner's own numbers through,
-and what counts as *the same exercise* is a key the runner writes. A first
+training. So *how close each one is* carries the runner's own numbers
+through, and what counts as *the same exercise* is a key the runner writes.
+
+That band was called **"close to a bump"** until 2026-10-16, when it was
+first rendered with the numbers the runner now produces: eleven rows, each
+a single lit pip of three, filling the screen under a heading saying they
+were all about to go up. The runner counts a streak from the first clean
+set, and this owner starts nearly every movement fresh — the studio changes
+the setup most classes — so one of three is the normal case, not the edge.
+The pips were worth keeping; the word *close* was not. It shows the five
+furthest along and counts the rest. A first
 version that worked that out locally, by hashing the whole variant, made 20
 of 20 lifts look distinct when one pair was the same movement — it was
 including the fields the runner deliberately leaves out of the key. Where
