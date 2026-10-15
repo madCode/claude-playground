@@ -151,6 +151,27 @@ fixture, so the names agreed by construction.
 it.** Name the keys one by one — a renamed field decodes as null and every
 behavioural assertion still passes.
 
+## Green tests do not prove anyone can see it
+
+A feature was added so the owner could record something the app had no way
+to record. Every test passed. The screen it fed returned early — *"Nothing
+logged yet"* — for exactly the sessions the feature existed for, because the
+emptiness check counted a different thing. The new test passed throughout,
+because it asserted on the data structure the screen reads rather than on
+the screen.
+
+**When a change exists so someone can see something, one assertion has to be
+against the thing they look at.** A test over the model proves the model.
+
+**And render it and look at it.** The same cycle added a sixth chip to a row
+that fitted five. What slid off the right edge was the chip that says a set
+did not happen — invisible to a green suite, obvious in the PNG in about two
+seconds. Screenshot tests are cheap; the looking is the part that finds this.
+
+**When a change makes one filter wrong, grep for the same wrong question
+elsewhere.** It was being asked one layer up too, and the correction was the
+same sentence both times.
+
 ## Write it down where it will be read
 
 - The backlog is what is next. An item that ships moves to **Done** — it does
