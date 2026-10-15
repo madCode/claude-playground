@@ -32,6 +32,30 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 34: two numbers that were never about the same thing
+
+**Confirmed against the runner before touching anything.** Its
+converted-streak rule counts clean sets at a *level* and pairs them with
+an Epley estimate for today's reps: two sets held at 30 lb for eight
+produce `streak_done: 2` beside `suggested_weight: 25.0`. Nothing was
+ever held at 25, and `previous_weight` is null on that path, so the real
+weight is not even in the file.
+
+**The sighted row never made the claim.** It shows a name, pips and a
+weight side by side and asserts no relation between them. The spoken
+label did — #78's accessibility work joined them into one sentence,
+*"2 of 3 clean sets, 25 pounds"*, which reads as two clean sets at 25.
+That was mine, two cycles ago.
+
+**Shipped:** *"2 of 3 clean sets, next at 25 pounds"*. True on every
+rule, because `suggested_weight` is always what to use today — a hold, a
+bump, or an estimate. Three falsifications.
+
+**Left open deliberately:** `Session.kt` still documents the pair as
+"clean sets held at this weight", right on the same-reps rule and wrong
+on the converted one. That is a note about the runner's schema rather
+than a change here, and the runner owns it.
+
 ## 2026-10-16 — cycle 33: the save that never started
 
 **CI went red on a PR that could not have caused it.** `CarryViewModelTest

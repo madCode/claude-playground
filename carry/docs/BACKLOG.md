@@ -64,19 +64,23 @@ not a thing anyone is blocked from building.
 
 The app's stated worst outcome is a wrong number in a training history.
 These are the open paths to one, hardest first.
-- [ ] **The streak's weight and the weight shown are different
-  quantities** — and the mechanism the #80 review gave for it was wrong,
-  which is worth recording. It said "when the runner proposes a bump while
-  the streak is unfinished"; checked against the runner, the two branches
-  that propose a bump set no `streak_done` at all, so those rows never
-  reach this band.
+- [x] ~~**The streak's weight and the weight shown are different
+  quantities.**~~ Fixed 2026-10-16. Confirmed end to end against the
+  runner first: two sets held at 30 lb for eight reps produce
+  `streak_done: 2` beside `suggested_weight: 25.0`, the Epley estimate
+  for today's twelve — nothing was ever held at 25, and `previous_weight`
+  is null on that path, so the real weight is not even in the file.
 
-  The real route is the runner's **converted streak**: that branch pairs
-  `streak_done` with an *Epley estimate for today's reps*, not with a
-  weight anything was held at. `Session.kt` documents the pair as "clean
-  sets held at this weight", and on that path it is "sets at this level,
-  and a guess at today's equivalent". Either the field's documentation is
-  wrong or the band should say which it is *(audit)*
+  **The sighted row never made the claim** — it shows a name, pips and a
+  weight side by side. The spoken label did, because #80 joined them into
+  one sentence: *"2 of 3 clean sets, 25 pounds"*. It now says *"next at
+  25 pounds"*, which is true on every rule, since `suggested_weight` is
+  always what to use today.
+
+  Left open deliberately: `Session.kt` still documents the pair as "clean
+  sets held at this weight", which is right on the same-reps rule and
+  wrong on the converted one. Correcting it is a note about the runner's
+  schema rather than a change to this app, and the runner owns it.
 - [ ] Every boolean on `ExerciseSet` is non-nullable with no `coerceInputValues`,
   and `SessionFiles.parse` turns a decode failure into "whole file unreadable" — so
   a `"done": null` from another writer costs the entire day. Carry is the only

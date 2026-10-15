@@ -208,7 +208,15 @@ private fun More(rest: Int) {
 private fun spoken(bump: Growth.Bump): String = listOfNotNull(
     bump.name,
     "${bump.done} of ${bump.needed} clean sets",
-    "${figure(bump.weight)} pounds",
+    // "next at", not a bare "25 pounds". The two numbers are not about
+    // the same thing and this label used to read as though they were:
+    // the pips count clean sets, and the weight is what the runner says
+    // to use TODAY. On the runner's converted-streak rule those differ --
+    // two sets held at 30 for 8 reps earn "2 of 3" beside an estimate of
+    // 25 for 12, and nothing was ever held at 25. The sighted row never
+    // made that claim; it shows three things side by side. This label
+    // joined them into a sentence, which is how it became one.
+    "next at ${figure(bump.weight)} pounds",
 ).joinToString(", ")
 
 /** The one actionable thing in the data: another clean set moves it. */

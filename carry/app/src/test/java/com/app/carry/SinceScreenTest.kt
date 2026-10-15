@@ -146,7 +146,7 @@ class SinceScreenTest {
         // And it reads out as what it is. The pips are bare Boxes with no
         // semantics, so without a row label the band's entire content --
         // the streak, which is what its heading asks about -- is inaudible.
-        compose.onNodeWithContentDescription("movement 1, 1 of 3 clean sets, 21 pounds")
+        compose.onNodeWithContentDescription("movement 1, 1 of 3 clean sets, next at 21 pounds")
             .assertIsDisplayed()
         compose.onNodeWithContentDescription("and 6 more, not shown").assertIsDisplayed()
         shoot("23-progress-band")
@@ -176,9 +176,9 @@ class SinceScreenTest {
         )
         compose.setContent { SinceScreen(since.copy(nearBump = odd)) }
         compose.onNodeWithText("no family").assertIsDisplayed()
-        compose.onNodeWithContentDescription("no family, 1 of 2 clean sets, 20 pounds")
+        compose.onNodeWithContentDescription("no family, 1 of 2 clean sets, next at 20 pounds")
             .assertIsDisplayed()
-        compose.onNodeWithContentDescription("long haul, 3 of 40 clean sets, 25 pounds")
+        compose.onNodeWithContentDescription("long haul, 3 of 40 clean sets, next at 25 pounds")
             .assertIsDisplayed()
         // And it is drawn as the numbers, not as pips. Clamping `needed`
         // to ten without rescaling `done` made 3 of 40 read as 3 of 10 --
@@ -192,7 +192,7 @@ class SinceScreenTest {
         // column. Unclamped it collapses to about one character wide,
         // which is the movement the owner is trying to read.
         val row = compose.onNodeWithContentDescription(
-            "long haul, 3 of 40 clean sets, 25 pounds"
+            "long haul, 3 of 40 clean sets, next at 25 pounds"
         ).getUnclippedBoundsInRoot()
         val name = compose.onNodeWithText("long haul", useUnmergedTree = true)
             .getUnclippedBoundsInRoot()
@@ -200,6 +200,24 @@ class SinceScreenTest {
             "the pips squeezed the name: $name in $row",
             (name.right - name.left) >= (row.right - row.left) / 2,
         )
+    }
+
+    @Test
+    fun `the label does not say the clean sets were at that weight`() {
+        // The two numbers are about different things. The pips count
+        // clean sets; the weight is what the runner says to use today.
+        // On its converted-streak rule they differ -- two sets held at 30
+        // for 8 reps earn "2 of 3" beside an estimate of 25 for 12, and
+        // nothing was ever held at 25 (confirmed against the runner,
+        // 2026-10-16). The sighted row never claimed otherwise; this
+        // label did, because it joined them into one sentence.
+        compose.setContent {
+            SinceScreen(since.copy(nearBump = listOf(Growth.Bump("squat", "legs", 25.0, 2, 3))))
+        }
+        compose.onNodeWithContentDescription("squat, 2 of 3 clean sets, next at 25 pounds")
+            .assertIsDisplayed()
+        compose.onNodeWithContentDescription("squat, 2 of 3 clean sets, 25 pounds")
+            .assertDoesNotExist()
     }
 
     @Test
