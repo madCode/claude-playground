@@ -75,6 +75,36 @@ class SinceScreenTest {
     }
 
     @Test
+    fun `a withheld band says it is blank rather than saying nothing`() {
+        // "Nothing is close" and "we cannot tell" are different answers,
+        // and a band that simply disappears gives the first when the
+        // truth is the second. The heading with one line under it is the
+        // only place on this screen that distinction can be drawn.
+        compose.setContent {
+            SinceScreen(since.copy(nearBump = emptyList(), newestUnreadable = true))
+        }
+        // `.uppercase()`: `Band` renders the heading upper case, so the
+        // plain string matches nothing -- which would have made the
+        // `assertDoesNotExist` in the next test pass whatever happened.
+        compose.onNodeWithText("Part way to a bump".uppercase()).assertIsDisplayed()
+        compose.onNodeWithText(
+            "Today's sheet didn't read. Rather than show an older day's, this is blank."
+        ).assertIsDisplayed()
+        shoot("26-since-band-withheld")
+    }
+
+    @Test
+    fun `an empty band on a readable sheet still says nothing at all`() {
+        // The other half: with the newest sheet readable and nothing in
+        // progress, the band is absent entirely, as it always was. A
+        // heading over an explanation on every ordinary day would be
+        // noise on the screen this app can least afford to pad.
+        compose.setContent { SinceScreen(since.copy(nearBump = emptyList())) }
+        compose.onNodeWithText("Part way to a bump".uppercase()).assertDoesNotExist()
+        compose.onNodeWithText("Rather than show an older day's", substring = true).assertDoesNotExist()
+    }
+
+    @Test
     fun `a folder where one sheet read fine but held nothing is not called unreadable`() {
         // Built through the real `Growth.of`, not hand-assembled: the
         // combination that makes the sentence false is unreachable from a

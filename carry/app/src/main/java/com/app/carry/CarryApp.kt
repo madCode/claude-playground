@@ -112,11 +112,19 @@ fun carryState(folder: Folder): CarryState {
  * because they all handed file TEXT straight to [Growth] and never went
  * through a folder at all.
  */
-fun growthOf(folder: Folder): Growth.Since = Growth.of(
-    folder.list()
-        .filter { (_, name) -> SessionFiles.isSessionFile(name) }
-        .mapNotNull { (id, _) -> folder.read(id) }
-)
+fun growthOf(folder: Folder): Growth.Since {
+    val sheets = folder.list().filter { (_, name) -> SessionFiles.isSessionFile(name) }
+    val texts = sheets.mapNotNull { (id, _) -> folder.read(id) }
+    // The names are kept this far for one question only: is the newest
+    // file in the folder among the ones that parsed? [Growth.of] sees
+    // text and nothing else, so it cannot tell a newest sheet that failed
+    // to read from a folder that simply ends earlier -- and that
+    // difference is whether its bump band is about today or is yesterday's
+    // answer wearing today's label.
+    val newest = SessionFiles.newest(sheets.map { it.second })
+    val newestText = newest?.let { name -> sheets.first { it.second == name } }?.let { folder.read(it.first) }
+    return Growth.of(texts, newestUnreadable = newest != null && SessionFiles.parse(newestText.orEmpty()) == null)
+}
 
 /**
  * Keeps the last session on screen when a refresh comes back empty.

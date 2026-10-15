@@ -286,6 +286,63 @@ class CarryStateTest {
     }
 
     @Test
+    fun `an unreadable newest sheet withholds the band rather than showing yesterday's`() {
+        // "Part way to a bump" is the one figure on that screen that is a
+        // claim about TODAY. A newest file that will not parse is not in
+        // the list the band is taken from, so the band quietly became the
+        // previous session's -- a perfectly well-formed number under a
+        // heading that says it is about now.
+        fun day(date: String, done: Int) =
+            """{"schema":"gym-session/1","sheet_id":"$date","date":"$date","sets":[
+              {"ref":0,"line":"10 x squat","canonical":"squat","key":"squat","family":"legs",
+               "suggested_weight":45,"streak_done":$done,"streak_needed":3,"weight":45,"reps":10}
+            ]}"""
+        val older = day("2026-10-01", 1)
+        val newest = day("2026-10-14", 2)
+
+        // The premise: with both readable the band is TODAY's count, and
+        // the older day's is a different number -- so a fallback is
+        // detectable rather than invisible.
+        assertEquals(2, Growth.of(listOf(older, newest)).nearBump.single().done)
+        assertEquals(1, Growth.of(listOf(older)).nearBump.single().done)
+
+        val withheld = Growth.of(listOf(older), newestUnreadable = true)
+        assertTrue("the band must be withheld, not inherited", withheld.nearBump.isEmpty())
+        assertTrue(withheld.newestUnreadable)
+        // Everything else still reads: only the band is about today.
+        assertEquals(1, withheld.sessions)
+    }
+
+    @Test
+    fun `the folder decides whether the newest sheet read, not Growth`() {
+        // The wiring, which no test of `Growth.of` can cover: it sees text
+        // and nothing else, so it cannot tell a newest sheet that failed
+        // to parse from a folder that simply ends earlier. Only the names
+        // answer that, and they are dropped one layer up.
+        val older = """{"schema":"gym-session/1","sheet_id":"a","date":"2026-10-01","sets":[
+            {"ref":0,"line":"10 x squat","canonical":"squat","key":"squat","family":"legs",
+             "suggested_weight":45,"streak_done":1,"streak_needed":3,"weight":45,"reps":10}
+        ]}"""
+        val broken = """{"schema":"gym-session/1","sheet_id":"b","date":"2026-10-14","""
+
+        val newestBroken = growthOf(FakeFolder(
+            files = listOf("d1" to "session-2026-10-01-2G.json", "d2" to "session-2026-10-14-3G.json"),
+            contents = mapOf("d1" to older, "d2" to broken),
+        ))
+        assertTrue("the band came from the older day", newestBroken.nearBump.isEmpty())
+        assertTrue(newestBroken.newestUnreadable)
+
+        // ...and an OLDER broken file must not cost the band, because the
+        // newest sheet read fine and the band is only ever about that one.
+        val olderBroken = growthOf(FakeFolder(
+            files = listOf("d1" to "session-2026-10-01-2G.json", "d2" to "session-2026-10-14-3G.json"),
+            contents = mapOf("d1" to broken, "d2" to older.replace("2026-10-01", "2026-10-14")),
+        ))
+        assertEquals(1, olderBroken.nearBump.size)
+        assertTrue(!olderBroken.newestUnreadable)
+    }
+
+    @Test
     fun `a sheet where no row read is counted, not treated as having nothing in it`() {
         // The case the whole rewording was about, and the first version
         // did not reach it. Every row failing still PARSES, so the file

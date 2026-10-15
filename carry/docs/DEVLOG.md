@@ -32,6 +32,46 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 39: yesterday's answer wearing today's label
+
+**Top of *Wrong numbers*, and the last hole the #88 review left open.**
+"Part way to a bump" is the one figure on the Since tab that is a claim
+about TODAY. It is taken from the newest sheet whether that sheet read
+short or not — deliberately, because dropping a short day there would
+promote yesterday's into the answer. But a newest file that will not
+parse AT ALL is not in the list the band is taken from, so the same
+substitution happened by the back door, and silently: an older day's
+streak is a perfectly well-formed number.
+
+**Probed first.** Two sheets, the older at 1 of 3 and today's at 2 of 3:
+with today's truncated the band reads **1 of 3**, under a heading that
+says it is about now. Same for a newer-schema file, which is the case
+that does not settle on its own.
+
+**Shipped:** the band is withheld, and says so where it would have been
+— the heading with one line under it, which it shows in no other case.
+"Nothing is close" and "we cannot tell" are different answers, and a band
+that simply disappears gives the first.
+
+**The interesting part is that `Growth` could not decide this alone.** It
+is handed text and nothing else, so it cannot tell a newest sheet that
+failed to parse from a folder that ends earlier. Only the FILENAMES
+answer that, and `growthOf` was dropping them one line before. So the
+question is answered a layer up and passed in — which is also why the
+test for it has to go through a real folder read.
+
+Six falsifications, each red on exactly the test that names it. The pair
+worth having is the wiring in both directions: stubbing it out, AND
+making it too broad (`sheets.size != texts.size`, so any broken file
+kills the band). The second is the plausible wrong implementation, and
+the second half of that test is the only thing that catches it.
+
+**And one caught by a failing test rather than by review:** `Band`
+renders its heading upper case, so `onNodeWithText("Part way to a bump")`
+matches nothing — which would have made the `assertDoesNotExist` in the
+sibling test pass whatever the code did. The first assertion failed
+loudly; the second would have passed silently for ever.
+
 ## 2026-10-16 — cycle 38: the day that was missing without a word
 
 **Small, and it closes something the previous cycle opened.** A day whose

@@ -180,12 +180,19 @@ These are the open paths to one, hardest first.
   parse AT ALL as well as one that read short, and only the short ones
   that have evidence a session happened. The day detail needs nothing: a
   short day never reaches `days`, so there is no detail view to mark.
-- [ ] **A newest file that will not parse at all silently hands the bump
-  band to yesterday.** The band is taken from the newest sheet whether it
-  read SHORT or not, deliberately — but a file that does not parse is not
-  in the list it is taken from, so the substitution the three lines on
-  `newest` exist to prevent happens anyway, for that one case. Nothing on
-  screen marks it. Pre-existing; found by the #88 review *(audit)*
+- [x] ~~**A newest file that will not parse at all silently hands the bump
+  band to yesterday.**~~ Fixed 2026-10-16. The band is WITHHELD rather
+  than inherited, and says so where it would have been: *"Today's sheet
+  didn't read. Rather than show an older day's, this is blank."* — the
+  heading with one line under it, which the band shows in no other case,
+  because "nothing is close" and "we cannot tell" are different answers
+  and a band that simply disappears gives the first.
+
+  `Growth.of` could not have decided this alone: it sees text and nothing
+  else, so it cannot tell a newest sheet that failed to parse from a
+  folder that ends earlier. Only the FILENAMES answer that, and `growthOf`
+  was dropping them. Pinned from both sides — an older broken file must
+  not cost the band, since the band is only ever about the newest sheet.
 - [ ] **Showing a short day's rows on the Since tab, rather than omitting
   the day.** The genuinely better answer, and the one the Before and After
   tabs got. It needs more than a count: `sets`, `movements`, `repeated`

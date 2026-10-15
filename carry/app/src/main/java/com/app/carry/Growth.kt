@@ -204,6 +204,16 @@ object Growth {
          * not settle on its own.
          */
         val newerSchema: Int = 0,
+        /**
+         * The newest file in the folder could not be read, so [nearBump]
+         * is withheld rather than taken from an older day.
+         *
+         * Separate from [short] and [newerSchema], which are both about
+         * the TOTALS. This one is about the single figure on this screen
+         * that is a statement about today, and the screen says it where
+         * the band would have been rather than in the line above.
+         */
+        val newestUnreadable: Boolean = false,
     ) {
         /**
          * There is nothing to show at all.
@@ -253,7 +263,15 @@ object Growth {
      *   a half-synced file is normal in a shared folder, and one bad file
      *   must not cost the owner the whole picture.
      */
-    fun of(files: List<String>): Since {
+    /**
+     * @param newestUnreadable the newest file in the folder BY NAME could
+     *   not be parsed, so it is not among [files] at all. Passed in
+     *   because this function only ever sees text: it cannot tell a
+     *   missing newest sheet from a folder that simply ends earlier, and
+     *   the difference decides whether [Since.nearBump] is an answer
+     *   about today or yesterday's answer wearing today's label.
+     */
+    fun of(files: List<String>, newestUnreadable: Boolean = false): Since {
         // Paired with the text it was parsed from, and with its rows, because
         // the rows the owner ADDED are not part of [Session] — a row with no
         // `name` key threw during deserialization once and cost the whole
@@ -353,7 +371,14 @@ object Growth {
         // the exact substitution these three lines exist to prevent. The
         // rows that did decode carry the runner's own counts, so a short
         // newest sheet gives a shorter band rather than a wrong one.
-        val newest = read.map { it.session }.maxByOrNull { it.date }
+        //
+        // A newest sheet that will not parse AT ALL is not in `read`, so
+        // the same substitution happens by the back door -- and silently,
+        // because an older day's streak is a perfectly well-formed number.
+        // There is nothing to compute from, so the band is WITHHELD and
+        // the screen says why. A blank band is a missing answer; an older
+        // day's band under the words "part way to a bump" is a wrong one.
+        val newest = read.map { it.session }.takeIf { !newestUnreadable }?.maxByOrNull { it.date }
         val nearBump = newest?.sets.orEmpty().mapNotNull { set ->
             // A row they said they did not do, the same exclusion `lifted`
             // and `liftsOf` make below. The streak behind it is real, but
@@ -428,6 +453,7 @@ object Growth {
             repeated = counts?.count { it.value > 1 },
             short = short,
             newerSchema = newerSchema,
+            newestUnreadable = newestUnreadable,
         )
     }
 

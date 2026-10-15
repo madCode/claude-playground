@@ -554,6 +554,14 @@ is the newest sheet behind "part way to a bump", because dropping a
 short day there would not leave a gap — it would promote yesterday's
 sheet into the answer to "where do I stand today".
 
+A newest sheet that will not parse AT ALL is not in that read either, so
+the band is **withheld** and says so, rather than quietly becoming the
+previous session's. That needs the filenames, which `Growth` never sees:
+it cannot tell a newest sheet that failed from a folder that ends
+earlier, so the question is answered one layer up and passed in. An older
+file failing costs the band nothing — the band is only ever about the
+newest sheet.
+
 Left out, but not left out quietly: the tab says how many sessions are
 not in its totals, above the figures they are missing from. This is the
 screen that exists to explain why the numbers are thin, so a session
