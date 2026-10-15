@@ -20,6 +20,28 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 26: what the app is for, written down
+
+**From you.** "We want *me* to have the information to know when to push
+myself... I also think that idea can be the guiding light here." It had been
+said in conversation and recorded nowhere, which is exactly the failure this
+run spent an evening fixing everywhere else.
+
+**Shipped.** `DESIGN.md` gains "What it is for", immediately after the
+constraint everything else follows from — because it governs the coaching
+side, not just the screens. It carries the measurement that produced it: a
+progress rule that acted on its own signal was built, measured ten ways, and
+rejected every time, because the smallest step a gym stocks is a whole
+dumbbell against a rep-conversion signal worth about a quarter of that.
+
+Two consequences are stated because they look like missing features:
+**silence is an answer**, and **a warning is worth more than a suggestion** —
+telling someone they did not finish a weight last time needs no evidence
+about what they should lift, and it is the one thing they cannot reconstruct
+in a car park.
+
+**Left.** Nothing. Docs only; no code changed.
+
 ## 2026-10-14 — cycle 25: the flaky ViewModel test
 
 **From the backlog**, not from you: `CarryViewModelTest` had been failing at
