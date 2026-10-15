@@ -212,9 +212,18 @@ object Growth {
         // `name` key threw during deserialization once and cost the whole
         // day, so they are read out of the raw JSON by [SessionPatch]. On a
         // borrowed day those rows are the entire session.
-        val parsed = files.mapNotNull { text ->
+        val read = files.mapNotNull { text ->
             SessionFiles.parse(text)?.let { Read(it, text, rowsOf(it, text)) }
         }
+        // A file that read SHORT is left out of the HISTORY, as it was
+        // when a bad row cost the whole file. The Before and After tabs
+        // gain from showing what they can and saying what they could not;
+        // the figures here do not, because they are claims -- "4 lifts,
+        // heaviest 50" over a day whose heaviest row did not decode is a
+        // confident wrong number and nothing downstream could tell.
+        // Omitting the day is what this screen already did, and a missing
+        // figure beats a wrong one. Saying so instead is on the backlog.
+        val parsed = read.filter { SessionFiles.unreadableRows(it.text, it.session) == 0 }
         val sessions = parsed.map { it.session }
         val lifts = sessions.flatMap(::liftsOf)
         // A sheet nobody filled in is not a session they did. One of those
@@ -253,7 +262,14 @@ object Growth {
         // Only from the newest sheet: a streak is a statement about where
         // the owner stands TODAY, and an older file's is a fact about a
         // day that has already been and gone.
-        val newest = sessions.maxByOrNull { it.date }
+        //
+        // From the UNFILTERED read, unlike everything above. Dropping a
+        // short day here would not leave a gap, it would silently promote
+        // yesterday's sheet into the answer to "where do I stand today" --
+        // the exact substitution these three lines exist to prevent. The
+        // rows that did decode carry the runner's own counts, so a short
+        // newest sheet gives a shorter band rather than a wrong one.
+        val newest = read.map { it.session }.maxByOrNull { it.date }
         val nearBump = newest?.sets.orEmpty().mapNotNull { set ->
             // A row they said they did not do, the same exclusion `lifted`
             // and `liftsOf` make below. The streak behind it is real, but

@@ -519,7 +519,45 @@ that field's default, so one odd key cannot cost a whole day's numbers.
 the file is ours at all, and a non-nullable `schema` would have coercion
 hand the gate its own default back.
 
-Anything else unreadable still costs the file, which the screen says
-plainly rather than guessing: a value of the wrong type, or a missing
-`ref`, takes the whole session to "Can't read that session". That is too
-blunt and is on the backlog.
+**The rows are decoded one at a time**, so a row this build cannot read
+costs that row rather than the day — a value of the wrong type, or a
+missing `ref`. The head is decoded with the rows taken out, so a bad row
+cannot take the date and the class tag with it.
+
+**Where the line between "a bad row" and "a bad file" is drawn: wherever
+the SAVE draws it**, and by calling the same function rather than keeping
+two lists in step. `SessionPatch.unshaped` names the problems with the
+file — a `sets` or an `added` that is not a list, an element of `sets`
+that is not an object, two rows sharing a `ref` — and both the read and
+the save refuse exactly those. (What depends on the owner's own input,
+like an edit naming a row that has gone, stays in the save: it is
+answerable from the screen.) On top of that the read refuses a file that
+is not JSON, one whose `schema` is not ours, and one whose `sheet_id` or
+`date` will not read.
+
+A reader that accepts what its writer rejects is worse than one that
+refuses: it opens a form, takes a whole day's typing, and then refuses to
+save it, with a message about a list the owner was shown as empty.
+
+Only the rows the owner can SEE are seeded into the form. The raw JSON
+holds every row, including the ones that did not decode, and treating
+those as the owner's would both count them as filled and let a change to
+an invisible row block a save. There are three seeds — the read, the
+discard, and the re-seed after a save — and they share one function,
+because fixing only the first left the other two showing the bug.
+
+The Since tab is the exception to all of this: a day that read short is
+left out of its history entirely. Its figures are claims rather than a
+sheet, and "heaviest 50" over a day whose heaviest row did not decode is
+a confident wrong number. The one figure taken from the unfiltered read
+is the newest sheet behind "part way to a bump", because dropping a
+short day there would not leave a gap — it would promote yesterday's
+sheet into the answer to "where do I stand today".
+
+Dropping a row is safe because the save path never sees the decode: it
+patches the raw JSON and copies every row it did not edit through byte
+for byte, so a row missing from the screen is still written back
+untouched. It is not silent either — both the Before and the After tab
+say how many rows did not read, in one shared wording, because a missing
+line on the sheet otherwise reads as the coach not prescribing it and a
+missing box otherwise reads as a row already filled in.

@@ -77,6 +77,11 @@ fun LogScreen(
     fileMoved: Boolean = false,
     onDiscard: () -> Unit = {},
     modifier: Modifier = Modifier,
+    /** Rows the file lists that this build could not read. Said here as
+     *  well as on the Before tab, because here the consequence is a box
+     *  that is not on screen: without it the owner looks for the row they
+     *  did and concludes they already filled it in. */
+    unreadable: Int = 0,
     /** Changes when a different session is loaded, so the text boxes reset
      *  with it rather than keeping the last workout's keystrokes. */
     sessionKey: String = session.sheetId,
@@ -109,6 +114,13 @@ fun LogScreen(
             color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
             modifier = Modifier.padding(top = 3.dp, bottom = 10.dp),
         )
+        SessionFiles.unreadableNote(unreadable)?.let {
+            Text(
+                "\u26a0 $it",
+                color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+        }
         if (fileMoved) {
             Text(
                 "\u26a0 The coach rewrote this session while you were filling it in. Your numbers are still here; check they line up before saving.",

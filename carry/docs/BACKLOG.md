@@ -30,7 +30,10 @@ not a thing anyone is blocked from building.
   "a third of this owner's logged sets" line repeated in `DESIGN.md`,
   `LogScreen.kt`, `LogScreenTest.kt`, `PastSessionScreenTest.kt` and
   — found by the #85 review, missed by every earlier pass over this
-  list — `SessionPatch.kt`. #79
+  list — `SessionPatch.kt`. Three more in `TodayScreenTest.kt`, found
+  while working nearby: "78% of the real history was logged this way",
+  "a sheet repeats a movement on 42% of days", "the repeats use the same
+  implement 78% of the time". #79
   removed the ones it had just added and left these, because they are
   load-bearing reasoning in several places and converting them is a pass of
   its own — **and it may be a deliberate exception you want kept**.
@@ -139,31 +142,45 @@ These are the open paths to one, hardest first.
   exactly what an unset flag means, and a null `sets` now reads the same
   as an absent one. `schema` is nullable now so coercion cannot hand the
   gate its own default back and vouch for another tool's file.
-- [ ] **The same bug one level up: ANY malformed field on ANY row still
-  costs the whole day.** Probed against `SessionFiles.parse`, one row per
-  case, everything else valid — each of these returns null, which the app
-  shows as "Can't read that session":
+- [x] ~~**The same bug one level up: ANY malformed field on ANY row still
+  costs the whole day.**~~ Fixed 2026-10-16. `SessionFiles.parse` decodes
+  `sets` one row at a time, so a `"ref": null`, a missing `ref`, a
+  `"line": null`, a `"weight": "45 lb"` or a `"done": "yes"` costs that
+  row and not the day — and the head is decoded with `sets` taken out, so
+  a bad row cannot take the date and the class tag with it either.
 
-  | the row says | today |
-  |---|---|
-  | `"done": null` | reads — **fixed above** |
-  | `"ref": null`, or no `ref` at all | whole day lost |
-  | `"line": null` | whole day lost |
-  | `"weight": "45 lb"` | whole day lost |
-  | `"done": "yes"` | whole day lost |
+  **Dropping a row is only an improvement if it is said**, so both tabs
+  say it: *"1 row of this sheet didn't read. It stays in the file
+  untouched; Carry can't show it."* On the Before tab a missing line
+  otherwise reads as the coach not prescribing it; on the After tab the
+  consequence is a box that is not on screen, which reads as a row already
+  filled in. One wording, in `SessionFiles.unreadableNote`, so the two
+  cannot drift.
 
-  Coercion cannot reach these: it rescues a null, never a value of the
-  wrong type or a missing non-defaulted field. The fix is to decode `sets`
-  **row by row**, which is what `SessionPatch.splitAdded` already does for
-  the `added` array and for the same stated reason. Two things make it
-  safe to drop a row from the screen: the save path patches the RAW JSON,
-  so an undecodable row is still written back untouched, and an edit
-  against a `ref` the file has lost is already refused.
+  The claim in that sentence was verified end to end before it was
+  written: a save with three undecodable rows writes all of them back
+  **byte for byte**, nulls, string weights and all. Six falsifications;
+  the sixth — `carryState` not counting — passed every test until a case
+  that goes through a real folder read was added.
 
-  What it needs decided is what the owner is TOLD. Showing ten rows of
-  eleven in silence is the "a row the owner cannot see is a refusal they
-  cannot act on" trap this codebase has already fallen into once, so this
-  wants a banner and therefore a design, not a one-line patch *(audit)*
+- [ ] **A day that read short is left out of the history entirely.** The
+  #87 review found the alternative was worse: `Growth.Day.best` and
+  `lifts` are claims, so "4 lifts, heaviest 50" over a day whose heaviest
+  row did not decode is a confident WRONG number and nothing downstream
+  could tell. Omitting it is what this screen already did when a bad row
+  cost the whole file, and it is a missing figure rather than a wrong one.
+  The better answer is the one the Before and After tabs got — show what
+  read and say what did not — which needs `Growth.Since`/`Day` to carry
+  the count and the Since tab and day detail to say it *(audit)*
+- [ ] **A `sets` holding both `"ref": 3` and `"ref": "3"` shows two rows
+  that share a ref, and an edit typed against the second is written onto
+  the first.** `refOf` excludes the string one from duplicate detection,
+  so the save does not refuse — it silently misplaces. Verified by the
+  #87 review (20 lb typed against one movement written into another,
+  outcome `Patched`). Pre-existing: the old whole-document decode accepted
+  that file too. Note that two rows sharing a plain integer ref IS now
+  refused by both halves, so this is the one remaining hole in that
+  guard, and it is the quiet one *(audit)*
 - [ ] **A sheet with no rows blanks the "part way to a bump" band, even
   when older sheets have something to say.** `Growth.of` picks `newest` from
   every parsed session rather than from the ones with rows, so an empty

@@ -41,6 +41,11 @@ fun TodayScreen(
     // Derived here, from the very date on the line above it, rather than
     // passed in as a verdict someone else reached earlier.
     today: java.time.LocalDate = java.time.LocalDate.now(),
+    /** Rows the file lists that this build could not read. Said out loud
+     *  rather than silently shown short -- the sheet is what the owner
+     *  checks against the board, so a missing line has to be explained
+     *  or it reads as the coach not prescribing it. */
+    unreadable: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     val day = SessionFiles.dayOf(session.date, today)
@@ -82,6 +87,7 @@ fun TodayScreen(
             SessionFiles.Day.UNKNOWN -> Warning("Carry can't tell what day this session is for.")
             SessionFiles.Day.TODAY -> Unit
         }
+        SessionFiles.unreadableNote(unreadable)?.let { Warning(it) }
         session.borrowedFrom?.let {
             Text(
                 "⚠ No ${session.classTag} intel. This is the $it floor block — check the board.",

@@ -1,5 +1,10 @@
 package com.app.carry
 
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
+
 /**
  * Which file in the folder is today's, and what it parses to.
  *
@@ -71,10 +76,82 @@ object SessionFiles {
         Regex(""""schema"\s*:\s*"gym-session/(\d+)"""").find(text)
             ?.groupValues?.get(1)?.toIntOrNull()?.let { it > 1 } == true
 
+    /**
+     * The rows are decoded ONE AT A TIME, so a row this build cannot read
+     * costs that row rather than the day.
+     *
+     * Decoding the document whole meant any malformed field anywhere took
+     * the whole file down -- a `"ref": null`, a `"weight": "45 lb"`, a
+     * `"done": "yes"` -- and the owner saw "Can't read that session" in a
+     * studio, with no way to fix it from the phone. The same bargain
+     * `SessionPatch.splitAdded` already strikes for the `added` array.
+     *
+     * Dropping a row is safe because the SAVE path never sees this: it
+     * patches the raw JSON and copies every row it did not edit through
+     * byte for byte, so a row missing from here is still written back
+     * untouched. What it is not is silent -- [unreadableRows] is what the
+     * screens say out loud, because a row the owner cannot see is a
+     * refusal they cannot act on.
+     */
     fun parse(text: String): Session? = try {
-        Session.json.decodeFromString<Session>(text).takeIf { it.schema == Session.SCHEMA }
+        val doc = Session.json.parseToJsonElement(text) as? JsonObject
+        val rows = doc?.let(::rowsIn)
+        // The head is decoded with `sets` taken out, so one bad row cannot
+        // take the date and the class tag with it.
+        val head = doc?.let { Session.json.decodeFromJsonElement<Session>(JsonObject(it - "sets")) }
+        if (rows == null) null else head?.takeIf { it.schema == Session.SCHEMA }?.copy(sets = rows)
     } catch (_: IllegalArgumentException) {
         // SerializationException extends this, so one catch covers both.
         null
+    }
+
+    /**
+     * The rows that decode, or null when the file is damaged in a way that
+     * is not about one row.
+     *
+     * What counts as "not about one row" is not decided here: it is
+     * whatever [SessionPatch.unshaped] names, because that is what the
+     * SAVE refuses. A reader that accepts what its writer rejects is
+     * worse than one that refuses -- it opens a form, takes a whole
+     * borrowed day's typing, and then refuses to write it, with a message
+     * about a list the owner was shown as empty.
+     *
+     * `null` and an absent `sets` are not damage: both mean no rows, and
+     * the save takes both.
+     */
+    private fun rowsIn(doc: JsonObject): List<ExerciseSet>? {
+        if (SessionPatch.unshaped(doc) != null) return null
+        val listed = doc["sets"].takeIf { it !is JsonNull } ?: return emptyList()
+        return (listed as JsonArray).mapNotNull {
+            runCatching { Session.json.decodeFromJsonElement<ExerciseSet>(it) }.getOrNull()
+        }
+    }
+
+    /**
+     * What to say about [unreadableRows], or null when there is nothing
+     * to say.
+     *
+     * Here rather than on either screen because both say it and the two
+     * must not drift: the Before tab explains why the sheet is short, and
+     * the After tab explains why there is no box to type into.
+     */
+    fun unreadableNote(rows: Int): String? = when {
+        rows <= 0 -> null
+        rows == 1 -> "1 row of this sheet didn't read. It stays in the file untouched; Carry can't show it."
+        else -> "$rows rows of this sheet didn't read. They stay in the file untouched; Carry can't show them."
+    }
+
+    /**
+     * How many rows the file holds that [parse] could not read.
+     *
+     * Derived by SUBTRACTING what parse kept from what the file lists, so
+     * the count and the rows on screen cannot drift apart -- the one way
+     * this could go wrong is saying "1 row didn't read" beside a sheet
+     * showing all of them, or the reverse.
+     */
+    fun unreadableRows(text: String, parsed: Session): Int {
+        val listed = ((runCatching { Session.json.parseToJsonElement(text) }.getOrNull() as? JsonObject)
+            ?.get("sets") as? JsonArray)?.size ?: return 0
+        return (listed - parsed.sets.size).coerceAtLeast(0)
     }
 }
