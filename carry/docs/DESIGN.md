@@ -519,7 +519,17 @@ that field's default, so one odd key cannot cost a whole day's numbers.
 the file is ours at all, and a non-nullable `schema` would have coercion
 hand the gate its own default back.
 
-Anything else unreadable still costs the file, which the screen says
-plainly rather than guessing: a value of the wrong type, or a missing
-`ref`, takes the whole session to "Can't read that session". That is too
-blunt and is on the backlog.
+**The rows are decoded one at a time**, so a row this build cannot read
+costs that row rather than the day — a value of the wrong type, or a
+missing `ref`. The head is decoded with the rows taken out, so a bad row
+cannot take the date and the class tag with it. Only a file that is not
+JSON, or whose `schema` is not ours, or whose `sheet_id` or `date` will
+not read, still goes to "Can't read that session".
+
+Dropping a row is safe because the save path never sees the decode: it
+patches the raw JSON and copies every row it did not edit through byte
+for byte, so a row missing from the screen is still written back
+untouched. It is not silent either — both the Before and the After tab
+say how many rows did not read, in one shared wording, because a missing
+line on the sheet otherwise reads as the coach not prescribing it and a
+missing box otherwise reads as a row already filled in.

@@ -70,6 +70,12 @@ sealed interface CarryState {
          *  never on a re-encoding of [session] -- see SessionPatch. */
         val raw: String,
         val documentId: String,
+        /** Rows the file lists that this build could not read, and which
+         *  are therefore missing from [session]. Carried so the screens
+         *  can say so: a row the owner cannot see is a refusal they
+         *  cannot act on, and the save still writes those rows back
+         *  untouched. */
+        val unreadable: Int = 0,
     ) : CarryState
 }
 
@@ -92,7 +98,7 @@ fun carryState(folder: Folder): CarryState {
     val text = folder.read(id) ?: return CarryState.Unreadable(newest, wrongSchema = false)
     val session = SessionFiles.parse(text)
         ?: return CarryState.Unreadable(newest, wrongSchema = SessionFiles.looksLikeNewerSchema(text))
-    return CarryState.Ready(session, text, id)
+    return CarryState.Ready(session, text, id, SessionFiles.unreadableRows(text, session))
 }
 
 /**
@@ -218,7 +224,7 @@ fun CarryApp(
             modifier = modifier,
         )
         is CarryState.Ready -> if (log == null) {
-            TodayScreen(state.session, modifier = modifier)
+            TodayScreen(state.session, unreadable = state.unreadable, modifier = modifier)
         } else {
             // Saved, because the tab you were on is part of where you
             // were -- and the third one is read at home, where being
@@ -237,10 +243,10 @@ fun CarryApp(
                         onShare = log.onShare,
                         onEdit = log.onEdit, onAdd = log.onAdd, onEditAdded = log.onEditAdded,
                         onSave = log.onSave, saving = log.saving, fileMoved = log.fileMoved,
-                        onDiscard = log.onDiscard,
+                        onDiscard = log.onDiscard, unreadable = state.unreadable,
                     )
-                    2 -> log.since?.let { SinceScreen(it) } ?: TodayScreen(state.session)
-                    else -> TodayScreen(state.session)
+                    2 -> log.since?.let { SinceScreen(it) } ?: TodayScreen(state.session, unreadable = state.unreadable)
+                    else -> TodayScreen(state.session, unreadable = state.unreadable)
                 }
             }
         }

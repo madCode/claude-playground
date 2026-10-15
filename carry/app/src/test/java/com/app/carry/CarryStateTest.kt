@@ -132,6 +132,64 @@ class CarryStateTest {
     }
 
     @Test
+    fun `a row this build cannot read costs that row, not the day`() {
+        // The file is written on another machine. Decoding it whole meant
+        // one malformed field anywhere took the whole day down and the
+        // owner saw "Can't read that session" in a studio, with no way to
+        // fix it from the phone.
+        val file = """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-17","class":"2G","sets":[
+            {"ref":0,"line":"10 x squat","canonical":"squat","suggested_weight":45},
+            {"ref":1,"line":"10 x row","canonical":"row","weight":"45 lb"},
+            {"ref":2,"line":"10 x press","canonical":"press","done":"yes"},
+            {"ref":null,"line":"10 x curl","canonical":"curl"},
+            {"line":"10 x fly","canonical":"fly"}
+        ]}"""
+        val parsed = SessionFiles.parse(file)
+        assertEquals("the readable row survives", 1, parsed?.sets?.size)
+        assertEquals("squat", parsed!!.sets.first().canonical)
+        // The head too: a bad row must not take the date and the class
+        // with it, since those are what the sheet is identified by.
+        assertEquals("2026-10-17", parsed.date)
+        assertEquals("2G", parsed.classTag)
+        // Four kinds of damage, one per row: a string weight, a string
+        // flag, a null ref and no ref at all.
+        assertEquals(4, SessionFiles.unreadableRows(file, parsed))
+    }
+
+    @Test
+    fun `the count reaches the screens through a real folder read`() {
+        // The wiring, which no amount of testing `parse` covers: stubbing
+        // `carryState` to stop counting left every unit test green while
+        // the feature was dead in the app. Two repos and 151 green tests
+        // once failed to talk to each other for exactly this reason.
+        val damaged = """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-17","sets":[
+            {"ref":0,"line":"10 x squat"},{"ref":1,"line":"10 x row","weight":"45 lb"}
+        ]}"""
+        val state = carryState(
+            FakeFolder(
+                files = listOf("doc1" to "session-2026-10-17-2G.json"),
+                contents = mapOf("doc1" to damaged),
+            )
+        )
+        val ready = state as CarryState.Ready
+        assertEquals("the readable row is on screen", 1, ready.session.sets.size)
+        assertEquals("and the other one is accounted for", 1, ready.unreadable)
+    }
+
+    @Test
+    fun `a clean file reports nothing unreadable`() {
+        // The count is a subtraction, so an off-by-one here would put a
+        // warning on every sheet the owner ever opens.
+        val file = """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-17","sets":[
+            {"ref":0,"line":"10 x squat"},{"ref":1,"line":"10 x row"}
+        ]}"""
+        val parsed = SessionFiles.parse(file)!!
+        assertEquals(2, parsed.sets.size)
+        assertEquals(0, SessionFiles.unreadableRows(file, parsed))
+        assertNull(SessionFiles.unreadableNote(0))
+    }
+
+    @Test
     fun `coercion must not vouch for another tool's file`() {
         // The hazard the fix brings with it. `schema` decides whether this
         // file is ours at all; if it were non-nullable with a default,

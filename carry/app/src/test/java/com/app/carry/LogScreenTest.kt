@@ -63,10 +63,11 @@ class LogScreenTest {
      *  composition, with the same scroll. */
     private val saving = mutableStateOf<SaveState>(SaveState.Idle)
 
-    private fun show(state: SaveState = SaveState.Idle) {
+    private fun show(state: SaveState = SaveState.Idle, unreadable: Int = 0) {
         saving.value = state
         compose.setContent {
             LogScreen(
+                unreadable = unreadable,
                 session = SampleSession.today,
                 entries = edits.value,
                 added = added.value,
@@ -510,6 +511,20 @@ class LogScreenTest {
         compose.onNodeWithContentDescription(
             "5 lines in the post are marked, because they look like they carry a weight: " +
                 "-26 lb curl; ybell deadlift 30; ybell deadlift 35; and 2 more.",
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a row with no box says why there is no box`() {
+        // Here the consequence of a dropped row is a box that is not on
+        // screen. Without the line the owner looks for the exercise they
+        // did, does not find it, and concludes they already filled it in
+        // -- so the set reaches history as nothing.
+        // Above the list, not in it: this is a reason the sheet is short,
+        // so it must be on screen before any scrolling.
+        show(unreadable = 2)
+        compose.onNodeWithText(
+            "\u26a0 2 rows of this sheet didn't read. They stay in the file untouched; Carry can't show them."
         ).assertIsDisplayed()
     }
 

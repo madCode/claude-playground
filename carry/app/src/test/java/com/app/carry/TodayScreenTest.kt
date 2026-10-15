@@ -71,6 +71,26 @@ class TodayScreenTest {
     }
 
     @Test
+    fun `a sheet shown short says why, rather than just being short`() {
+        // The sheet is what gets checked against the board, so a line that
+        // is simply missing reads as the coach not having prescribed it.
+        // A row this build cannot decode costs that row now rather than
+        // the whole day -- which is only an improvement if it is said.
+        compose.setContent {
+            TodayScreen(SampleSession.today, java.time.LocalDate.of(2026, 10, 17), unreadable = 1)
+        }
+        compose.onNodeWithText(
+            "\u26a0 1 row of this sheet didn't read. It stays in the file untouched; Carry can't show it."
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a sheet that read cleanly says nothing about it`() {
+        compose.setContent { TodayScreen(SampleSession.today, java.time.LocalDate.of(2026, 10, 17)) }
+        compose.onNodeWithText("didn't read", substring = true).assertDoesNotExist()
+    }
+
+    @Test
     fun `a borrowed floor block says so before any number`() {
         // A substitute mistaken for the real thing is worse than no sheet:
         // 78% of the real history was logged this way.

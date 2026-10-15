@@ -63,6 +63,33 @@ class SessionPatchTest {
     // ---- what must survive ------------------------------------------------
 
     @Test
+    fun `a row the screen could not show is still written back untouched`() {
+        // The whole basis for dropping an undecodable row from the screen
+        // rather than refusing the file. If this were not true the sheet
+        // would quietly lose rows on the first save, which is the one
+        // thing this app must never do.
+        val file = """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-17","sets":[
+            {"ref":0,"line":"10 x squat","canonical":"squat"},
+            {"ref":1,"line":"10 x row","canonical":"row","weight":"45 lb"},
+            {"ref":2,"line":"10 x press","canonical":"press","done":"yes"},
+            {"ref":null,"line":"10 x curl","canonical":"curl"}
+        ]}"""
+        assertEquals("the premise: the screen shows one of four", 1, SessionFiles.parse(file)!!.sets.size)
+
+        val out = SessionPatch.apply(file, mapOf(0 to SessionPatch.Entry(weight = 45.0, reps = 10)))
+        val text = (out as SessionPatch.Outcome.Patched).text!!
+        val before = doc(file)["sets"]!!.jsonArray
+        val after = doc(text)["sets"]!!.jsonArray
+        assertEquals("a row was dropped from the file", 4, after.size)
+        // Byte for byte, the three the screen never saw. A null `ref` and
+        // a string weight come back exactly as they went in: this app
+        // cannot read them, so it has no business normalising them.
+        for (i in 1..3) assertEquals("row $i was rewritten", before[i], after[i])
+        assertEquals("45", after[0].jsonObject["weight"].toString())
+    }
+
+
+    @Test
     fun `a null list saves like an absent one, because it reads like one`() {
         // The decode treats `null` and an absent key alike -- both mean "no
         // rows" -- so the save path has to as well, or the file opens and

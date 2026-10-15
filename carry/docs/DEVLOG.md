@@ -32,6 +32,42 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 37: one bad row cost a whole day
+
+**The other half of the previous cycle, and the half that needed a
+decision rather than a setting.** `SessionFiles.parse` decoded the
+document whole, so any malformed field on any row took the file down: a
+`"ref": null`, a missing `ref`, a `"line": null`, a `"weight": "45 lb"`,
+a `"done": "yes"`. Coercion had rescued the nulls and could not reach
+these.
+
+**Shipped:** `sets` is decoded a row at a time, and the head is decoded
+with `sets` taken out — so a bad row costs that row, and cannot take the
+date and class tag with it either. The same bargain `SessionPatch`
+already strikes for the `added` array.
+
+**The decision this needed was what the owner is TOLD**, and that is
+what made it more than a one-line patch. Showing ten rows of eleven in
+silence fails differently on each tab: on *Before* the sheet is what gets
+checked against the board, so a missing line reads as the coach not
+having prescribed it; on *After* the consequence is a box that is not on
+screen, which reads as a row already filled in, and the set reaches
+history as nothing. Both now say *"1 row of this sheet didn't read. It
+stays in the file untouched; Carry can't show it."* — one wording, in
+`SessionFiles.unreadableNote`, so the two cannot drift.
+
+**The claim in that sentence was verified before it was written.** A save
+over a file with three undecodable rows writes all of them back byte for
+byte — string weights, string flags and null refs exactly as they came
+in — because the save path patches the raw JSON and never sees the
+decode. That is the whole basis for dropping a row rather than refusing
+the file, so it is now a test rather than an argument.
+
+Six falsifications. The sixth is the one worth recording: stubbing
+`carryState` to stop counting left **every** test green while the feature
+was dead in the real app. A case that goes through a real folder read
+catches it.
+
 ## 2026-10-16 — cycle 36: one null key cost a whole day
 
 **Top of *Wrong numbers*, and the probe found it was wider than the item
