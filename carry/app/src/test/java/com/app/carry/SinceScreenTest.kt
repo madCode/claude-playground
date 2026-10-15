@@ -127,9 +127,8 @@ class SinceScreenTest {
         // movement fresh, so that is the normal case, not the edge.
         compose.setContent { SinceScreen(since.copy(nearBump = allAtOne(11))) }
         compose.onNodeWithText("Close to a bump".uppercase()).assertDoesNotExist()
-        // And not "how close each one is" either: the band is three
-        // filters deep -- the newest sheet, streaks strictly in progress,
-        // five of those -- so "each one" read as every movement trained.
+        // And not "how close each one is" either: "each one" read as
+        // every movement trained, when the band is five exclusions deep.
         // The heading claims only what every row in it is.
         compose.onNodeWithText("Part way to a bump".uppercase()).assertIsDisplayed()
     }
@@ -181,6 +180,11 @@ class SinceScreenTest {
             .assertIsDisplayed()
         compose.onNodeWithContentDescription("long haul, 3 of 40 clean sets, 25 pounds")
             .assertIsDisplayed()
+        // And it is drawn as the numbers, not as pips. Clamping `needed`
+        // to ten without rescaling `done` made 3 of 40 read as 3 of 10 --
+        // seven sets away instead of thirty-seven -- and 12 of 40 read as
+        // a bump already earned (found by the review, 2026-10-16).
+        compose.onNodeWithText("3 of 40").assertIsDisplayed()
         // And a 40-set streak does not draw 40 pips. They are unlabelled
         // Boxes, so nothing in the semantics tree counts them -- what can
         // be checked is the consequence. The row keeps its width either

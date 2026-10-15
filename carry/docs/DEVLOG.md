@@ -57,6 +57,27 @@ squeezes the movement name to **about one character**. The pips have no
 semantics to count, so the test asserts what they eat: the name keeps at
 least half the row.
 
+**And then the review counted the pips, which no test had.** Clamping
+`needed` to ten without rescaling `done` does not draw a shorter version
+of the truth — it draws a different number. *3 of 40* came out as three
+lit and seven unlit, which reads as **seven sets away instead of
+thirty-seven**; *12 of 40* came out as **ten lit and none unlit** — the
+picture of a bump already earned — under a heading saying part way. The
+new fixture introduced `needed = 40` and asserted the row's *name*, so
+the diff certified as correct the very row that was wrong.
+
+Past ten, pips cannot tell the truth and are not countable at a glance
+anyway, so the row says **"12 of 40"** instead. Both screens: the Before
+tab had the same shape, clamping `done` to the clamped `needed`, which
+produced the same full row of lit pips.
+
+Also from that review: `DESIGN.md` still named the retired heading in the
+present tense five lines above the paragraph this changed; the comparator's
+third rule — ties keep the sheet's own order — had no test, and the
+ordering test that existed passed under the *old* sort too; and two
+comments were wrong about their own code ("`sortedBy`" for `sortedWith`,
+"three filters deep" for five).
+
 ## 2026-10-16 — cycle 30: eleven movements that were not close to anything
 
 **Started as a backlog item that turned out to be wrong.** "Write the

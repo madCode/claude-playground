@@ -289,8 +289,8 @@ when the file comes back.
 rows already in the files. A streak is not — it comes from a rule about
 what earns a bump, that rule lives in the runner, and a second
 implementation here would eventually disagree with it about someone's
-training. So *how close each one is* carries the runner's own numbers
-through, and what counts as *the same exercise* is a key the runner writes.
+training. So the progress band carries the runner's own numbers through,
+and what counts as *the same exercise* is a key the runner writes.
 A first version that worked that out locally, by hashing the whole variant,
 made every lift on a sheet look distinct when one pair was the same
 movement — it was including the fields the runner deliberately leaves out

@@ -272,10 +272,10 @@ object Growth {
             // set would bump could be the one cut. Not reachable while
             // every `needed` is 3; the runner's rule is free to differ.
             //
-            // Ties keep the sheet's own order, which `sortedBy` is stable
-            // enough to promise. Most sheets are one rung all the way
-            // down, so this is usually not a ranking at all -- see the
-            // cap's own note.
+            // Ties keep the sheet's own order: `sortedWith` is stable, and
+            // the input is the sheet's rows in file order. Most sheets are
+            // one rung all the way down, so this is usually not a ranking
+            // at all -- see the cap's own note.
         }.sortedWith(compareBy({ it.needed - it.done }, { -(it.done.toDouble() / it.needed) }))
 
         // Over what was actually LIFTED, not over every row on every sheet.

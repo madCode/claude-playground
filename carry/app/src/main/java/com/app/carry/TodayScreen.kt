@@ -162,10 +162,21 @@ private fun StreakPips(set: ExerciseSet) {
     // and would emit two billion nodes during the first composition of
     // the default tab -- hanging the app on every launch, unfixable from
     // the phone, in the one moment it exists for.
-    val needed = (set.streakNeeded ?: return).coerceIn(0, MAX_PIPS)
-    val done = (set.streakDone ?: 0).coerceIn(0, needed)
+    val needed = set.streakNeeded ?: return
+    val done = (set.streakDone ?: 0).coerceAtLeast(0)
+    // Past ten, pips cannot tell the truth and are not countable at a
+    // glance anyway. Clamping them LIES: `needed` capped at 10 with `done`
+    // at 12 draws ten lit pips -- the picture of a bump already earned --
+    // for a streak 28 sets from finishing. Say the numbers instead.
+    if (needed > MAX_PIPS) {
+        Text(
+            "$done of $needed", color = Look.ChalkDim,
+            fontFamily = Look.Figure, fontSize = 11.sp, maxLines = 1,
+        )
+        return
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        repeat(needed) { i ->
+        repeat(needed.coerceAtLeast(0)) { i ->
             Box(
                 Modifier.size(5.dp).clip(RoundedCornerShape(50))
                     .background(if (i < done) Look.AmberDim else Look.RuleStrong)

@@ -125,9 +125,12 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
                 //
                 // The pips are worth keeping; the word "close" was not --
                 // and nor was "each one", which read as every movement
-                // trained when the band is three filters deep: the newest
-                // sheet only, streaks strictly in progress, and five of
-                // those. This claims nothing but what every row in it is.
+                // trained. This band is five exclusions deep: one sheet
+                // (so the second class of a two-class day is absent), rows
+                // not skipped, a streak the runner wrote, one strictly in
+                // progress, a suggested weight (so a bodyweight movement
+                // part way through is dropped), and then five of those.
+                // This claims nothing but what every row in it IS.
                 item { Band("Part way to a bump") }
                 // Fewest sets away first, and capped so the band cannot
                 // take the screen from the ones under it. On a sheet where
@@ -231,12 +234,23 @@ private fun BumpRow(bump: Growth.Bump) {
             bump.name, color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.NameSize,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            repeat(bump.needed.coerceAtMost(MAX_PIPS)) { i ->
-                Box(
-                    Modifier.size(5.dp).clip(RoundedCornerShape(50))
-                        .background(if (i < bump.done) Look.AmberDim else Look.RuleStrong)
-                )
+        // Past ten, pips cannot tell the truth and are not countable at a
+        // glance anyway. Clamping `needed` alone LIES: 12 of 40 draws ten
+        // lit pips and no unlit ones -- the picture of a bump already
+        // earned -- under a heading that says part way. Say the numbers.
+        if (bump.needed > MAX_PIPS) {
+            Text(
+                "${bump.done} of ${bump.needed}", color = Look.ChalkDim,
+                fontFamily = Look.Figure, fontSize = 11.sp, maxLines = 1,
+            )
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                repeat(bump.needed) { i ->
+                    Box(
+                        Modifier.size(5.dp).clip(RoundedCornerShape(50))
+                            .background(if (i < bump.done) Look.AmberDim else Look.RuleStrong)
+                    )
+                }
             }
         }
         Text(figure(bump.weight), color = Look.Chalk, fontFamily = Look.Figure,

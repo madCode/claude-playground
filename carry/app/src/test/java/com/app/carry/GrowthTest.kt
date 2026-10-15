@@ -179,6 +179,28 @@ class GrowthTest {
     }
 
     @Test
+    fun `rows the same distance away keep the sheet's own order`() {
+        // The case the docs call usual: every row on the same rung, so
+        // neither rule in the comparator separates them. What decides
+        // which five of them the screen shows is then the board's order,
+        // and nothing held that -- the ordering tests above all use rows
+        // that one rule or the other can tell apart.
+        val since = Growth.of(
+            listOf(
+                file("2026-10-11", sets = listOf(
+                    set(0, "first on the board", "legs", done = "1", needed = "3", suggested = "20"),
+                    set(1, "second", "legs", done = "1", needed = "3", suggested = "25"),
+                    set(2, "third", "legs", done = "1", needed = "3", suggested = "30"),
+                ).joinToString(",")),
+            )
+        )
+        assertEquals(
+            listOf("first on the board", "second", "third"),
+            since.nearBump.map { it.name },
+        )
+    }
+
+    @Test
     fun `a movement they skipped does not take a slot in the band`() {
         // The band is capped on screen, so a row they said they did not do
         // would push out one they worked on. The same exclusion the lift

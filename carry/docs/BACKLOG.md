@@ -44,6 +44,22 @@ the analysis).
   consequence: unclamped, a 40-set streak draws 40 pips and squeezes the
   movement name to about one character. Asserted on the name's width, since
   the pips themselves have no semantics to count.
+- [ ] **The band shows the runner's streak beside the runner's suggested
+  weight, and ignores what the owner logged in the same row.** `Growth.of`
+  consults only `skipped`; `weight`, `hard` and `easier` are in the same
+  JSON object and Carry wrote them. So a row suggested at 40 lb, logged at
+  35 and marked `hard`, still reads "2 of 3 clean sets, 40 pounds" under
+  *part way to a bump* until the runner's next pass. Excluding a row whose
+  logged weight is below its suggested one would close most of it; the
+  streak itself must stay the runner's (`Growth.kt`, "It derives, it never
+  coaches") *(audit)*
+- [ ] **The streak's weight and the weight shown are different
+  quantities.** `streak_done`/`streak_needed` mean "clean sets held at this
+  weight" (`Session.kt`), and the band pairs them with `suggestedWeight`.
+  When the runner proposes a bump while the streak is unfinished, the row
+  reads "2 of 3 clean sets, 45 pounds" for two sets held at 40.
+  `previousWeight` is on the same set and nothing compares them. Not
+  reachable if the runner only bumps on a finished streak *(audit)*
 - [ ] **Aggregate facts about the owner's training are in this public repo,
   predating tonight.** `CLAUDE.md`'s Privacy section rules them out — "the
   test is whether a stranger learns something about the owner's training
@@ -55,11 +71,14 @@ the analysis).
   `LogScreen.kt`, `LogScreenTest.kt` and `PastSessionScreenTest.kt`. #79
   removed the ones it had just added and left these, because they are
   load-bearing reasoning in several places and converting them is a pass of
-  its own — **and it may be a deliberate exception you want kept** *(audit)*
+  its own — **and it may be a deliberate exception you want kept**.
+  Three more the #80 review found that the list above would have missed:
+  "eleven rows of one lit pip" in this file, and the same figure in
+  `DEVLOG.md` twice, once in a section heading *(audit)*
 
 - [ ] **Should a movement done once appear in the progress band at all?**
-  #79 kept it and fixed the heading — *how close each one is*, five rows,
-  the rest counted. The alternative is to show only what is genuinely close
+  #79 kept it and capped the band to five rows with the rest counted; #80
+  settled the heading at *part way to a bump*. The alternative is to show only what is genuinely close
   (2 of 3), which on today's data empties the band. Keeping it shows
   progress; cutting it keeps the screen to signals you can act on. The
   "why the coach is often quiet" band already explains why they all sit at
