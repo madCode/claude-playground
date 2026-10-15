@@ -12,6 +12,39 @@ That is the whole information budget. A screen that gives every exercise
 equal weight has failed, because most lines say "first time, go by feel" or
 "no weight needed" — nothing to carry.
 
+## What it is for
+
+**Make sure the owner knows when they can push themselves.** Their words,
+2026-10-14, and the line that settles arguments the other principles cannot.
+
+The app informs; it instructs only where it has real evidence. Where the
+evidence is thin — which is most lines, most days — it shows what was
+actually done and leaves the judgement with the person lifting. That is not
+a placeholder until the coaching gets better. It is the correct division of
+labour, and it stays correct as the data thickens.
+
+It was decided against a measurement rather than a preference. A progress
+rule that *acted* on its own signal was built, measured ten ways, and
+rejected every time: each formulation that raised how much of their ability
+the lifter used also raised how many sets they failed to finish, roughly a
+point for a point. The cause is physical, not a tuning problem — the
+smallest step a gym stocks is a whole dumbbell, 17–20% at the low end of the
+rack, against a rep-conversion signal worth about 5%. The instruction was
+three to four times larger than the evidence that earned it.
+
+So the same rule ships as information: the progress dots count, and nothing
+acts on them. The weight stays whatever the estimate said.
+
+Two consequences worth stating, because they look like missing features:
+
+- **Silence is an answer.** A line that says "first time, go by feel" is the
+  honest output when nothing comparable has been lifted, and filling it with
+  a confident number would be the failure, not the fix.
+- **A warning is worth more than a suggestion.** Telling someone they did
+  not finish a weight last time needs no evidence about what they *should*
+  lift, and it is the one thing they cannot reconstruct from memory in a
+  car park.
+
 ## Screens
 
 **Today** — what to carry in. Ordered by what you can't guess:
