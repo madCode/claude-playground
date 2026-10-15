@@ -177,6 +177,48 @@ class CarryStateTest {
     }
 
     @Test
+    fun `damage that is not about one row still costs the file`() {
+        // The line between "one bad row" and "a bad file" is drawn in
+        // exactly one place: whatever the SAVE refuses, the read must
+        // refuse too. `SessionPatch.apply` refuses a `sets` that is not a
+        // list and an element in it that is not an object, so reading
+        // either as "a sheet with no rows" would open a form, let the
+        // owner type a whole borrowed day into it, and then refuse the
+        // save with a message about a list shown to them as empty.
+        fun file(sets: String) =
+            """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-17","sets":$sets}"""
+        for (shape in listOf("""{"0":{"ref":0,"line":"x"}}""", "\"none\"", "7", "true")) {
+            assertNull("a sets of $shape was read", SessionFiles.parse(file(shape)))
+        }
+        // An element that is not an object, beside one that is.
+        assertNull(SessionFiles.parse(file("""[{"ref":0,"line":"10 x squat"},null]""")))
+        assertNull(SessionFiles.parse(file("""[{"ref":0,"line":"10 x squat"},"junk"]""")))
+        // ...and the two that are NOT damage: both mean no rows, and the
+        // save takes both.
+        assertEquals(0, SessionFiles.parse(file("null"))?.sets?.size)
+        assertEquals(0, SessionFiles.parse(file("[]"))?.sets?.size)
+    }
+
+    @Test
+    fun `a day that read short is left out of the history`() {
+        // The Before and After tabs gain from showing what they can and
+        // saying what they could not. This screen does not: its figures
+        // are claims, and "heaviest 40" over a day whose 60 lb row did not
+        // decode is a confident wrong number that nothing downstream could
+        // tell from a right one.
+        val short = """{"schema":"gym-session/1","sheet_id":"a","date":"2026-10-15","sets":[
+            {"ref":0,"line":"10 x squat","canonical":"squat","key":"squat","family":"legs","weight":40,"reps":10},
+            {"ref":1,"line":"10 x row","canonical":"row","key":"row","family":"pull","weight":"60 lb","reps":8}
+        ]}"""
+        val whole = short.replace(""""weight":"60 lb"""", """"weight":60""")
+        assertEquals("the premise: one row of two reads", 1, SessionFiles.parse(short)!!.sets.size)
+
+        assertEquals("a short day must not reach the history", 0, Growth.of(listOf(short)).sessions)
+        assertEquals("the same file undamaged does", 1, Growth.of(listOf(whole)).sessions)
+        assertEquals(2, Growth.of(listOf(whole)).sets)
+    }
+
+    @Test
     fun `a clean file reports nothing unreadable`() {
         // The count is a subtraction, so an off-by-one here would put a
         // warning on every sheet the owner ever opens.

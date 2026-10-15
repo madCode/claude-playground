@@ -126,6 +126,36 @@ class CarryViewModelTest {
     }
 
     @Test
+    fun `a row with no box on screen is not seeded as one that has been filled`() = runTest(dispatcher) {
+        // `entriesIn` reads the RAW json, so it finds every ref in the
+        // file -- including a row this build could not decode and so does
+        // not show. Seeding those is wrong twice over: the header counts
+        // them as filled, so an untouched form reads "1 of 1 filled" over
+        // two empty boxes and the owner leaves thinking they logged it;
+        // and the save's identity check tests them, so a rerun that
+        // changed only an INVISIBLE row refuses a save they can do
+        // nothing about.
+        val raw = """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-17","sets":[
+            {"ref":0,"line":"10 x squat","canonical":"squat"},
+            {"ref":1,"canonical":"row","key":"row","weight":60,"reps":8}
+        ]}"""
+        val session = SessionFiles.parse(raw)!!
+        assertEquals("the premise: row 1 has no `line` and does not decode", 1, session.sets.size)
+
+        val model = viewModel()
+        model.read = { CarryState.Ready(session, raw, "doc", unreadable = 1) }
+        model.refresh()
+        advanceUntilIdle()
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) { while (model.state.value !is CarryState.Ready) delay(5) }
+            // The seed is the thing under test and it may legitimately be
+            // empty, so wait on the read it comes from rather than on it.
+            delay(200)
+        }
+        assertEquals("the invisible row was seeded", emptyMap<Int, SessionPatch.Entry>(), model.edits.value)
+    }
+
+    @Test
     fun `a folder that never answers ends in a state with a way out`() = runTest(dispatcher) {
         // openInputStream has no timeout and runCatching never fires on a
         // wedged provider, so without this the owner sits on "Reading" with

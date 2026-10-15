@@ -522,9 +522,20 @@ hand the gate its own default back.
 **The rows are decoded one at a time**, so a row this build cannot read
 costs that row rather than the day — a value of the wrong type, or a
 missing `ref`. The head is decoded with the rows taken out, so a bad row
-cannot take the date and the class tag with it. Only a file that is not
-JSON, or whose `schema` is not ours, or whose `sheet_id` or `date` will
-not read, still goes to "Can't read that session".
+cannot take the date and the class tag with it.
+
+**Where the line between "a bad row" and "a bad file" is drawn: wherever
+the SAVE draws it.** The save refuses a `sets` that is not a list, and an
+element in it that is not an object, so the read refuses exactly those
+too — along with a file that is not JSON, one whose `schema` is not ours,
+and one whose `sheet_id` or `date` will not read. A reader that accepts
+what its writer rejects is worse than one that refuses: it opens a form,
+takes a whole day's typing, and then refuses to save it.
+
+Only the rows the owner can SEE are seeded into the form. The raw JSON
+holds every row, including the ones that did not decode, and treating
+those as the owner's would both count them as filled and let a change to
+an invisible row block a save.
 
 Dropping a row is safe because the save path never sees the decode: it
 patches the raw JSON and copies every row it did not edit through byte

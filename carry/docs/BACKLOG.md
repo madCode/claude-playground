@@ -163,12 +163,22 @@ These are the open paths to one, hardest first.
   the sixth — `carryState` not counting — passed every test until a case
   that goes through a real folder read was added.
 
-- [ ] **A dropped row is silent on the Since tab.** `Growth` reads every
-  file with the same `parse`, so a day with an unreadable row now counts
-  as a session with fewer sets rather than not counting at all — better,
-  but the history figures and the bump band say nothing about it. Not a
-  wrong number, a missing one, and the tab is read at home rather than
-  acted on in a lobby *(audit)*
+- [ ] **A day that read short is left out of the history entirely.** The
+  #87 review found the alternative was worse: `Growth.Day.best` and
+  `lifts` are claims, so "4 lifts, heaviest 50" over a day whose heaviest
+  row did not decode is a confident WRONG number and nothing downstream
+  could tell. Omitting it is what this screen already did when a bad row
+  cost the whole file, and it is a missing figure rather than a wrong one.
+  The better answer is the one the Before and After tabs got — show what
+  read and say what did not — which needs `Growth.Since`/`Day` to carry
+  the count and the Since tab and day detail to say it *(audit)*
+- [ ] **A `sets` holding both `"ref": 3` and `"ref": "3"` shows two rows
+  that share a ref, and an edit typed against the second is written onto
+  the first.** `refOf` excludes the string one from duplicate detection,
+  so the save does not refuse — it silently misplaces. Verified by the
+  #87 review (20 lb typed against one movement written into another,
+  outcome `Patched`). Pre-existing: the old whole-document decode accepted
+  that file too *(audit)*
 - [ ] **A sheet with no rows blanks the "part way to a bump" band, even
   when older sheets have something to say.** `Growth.of` picks `newest` from
   every parsed session rather than from the ones with rows, so an empty

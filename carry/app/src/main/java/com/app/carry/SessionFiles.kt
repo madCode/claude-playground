@@ -1,6 +1,7 @@
 package com.app.carry
 
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 
@@ -94,28 +95,41 @@ object SessionFiles {
      */
     fun parse(text: String): Session? = try {
         val doc = Session.json.parseToJsonElement(text) as? JsonObject
+        val rows = doc?.let(::rowsIn)
         // The head is decoded with `sets` taken out, so one bad row cannot
         // take the date and the class tag with it.
         val head = doc?.let { Session.json.decodeFromJsonElement<Session>(JsonObject(it - "sets")) }
-        head?.takeIf { it.schema == Session.SCHEMA }?.copy(sets = rowsIn(doc))
+        if (rows == null) null else head?.takeIf { it.schema == Session.SCHEMA }?.copy(sets = rows)
     } catch (_: IllegalArgumentException) {
         // SerializationException extends this, so one catch covers both.
         null
     }
 
-    private fun rowsIn(doc: JsonObject): List<ExerciseSet> =
-        (doc["sets"] as? JsonArray).orEmpty().mapNotNull {
+    /**
+     * The rows that decode, or null when the file is damaged in a way that
+     * is not about one row.
+     *
+     * The two refusals here are exactly the two [SessionPatch.apply]
+     * makes, and they have to stay exactly those: a `sets` that is not a
+     * list, and an element in it that is not an object, both make the save
+     * refuse the WHOLE file. Reading such a file as "a sheet with no rows"
+     * would open a screen that offers the owner a form, let them type a
+     * whole borrowed day into it, and then refuse the save with a message
+     * about a list they are being shown as empty. A reader that accepts
+     * what its writer rejects is worse than a reader that refuses.
+     *
+     * `null` and an absent `sets` are not damage -- both mean no rows, and
+     * the save takes both.
+     */
+    private fun rowsIn(doc: JsonObject): List<ExerciseSet>? {
+        val listed = doc["sets"].takeIf { it !is JsonNull } ?: return emptyList()
+        val rows = listed as? JsonArray ?: return null
+        if (rows.any { it !is JsonObject }) return null
+        return rows.mapNotNull {
             runCatching { Session.json.decodeFromJsonElement<ExerciseSet>(it) }.getOrNull()
         }
+    }
 
-    /**
-     * How many rows the file holds that [parse] could not read.
-     *
-     * Derived by SUBTRACTING what parse kept from what the file lists, so
-     * the count and the rows on screen cannot drift apart -- the one way
-     * this could go wrong is saying "1 row didn't read" beside a sheet
-     * showing all of them, or the reverse.
-     */
     /**
      * What to say about [unreadableRows], or null when there is nothing
      * to say.
@@ -130,6 +144,14 @@ object SessionFiles {
         else -> "$rows rows of this sheet didn't read. They stay in the file untouched; Carry can't show them."
     }
 
+    /**
+     * How many rows the file holds that [parse] could not read.
+     *
+     * Derived by SUBTRACTING what parse kept from what the file lists, so
+     * the count and the rows on screen cannot drift apart -- the one way
+     * this could go wrong is saying "1 row didn't read" beside a sheet
+     * showing all of them, or the reverse.
+     */
     fun unreadableRows(text: String, parsed: Session): Int {
         val listed = ((runCatching { Session.json.parseToJsonElement(text) }.getOrNull() as? JsonObject)
             ?.get("sets") as? JsonArray)?.size ?: return 0

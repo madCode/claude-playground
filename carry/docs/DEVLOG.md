@@ -68,6 +68,34 @@ Six falsifications. The sixth is the one worth recording: stubbing
 was dead in the real app. A case that goes through a real folder read
 catches it.
 
+**The review then found four more ways the same leniency went wrong, and
+they are the interesting part.** Loosening a reader turns out to reach
+much further than the reader:
+
+- **A `sets` that is not a list, and an element in it that is not an
+  object, both read as "a sheet with no rows" — and the save refuses
+  both.** So the screen offered a form, took a whole borrowed day's
+  typing, and then refused it, with a message about a list shown as
+  empty. The line between a bad row and a bad file is now drawn exactly
+  where the save draws it.
+- **"1 of 1 filled" over two empty boxes.** `entriesIn` reads the raw
+  JSON, so it found every ref in the file, dropped rows included — and
+  the tally counted those as filled while the total counted only visible
+  ones. An untouched form read as already logged, which is the exact
+  failure the warning line was added to prevent, delivered by the line
+  directly above it.
+- **A rerun that changed only an INVISIBLE row refused the save**, because
+  the identity check tested every seeded ref. Both are fixed at the
+  source: the form is seeded from the rows on screen.
+- **A confident wrong number on the Since tab.** `Growth.Day.best` is a
+  claim, so a day whose heaviest row did not decode rendered a lower
+  heaviest with nothing downstream able to tell. A day that read short is
+  left out of the history, which is what that screen already did when a
+  bad row cost the whole file — a missing figure rather than a wrong one.
+  Saying so instead is on the backlog.
+
+Eleven falsifications in all.
+
 ## 2026-10-16 — cycle 36: one null key cost a whole day
 
 **Top of *Wrong numbers*, and the probe found it was wider than the item

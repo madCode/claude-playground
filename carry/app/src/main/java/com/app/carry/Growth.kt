@@ -213,7 +213,19 @@ object Growth {
         // day, so they are read out of the raw JSON by [SessionPatch]. On a
         // borrowed day those rows are the entire session.
         val parsed = files.mapNotNull { text ->
-            SessionFiles.parse(text)?.let { Read(it, text, rowsOf(it, text)) }
+            SessionFiles.parse(text)
+                // A file that read SHORT is left out of the history
+                // entirely, as it was when a bad row cost the whole file.
+                // The Before and After tabs gain from showing what they
+                // can and saying what they could not; this screen does
+                // not, because its figures are claims -- "4 lifts,
+                // heaviest 50" over a day whose heaviest row did not
+                // decode is a confident wrong number, and nothing
+                // downstream could tell. Saying so here instead is on the
+                // backlog; omitting the day is what this screen already
+                // did, and it is a missing figure rather than a wrong one.
+                ?.takeIf { SessionFiles.unreadableRows(text, it) == 0 }
+                ?.let { Read(it, text, rowsOf(it, text)) }
         }
         val sessions = parsed.map { it.session }
         val lifts = sessions.flatMap(::liftsOf)
