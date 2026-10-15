@@ -6,8 +6,9 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** the progress band, first rendered with real numbers and found
-  to be claiming eleven movements were close to a bump (#79); the save
+- **Lately:** the progress band finished — honest heading, sorted by the
+  question its rows answer (#80); first rendered with real numbers and
+  found to be claiming movements were close to a bump (#79); the save
   path's own tests, which it had never had, and the wrong-number bug they
   exposed (#78); the *done* chip for timed holds, and the Since screen no
   longer dropping a session logged only with markers (#77); opening a past
@@ -26,6 +27,35 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-16 — cycle 31: the band, finished
+
+Three things the last cycle's review left on the backlog, all in the one
+band.
+
+**The heading still over-claimed, in the other direction.** "How close each
+one is" reads as every movement trained; the band is three filters deep —
+the newest sheet only, streaks strictly in progress, five of those. It is
+**"Part way to a bump"** now, which is what every row in it is and claims
+nothing about scope. Second rename in two cycles, and the reason is worth
+keeping: both earlier headings described the owner's *position* ("close",
+"each one"), which is a claim about data the band does not have. This one
+describes the rows.
+
+**It sorted by the wrong question.** `done/needed` is how far along; the
+row's own line is "another clean set moves it". Under a fraction, a
+movement at 8 of 10 — two sets away — outranks one at 2 of 3, which is a
+single set away, and with the band capped that is the row that gets cut.
+Fewest sets away leads now, how-far-along breaks the tie, and the sheet's
+own order breaks that. Not reachable while every `needed` is 3; the
+runner's rule is free to differ per movement.
+
+**And three shapes its fixture never produced:** a row whose family the
+runner did not say, a `needed` other than 3, and one past `MAX_PIPS`. The
+last has a real consequence — unclamped, a 40-set streak draws 40 pips and
+squeezes the movement name to **about one character**. The pips have no
+semantics to count, so the test asserts what they eat: the name keeps at
+least half the row.
 
 ## 2026-10-16 — cycle 30: eleven movements that were not close to anything
 

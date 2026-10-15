@@ -123,9 +123,13 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
                 // on the same rung, under a heading that said they were
                 // about to go up.
                 //
-                // The pips are worth keeping; the word "close" was not.
-                item { Band("How close each one is") }
-                // Ordered by how far along, and capped so the band cannot
+                // The pips are worth keeping; the word "close" was not --
+                // and nor was "each one", which read as every movement
+                // trained when the band is three filters deep: the newest
+                // sheet only, streaks strictly in progress, and five of
+                // those. This claims nothing but what every row in it is.
+                item { Band("Part way to a bump") }
+                // Fewest sets away first, and capped so the band cannot
                 // take the screen from the ones under it. On a sheet where
                 // everything is on the same rung -- which is the usual case
                 // -- the order is the board's, so the cap says how many are
@@ -434,11 +438,10 @@ private fun Stat(number: String, label: String) {
 private fun figure(weight: Double): String = weight.asWeight()
 
 /** How many rows the progress band may show, so it cannot take the screen
- *  from the three bands under it. NOT "the rest are the least far along":
- *  when every row is on the same rung -- the usual case -- the sort is a
- *  no-op and the five shown are simply the first five the board listed,
- *  which is why the line below counts the others rather than ranking
- *  them. */
+ *  from the three bands under it. NOT "the rest are furthest away": when
+ *  every row is on the same rung -- the usual case -- the sort is a no-op
+ *  and the five shown are simply the first five the board listed, which is
+ *  why the line below counts the others rather than ranking them. */
 private const val MAX_BUMP_ROWS = 5
 private const val MAX_PIPS = 10
 private const val MIN_BAR = 5.0

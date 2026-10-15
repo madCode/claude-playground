@@ -212,9 +212,31 @@ class GrowthTest {
                 ).joinToString(",")),
             )
         )
-        // Two thirds, one half, one third: how far along, not how many
-        // sets are left.
+        // One set away, one set away, two away -- and between the first
+        // two, the one further along. A fraction would put "a" (one of
+        // three) last either way, so the case that tells the two rules
+        // apart is the next test.
         assertEquals(listOf("c", "b", "a"), since.nearBump.map { it.name })
+    }
+
+    @Test
+    fun `one set from a bump outranks two sets from a nearer-looking one`() {
+        // The band is capped on screen, so the order decides what the
+        // owner sees. Sorted by how far ALONG, 8 of 10 (two sets away)
+        // beats 2 of 3 (one set away) -- and the one movement a single
+        // clean set would bump is the one that gets cut. The row's own
+        // line is "another clean set moves it", so that is what it sorts
+        // by. Not reachable while every `needed` is 3; the runner's rule
+        // is free to differ per movement.
+        val since = Growth.of(
+            listOf(
+                file("2026-10-11", sets = listOf(
+                    set(0, "two away", "legs", done = "8", needed = "10", suggested = "20"),
+                    set(1, "one away", "legs", done = "2", needed = "3", suggested = "20"),
+                ).joinToString(",")),
+            )
+        )
+        assertEquals(listOf("one away", "two away"), since.nearBump.map { it.name })
     }
 
     @Test

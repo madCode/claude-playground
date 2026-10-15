@@ -31,22 +31,19 @@ the analysis).
   What that revealed instead is in #79: rendered with those numbers the
   Since band was eleven rows of one lit pip under the heading "close to a
   bump" *(you asked)*
-- [ ] **"How close each one is" over-claims in the quantifier.** "Each one"
-  reads as every movement trained; the band is three filters deep — only the
-  newest sheet, only streaks strictly in progress, and now only five of
-  those — and "and N more" implies that N+5 is the total. A movement at
-  0 of 3, or one not on today's sheet, is absent *(audit)*
-- [ ] The progress band sorts by `done/needed`, which matches its heading,
-  but its row KDoc says "another clean set moves it" — a different question.
-  With a varying `needed` (the runner's rule is free to differ per movement
-  and `MAX_PIPS` is 10), five rows at 8 of 10 outrank one at 2 of 3, so the
-  one row a single set would bump lands in "and N more". Not reachable while
-  every `needed` is 3 *(audit)*
-- [ ] The progress-band fixture never produces three shapes the real path
-  does: `family = null` (so the row without its colour bar is never
-  rendered in a test), `needed` other than 3, and a `needed` big enough to
-  hit `coerceAtMost(MAX_PIPS)`. A `Growth.of`-level fixture would cover all
-  three *(audit)*
+- [x] ~~"How close each one is" over-claims in the quantifier~~ — **"Part
+  way to a bump"**, which is what every row in it is and claims nothing
+  about scope.
+- [x] ~~The band sorts by `done/needed`, not by the question its row
+  answers~~ — fewest sets away leads now, with how-far-along as the
+  tie-break and the sheet's own order under that. Under a fraction a
+  movement two sets from a bump outranks one a single set away, and with
+  the band capped that is the row that gets cut.
+- [x] ~~Three shapes the band's fixture never produced~~ — `family = null`,
+  a `needed` other than 3, and one past `MAX_PIPS`. The last one has a real
+  consequence: unclamped, a 40-set streak draws 40 pips and squeezes the
+  movement name to about one character. Asserted on the name's width, since
+  the pips themselves have no semantics to count.
 - [ ] **Aggregate facts about the owner's training are in this public repo,
   predating tonight.** `CLAUDE.md`'s Privacy section rules them out — "the
   test is whether a stranger learns something about the owner's training
