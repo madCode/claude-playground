@@ -59,6 +59,24 @@ open, report back*.
 review found, and — the one that matters — *what could not be done*. An agent
 told to report blockers will; one told only to finish will paper over them.
 
+## A backlog item is a hypothesis
+
+Three times in six cycles, the item at the top of the list named a cause
+that was not the cause:
+
+- "Nothing calls this" — something did, two layers away.
+- "Nothing writes these fields" — the writer had been there all along; the
+  value it wrote was null for a different reason entirely.
+- "Four of five patterns have a heavier lift that is not the latest" — true
+  of the patterns, but a gate downstream absorbed it and the real effect was
+  two rows.
+
+Each was written in good faith by an earlier cycle that had just found
+something real nearby. **Before building what an item says, spend ten
+minutes proving the thing it claims is broken is actually broken**, and
+re-derive the size of any number it carries. Correcting the item is a
+finished cycle; building on it is not.
+
 ## Pick one thing, and finish it
 
 A cycle that half-builds three things leaves three things to re-read later.
@@ -94,6 +112,20 @@ test for one code path used a value that routed to a different path, and the
 resulting failure read like a bug in the feature rather than in the test.
 Twenty minutes to find.
 
+**A fixture with one of a thing cannot tell a ratio from a constant.** "1
+recorded, went up 1/1" passes whether the code counts the ones that went up,
+the total, or everything. Three mutations survived a suite that way in a
+single cycle. Where a test asserts a proportion, the fixture needs one of
+each outcome and one of neither.
+
+**The falsification harness can lie the way a test can.** One reported all
+seven mutations green and nearly convinced me the tests were worthless; it
+was grepping for a `FAIL` line that runner never prints, because an
+`AssertionError` just aborts the run. Check the exit code. And **distrust a
+uniformly negative falsification result** — seven useless tests in a row is
+far less likely than one broken harness. In the same pass, once it was
+fixed, exactly one test really was useless.
+
 ## A measurement you have not tried to break is a guess
 
 Four consecutive published figures about one matcher were wrong, each for a
@@ -117,6 +149,9 @@ on the first pass.
   count: "1 of 30 before, 0 of 90 after" is evidence; "the suite passed" is
   not. If the obvious probe cannot reproduce it, build a denser one — and if
   you still cannot, say the fix is unverified rather than claiming it works.
+  **Twenty runs is the floor, and say the number.** Twelve came back clean
+  on a test a reviewer then measured failing four times in twenty; twelve is
+  simply too few for a one-in-five rate to be unlikely to hide.
 
 ## Let the measurement overrule you
 
@@ -150,6 +185,25 @@ fixture, so the names agreed by construction.
 **Generate one fixture with the real producer and assert the consumer reads
 it.** Name the keys one by one — a renamed field decodes as null and every
 behavioural assertion still passes.
+
+## A test that stops one layer short
+
+Both of the worst gaps found in one audit had the same shape: the logic was
+tested and **the thing that says it** was not.
+
+- A replay carried the flags correctly, and nothing checked that the report
+  printed them — the 72-line function the owner actually reads had never
+  executed. One of the tests even claimed, in its docstring, that the report
+  "would have caught" the bug. Nothing checked that it did.
+- A save helper returned three outcomes, thoroughly tested, and nothing
+  checked what the caller did with them. The caller's handling of all three
+  was at zero, and it held a bug that put one session's numbers on another
+  session's rows.
+
+Both read as covered from the test names alone. **Coverage by function, not
+by percentage, is what finds these** — a per-function report names the thing
+nobody ran; a total percentage stays comfortable while a whole function
+sits at zero.
 
 ## Green tests do not prove anyone can see it
 
