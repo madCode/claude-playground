@@ -306,6 +306,15 @@ was a claim the rows could not support, and *each one* was a claim about
 scope: the band is the newest sheet only, streaks strictly in progress,
 and five of those.
 
+**The two numbers on a row are about different things**, and the row says
+so. The pips count clean sets; the weight is what the runner says to use
+today. On its converted-streak rule those differ — two sets held at 30 for
+eight reps earn "2 of 3" beside an estimate of 25 for twelve, and nothing
+was ever held at 25. The sighted row shows three things side by side and
+claims no relation between them; the spoken label says *"2 of 3 clean
+sets, next at 25 pounds"* rather than joining them into a sentence that
+would.
+
 A row leaves it the moment the owner's own answer contradicts it: marked
 *hard*, or logged **below** the weight the count is about. Those are the
 runner's own signals that the next bump is blocked. Logged at that weight
