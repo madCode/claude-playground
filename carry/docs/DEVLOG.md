@@ -32,6 +32,39 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 36: one null key cost a whole day
+
+**Top of *Wrong numbers*, and the probe found it was wider than the item
+said.** `Session.json` had no `coerceInputValues`, so a `null` where the
+decoder wanted a plain value threw, `SessionFiles.parse` turned that into
+null, and `CarryState.Unreadable` told the owner "Can't read that
+session" — for a file whose every number was intact, with nothing they
+could do about it from the phone.
+
+**Fixed:** coercion on, which falls back to the field's default. For
+these fields that is also the right answer rather than a guess: `false`
+is exactly what an unset flag means, and a null `sets` now reads the same
+as an absent one, which it always should have.
+
+**The hazard that comes with it, and the reason `schema` is now
+nullable.** `parse` decides a file is ours by comparing `schema` to
+`"gym-session/1"`. Left non-nullable with that as its default, coercion
+would turn another tool's `"schema": null` INTO the expected value and
+the gate would pass its own default back to itself. A test pins it.
+
+**What the probe found that the backlog item had not.** One row per
+case, everything else valid: a null `ref`, a missing `ref`, a null
+`line`, a `"weight": "45 lb"` and a `"done": "yes"` all still cost the
+entire day. Coercion rescues a null and nothing else. The real fix is
+decoding `sets` row by row — which `splitAdded` already does for the
+`added` array — but what the owner is TOLD when a row is dropped needs
+deciding first, so it is in the backlog with the table rather than
+patched in passing.
+
+Two falsifications: coercion removed, and `schema` non-nullable again.
+Whole suite green, so nothing else was quietly depending on the
+strictness.
+
 ## 2026-10-16 — cycle 35: the one check before the only way out
 
 **A security pass, and most of its value is what did NOT hold.** Four

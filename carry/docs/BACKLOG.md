@@ -132,10 +132,38 @@ These are the open paths to one, hardest first.
   sets held at this weight", which is right on the same-reps rule and
   wrong on the converted one. Correcting it is a note about the runner's
   schema rather than a change to this app, and the runner owns it.
-- [ ] Every boolean on `ExerciseSet` is non-nullable with no `coerceInputValues`,
-  and `SessionFiles.parse` turns a decode failure into "whole file unreadable" — so
-  a `"done": null` from another writer costs the entire day. Carry is the only
-  writer of `done` and writes a real boolean, so this is latent, not live *(audit)*
+- [x] ~~Every boolean on `ExerciseSet` is non-nullable with no
+  `coerceInputValues`, so a `"done": null` from another writer costs the
+  entire day.~~ Fixed 2026-10-16. `coerceInputValues = true` falls back to
+  the default, which for these fields is also the right answer: `false` is
+  exactly what an unset flag means, and a null `sets` now reads the same
+  as an absent one. `schema` is nullable now so coercion cannot hand the
+  gate its own default back and vouch for another tool's file.
+- [ ] **The same bug one level up: ANY malformed field on ANY row still
+  costs the whole day.** Probed against `SessionFiles.parse`, one row per
+  case, everything else valid — each of these returns null, which the app
+  shows as "Can't read that session":
+
+  | the row says | today |
+  |---|---|
+  | `"done": null` | reads — **fixed above** |
+  | `"ref": null`, or no `ref` at all | whole day lost |
+  | `"line": null` | whole day lost |
+  | `"weight": "45 lb"` | whole day lost |
+  | `"done": "yes"` | whole day lost |
+
+  Coercion cannot reach these: it rescues a null, never a value of the
+  wrong type or a missing non-defaulted field. The fix is to decode `sets`
+  **row by row**, which is what `SessionPatch.splitAdded` already does for
+  the `added` array and for the same stated reason. Two things make it
+  safe to drop a row from the screen: the save path patches the RAW JSON,
+  so an undecodable row is still written back untouched, and an edit
+  against a `ref` the file has lost is already refused.
+
+  What it needs decided is what the owner is TOLD. Showing ten rows of
+  eleven in silence is the "a row the owner cannot see is a refusal they
+  cannot act on" trap this codebase has already fallen into once, so this
+  wants a banner and therefore a design, not a one-line patch *(audit)*
 - [ ] `prescribed_duration_sec` outside 1..3600 renders no prescription and no
   *done* chip, so a row written on another machine with an absurd duration silently
   loses the only record it could carry. The guard is right; the consequence is not
