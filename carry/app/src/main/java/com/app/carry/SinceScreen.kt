@@ -53,6 +53,26 @@ import androidx.compose.ui.unit.sp
  * it was — and then says plainly why there is not more. Without that last
  * part every empty row looks like a broken app.
  */
+/**
+ * What to say about days left out of every figure on this screen, or null
+ * when none were.
+ *
+ * Not the same sentence as the sheet's, and not shared with it. There the
+ * missing thing is a ROW and the screen still shows the rest of the sheet;
+ * here the missing thing is a whole DAY and it is absent from totals the
+ * owner has no other way to check. Saying "a row didn't read" on a screen
+ * that never shows rows would explain the wrong thing.
+ *
+ * Why they are left out at all rather than counted short: these figures
+ * are claims. "4 lifts, heaviest 50" over a day whose heaviest row did not
+ * decode is a confident wrong number and nothing downstream could tell.
+ */
+internal fun shortNote(days: Int): String? = when {
+    days <= 0 -> null
+    days == 1 -> "1 day isn't counted here: part of its sheet didn't read."
+    else -> "$days days aren't counted here: part of their sheets didn't read."
+}
+
 @Composable
 fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
     // There is no nav library here and this does not justify adding one:
@@ -103,6 +123,16 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(top = 3.dp, bottom = 4.dp),
         )
 
+        // ABOVE the empty check, deliberately: if every file in the folder
+        // read short there are no days at all, and "Nothing logged yet" on
+        // its own would be a flat lie about a folder full of sessions.
+        shortNote(since.short)?.let {
+            Text(
+                "\u26a0 $it", color = Look.BrickInk, fontFamily = Look.Name,
+                fontSize = Look.SmallSize,
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
+            )
+        }
         if (since.empty) {
             Text(
                 "Nothing logged yet. This fills in as you save sessions.",

@@ -61,6 +61,40 @@ class SinceScreenTest {
     }
 
     @Test
+    fun `a day left out of the totals is named above them`() {
+        // This screen's figures are the ones the owner has no other way to
+        // check, so a day quietly absent from them is worse here than
+        // anywhere else in the app.
+        compose.setContent { SinceScreen(since.copy(short = 2)) }
+        compose.onNodeWithText(
+            "⚠ 2 days aren't counted here: part of their sheets didn't read."
+        ).assertIsDisplayed()
+        shoot("25-since-short")
+    }
+
+    @Test
+    fun `a history that read cleanly says nothing about it`() {
+        compose.setContent { SinceScreen(since) }
+        compose.onNodeWithText("aren't counted here", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("isn't counted here", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a folder where every sheet read short does not claim nothing was logged`() {
+        // The one case the line has to appear ABOVE the empty check. With
+        // no days at all, "Nothing logged yet" on its own is a flat lie
+        // about a folder full of sessions.
+        val none = since.copy(
+            sessions = 0, sets = 0, from = null, to = null,
+            peaks = emptyList(), nearBump = emptyList(), days = emptyList(),
+            movements = null, repeated = null, short = 3,
+        )
+        compose.setContent { SinceScreen(none) }
+        compose.onNodeWithText("aren't counted here", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Nothing logged yet", substring = true).assertIsDisplayed()
+    }
+
+    @Test
     fun `an empty folder says what will fill it, rather than nothing`() {
         // A screen that is blank because there is no data looks exactly
         // like a screen that is blank because it is broken.

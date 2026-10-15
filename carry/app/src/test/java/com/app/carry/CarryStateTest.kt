@@ -259,6 +259,33 @@ class CarryStateTest {
     }
 
     @Test
+    fun `a day left out of the history is not left out silently`() {
+        // This is the screen that explains why the numbers are thin, so a
+        // day missing from it without a word is the same failure as a
+        // confident wrong total, one step quieter.
+        fun day(date: String, extra: String = "") =
+            """{"schema":"gym-session/1","sheet_id":"$date","date":"$date","sets":[
+              {"ref":0,"line":"10 x squat","canonical":"squat","key":"squat","family":"legs",
+               "weight":45,"reps":10}$extra
+            ]}"""
+        val whole = day("2026-10-01")
+        val short = day("2026-10-14", """,{"ref":1,"line":"10 x row","weight":"60 lb"}""")
+        // The premise, asserted rather than assumed.
+        val parsedShort = SessionFiles.parse(short)
+        assertEquals("the short file does not read at all", 1, parsedShort?.sets?.size)
+        assertEquals("the short file is not short", 1, SessionFiles.unreadableRows(short, parsedShort!!))
+
+        val since = Growth.of(listOf(whole, short))
+        assertEquals("the short day must stay out of the totals", 1, since.sessions)
+        assertEquals("and must be counted as left out", 1, since.short)
+        assertEquals("1 day isn't counted here: part of its sheet didn't read.", shortNote(since.short))
+
+        // Nothing to say when every file read whole.
+        assertEquals(0, Growth.of(listOf(whole)).short)
+        assertNull(shortNote(0))
+    }
+
+    @Test
     fun `a short newest sheet does not hand the band to yesterday`() {
         // The one figure that must NOT come from the filtered history.
         // "Part way to a bump" is a statement about where the owner stands

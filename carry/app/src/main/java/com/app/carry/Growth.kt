@@ -157,6 +157,24 @@ object Growth {
          */
         val movements: Int?,
         val repeated: Int?,
+        /**
+         * Days left out of every figure above because part of their sheet
+         * did not read.
+         *
+         * They are left out rather than counted short because these
+         * figures are CLAIMS: "4 lifts, heaviest 50" over a day whose
+         * heaviest row did not decode is a confident wrong number and
+         * nothing downstream could tell it from a right one. The Before
+         * and After tabs can do better — they show the rows that read and
+         * say how many did not — because a sheet is a list rather than a
+         * total.
+         *
+         * But excluding them SILENTLY is the thing this screen exists not
+         * to do. It is the screen that explains why the numbers are thin,
+         * so a day missing from it without a word is the same failure as
+         * a confident wrong total, one step quieter.
+         */
+        val short: Int = 0,
     ) {
         /**
          * There is nothing to show at all.
@@ -342,6 +360,7 @@ object Growth {
             days = days,
             movements = counts?.size,
             repeated = counts?.count { it.value > 1 },
+            short = read.size - parsed.size,
         )
     }
 

@@ -554,6 +554,14 @@ is the newest sheet behind "part way to a bump", because dropping a
 short day there would not leave a gap — it would promote yesterday's
 sheet into the answer to "where do I stand today".
 
+Left out, but not left out quietly: the tab says how many days are not
+counted, above the figures they are missing from. This is the screen that
+exists to explain why the numbers are thin, so a day absent from it
+without a word is the same failure as a confident wrong total, one step
+quieter. It is a different sentence from the sheet's, because what is
+missing there is a row on a list the owner can still see, and what is
+missing here is a whole day from totals they have no other way to check.
+
 Dropping a row is safe because the save path never sees the decode: it
 patches the raw JSON and copies every row it did not edit through byte
 for byte, so a row missing from the screen is still written back

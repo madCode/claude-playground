@@ -32,6 +32,40 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 38: the day that was missing without a word
+
+**Small, and it closes something the previous cycle opened.** A day whose
+sheet read short is left out of every figure on the Since tab. That
+exclusion is right and the #87 review established why — these figures are
+claims, and "4 lifts, heaviest 50" over a day whose heaviest row did not
+decode is a confident wrong number nothing downstream could tell from a
+right one. What was wrong was that it happened in silence, on the one
+screen whose whole job is to explain why the numbers are thin. A day
+absent from it without a word is the same failure as a confident wrong
+total, one step quieter.
+
+**Shipped:** `Since.short` counts them and the tab says *"2 days aren't
+counted here: part of their sheets didn't read."* — above the figures it
+qualifies, and above the empty check. That last placement is the one that
+needed a test: if every file in the folder read short there are no days
+at all, and "Nothing logged yet" on its own is a flat lie about a folder
+full of sessions.
+
+**A different sentence from the sheet's, deliberately, and not shared with
+it.** There the missing thing is a row on a list the owner can still see;
+here it is a whole day missing from totals they have no other way to
+check. Saying "a row didn't read" on a screen that never shows rows would
+explain the wrong thing.
+
+The day detail needed nothing, which is worth saying because the backlog
+item asked for it: a short day never reaches `days`, so there is no
+detail view to mark.
+
+Four falsifications, including a genuine MOVE of the warning to below the
+empty check — which fails only the one test that is about placement, and
+leaves the other two green. A deletion would have failed all three and
+proved less.
+
 ## 2026-10-16 — cycle 37: one bad row cost a whole day
 
 **The other half of the previous cycle, and the half that needed a
