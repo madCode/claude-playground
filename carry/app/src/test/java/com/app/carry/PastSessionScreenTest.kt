@@ -138,6 +138,28 @@ class PastSessionScreenTest {
     }
 
     @Test
+    fun `a hold ticked off reads back as the hold it was`() {
+        // The row the `done` chip exists for: no weight, no rep count, and
+        // the prescription is the whole quantity. Read back as "blank" it
+        // would say they skipped the one thing they did say; read out
+        // without the duration it is the same sentence for a 30-second
+        // hold and a 90-second one.
+        //
+        // Through `Growth.of`, not a hand-built Row: the screen must work
+        // on what the folder actually produces.
+        val held = Growth.of(listOf("""
+            {"schema":"gym-session/1","sheet_id":"2026-09-27:3G","date":"2026-09-27",
+             "class":"3G","added":[],
+             "sets":[{"ref":0,"line":"45 sec of low plank","canonical":"low plank",
+                      "key":"plank-bw","family":"core","prescribed_duration_sec":45,
+                      "variant":null,"weight":null,"reps":null,"done":true}]}
+        """.trimIndent())).days.single()
+        compose.setContent { PastSession(held, onBack = {}) }
+        compose.onNodeWithText("No numbers were entered", substring = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription("45 sec of low plank, done").assertIsDisplayed()
+    }
+
+    @Test
     fun `the rows the owner added are part of the session, not left out`() {
         // On a borrowed day these ARE the session: the sheet's rows are
         // another class's block. They live in the file's `added` array,

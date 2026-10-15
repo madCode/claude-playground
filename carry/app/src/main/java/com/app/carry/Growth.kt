@@ -158,7 +158,17 @@ object Growth {
         val movements: Int?,
         val repeated: Int?,
     ) {
-        val empty: Boolean get() = sets == 0
+        /**
+         * There is nothing to show at all.
+         *
+         * Not `sets == 0`. [sets] counts WEIGHTED lifts, and a class can be
+         * entirely real with none of them — a bodyweight block, a
+         * 45-second hold ticked off with `done`. The screen returns early
+         * on this, so asking the wrong question hid the whole of it,
+         * *every session* band included, from exactly the sessions that
+         * have the least else to show for themselves.
+         */
+        val empty: Boolean get() = days.isEmpty()
 
         /**
          * Whether the "why the coach is often quiet" band still has a job.

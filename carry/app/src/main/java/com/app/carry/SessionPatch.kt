@@ -418,9 +418,12 @@ object SessionPatch {
     private fun JsonPrimitive.empty(): Boolean =
         this == JsonNull || content.isBlank() || (!isString && content == "false")
 
-    /** The keys [encode] writes, so [holdsNothing] can tell an empty row
-     *  from one carrying something this build cannot read. */
-    private val WRITTEN_KEYS = setOf("id", "name", "weight", "reps", "easy", "hard", "easier", "done", "hurt", "note")
+    /** The keys the ADDED-row [encode] writes, so [holdsNothing] can tell
+     *  an empty row from one carrying something this build cannot read.
+     *  Not the sheet row's keys: `done` and `skipped` belong to a sheet
+     *  row and [AddedSet] has neither, so listing them here would let a
+     *  key nothing writes vouch for a row being empty. */
+    private val WRITTEN_KEYS = setOf("id", "name", "weight", "reps", "easy", "hard", "easier", "hurt", "note")
 
     /**
      * Roughly how many bytes a row would cost to hold, without building

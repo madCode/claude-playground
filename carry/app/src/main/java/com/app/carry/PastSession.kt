@@ -274,11 +274,28 @@ private fun accent(mark: String) = when (mark) {
 }
 
 /**
+ * What the row is called, out loud.
+ *
+ * The prescription is normally left out — the numbers carry the content
+ * and the label should name the movement — but a `done` row has no numbers
+ * by definition and its prescription IS the quantity. "low plank, done" is
+ * the same sentence for a 30-second hold and a 90-second one, where the
+ * sighted reader can see which. Joined to the name rather than listed
+ * beside it, because "45 sec of" is written to sit in front of a name and
+ * reads as a dangling fragment on its own.
+ */
+private fun spokenName(row: Growth.Row): String {
+    val name = row.name.ifBlank { "unnamed exercise" }
+    val asked = row.prescription?.takeIf { row.done && row.weight == null && row.reps == null }
+    return asked?.let { "$it $name" } ?: name
+}
+
+/**
  * The row for TalkBack, which gets the units the sighted layout leaves to
  * the column it sits in.
  */
 private fun spoken(row: Growth.Row): String = listOfNotNull(
-    row.name.ifBlank { "unnamed exercise" },
+    spokenName(row),
     row.weight?.let { "${it.asWeight()} pounds" },
     row.reps?.let { if (it == 1) "1 rep" else "$it reps" },
     if (row.skipped) "skipped" else null,

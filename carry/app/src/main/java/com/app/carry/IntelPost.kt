@@ -66,9 +66,13 @@ object IntelPost {
 
         val did = session.sets.mapNotNull { set ->
             val entry = entries[set.ref] ?: return@mapNotNull null
-            // The same test the history uses: a number, or an explicit
-            // skip. Tapping `hurt` while deciding is not a record that the
-            // movement was in the block.
+            // A number, deliberately NOT the history's wider test. This
+            // goes to the subreddit, where the only thing worth reading is
+            // what weight the block was done at — and tapping `hurt` while
+            // deciding is not a record that the movement was in the block
+            // at all. `done` on a timed row says it WAS, which is the one
+            // marker that would belong here; whether a weightless row is
+            // worth posting is the owner's call and has not been asked.
             if (entry.skipped || (entry.weight == null && entry.reps == null)) return@mapNotNull null
             val name = set.ownName() ?: return@mapNotNull null
             // `prescription`, never `prescribedReps`: that one is the

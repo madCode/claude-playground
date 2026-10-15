@@ -294,10 +294,11 @@ private fun LogRow(
                 // the owner may not mean -- a finished plank reached history
                 // as nothing at all until this.
                 //
-                // Chalk, the loudest the palette goes, because on the rows
-                // it appears on it is not a side note: both number boxes
-                // are empty by definition, so this chip is the only thing
-                // on the row there is to tap.
+                // Chalk, the loudest the palette goes, because on these
+                // rows it is not a side note but the thing to tap. The
+                // number boxes stay: the board prescribes no weight, but a
+                // plank with a plate on your back is a real set, and
+                // taking the boxes away would make that unsayable.
                 if (timed) {
                     Chip("done", entry.done, Look.Chalk) {
                         onChange(entry.copy(done = !entry.done))
