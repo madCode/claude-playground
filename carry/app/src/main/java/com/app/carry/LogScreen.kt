@@ -478,17 +478,26 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
                 .clickable { open = !open }
                 .padding(vertical = 12.dp),
         )
+        // Everything about WHICH lines are flagged is said HERE, on a short
+        // node of its own, and nothing about it is said on the preview --
+        // see [spokenFlags].
+        val flagged = post.text.lines().filter { it in post.suspect }
         Text(
             // The honest version of the claim. A name is typed by hand, so
             // "never your weights" is not something this screen can promise
             // on its own — what it can do is show you the lines where you
             // may have typed one.
-            if (post.suspect.isEmpty()) "The movements only \u2014 never your weights."
-            else "Check the lines in red \u2014 they look like they carry a weight.",
-            color = if (post.suspect.isEmpty()) Look.ChalkFaint else Look.BrickInk,
+            if (flagged.isEmpty()) "The movements only \u2014 never your weights."
+            else "\u26a0 marks the lines that look like they carry a weight.",
+            color = if (flagged.isEmpty()) Look.ChalkFaint else Look.BrickInk,
             fontFamily = Look.Name, fontSize = Look.SmallSize,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                .then(
+                    spokenFlags(flagged)
+                        ?.let { said -> Modifier.semantics { contentDescription = said } }
+                        ?: Modifier
+                ),
         )
         if (open) {
             // Marked in the TEXT, not only in red. This preview is the
@@ -514,9 +523,19 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
                     }
                 },
                 color = Look.ChalkDim, fontFamily = Look.Figure, fontSize = 11.sp,
+                // DELIBERATELY no `contentDescription`. One on this node
+                // cost more than it gave, three ways at once: Compose
+                // offers LINE and PAGE navigation only to a text node
+                // whose description is empty, so a listener lost the
+                // ability to step through the post a bullet at a time;
+                // the label named the flagged lines and then read the
+                // whole post, so every flagged line was spoken twice and
+                // a full post's label ran past 3 kB; and joining the
+                // lines with ", " turned the blank line under the heading
+                // into a bare comma. The text itself carries the marks,
+                // and the caption above says how many and which.
                 modifier = Modifier
                     .fillMaxWidth().padding(top = 10.dp)
-                    .semantics { contentDescription = spokenPost(post) }
                     .clip(RoundedCornerShape(4.dp)).background(Look.SlateRaised)
                     .padding(10.dp),
             )
@@ -535,23 +554,39 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
 }
 
 /**
- * The post, read out.
+ * The caption, read out: how many lines are marked, and which.
  *
- * The flagged lines are named first and counted, because the warning
- * above the preview says "check the lines in red" and a listener has no
- * red. Without this the whole block arrived as one string and the one
- * safeguard on the one path off this device was unreadable.
+ * On the CAPTION rather than on the preview, which is the whole point.
+ * The caption's own words name a glyph ("`⚠` marks the lines..."), and a
+ * glyph is exactly what a listener does not get -- no bundled font even
+ * carries U+26A0, so it renders through system fallback and is spoken by
+ * whatever name the reader's engine has for it, if any. So this node says
+ * in words what the sighted reader gets from the mark.
+ *
+ * The preview itself keeps NO description, so it is still navigable line
+ * by line and the post is never read out twice. That was the trade the
+ * first version got backwards.
+ *
+ * Returns null when nothing is flagged: the caption's visible text is
+ * already the whole of what there is to say, and a description that
+ * merely repeats it would suppress the node's own text for no gain.
  */
-private fun spokenPost(post: IntelPost.Post): String {
-    val flagged = post.text.lines().filter { it in post.suspect }
-    val lead = when (flagged.size) {
-        0 -> "Post preview, nothing flagged."
-        1 -> "Post preview. One line looks like it carries a weight: ${flagged.first()}."
-        else -> "Post preview. ${flagged.size} lines look like they carry a weight: " +
-            flagged.joinToString("; ") + "."
-    }
-    return "$lead The whole post reads: ${post.text.lines().joinToString(", ")}"
+private fun spokenFlags(flagged: List<String>): String? = when {
+    flagged.isEmpty() -> null
+    flagged.size == 1 -> "One line in the post is marked, because it looks like it " +
+        "carries a weight: ${flagged.first().trimStart(' ', '-')}."
+    // Past a handful, naming them is not a summary any more -- and if the
+    // whole post is marked, the count IS the finding.
+    flagged.size <= MAX_SPOKEN_FLAGS -> "${flagged.size} lines in the post are marked, " +
+        "because they look like they carry a weight: " +
+        flagged.joinToString("; ") { it.trimStart(' ', '-') } + "."
+    else -> "${flagged.size} lines in the post are marked, because they look like " +
+        "they carry a weight. They are marked in the preview below."
 }
+
+/** How many flagged lines are worth naming out loud. A label is spoken
+ *  start to finish with no way to skim, so this is a sentence's worth. */
+private const val MAX_SPOKEN_FLAGS = 3
 
 sealed interface SaveState {
     data object Idle : SaveState

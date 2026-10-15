@@ -115,12 +115,25 @@ object IntelPost {
         val line: String get() = asked?.let { "$it $name" } ?: name
 
         /**
-         * Only a name the OWNER typed can be flagged. A canonical the
-         * runner parsed may legitimately hold a digit — `bicep curl 21s`,
-         * `90/90 hip stretch`, `3 way shoulder` — and flagging one would
-         * light the warning on a line nobody can fix, on every intel day,
-         * until the owner learns to ignore it. The guard is worth more
-         * than all the others only while it still means something.
+         * Only a name the OWNER typed can be flagged, because a typed name
+         * is the only place a weight can have been entered: a canonical
+         * comes from the coach's knowledge base, which holds movements and
+         * not loads.
+         *
+         * The reasoning is NOT "runner names legitimately hold digits, so
+         * exempt them" — that was the first version of this note and it is
+         * backwards. `bicep curl 21s`, `90/90 hip stretch` and `3 way
+         * shoulder` all hold a digit legitimately, and all three are
+         * flagged when the owner types one into "+ Add something the sheet
+         * missed", which is exactly where such a name gets typed. So the
+         * false alarm this gate was meant to avoid is still reachable, on
+         * the one path that can reach it. What the gate buys is that it
+         * cannot fire on an intel day the owner had no hand in — which is
+         * most of them.
+         *
+         * A false alarm costs the guard its meaning, which is the one
+         * thing it cannot afford, so narrowing it is on the backlog as a
+         * question rather than a patch.
          */
         val carriesANumber: Boolean get() = typed && name.any(Char::isDigit)
     }

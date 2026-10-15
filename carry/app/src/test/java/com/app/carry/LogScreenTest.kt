@@ -18,7 +18,10 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
@@ -438,21 +441,31 @@ class LogScreenTest {
         show(SaveState.Saved)
         reach("Post what 2G did")
         compose.onNodeWithText("Post what 2G did").performClick()
-        compose.onNodeWithText("Check the lines in red", substring = true).assertIsDisplayed()
-        // Marked in the TEXT as well as in red. This preview is the one
-        // check between a hand-typed weight and a public subreddit, and
-        // "the lines in red" is no use to a reader who has no red -- a
-        // colour vision deficiency, glare, a greyscale display.
-        compose.onNodeWithText("⚠ ", substring = true).assertIsDisplayed()
-        // ...and the block reads out as what it is, naming the flagged
-        // line first. Unlabelled it arrived as one undifferentiated
-        // string and the safeguard was inaudible.
-        // Asserted as one phrase: the label also repeats the whole post
-        // further down, so checking for the lead and the name separately
-        // passes even when the lead has stopped naming anything.
+        // The caption names the MARK, not the colour. "Check the lines in
+        // red" was no use to a reader who has no red -- a colour vision
+        // deficiency, glare, a greyscale display -- which is the whole
+        // reason the mark is in the text, and the caption went on naming
+        // the colour anyway.
+        compose.onNodeWithText("⚠ marks the lines", substring = true).assertIsDisplayed()
+        // The flagged bullet carries the mark and the clean one does not.
+        // Asserted on the same node, because the preview is one Text: an
+        // "is the glyph anywhere in here" check passes just as happily
+        // when EVERY line is marked, which is the other way to be wrong.
+        val preview = compose.onNode(hasText("⚠ - ybell deadlift 26", substring = true))
+        preview.assertIsDisplayed()
+        preview.assert(hasText("\n- pop squat", substring = true))
+        // ...and the one thing said out loud is said on the CAPTION, a
+        // short node, naming the flagged line.
         compose.onNodeWithContentDescription(
-            "it carries a weight: - ybell deadlift 26", substring = true
+            "marked, because it looks like it carries a weight: ybell deadlift 26", substring = true
         ).assertIsDisplayed()
+        // The preview itself must keep NO description. Compose offers a
+        // text node LINE and PAGE navigation only while its description
+        // is empty, so labelling this one took away the listener's
+        // ability to step through the post a bullet at a time -- and the
+        // label it gave them instead read every flagged line twice and
+        // flattened the blank line under the heading into a bare comma.
+        preview.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
         // Scroll past the preview, so the shot shows the flagged bullet
         // and not just the warning above it.
         reach("Send it")

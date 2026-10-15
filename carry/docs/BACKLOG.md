@@ -28,7 +28,9 @@ not a thing anyone is blocked from building.
   across 32 sets and exactly one of them done twice"), `DESIGN.md`
   ("20 of 20 lifts"), `GrowthTest.kt` ("19 of 20 distinct"), and the
   "a third of this owner's logged sets" line repeated in `DESIGN.md`,
-  `LogScreen.kt`, `LogScreenTest.kt` and `PastSessionScreenTest.kt`. #79
+  `LogScreen.kt`, `LogScreenTest.kt`, `PastSessionScreenTest.kt` and
+  — found by the #85 review, missed by every earlier pass over this
+  list — `SessionPatch.kt`. #79
   removed the ones it had just added and left these, because they are
   load-bearing reasoning in several places and converting them is a pass of
   its own — **and it may be a deliberate exception you want kept**.
@@ -71,15 +73,43 @@ the whole of the egress control.
   alone.**~~ Fixed. "Check the lines in red" is no use to a reader with a
   colour vision deficiency, in glare, or on a greyscale display, and the
   block had no content description at all, so TalkBack read it as one
-  undifferentiated string. The flagged lines now carry `⚠` in the text and
-  the block reads out naming them first. The mark is on the preview only:
+  undifferentiated string. The flagged lines now carry `⚠` in the text, the
+  caption names that mark instead of the colour, and the caption — a short
+  node, not the preview — is what reads out how many lines are marked and
+  which. The preview deliberately keeps **no** content description: a
+  review of the first attempt found that labelling it took away LINE and
+  PAGE navigation (Compose offers those only to a text node whose
+  description is empty), read every flagged line twice, and flattened the
+  blank line under the heading into a bare comma. The mark is on the
+  preview only:
   `post.text` goes to the share sheet untouched, and a test asserts the
   warning never reaches the subreddit.
-- [ ] **The Python side was not covered by this pass.** `gym-coach` holds
-  the Reddit API key, writes to Signal, and `errorlog`'s allowlist is what
-  keeps the data directory from leaking into a log a session can read. A
-  later security cycle should start there rather than re-reading the app
-  *(audit: security)*
+- [ ] **The Python side was not covered by this pass.** It holds the
+  credentials, the outbound writes and the allowlist that decides what may
+  leave the data directory — three things this app has none of — and a
+  later security cycle should start there rather than re-reading the app.
+  Named specifically in that repo's own notes, which is where a map of its
+  controls belongs; this one is public *(audit: security)*
+
+- [ ] **The weight guard only sees decimal digits, and only on a typed
+  name.** `Char.isDigit` is Unicode `Nd`, so a load written as a word or a
+  symbol publishes silently — verified unflagged: `ybell deadlift heavy`,
+  `deadlift twenty six`, `deadlift ½ rack`. And the other way: a
+  legitimate name with a digit in it IS flagged when hand-typed —
+  `bicep curl 21s`, `90/90 hip stretch`, `3 way shoulder` — which is the
+  false alarm that costs the guard its meaning. Both directions are the
+  same question: is a digit test the right instrument at all, or should
+  this be a "you typed this name, read it" prompt with no claim about
+  weights? Needs deciding before patching *(audit: security)*
+- [ ] **Two identical bullets can appear in one post, and both get
+  marked.** `IntelPost` dedupes by (prescription, name), which is right —
+  it is what keeps a hand-typed row from eating the sheet's own — but a
+  name typed WITH its scheme (`10 total x squat`, no prescription) renders
+  the same line as the sheet's (`10 total x` + `squat`). The pair survives
+  the dedupe, the post carries the bullet twice, and the preview marks
+  both. `IntelPostTest` already constructs this state on purpose, so the
+  behaviour is pinned; what is undecided is whether the post should carry
+  it *(audit: security)*
 
 ### Wrong numbers, or a road to one
 

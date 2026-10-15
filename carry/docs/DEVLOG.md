@@ -63,10 +63,32 @@ in glare, on a greyscale display, or to anyone with a colour vision
 deficiency — for the one check standing between a hand-typed weight and a
 public subreddit.
 
-**Shipped:** `⚠` on the flagged lines in the text, and a spoken label that
-names them first. The mark is on the preview only — `post.text` goes to
-the share sheet untouched, and a test asserts the warning never reaches
-the subreddit. Four falsifications.
+**Shipped:** `⚠` on the flagged lines in the text; the caption naming
+that mark rather than the colour; and the count and the names of the
+flagged lines spoken on the CAPTION, which is a short node of its own.
+The mark is on the preview only — `post.text` goes to the share sheet
+untouched, and a test asserts the warning never reaches the subreddit.
+Eight falsifications across the two attempts.
+
+**The first attempt put the spoken label on the preview, and a
+fresh-eyes review found that made TalkBack worse, three ways.** Compose
+offers a text node LINE and PAGE navigation only while its content
+description is empty, so labelling the preview took away the one thing a
+listener most needs there — stepping through the post a bullet at a time
+— and replaced it with character-and-word stepping over a string with no
+newlines in it at all. The label named the flagged lines and then read
+the whole post, so every flagged line was spoken twice and a full post's
+label ran past 3 kB with no way to skim. And joining the lines with
+`", "` turned the blank line under the heading into a bare comma. On top
+of that the caption it was supporting still said "check the lines in
+red", so the sighted reader with no red was told to look for a colour and
+the listener heard neither the colour nor the glyph.
+
+The fix is a split, not a tweak: the preview keeps **no** description and
+is read as what it is, and everything about which lines are flagged is
+said on the caption — where it is a sentence, not a second copy of the
+post. Flagged lines are named up to three; past that the count is the
+finding.
 
 ## 2026-10-16 — cycle 34: two numbers that were never about the same thing
 
