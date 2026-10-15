@@ -5,6 +5,7 @@ every session reads. These files are read when they're needed.
 
 - [The loop](lifecycle.md): how something becomes a shipped change, and who decides what.
 - [Starting a project](#starting-a-project), below.
+- [How to do a cycle well](cycles.md): picking one thing, proving it, and the traps that recur.
 - [Recurring reviews](recurring-reviews.md): whole-codebase passes for what a review of one PR
   can't see, and when to run them.
 - [Releasing](releasing.md): the checklist before a build goes to anyone else.
