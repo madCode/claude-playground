@@ -72,6 +72,44 @@ matches nothing — which would have made the `assertDoesNotExist` in the
 sibling test pass whatever the code did. The first assertion failed
 loudly; the second would have passed silently for ever.
 
+**The review then found the fix had opened a race that reinstates the
+bug.** Asking "did the newest file parse?" meant reading it a SECOND
+time — and the file a sync is replacing is, by definition, the newest
+one. The two answers disagree in both directions: a truncated first read
+and a whole second one puts the older day's band back with no marker at
+all, and the other way round lists today's session under a band saying
+today's sheet did not read. One read now, paired with its name. A test
+counts the reads.
+
+Three more from the same pass:
+
+- **The gate asked about the newest FILE; it should ask about the newest
+  DATE.** `SessionFiles.newest` breaks a date tie on the name and
+  `Growth.of` keeps the first session at the newest date, so with two
+  classes on one day — which is what `sheet_id` exists for — one broken
+  file withheld a band the other supplied perfectly well.
+- **A newer schema was called "didn't read"**, directly under a warning
+  saying "update Carry" about the same file. That is the inconsistency
+  the previous cycle added `newerSchema` to prevent, reintroduced one
+  band lower, and it is the case that does not settle on its own.
+- **"Today's sheet" is a claim this app refuses to make elsewhere.** The
+  newest file is the newest by NAME: on a rest day that is last week's,
+  and it can be dated ahead. The Before tab says "No sheet for today" for
+  exactly this reason. It says *the newest sheet* now.
+
+Two stale doc blocks of mine went with them — one asserting the very bug
+this cycle fixed, and a second `@param` block that detached the existing
+KDoc from the function.
+
+**Worth knowing about reachability**, which the first write-up
+overstated: if the newest file is unreadable on a cold start,
+`carryState` shows "Can't read that session" and the tabs never render.
+This line is reached when the app already has a good state and a sync
+lands under it — `keepLastGood` — which is also when the Before tab is
+showing a sheet, so the two screens disagreeing matters most there.
+
+Twelve falsifications.
+
 ## 2026-10-16 — cycle 38: the day that was missing without a word
 
 **Small, and it closes something the previous cycle opened.** A day whose

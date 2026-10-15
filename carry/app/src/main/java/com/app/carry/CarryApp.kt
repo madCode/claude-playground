@@ -113,17 +113,44 @@ fun carryState(folder: Folder): CarryState {
  * through a folder at all.
  */
 fun growthOf(folder: Folder): Growth.Since {
-    val sheets = folder.list().filter { (_, name) -> SessionFiles.isSessionFile(name) }
-    val texts = sheets.mapNotNull { (id, _) -> folder.read(id) }
-    // The names are kept this far for one question only: is the newest
-    // file in the folder among the ones that parsed? [Growth.of] sees
-    // text and nothing else, so it cannot tell a newest sheet that failed
-    // to read from a folder that simply ends earlier -- and that
-    // difference is whether its bump band is about today or is yesterday's
-    // answer wearing today's label.
-    val newest = SessionFiles.newest(sheets.map { it.second })
-    val newestText = newest?.let { name -> sheets.first { it.second == name } }?.let { folder.read(it.first) }
-    return Growth.of(texts, newestUnreadable = newest != null && SessionFiles.parse(newestText.orEmpty()) == null)
+    // ONE read per file, paired with its name. Reading the newest a
+    // second time to ask about it opened a window a sync can land in --
+    // and the file a sync is replacing is, by definition, the newest one.
+    // The two answers then disagree in both directions: a first read that
+    // was truncated and a second that was not puts the older day's band
+    // back with no marker, and the other way round lists today's session
+    // below a band saying today's sheet did not read.
+    val sheets = folder.list()
+        .filter { (_, name) -> SessionFiles.isSessionFile(name) }
+        .map { (id, name) -> name to folder.read(id) }
+    val texts = sheets.mapNotNull { it.second }
+
+    // The names are kept this far for one question only: did ANYTHING at
+    // the newest date read? [Growth.of] sees text and nothing else, so it
+    // cannot tell a newest sheet that failed to parse from a folder that
+    // simply ends earlier -- and that difference is whether its bump band
+    // is about now or is an older day's answer wearing today's label.
+    //
+    // By DATE, not by file. Two classes on one day are two files, and if
+    // either of them read there is a sheet for that day to take the band
+    // from -- `Growth.of` picks the newest session by its own date, so
+    // asking about one named file would withhold a band the other file
+    // could legitimately supply.
+    val newestDate = sheets.mapNotNull { SessionFiles.dateIn(it.first) }.maxOrNull()
+    val atNewest = sheets.filter { SessionFiles.dateIn(it.first) == newestDate }
+    val readAtNewest = atNewest.filter { SessionFiles.parse(it.second.orEmpty()) != null }
+    return Growth.of(
+        texts,
+        newestRead = when {
+            newestDate == null || readAtNewest.isNotEmpty() -> Growth.NewestRead.FINE
+            // Wording, not severity: the Before tab says "update Carry"
+            // about this same file, and two screens describing one intact
+            // file differently is worse than either alone.
+            atNewest.all { SessionFiles.looksLikeNewerSchema(it.second.orEmpty()) } ->
+                Growth.NewestRead.NEWER_SCHEMA
+            else -> Growth.NewestRead.DAMAGED
+        },
+    )
 }
 
 /**

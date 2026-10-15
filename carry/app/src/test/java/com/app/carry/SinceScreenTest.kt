@@ -81,16 +81,29 @@ class SinceScreenTest {
         // truth is the second. The heading with one line under it is the
         // only place on this screen that distinction can be drawn.
         compose.setContent {
-            SinceScreen(since.copy(nearBump = emptyList(), newestUnreadable = true))
+            SinceScreen(since.copy(nearBump = emptyList(), newestRead = Growth.NewestRead.DAMAGED))
         }
         // `.uppercase()`: `Band` renders the heading upper case, so the
         // plain string matches nothing -- which would have made the
         // `assertDoesNotExist` in the next test pass whatever happened.
         compose.onNodeWithText("Part way to a bump".uppercase()).assertIsDisplayed()
         compose.onNodeWithText(
-            "Today's sheet didn't read. Rather than show an older day's, this is blank."
+            "The newest sheet didn't read. Rather than show an older day's, this is blank."
         ).assertIsDisplayed()
         shoot("26-since-band-withheld")
+    }
+
+    @Test
+    fun `a newer schema says the app is behind, not that the sheet is broken`() {
+        compose.setContent {
+            SinceScreen(since.copy(nearBump = emptyList(), newestRead = Growth.NewestRead.NEWER_SCHEMA))
+        }
+        compose.onNodeWithText("Part way to a bump".uppercase()).assertIsDisplayed()
+        compose.onNodeWithText(
+            "The newest sheet needs a newer Carry. Rather than show an older day's, this is blank."
+        ).assertIsDisplayed()
+        // The file is intact; the other tab says "update Carry" about it.
+        compose.onNodeWithText("didn't read", substring = true).assertDoesNotExist()
     }
 
     @Test

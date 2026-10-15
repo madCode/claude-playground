@@ -170,10 +170,10 @@ object Growth {
          * so the sentence on screen says "these totals" rather than
          * "here".
          *
-         * The band does lose a newest file that will not parse AT ALL,
-         * because there is nothing to take a streak from — so that case
-         * gets the substitution anyway, silently. Pre-existing rather
-         * than introduced here, and on the backlog.
+         * A newest sheet that will not parse at all is a third case and
+         * [newestRead] carries it: there is nothing to take a streak
+         * from, so the band is withheld rather than quietly becoming an
+         * older day's.
          *
          * They are left out of the rest rather than counted short because
          * those figures are CLAIMS: "4 lifts, heaviest 50" over a day
@@ -205,15 +205,15 @@ object Growth {
          */
         val newerSchema: Int = 0,
         /**
-         * The newest file in the folder could not be read, so [nearBump]
-         * is withheld rather than taken from an older day.
+         * Whether anything at the newest date read, so [nearBump] can be
+         * withheld rather than taken from an older day.
          *
          * Separate from [short] and [newerSchema], which are both about
          * the TOTALS. This one is about the single figure on this screen
-         * that is a statement about today, and the screen says it where
-         * the band would have been rather than in the line above.
+         * that is a statement about now, and the screen says it where the
+         * band would have been rather than in the line above.
          */
-        val newestUnreadable: Boolean = false,
+        val newestRead: NewestRead = NewestRead.FINE,
     ) {
         /**
          * There is nothing to show at all.
@@ -262,16 +262,27 @@ object Growth {
      *   order. Unreadable ones are skipped rather than failing the screen:
      *   a half-synced file is normal in a shared folder, and one bad file
      *   must not cost the owner the whole picture.
+     *
+     * @param newestRead whether anything at the newest DATE parsed, and
+     *   if not, why. Passed in because this function only ever sees text:
+     *   it cannot tell a newest sheet that failed to parse from a folder
+     *   that simply ends earlier -- they are the same input -- and that
+     *   difference decides whether [Since.nearBump] is an answer about
+     *   now or an older day's answer wearing today's label.
      */
-    /**
-     * @param newestUnreadable the newest file in the folder BY NAME could
-     *   not be parsed, so it is not among [files] at all. Passed in
-     *   because this function only ever sees text: it cannot tell a
-     *   missing newest sheet from a folder that simply ends earlier, and
-     *   the difference decides whether [Since.nearBump] is an answer
-     *   about today or yesterday's answer wearing today's label.
-     */
-    fun of(files: List<String>, newestUnreadable: Boolean = false): Since {
+    /** How the newest day's sheets read, which this function cannot work
+     *  out for itself -- see [of]'s `newestRead` parameter. */
+    enum class NewestRead {
+        FINE,
+        /** Nothing at the newest date would parse. */
+        DAMAGED,
+        /** ...and the reason is a schema this build does not know, which
+         *  is a different thing to tell someone: the file is intact and
+         *  the app is the thing that is out of date. */
+        NEWER_SCHEMA,
+    }
+
+    fun of(files: List<String>, newestRead: NewestRead = NewestRead.FINE): Since {
         // Paired with the text it was parsed from, and with its rows, because
         // the rows the owner ADDED are not part of [Session] — a row with no
         // `name` key threw during deserialization once and cost the whole
@@ -378,7 +389,8 @@ object Growth {
         // There is nothing to compute from, so the band is WITHHELD and
         // the screen says why. A blank band is a missing answer; an older
         // day's band under the words "part way to a bump" is a wrong one.
-        val newest = read.map { it.session }.takeIf { !newestUnreadable }?.maxByOrNull { it.date }
+        val newest = read.map { it.session }
+            .takeIf { newestRead == NewestRead.FINE }?.maxByOrNull { it.date }
         val nearBump = newest?.sets.orEmpty().mapNotNull { set ->
             // A row they said they did not do, the same exclusion `lifted`
             // and `liftsOf` make below. The streak behind it is real, but
@@ -453,7 +465,7 @@ object Growth {
             repeated = counts?.count { it.value > 1 },
             short = short,
             newerSchema = newerSchema,
-            newestUnreadable = newestUnreadable,
+            newestRead = newestRead,
         )
     }
 

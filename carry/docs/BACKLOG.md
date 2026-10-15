@@ -191,8 +191,9 @@ These are the open paths to one, hardest first.
   `Growth.of` could not have decided this alone: it sees text and nothing
   else, so it cannot tell a newest sheet that failed to parse from a
   folder that ends earlier. Only the FILENAMES answer that, and `growthOf`
-  was dropping them. Pinned from both sides — an older broken file must
-  not cost the band, since the band is only ever about the newest sheet.
+  was dropping them — and the question is about the newest DATE, since
+  two classes on one day are two files and either reading is enough.
+  Pinned from both sides: an older broken file must not cost the band.
 - [ ] **Showing a short day's rows on the Since tab, rather than omitting
   the day.** The genuinely better answer, and the one the Before and After
   tabs got. It needs more than a count: `sets`, `movements`, `repeated`
@@ -264,6 +265,14 @@ These are the open paths to one, hardest first.
 - [ ] **A logo** — chalk on slate, and it has to work as a one-colour launcher
   icon at 48dp *(you asked, design: [logo](designs/logo.md))*
 
+
+- [ ] **`Growth.of` picks the newest session by the date INSIDE the file,
+  while the gate that decides whether to trust it reads the date from the
+  FILENAME.** They agree on everything the runner writes, so this is
+  latent: a file whose content date is blank or older than its name's
+  would take the band while the gate called the folder fine. Found by the
+  #89 review. The fix is to pick by one rule — most likely by passing the
+  newest text in rather than letting `Growth.of` choose *(audit)*
 
 ### Health and tidying
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on

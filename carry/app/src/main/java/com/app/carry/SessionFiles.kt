@@ -54,6 +54,11 @@ object SessionFiles {
 
     fun isSessionFile(name: String) = NAME.matches(name)
 
+    /** The day this file is for, from its NAME. The content carries one
+     *  too, and they are not guaranteed to agree -- this is the one the
+     *  folder is ordered by. */
+    fun dateIn(name: String): String? = NAME.find(name)?.groupValues?.get(1)
+
     /**
      * The newest session by the date in its name, not by file timestamp:
      * a sync copies a file whenever it feels like it, so mtime says when it
