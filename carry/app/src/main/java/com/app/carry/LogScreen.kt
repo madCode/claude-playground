@@ -570,22 +570,33 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
  * Returns null when nothing is flagged: the caption's visible text is
  * already the whole of what there is to say, and a description that
  * merely repeats it would suppress the node's own text for no gain.
+ *
+ * Past [MAX_SPOKEN_FLAGS] it names the first few and COUNTS the rest,
+ * rather than dropping the names for a bare total. A bare total would
+ * hand identification back to the `⚠` in the preview, which is the one
+ * channel this whole change exists because a listener may not get.
  */
-private fun spokenFlags(flagged: List<String>): String? = when {
-    flagged.isEmpty() -> null
-    flagged.size == 1 -> "One line in the post is marked, because it looks like it " +
-        "carries a weight: ${flagged.first().trimStart(' ', '-')}."
-    // Past a handful, naming them is not a summary any more -- and if the
-    // whole post is marked, the count IS the finding.
-    flagged.size <= MAX_SPOKEN_FLAGS -> "${flagged.size} lines in the post are marked, " +
-        "because they look like they carry a weight: " +
-        flagged.joinToString("; ") { it.trimStart(' ', '-') } + "."
-    else -> "${flagged.size} lines in the post are marked, because they look like " +
-        "they carry a weight. They are marked in the preview below."
+private fun spokenFlags(flagged: List<String>): String? {
+    if (flagged.isEmpty()) return null
+    // `removePrefix`, not `trimStart(' ', '-')`: the bullet is exactly what
+    // the post prepends, and trimming every leading hyphen would turn a
+    // typed `-26 lb curl` into `26 lb curl` -- changing a name while
+    // reading it out, on the screen whose job is to show what was typed.
+    val named = flagged.take(MAX_SPOKEN_FLAGS).joinToString("; ") { it.removePrefix("- ") }
+    val rest = flagged.size - MAX_SPOKEN_FLAGS
+    val which = if (rest > 0) "$named; and $rest more" else named
+    return if (flagged.size == 1) {
+        "One line in the post is marked, because it looks like it carries a weight: $which."
+    } else {
+        "${flagged.size} lines in the post are marked, because they look like " +
+            "they carry a weight: $which."
+    }
 }
 
-/** How many flagged lines are worth naming out loud. A label is spoken
- *  start to finish with no way to skim, so this is a sentence's worth. */
+/** How many flagged lines are named out loud before the rest are counted.
+ *  A label is spoken start to finish with no way to skim, so this is a
+ *  sentence's worth; the names are capped at 80 characters each, which
+ *  bounds the whole label at a few hundred. */
 private const val MAX_SPOKEN_FLAGS = 3
 
 sealed interface SaveState {

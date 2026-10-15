@@ -87,8 +87,16 @@ the listener heard neither the colour nor the glyph.
 The fix is a split, not a tweak: the preview keeps **no** description and
 is read as what it is, and everything about which lines are flagged is
 said on the caption — where it is a sentence, not a second copy of the
-post. Flagged lines are named up to three; past that the count is the
-finding.
+post. Three flagged lines are named and the rest counted ("and 2 more").
+
+**A second look at that fix found the cutoff itself was a hole**, and it
+is the same mistake one layer down: dropping the names past three handed
+identification back to the `⚠` in the preview — which is the one
+channel this whole change exists because a listener may not get. Named
+plus counted keeps both the bound and the information. It also found
+that `trimStart(' ', '-')` would read a typed `-26 lb curl` as `26 lb
+curl`, renaming a movement while reading it out; the bullet comes off
+with `removePrefix("- ")` now, which is exactly what the post put on.
 
 ## 2026-10-16 — cycle 34: two numbers that were never about the same thing
 

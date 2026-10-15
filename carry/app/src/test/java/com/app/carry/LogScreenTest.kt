@@ -473,6 +473,47 @@ class LogScreenTest {
     }
 
     @Test
+    fun `with nothing flagged the caption speaks for itself`() {
+        // The other half of the caption's description, and the one a
+        // regression could break silently: with nothing to flag there must
+        // be NO description at all, so the caption's own words are what
+        // TalkBack reads. An empty string or a repeat of those words would
+        // suppress them instead -- announcing a blank node where the
+        // promise under the button should be.
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        added.value = listOf(AddedSet(id = "a", name = "pop squat", weight = 15.0))
+        show(SaveState.Saved)
+        reach("Post what 2G did")
+        compose.onNodeWithText("Post what 2G did").performClick()
+        val caption = compose.onNode(hasText("The movements only", substring = true))
+        caption.assertIsDisplayed()
+        caption.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
+    }
+
+    @Test
+    fun `past three flagged lines the rest are counted, not dropped`() {
+        // Naming them all is unbounded and naming none hands the job back
+        // to the glyph in the preview -- which is the channel a listener
+        // may not get, and the reason any of this was written.
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        // The first name starts with a hyphen on purpose: only the post's
+        // own "- " bullet comes off, so a typed name is read as typed. A
+        // blanket trim of leading hyphens would say "26 lb curl" -- an app
+        // that renames a movement while reading it out.
+        added.value = listOf("-26 lb curl", "ybell deadlift 30", "ybell deadlift 35",
+            "ybell deadlift 40", "ybell deadlift 45").mapIndexed { i, n ->
+            AddedSet(id = "a$i", name = n, weight = 20.0)
+        }
+        show(SaveState.Saved)
+        reach("Post what 2G did")
+        compose.onNodeWithText("Post what 2G did").performClick()
+        compose.onNodeWithContentDescription(
+            "5 lines in the post are marked, because they look like they carry a weight: " +
+                "-26 lb curl; ybell deadlift 30; ybell deadlift 35; and 2 more.",
+        ).assertIsDisplayed()
+    }
+
+    @Test
     fun `the mark is on the preview only, never on what is sent`() {
         // The one thing this must not do. `post.text` goes to the share
         // sheet untouched; the warning lives in the preview that is built
