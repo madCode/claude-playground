@@ -82,6 +82,7 @@ class TodayScreenTest {
         compose.onNodeWithText(
             "\u26a0 1 row of this sheet didn't read. It stays in the file untouched; Carry can't show it."
         ).assertIsDisplayed()
+        shoot("24-short-sheet")
     }
 
     @Test
