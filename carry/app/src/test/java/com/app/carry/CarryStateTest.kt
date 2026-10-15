@@ -278,11 +278,79 @@ class CarryStateTest {
         val since = Growth.of(listOf(whole, short))
         assertEquals("the short day must stay out of the totals", 1, since.sessions)
         assertEquals("and must be counted as left out", 1, since.short)
-        assertEquals("1 day isn't counted here: part of its sheet didn't read.", shortNote(since.short))
+        assertEquals("1 session isn't in these totals: its sheet didn't read cleanly.", shortNote(since.short))
 
         // Nothing to say when every file read whole.
         assertEquals(0, Growth.of(listOf(whole)).short)
         assertNull(shortNote(0))
+    }
+
+    @Test
+    fun `a short sheet nobody filled in is not reported as a loss`() {
+        // The difference between reporting a loss and inventing one. A
+        // sheet of blank rows was never going to count -- eleven of them
+        // sat in the real folder once -- so damage to it costs the history
+        // nothing, and claiming a day was lost asserts something the data
+        // cannot support. On the one screen whose job is explaining thin
+        // numbers, that is a manufactured loss.
+        fun sheet(rows: String) =
+            """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-14","sets":[$rows]}"""
+        val answered = """{"ref":0,"line":"10 x squat","canonical":"squat","key":"squat","family":"legs","weight":45,"reps":10}"""
+        val blank = """{"ref":0,"line":"10 x squat","canonical":"squat"}"""
+        val broken = """{"ref":9,"line":"10 x row","weight":"60 lb"}"""
+
+        // Blank + damaged: identical history with or without the damage.
+        val blankShort = sheet("$blank,$broken")
+        assertEquals("the premise: it reads short", 1,
+            SessionFiles.unreadableRows(blankShort, SessionFiles.parse(blankShort)!!))
+        assertEquals(0, Growth.of(listOf(blankShort)).short)
+        assertEquals(0, Growth.of(listOf(sheet(blank))).sessions)
+
+        // Answered + damaged: a real loss, and counted.
+        val realShort = sheet("$answered,$broken")
+        assertEquals(1, Growth.of(listOf(realShort)).short)
+        assertEquals("the damaged day must stay out of the totals", 0,
+            Growth.of(listOf(realShort)).sessions)
+    }
+
+    @Test
+    fun `a file that did not parse at all is counted too, not dropped in silence`() {
+        // The louder half of the same silence. `Growth.of` only ever saw
+        // the files that parsed, so a truncated one, a newer schema and a
+        // file with duplicate refs all vanished without a word -- and a
+        // folder of nothing but those said "Nothing logged yet" over a
+        // folder full of sessions.
+        val whole = """{"schema":"gym-session/1","sheet_id":"a","date":"2026-10-01","sets":[
+            {"ref":0,"line":"10 x squat","canonical":"squat","key":"squat","family":"legs","weight":45,"reps":10}
+        ]}"""
+        val truncated = """{"schema":"gym-session/1","sheet_id":"b","date":"2026-10-02","""
+        val newer = """{"schema":"gym-session/2","sheet_id":"c","date":"2026-10-03","sets":[]}"""
+        val since = Growth.of(listOf(whole, truncated, newer))
+        assertEquals(1, since.sessions)
+        assertEquals(2, since.short)
+        assertEquals(
+            "2 sessions aren't in these totals: their sheets didn't read cleanly.",
+            shortNote(since.short),
+        )
+    }
+
+    @Test
+    fun `the sentence does not claim part of a sheet read when none of it did`() {
+        // Every row failing still PARSES -- the rows are decoded one at a
+        // time -- so a sentence saying "part of its sheet didn't read" is
+        // false in exactly the worst case, and there is no sheet beside it
+        // to tell the owner otherwise.
+        val none = """{"schema":"gym-session/1","sheet_id":"s","date":"2026-10-14","sets":[
+            {"ref":0,"line":"10 x squat","weight":"45 lb"},
+            {"ref":1,"line":"10 x row","done":"yes"}
+        ]}"""
+        val parsed = SessionFiles.parse(none)
+        assertEquals("the premise: it parses with no rows", 0, parsed?.sets?.size)
+        assertEquals(2, SessionFiles.unreadableRows(none, parsed!!))
+        assertEquals(
+            "1 session isn't in these totals: its sheet didn't read cleanly.",
+            shortNote(Growth.of(listOf(none)).short + 1),
+        )
     }
 
     @Test

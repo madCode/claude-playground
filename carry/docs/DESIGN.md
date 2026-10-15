@@ -554,13 +554,28 @@ is the newest sheet behind "part way to a bump", because dropping a
 short day there would not leave a gap — it would promote yesterday's
 sheet into the answer to "where do I stand today".
 
-Left out, but not left out quietly: the tab says how many days are not
-counted, above the figures they are missing from. This is the screen that
-exists to explain why the numbers are thin, so a day absent from it
-without a word is the same failure as a confident wrong total, one step
-quieter. It is a different sentence from the sheet's, because what is
-missing there is a row on a list the owner can still see, and what is
-missing here is a whole day from totals they have no other way to check.
+Left out, but not left out quietly: the tab says how many sessions are
+not in its totals, above the figures they are missing from. This is the
+screen that exists to explain why the numbers are thin, so a session
+absent from it without a word is the same failure as a confident wrong
+total, one step quieter. It is a different sentence from the sheet's,
+because what is missing there is a row on a list the owner can still see,
+and what is missing here is a whole session from totals they have no
+other way to check.
+
+Three words in that sentence are load-bearing. **Sessions**, not days:
+two classes on one date are two files. **These totals**, not "here": the
+bump band above is drawn from the newest sheet whether it read cleanly or
+not, so "isn't counted here" would be contradicted by the first thing
+under it. And no **part of**: a file where every row failed still parses,
+so "part" is false in exactly the worst case.
+
+It counts two things, because to the owner they are one: a file that
+would not parse at all, and one that read short **and** has evidence a
+session happened. That second test is the same one the history itself
+uses, and it is the difference between reporting a loss and inventing
+one — a short sheet nobody filled in would not have counted undamaged, so
+calling it a casualty asserts what the data cannot support.
 
 Dropping a row is safe because the save path never sees the decode: it
 patches the raw JSON and copies every row it did not edit through byte

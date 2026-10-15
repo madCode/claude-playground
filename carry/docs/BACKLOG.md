@@ -173,12 +173,13 @@ These are the open paths to one, hardest first.
   alternative is worse, because these figures are CLAIMS and "4 lifts,
   heaviest 50" over a day whose heaviest row did not decode is a confident
   wrong number nothing downstream could tell. What is fixed 2026-10-16 is
-  the silence: `Since.short` counts them and the tab says *"2 days aren't
-  counted here: part of their sheets didn't read."*, above the figures it
-  qualifies and above the empty check, since a folder where every sheet
-  read short would otherwise say "Nothing logged yet" over a folder full
-  of sessions. The day detail needs nothing: a short day never reaches
-  `days`, so there is no detail view to mark.
+  the silence: `Since.short` counts them and the tab says *"2 sessions
+  aren't in these totals: their sheets didn't read cleanly."*, above the
+  figures it qualifies and above the empty check — and the empty copy
+  stops offering advice that cannot work. It counts a file that would not
+  parse AT ALL as well as one that read short, and only the short ones
+  that have evidence a session happened. The day detail needs nothing: a
+  short day never reaches `days`, so there is no detail view to mark.
 - [ ] **Showing a short day's rows on the Since tab, rather than omitting
   the day.** The genuinely better answer, and the one the Before and After
   tabs got. It needs more than a count: `sets`, `movements`, `repeated`

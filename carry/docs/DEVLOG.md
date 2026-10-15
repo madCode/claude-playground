@@ -66,6 +66,37 @@ empty check — which fails only the one test that is about placement, and
 leaves the other two green. A deletion would have failed all three and
 proved less.
 
+**The review then found that almost every word of the sentence was
+wrong**, which is a fair verdict on a change whose whole content is a
+sentence:
+
+- **"here" was contradicted by the first thing under it.** The bump band
+  is drawn from the newest sheet whether it read cleanly or not — cycle
+  30's deliberate asymmetry — so "isn't counted here" sat directly above
+  a band computed from the excluded day. It says **"these totals"** now,
+  and the field's KDoc lists which figures rather than claiming all of
+  them.
+- **"days" counts files.** Two classes on one date are two files, which
+  `Growth.Day`'s own doc says in as many words. The rest of this screen
+  says *session*; so does this now.
+- **"part of its sheet didn't read" is false when NONE of it did.** Rows
+  are decoded one at a time, so a file where every row fails still
+  parses. There is no sheet beside the sentence to correct it, so "part"
+  was the owner's only information about scale and it was wrong in the
+  worst case.
+
+And two counting faults, one in each direction. **A short sheet nobody
+filled in was reported as a loss** — but a blank sheet was never going to
+count, so damage to it costs nothing and calling it a casualty asserts
+what the data cannot support. It is now gated on the same test the
+history itself uses. **And a file that would not parse at all was still
+dropped in silence** — the exact thing this cycle was closing, through a
+different door: a folder of nothing but truncated files said "Nothing
+logged yet". Both are counted now, and the empty copy stops offering
+advice that cannot work.
+
+Nine falsifications in all.
+
 ## 2026-10-16 — cycle 37: one bad row cost a whole day
 
 **The other half of the previous cycle, and the half that needed a

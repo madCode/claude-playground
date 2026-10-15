@@ -67,7 +67,7 @@ class SinceScreenTest {
         // anywhere else in the app.
         compose.setContent { SinceScreen(since.copy(short = 2)) }
         compose.onNodeWithText(
-            "⚠ 2 days aren't counted here: part of their sheets didn't read."
+            "⚠ 2 sessions aren't in these totals: their sheets didn't read cleanly."
         ).assertIsDisplayed()
         shoot("25-since-short")
     }
@@ -75,8 +75,8 @@ class SinceScreenTest {
     @Test
     fun `a history that read cleanly says nothing about it`() {
         compose.setContent { SinceScreen(since) }
-        compose.onNodeWithText("aren't counted here", substring = true).assertDoesNotExist()
-        compose.onNodeWithText("isn't counted here", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("aren't in these totals", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("isn't in these totals", substring = true).assertDoesNotExist()
     }
 
     @Test
@@ -90,8 +90,13 @@ class SinceScreenTest {
             movements = null, repeated = null, short = 3,
         )
         compose.setContent { SinceScreen(none) }
-        compose.onNodeWithText("aren't counted here", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Nothing logged yet", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("aren't in these totals", substring = true).assertIsDisplayed()
+        // And NOT the never-used-folder copy. "This fills in as you save
+        // sessions" is advice that cannot work here -- the owner has saved
+        // these, and saving more will not recover them -- and it is the
+        // sentence that tells them what to do next.
+        compose.onNodeWithText("Nothing in that folder read cleanly.").assertIsDisplayed()
+        compose.onNodeWithText("Nothing logged yet", substring = true).assertDoesNotExist()
     }
 
     @Test

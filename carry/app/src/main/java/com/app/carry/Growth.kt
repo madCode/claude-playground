@@ -158,21 +158,34 @@ object Growth {
         val movements: Int?,
         val repeated: Int?,
         /**
-         * Days left out of every figure above because part of their sheet
-         * did not read.
+         * Sessions left out of [sessions], [sets], [from], [to], [peaks],
+         * [days], [movements] and [repeated] because their file did not
+         * read cleanly.
          *
-         * They are left out rather than counted short because these
-         * figures are CLAIMS: "4 lifts, heaviest 50" over a day whose
-         * heaviest row did not decode is a confident wrong number and
-         * nothing downstream could tell it from a right one. The Before
-         * and After tabs can do better — they show the rows that read and
-         * say how many did not — because a sheet is a list rather than a
-         * total.
+         * NOT [nearBump], which is taken from the newest sheet whether it
+         * read cleanly or not — dropping a short day there would not
+         * leave a gap, it would promote yesterday's sheet into the answer
+         * to "where do I stand today". The band is deliberately the one
+         * figure here that is about today rather than about the record,
+         * so the sentence on screen says "these totals" rather than
+         * "here".
+         *
+         * They are left out of the rest rather than counted short because
+         * those figures are CLAIMS: "4 lifts, heaviest 50" over a day
+         * whose heaviest row did not decode is a confident wrong number
+         * and nothing downstream could tell it from a right one. The
+         * Before and After tabs can do better — they show the rows that
+         * read and say how many did not — because a sheet is a list
+         * rather than a total.
          *
          * But excluding them SILENTLY is the thing this screen exists not
          * to do. It is the screen that explains why the numbers are thin,
-         * so a day missing from it without a word is the same failure as
-         * a confident wrong total, one step quieter.
+         * so a session missing from it without a word is the same failure
+         * as a confident wrong total, one step quieter.
+         *
+         * Counted in SESSIONS, not days: two classes on one date are two
+         * files and two sessions, which is the word the rest of this
+         * screen uses.
          */
         val short: Int = 0,
     ) {
@@ -262,8 +275,26 @@ object Growth {
         // moves the aggregates rather than fixing a wrong one — and
         // answering it by accident here is how a decision gets made without
         // anyone deciding it.
-        val logged = parsed.filter { read -> read.rows.any { !it.added && it.answered } }
+        val wasDone = { r: Read -> r.rows.any { !it.added && it.answered } }
+        val logged = parsed.filter(wasDone)
         val dates = logged.map { it.session.date }.filter { it.isNotBlank() }.sorted()
+
+        // Sessions missing from the totals because their file did not read
+        // cleanly. Two sources, one sentence, because to the owner they
+        // are the same thing: a file that would not parse AT ALL, and one
+        // that read short AND has evidence a session happened.
+        //
+        // That second test is `wasDone`, the same one `logged` uses, and it
+        // is the difference between reporting a loss and inventing one. A
+        // short sheet with no answered row among the rows that DID read
+        // would not have been counted even undamaged -- eleven blank rows
+        // from an early test is a real file in the real folder -- so
+        // calling it a casualty asserts something the data cannot support,
+        // on the one screen whose job is explaining thin numbers. What
+        // cannot be known either way is whether the row that did NOT read
+        // was the answered one; the quiet choice is the right one there.
+        val short = (files.size - read.size) +
+            read.count { SessionFiles.unreadableRows(it.text, it.session) > 0 && wasDone(it) }
 
         val peaks = lifts.filter { it.family != null }
             .groupBy { it.family!! }
@@ -360,7 +391,7 @@ object Growth {
             days = days,
             movements = counts?.size,
             repeated = counts?.count { it.value > 1 },
-            short = read.size - parsed.size,
+            short = short,
         )
     }
 
