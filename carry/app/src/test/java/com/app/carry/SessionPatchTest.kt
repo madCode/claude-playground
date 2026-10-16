@@ -433,9 +433,9 @@ class SessionPatchTest {
 
     @Test
     fun `a value this build cannot parse survives a row it did not edit`() {
-        // Re-encoding flattens what it cannot read: `12.5` reps becomes
+        // Re-encoding flattens what it cannot read: `8.0` reps becomes
         // null, `45.0` becomes `45`. An untouched row goes back verbatim.
-        val file = withAdded("""{"name": "plank", "weight": 45.0, "reps": 12.5}""")
+        val file = withAdded("""{"name": "plank", "weight": 45.0, "reps": 8.0}""")
         val row = SessionPatch.addedIn(file).single()
         assertEquals(null, SessionPatch.apply(file, emptyMap(), listOf(row)).let {
             (it as SessionPatch.Outcome.Patched).text
@@ -443,7 +443,7 @@ class SessionPatchTest {
 
         val out = patched(file, mapOf(0 to SessionPatch.Entry(reps = 8)), listOf(row))
         val saved = doc(out)["added"]!!.jsonArray.single().jsonObject
-        assertEquals("12.5", saved["reps"]!!.jsonPrimitive.content)
+        assertEquals("8.0", saved["reps"]!!.jsonPrimitive.content)
         assertEquals("45.0", saved["weight"]!!.jsonPrimitive.content)
     }
 
@@ -630,6 +630,32 @@ class SessionPatchTest {
 
     /** The fixture with a different `added` array, so each case states only
      *  the rows it is about. */
+    @Test
+    fun `a number the importer refuses never reaches the file`() {
+        // The last line behind the screen's own check: the importer drops
+        // the whole day over one of these, so writing it is losing the day.
+        for ((edits, added) in listOf(
+            mapOf(0 to SessionPatch.Entry(weight = 1000.5)) to emptyList(),
+            mapOf(0 to SessionPatch.Entry(reps = 1001)) to emptyList(),
+            mapOf(0 to SessionPatch.Entry(fractionalReps = 8.5)) to emptyList(),
+            emptyMap<Int, SessionPatch.Entry>() to listOf(AddedSet(id = "a", name = "curl", weight = 2500.0)),
+        )) {
+            refused(original, edits, added)
+        }
+        // The edges are the importer's own: 0 and 1000 are fine.
+        patched(original, mapOf(0 to SessionPatch.Entry(weight = 1000.0, reps = 1000), 1 to SessionPatch.Entry(weight = 0.0, reps = 0)))
+    }
+
+    @Test
+    fun `a fractional rep count in the file comes back to the screen`() {
+        // Read as an Int it was null: a blank box over a file the importer
+        // refuses, with nothing on the phone to say why the day never lands.
+        val file = original.replaceFirst("\"weight\": null, \"reps\": null", "\"weight\": 45, \"reps\": 8.5")
+        assertEquals(SessionPatch.Entry(weight = 45.0, fractionalReps = 8.5), SessionPatch.entriesIn(file)[0])
+        val row = SessionPatch.addedIn(withAdded("""{"name": "plank", "reps": 12.5}""")).single()
+        assertEquals(12.5, row.fractionalReps)
+    }
+
     private fun withAdded(rows: String): String {
         val placeholder = "\"added\": []"
         assertTrue("fixture no longer has $placeholder", original.contains(placeholder))

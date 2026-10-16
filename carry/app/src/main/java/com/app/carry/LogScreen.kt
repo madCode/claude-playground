@@ -33,7 +33,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -244,6 +247,8 @@ private fun LogRow(
     timed: Boolean,
     onChange: (SessionPatch.Entry) -> Unit,
 ) {
+    val weightProblem = LogCheck.row(entry.weight, null, null).firstOrNull()
+    val repsProblem = LogCheck.row(null, entry.reps, entry.fractionalReps).firstOrNull()
     // Two lines, not one. On one line the name shared ~400dp with two
     // number boxes and three 44dp chips, and the owner's own sheet
     // truncated: "bicep curl + lateral lu...". Everything here is read at
@@ -278,13 +283,12 @@ private fun LogRow(
             // A skipped row offers no boxes and no feel chips. There is no
             // number to put in them, and no set to have found easy.
             if (!entry.skipped) {
-                NumberField(entry.weight.asWeightField(), "$key-w", "$name weight in pounds") { text ->
+                NumberField(entry.weight.asWeightField(), "$key-w", "$name weight in pounds", weightProblem) { text ->
                     onChange(entry.copy(weight = text.toDoubleOrNull()))
                 }
-                NumberField(entry.reps?.toString() ?: "", "$key-r", "$name reps") { text ->
-                    // "8." is mid-typing, not a mistake: keep the last whole
-                    // number rather than blanking what they already entered.
-                    onChange(entry.copy(reps = text.trimEnd('.').toIntOrNull()))
+                NumberField(repsField(entry.reps, entry.fractionalReps), "$key-r", "$name reps", repsProblem) { text ->
+                    val (reps, fractional) = parseReps(text)
+                    onChange(entry.copy(reps = reps, fractionalReps = fractional))
                 }
                 // easy and hard are one question with two answers, so
                 // turning one on turns the other off. A set is not both.
@@ -333,12 +337,15 @@ private fun LogRow(
                 )
             }
         }
+        RowProblem(listOfNotNull(weightProblem, repsProblem))
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Look.Rule))
 }
 
 @Composable
 private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
+    val weightProblem = LogCheck.row(row.weight, null, null).firstOrNull()
+    val repsProblem = LogCheck.row(null, row.reps, row.fractionalReps).firstOrNull()
     // Same two-line shape as a sheet row, for the same reason: a name the
     // owner types needs the width more than a one-line row needs the
     // height, and the two kinds of row sitting differently on the same
@@ -376,11 +383,12 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            NumberField(row.weight.asWeightField(), "$key-w", "added exercise weight in pounds") {
+            NumberField(row.weight.asWeightField(), "$key-w", "added exercise weight in pounds", weightProblem) {
                 onChange(row.copy(weight = it.toDoubleOrNull()))
             }
-            NumberField(row.reps?.toString() ?: "", "$key-r", "added exercise reps") {
-                onChange(row.copy(reps = it.trimEnd('.').toIntOrNull()))
+            NumberField(repsField(row.reps, row.fractionalReps), "$key-r", "added exercise reps", repsProblem) {
+                val (reps, fractional) = parseReps(it)
+                onChange(row.copy(reps = reps, fractionalReps = fractional))
             }
             Chip("easy", row.easy, Look.Amber) { onChange(row.copy(easy = !row.easy, hard = false)) }
             Chip("hard", row.hard, Look.BrickInk) { onChange(row.copy(hard = !row.hard, easy = false)) }
@@ -389,6 +397,7 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
             // No skip: a row you added is one you did. Skipping it is
             // clearing it, which the owner does by emptying the name.
         }
+        RowProblem(listOfNotNull(weightProblem, repsProblem))
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Look.Rule))
 }
@@ -406,7 +415,7 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
  * session the owner's keystrokes are the only thing that changes it.
  */
 @Composable
-private fun NumberField(initial: String, key: Any, label: String, onChange: (String) -> Unit) {
+private fun NumberField(initial: String, key: Any, label: String, problem: String?, onChange: (String) -> Unit) {
     var text by rememberSaveable(key) { mutableStateOf(initial) }
     BasicTextField(
         value = text,
@@ -431,11 +440,44 @@ private fun NumberField(initial: String, key: Any, label: String, onChange: (Str
             .width(50.dp)
             .clip(RoundedCornerShape(4.dp))
             .background(Look.SlateRaised)
-            .border(1.dp, Look.RuleStrong, RoundedCornerShape(4.dp))
+            .border(if (problem != null) 2.dp else 1.dp, if (problem != null) Look.BrickInk else Look.RuleStrong, RoundedCornerShape(4.dp))
             .padding(vertical = 11.dp)
-            .semantics { contentDescription = label },
+            .semantics {
+                contentDescription = label
+                // Spoken on the box itself, so a listener who lands on it
+                // hears what is wrong without finding the line below.
+                if (problem != null) error(problem)
+            },
     )
 }
+
+/**
+ * Under the row it belongs to, in words as well as colour: the box's red
+ * border alone says nothing in glare, on a greyscale display or to anyone
+ * who cannot tell brick from grey.
+ */
+@Composable
+private fun RowProblem(problems: List<String>) {
+    val message = LogCheck.rowMessage(problems) ?: return
+    Text(
+        message,
+        color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.SmallSize,
+        modifier = Modifier.padding(start = 9.dp, top = 4.dp),
+    )
+}
+
+/**
+ * The reps box's text as a rep count, or as a fractional count the save
+ * will refuse. "8." is mid-typing and keeps 8; "8.5" is not 8 and not
+ * blank, because either would store something the box does not show.
+ */
+private fun parseReps(text: String): Pair<Int?, Double?> {
+    val n = text.trimEnd('.').toDoubleOrNull() ?: return null to null
+    return if (n == Math.floor(n)) n.toInt() to null else null to n
+}
+
+private fun repsField(reps: Int?, fractional: Double?): String =
+    reps?.toString() ?: fractional?.asWeight() ?: ""
 
 @Composable
 private fun Chip(text: String, on: Boolean, accent: androidx.compose.ui.graphics.Color, onToggle: () -> Unit) {
@@ -632,9 +674,11 @@ private fun SaveButton(state: SaveState, onSave: () -> Unit) {
         if (state is SaveState.Failed) {
             Text(
                 (if (state.damaged) "⚠ " else "") + state.why,
-                color = if (state.damaged) Look.BrickInk else Look.ChalkDim,
+                color = Look.BrickInk,
                 fontFamily = Look.Name, fontSize = Look.SmallSize,
-                modifier = Modifier.padding(bottom = 8.dp),
+                // Announced when it appears: the tap that caused it gives a
+                // listener no other sign that nothing was saved.
+                modifier = Modifier.padding(bottom = 8.dp).semantics { liveRegion = LiveRegionMode.Polite },
             )
         }
         Text(

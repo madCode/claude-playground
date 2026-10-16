@@ -7,6 +7,13 @@ that hold become rules in CLAUDE.md or the cycles skill.
 
 ## 2026-10-16 run (cloud session)
 
+### Cycle 58 — build: the After screen checks what the importer refuses
+
+- **Read the parse next to the check.** The range check was the ask, but
+  the reps box already stored `8.5` as null while showing it: a silent
+  drop the new check would have missed, because it looked at the stored
+  value. Check every way a box's text can fail to become its number.
+
 ### Cycle 57 — build: the bars beside each family's heaviest go
 
 - **A removal has no behaviour to test, so the screenshot is the guard.**

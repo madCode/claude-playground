@@ -99,8 +99,11 @@ not a thing anyone is blocked from building.
   it *(audit: security)*
 
 ### Wrong numbers, or a road to one
-- [ ] **A weight over 1000 saves on the phone, and the importer then
-  refuses the whole day.** Since 2026-10-16 the companion importer refuses
+- [x] ~~**A weight over 1000 saves on the phone, and the importer then
+  refuses the whole day.**~~ **Done 2026-10-16:** the owner asked for the
+  form to validate like a full feature. Each out-of-range box says so
+  under its row, and Save is refused with the rows named (DESIGN.md,
+  "Numbers the importer would refuse"). Was: Since 2026-10-16 the companion importer refuses
   a session file holding a weight or rep count outside 0 to 1000. That
   stops a typo from corrupting the record, but the number boxes take up to
   six characters, so a slip like `2500` saves on the phone and loses the

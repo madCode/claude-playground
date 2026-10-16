@@ -415,6 +415,12 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         // document, which could undo each other: the composable captured
         // `enabled` before this ever ran.
         if (_saving.value == SaveState.Saving) return
+        // By row name, every row at once: the importer refuses the whole
+        // day over any one of these, and one refusal per tap hides the rest.
+        LogCheck.summary(LogCheck.problems(ready.session, _edits.value, _added.value))?.let {
+            _saving.value = SaveState.Failed(it, damaged = false)
+            return
+        }
         val typedAgainst = savedDraft()?.takeIf { it.sheetId == ready.session.sheetId }
         if (typedAgainst != null && typedAgainst.fromFingerprint != ready.raw.hashCode() &&
             !SessionPatch.identityHolds(typedAgainst.fromIdentities, ready.raw, _edits.value.keys)

@@ -28,6 +28,14 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 58: the After screen checks what the importer refuses
+
+- A weight over 1000, reps over 1000, or reps with a fraction now show a
+  line under the row and a red box, and Save is refused with the rows
+  named. Before, the phone said "Saved" and the importer dropped the
+  whole day. Reps like `8.5` used to be stored as blank under a box
+  showing 8.5; they are now held and flagged.
+
 ## 2026-10-16 — cycles 56 and 57: a chip kept, a chart cut
 
 - **#115:** a row whose `prescribed_duration_sec` the file couldn't mean
