@@ -29,6 +29,8 @@ A scheduled task's prompt, or madCode, says:
 3. DEVLOG.md's status block, then BACKLOG.md.
 4. The project's open PRs and CI on main. A red main, or a PR the last cycle left red, is this
    cycle's work before anything new.
+5. The answers on the project's morning page (see [The morning page](#the-morning-page)): a
+   decision madCode answered there is approval to build it, or a reason not to.
 
 Then check the stop rule. If it is met, go to [Stopping](#stopping).
 
@@ -136,19 +138,21 @@ one), and add what the cycle found to *Next*.
 
 ### The morning page
 
-BACKLOG.md and DEVLOG.md hold what waits on madCode. On top of them, the run keeps one page
-madCode reads on their phone in the morning, across every project: what needs them, then a
-report of what the cycles did. Every run keeps it, in any repo, whether or not the prompt names
-it. Without a link in the prompt, find it with `Artifact` (`action: "list"`): it is titled
-**Waiting on You**, and each project's section sits between `<!-- project:<name> -->` and
-`<!-- /project:<name> -->`. When two pages could be it, the one with those markers is; never
-start another. Only if none exists, create it with that title and those markers, and say so.
+BACKLOG.md and DEVLOG.md hold what waits on madCode. On top of them, each project keeps a
+morning page madCode reads on their phone: what needs them, then a report of what the cycles
+did. Every run keeps its project's page, in any repo, whether or not the prompt names it.
+Without a link in the prompt, find it with `Artifact` (`action: "list"`) by its title,
+**<Project> Morning Page** (Gym Morning Page, newspapeRSS Morning Page); if none exists,
+create it, modelled on an existing one, and say so. Never start a second page for a project.
 
-- Read the page (`Artifact`, `action: "read"`), change only this project's section (adding it,
-  between its markers, if it has none), and publish to the same link. Another project's cycle may have published since; build on what the
-  read returned and never drop another project's section.
-- First, what needs madCode, most blocking first: one line each saying what is needed and why,
-  linked to where they answer (the PR, the issue, the BACKLOG.md line on GitHub).
+- Read the page (`Artifact`, `action: "read"`), change what this run touched, and publish to
+  the same link. Another session may have published since; build on what the read returned.
+- First, the decisions waiting on madCode, most blocking first, each with why in a sentence or
+  two and an answer box: options where they're known, a free-text note always. Answers save to
+  the page's `db` store under `decisions/<slug>`, so read them (`ArtifactData`) at the start of
+  each run before choosing, act on them, and take answered items off. Then the things only they
+  can do, as ticks the same way, linked to where they act (the PR, the issue, the BACKLOG.md
+  line on GitHub).
 - Then the cycles report, newest first: one card per cycle with its project and number, what it
   picked and why in a sentence, what changed for madCode in plain words (not the code), its PR,
   and anything that went wrong or was left, linked to the DEVLOG.md entry for the detail. Cards
