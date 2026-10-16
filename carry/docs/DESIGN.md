@@ -367,13 +367,9 @@ them while using it:
 | `ACCESS_NETWORK_STATE` | read connectivity, for network constraints |
 | `FOREGROUND_SERVICE` | run expedited work |
 
-`ACCESS_NETWORK_STATE` is the one a careful reader will stop on, so it is
-worth being exact: it permits *reading whether a network exists*, not
-using one. **There is still no `INTERNET` permission**, so the app cannot
-open a connection even in principle — which was always the property worth
-checking, and it still holds. The share sheet remains the only way
-anything leaves, and the notification text carries the class alone,
-because a lock screen is not somewhere the owner's weights belong.
+`ACCESS_NETWORK_STATE` permits *reading whether a network exists*, not
+using one. The notification text carries the class alone, because a lock
+screen is not somewhere the owner's weights belong.
 
 Until 2026-10-16 this app declared no permissions at all, and that was
 checkable by opening one file. That is no longer true, and the honest
@@ -406,11 +402,33 @@ tomorrow's sheet the evening before, which is the case this feature exists
 for; storing it on sight meant that when its day arrived it was already
 seen and was silently never announced.
 
+## Asking whether a newer build is out
+
+The one connection the app opens. The owner chose it on 2026-10-16
+([#107](https://github.com/madCode/claude-playground/issues/107)) over
+routing the build number through the synced folder, so Carry declares
+`INTERNET` for this alone. `DebugUpdates` works like newspaperss's:
+
+- **Only a CI debug build asks.** The installed build number comes from the
+  version name (`0.1.0-debug.131+…`); a local or release build has none and
+  never asks.
+- **At most every three hours**, on a return to the app. Any answer counts
+  as asked, refusals too, so a rate limit isn't spent again on every
+  resume. No answer at all (offline) doesn't count, so it asks again next
+  time.
+- **It sends nothing of the owner's.** A GET of the `carry-debug` release's
+  public JSON. The newest build is the highest `carry-debug-<run>.apk`
+  among its files; a body over 256 KB is not read.
+- **The Since tab says it**, under the history: "Build N is out — tap to
+  download", in chalk rather than amber. The tap opens the fixed download
+  link, or copies it when nothing can open it.
+
+The session files still leave only through the share sheet.
+
 ## Handing the block over
 
-The preview is the whole of the egress control -- the app has no
-`INTERNET` permission, so the share sheet is the only way anything
-leaves -- and it marks a suspect line in the TEXT as well as in red.
+The preview is the whole of the egress control -- the share sheet is the
+only way anything of the owner's leaves -- and it marks a suspect line in the TEXT as well as in red.
 Colour alone is unreadable in glare, on a greyscale display, or to
 anyone with a colour vision deficiency, and it is silent to TalkBack.
 The caption above the preview names that mark rather than the colour.

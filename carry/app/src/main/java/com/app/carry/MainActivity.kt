@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.activity.viewModels
 
@@ -89,6 +90,8 @@ class MainActivity : ComponentActivity() {
                         onSave = model::save,
                         since = model.since.value,
                         onShare = ::share,
+                        newerBuild = model.updates.newer.collectAsState().value,
+                        onGetBuild = ::getBuild,
                     ),
                 )
             }
@@ -120,11 +123,22 @@ class MainActivity : ComponentActivity() {
             }
     }
 
+    /** Opens the newest build's download; with no browser to take it, copies the link instead. */
+    private fun getBuild() {
+        val view = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(DebugUpdates.DOWNLOAD))
+        runCatching { startActivity(view) }.onFailure {
+            getSystemService(android.content.ClipboardManager::class.java)
+                ?.setPrimaryClip(android.content.ClipData.newPlainText("Carry download", DebugUpdates.DOWNLOAD))
+            android.widget.Toast.makeText(this, "No browser here. The download link is copied.", android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
     /** The normal case is a sync dropping the day's session in while the
      *  app is backgrounded, so the folder is re-read on every resume. */
     override fun onResume() {
         super.onResume()
         model.refresh()
+        model.checkForUpdate()
         maybeAskToNotify()
     }
 

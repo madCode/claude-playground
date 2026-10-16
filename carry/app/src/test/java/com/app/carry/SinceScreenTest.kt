@@ -9,6 +9,8 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -371,5 +373,22 @@ class SinceScreenTest {
         File(out, "$name.png").outputStream().use {
             shot.compress(Bitmap.CompressFormat.PNG, 100, it)
         }
+    }
+
+    @Test
+    fun `a newer build is named under the history and the tap asks for it`() {
+        var asked = 0
+        compose.setContent { SinceScreen(since, newerBuild = 131, onGetBuild = { asked++ }) }
+        compose.onNode(androidx.compose.ui.test.hasScrollAction())
+            .performScrollToNode(androidx.compose.ui.test.hasText("Build 131 is out", substring = true))
+        compose.onNodeWithText("Build 131 is out", substring = true).assertIsDisplayed()
+            .performClick()
+        assertEquals(1, asked)
+    }
+
+    @Test
+    fun `with no newer build there is no notice`() {
+        compose.setContent { SinceScreen(since) }
+        compose.onNodeWithText("is out", substring = true).assertDoesNotExist()
     }
 }

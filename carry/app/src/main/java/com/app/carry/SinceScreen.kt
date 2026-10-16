@@ -54,7 +54,12 @@ import androidx.compose.ui.unit.sp
  * part every empty row looks like a broken app.
  */
 @Composable
-fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
+fun SinceScreen(
+    since: Growth.Since,
+    modifier: Modifier = Modifier,
+    newerBuild: Int? = null,
+    onGetBuild: () -> Unit = {},
+) {
     // There is no nav library here and this does not justify adding one:
     // the app is three tabs, and one nullable id inside this screen keeps
     // it that way.
@@ -203,6 +208,7 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
                 items(since.days) { day -> DayRow(day) { opened = day.sheetId } }
             }
             if (since.explainsTheQuiet) item { Quiet(since) }
+            if (newerBuild != null) item { NewerBuild(newerBuild, onGetBuild) }
             item { Version() }
         }
     }
@@ -484,6 +490,19 @@ private fun Quiet(since: Growth.Since) {
  * On the Since tab rather than behind a menu: this is the screen read at
  * home and not in a hurry, and the other two have a job to do.
  */
+/** In chalk, not amber: amber is kept for the number the owner came for. */
+@Composable
+private fun NewerBuild(build: Int, onGet: () -> Unit) {
+    Text(
+        "Build $build is out \u2014 tap to download",
+        color = Look.Chalk, fontFamily = Look.Figure, fontSize = Look.SmallSize,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onGet)
+            .padding(top = 18.dp, bottom = 10.dp),
+    )
+}
+
 @Composable
 private fun Version() {
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current

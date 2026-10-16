@@ -1,21 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!--
-      The only permission this app declares, added 2026-10-16 so a session
-      file landing in the synced folder can say so. Until then the Before
-      tab depended on the owner remembering to open the app.
+      Two permissions are this app's own:
 
-      Local: nothing leaves the device, and the notification text carries
-      the class only (see NewSession.text).
+      - POST_NOTIFICATIONS, added 2026-10-16 so a session file landing in
+        the synced folder can say so. The notification text carries the
+        class only (see NewSession.text).
+      - INTERNET, added 2026-10-16 at the owner's choice (claude-playground
+        #107) for one thing: asking GitHub whether a newer debug build is
+        out (DebugUpdates). Only a CI debug build asks, at most every three
+        hours, and the request carries nothing of the owner's. The session
+        files still never leave except through the share sheet.
 
-      THIS FILE IS NO LONGER THE WHOLE ANSWER. androidx.work brings four
-      more (WAKE_LOCK, RECEIVE_BOOT_COMPLETED, ACCESS_NETWORK_STATE and
-      FOREGROUND_SERVICE) which appear only in the MERGED manifest, so
-      "read one file to see what this app asks for" stopped being true
-      when WorkManager was added. `aapt2 dump permissions` on the built
-      APK is the honest check; docs/DESIGN.md carries the table and the
-      reasons. There is still no INTERNET permission.
+      THIS FILE IS NOT THE WHOLE ANSWER. androidx.work brings four more
+      (WAKE_LOCK, RECEIVE_BOOT_COMPLETED, ACCESS_NETWORK_STATE and
+      FOREGROUND_SERVICE) which appear only in the MERGED manifest.
+      `aapt2 dump permissions` on the built APK is the honest check;
+      docs/DESIGN.md carries the table and the reasons.
     -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:allowBackup="false"

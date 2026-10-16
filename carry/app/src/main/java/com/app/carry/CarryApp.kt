@@ -201,6 +201,9 @@ data class LogBinding(
      *  callback rather than an Intent here, so the screen stays
      *  renderable from a test with no Android in the picture. */
     val onShare: (String) -> Unit = {},
+    /** The newest debug build's number while it's newer than this one, else null. */
+    val newerBuild: Int? = null,
+    val onGetBuild: () -> Unit = {},
 )
 
 @Composable
@@ -293,7 +296,7 @@ fun CarryApp(
                         onSave = log.onSave, saving = log.saving, fileMoved = log.fileMoved,
                         onDiscard = log.onDiscard, unreadable = state.unreadable,
                     )
-                    2 -> log.since?.let { SinceScreen(it) } ?: TodayScreen(state.session, unreadable = state.unreadable)
+                    2 -> log.since?.let { SinceScreen(it, newerBuild = log.newerBuild, onGetBuild = log.onGetBuild) } ?: TodayScreen(state.session, unreadable = state.unreadable)
                     else -> TodayScreen(state.session, unreadable = state.unreadable)
                 }
             }
