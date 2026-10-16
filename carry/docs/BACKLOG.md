@@ -412,6 +412,11 @@ These are the open paths to one, hardest first.
   this way *(audit)*
 
 ### Health and tidying
+- [ ] **A launcher icon of its own.** Carry has none, so it shows Android's
+  default and can't be told apart from the other apps on the phone. An
+  adaptive icon (vector foreground, plain background, a monochrome layer for
+  themed icons) drawn for Carry, as
+  [practices/android.md](../../practices/android.md) asks *(you asked)*
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on
   instructions.** The gate is real but it is counting the wrong thing for
   a codebase this full of fail-closed guards — a third of branches have
