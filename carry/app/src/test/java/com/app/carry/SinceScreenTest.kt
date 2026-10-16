@@ -46,8 +46,17 @@ class SinceScreenTest {
             Growth.Day("2026-09-27:3G", "2026-09-27", "3G", 6, lift("2026-09-27", "sumo squat", "legs", 50.0)),
             Growth.Day("2026-09-13:2G", "2026-09-13", "2G", 0, null),
         ),
-        movements = 19, repeated = 1,
+        // Deliberately NOT equal to `sets`: the band prints movements over
+        // this number, and only a fixture where the two differ can tell
+        // which one it read.
+        movements = 19, repeated = 1, movementSets = 18,
     )
+
+    @Test
+    fun `the quiet band counts movements over the sets it counted them in`() {
+        compose.setContent { SinceScreen(since) }
+        compose.onNodeWithText("different movements in 18 sets").assertIsDisplayed()
+    }
 
     @Test
     fun `the whole folder, read back`() {

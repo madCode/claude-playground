@@ -1,5 +1,7 @@
 package com.app.carry
 
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -31,6 +33,97 @@ class GrowthTest {
             "family":${family?.let { "\"$it\"" } ?: "null"},"variant":$variant,
             "streak_done":$done,"streak_needed":$needed,"suggested_weight":$suggested,
             "weight":$weight,"reps":$reps,"skipped":$skipped,"hard":$hard}"""
+
+
+    /** A sheet printed for the other block, left blank, with the real
+     *  session typed into the added rows. */
+    private fun borrowedDay(date: String, added: String) = """
+        {"schema":"gym-session/1","sheet_id":"$date:2G","date":"$date","class":"3G",
+         "borrowed_from":"2G",
+         "sets":[${set(0, "bench press")},${set(1, "chest fly")}],
+         "added":[$added]}
+    """.trimIndent()
+
+    @Test
+    fun `a day logged entirely by hand is a session`() {
+        // The owner's call, 2026-10-16: "Yes if the 2G was
+        // incomplete/completely off or I left a class early after only
+        // doing the row session, it should still count." The printed
+        // sheet was for the other block and they ignored it; what they
+        // did is in the rows they typed. It used to reach the history as
+        // nothing at all.
+        val day = borrowedDay("2026-10-11",
+            """{"id":"a","name":"ybell deadlift","weight":26,"reps":12},
+               {"id":"b","name":"ybell overhead press","weight":26,"reps":12}""")
+        val since = Growth.of(listOf(day))
+
+        assertEquals("the day must count as a session", 1, since.sessions)
+        assertEquals(1, since.days.size)
+        // ...and it must not read "0 lifts" over a list with weights in it.
+        assertEquals(2, since.days.first().lifts)
+        assertEquals(26.0, since.days.first().best?.weight)
+        assertEquals("ybell deadlift", since.days.first().best?.name)
+        assertEquals(2, since.sets)
+    }
+
+    @Test
+    fun `an added row with only a name still says the movement happened`() {
+        // Typing "ybell deadlift" and no numbers is a record that it
+        // happened -- the sheet never listed it, so the name IS the reply.
+        val day = borrowedDay("2026-10-11", """{"id":"a","name":"ybell deadlift"}""")
+        val since = Growth.of(listOf(day))
+        assertEquals("a named added row is an answer", 1, since.sessions)
+        // No weight, so nothing to call heaviest, and that is not a session
+        // of zero lifts being hidden -- it is a day of bodyweight work.
+        assertEquals(0, since.days.first().lifts)
+        assertNull(since.days.first().best)
+    }
+
+    @Test
+    fun `a blank sheet row is still blank`() {
+        // The gate on the rule above. A sheet row always has a name --
+        // it is the prescription, not a reply -- so without the `added`
+        // gate every untouched sheet would count as a logged session.
+        val untouched = borrowedDay("2026-10-11", "")
+        assertEquals("an untouched sheet is not a session", 0, Growth.of(listOf(untouched)).sessions)
+    }
+
+    @Test
+    fun `a hand-typed weight does not withhold the movements count`() {
+        // `movements`/`repeated` group by the runner's own key, and an
+        // added row has none by design. Feeding them in would trip the
+        // withholding guard and hide the count on any day with one
+        // hand-typed weight -- a worse answer than a count that means
+        // "among the movements the runner named".
+        val sheet = file("2026-09-13", sets = set(0, "low row", "pull", weight = "30", reps = "10"))
+        val byHand = borrowedDay("2026-10-11", """{"id":"a","name":"ybell deadlift","weight":26,"reps":12}""")
+        val since = Growth.of(listOf(sheet, byHand))
+        assertEquals(2, since.sessions)
+        assertNotNull("the count must survive a keyless hand-typed lift", since.movements)
+        assertEquals(1, since.movements)
+        // And the band's denominator comes from the same population as its
+        // numerator. `sets` counts the hand-typed lift; `movementSets`
+        // must not, or the band reads "1 different movements in 2 sets".
+        assertEquals(2, since.sets)
+        assertEquals(1, since.movementSets)
+    }
+
+    @Test
+    fun `a weighted row with no name does not become the day's heaviest`() {
+        // The Log editor shows a nameless weighted row on purpose -- the
+        // save refuses it, and an invisible refusal cannot be acted on.
+        // Counting it here would DISPLACE the named lift that describes
+        // the day, leaving the screen reading "heaviest , 99 pounds".
+        val day = borrowedDay(
+            "2026-10-11",
+            """{"id":"a","name":"ybell deadlift","weight":26,"reps":12},{"id":"b","weight":99,"reps":5}""",
+        )
+        val since = Growth.of(listOf(day))
+        assertEquals(1, since.sessions)
+        assertEquals("the nameless row is not a lift", 1, since.sets)
+        assertEquals("ybell deadlift", since.days.single().best?.name)
+        assertEquals(26.0, since.days.single().best?.weight)
+    }
 
     @Test
     fun `every session is listed, newest first, named by its heaviest lift`() {
@@ -458,10 +551,14 @@ class GrowthTest {
         val day = Growth.of(listOf(text)).days.single()
         assertEquals(listOf("sumo squat", "farmer carry"), day.rows.map { it.name })
         assertEquals(listOf(false, true), day.rows.map { it.added })
-        // Added rows carry no weight toward the lift count, which comes
-        // from the sheet's own sets -- changing that would move the
-        // numbers on every band of the Since screen.
-        assertEquals(1, day.lifts)
+        // Added rows DO count toward the day's lifts, as of 2026-10-16.
+        // This assertion used to be 1, with a note that changing it would
+        // move the numbers on every band of the Since screen -- which was
+        // true, and why it was the owner's call rather than a bug fix.
+        // They made it: a day logged entirely by hand is a day they
+        // trained, so a carry at 35 lb is a lift whoever typed it.
+        assertEquals(2, day.lifts)
+        assertEquals(50.0, day.best?.weight)
     }
 
     @Test
