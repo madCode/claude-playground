@@ -179,6 +179,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         UpdateInstaller.inFront = true
+        runCatching { UpdateInstaller.forgetIfGone(this) }
         // An installer confirmation that arrived while Carry was behind another app.
         UpdateInstaller.awaitingConfirm?.let { confirm ->
             UpdateInstaller.awaitingConfirm = null

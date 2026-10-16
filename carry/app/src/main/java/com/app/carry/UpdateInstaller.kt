@@ -26,7 +26,7 @@ object UpdateInstaller {
 
     /** False when an attempt is already under way. */
     fun start(): Boolean = _installing.compareAndSet(expect = false, update = true)
-    fun finish() { _installing.value = false }
+    fun finish() { committed = null; _installing.value = false }
 
     /** Whether Carry's window is in front, kept by MainActivity: Android won't let a receiver
      *  open the confirmation over another app. */
@@ -101,40 +101,74 @@ object UpdateInstaller {
         return info.packageName == context.packageName && code > installed
     }
 
-    /** Hands [apk] to Android's installer. The answer arrives at [Result]. */
-    fun install(context: Context, apk: File) {
+    /** The session id of an attempt handed to Android and not yet answered. */
+    @Volatile var committed: Int? = null
+
+    /**
+     * Writes [apk] into a new installer session and returns its id, without committing: the
+     * copy takes a while, and the caller checks for unsaved typing between this and [commit].
+     */
+    fun stage(context: Context, apk: File): Int {
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(context.packageName)
-            // Updating itself, Android 12 and later may skip the confirmation. Where it doesn't,
-            // the owner gets the system's "Update this app?" instead, which is fine.
+            // Android 12 and later may skip the confirmation once Carry has installed itself
+            // before; until then, and below 12, the owner sees "Update this app?".
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
             }
         }
         val id = installer.createSession(params)
         try {
-            commit(context, installer, id, apk)
+            installer.openSession(id).use { session ->
+                session.openWrite("carry.apk", 0, apk.length()).use { out ->
+                    apk.inputStream().use { it.copyTo(out) }
+                    session.fsync(out)
+                }
+            }
         } catch (e: Exception) {
-            // Otherwise its staged bytes stay on the device until Android expires the session,
-            // and every retry leaves another.
-            runCatching { installer.abandonSession(id) }
+            abandon(context, id)
+            throw e
+        }
+        return id
+    }
+
+    /** Hands the staged session to Android. The answer arrives at [Result]. */
+    fun commit(context: Context, id: Int) {
+        try {
+            context.packageManager.packageInstaller.openSession(id).use { session ->
+                // Mutable: the installer fills in the status and, when it needs the owner, the
+                // confirmation intent.
+                val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+                    (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+                val reply = PendingIntent.getBroadcast(context, id, Intent(context, Result::class.java), flags)
+                committed = id
+                session.commit(reply.intentSender)
+            }
+        } catch (e: Exception) {
+            committed = null
+            abandon(context, id)
             throw e
         }
     }
 
-    private fun commit(context: Context, installer: PackageInstaller, id: Int, apk: File) {
-        installer.openSession(id).use { session ->
-            session.openWrite("carry.apk", 0, apk.length()).use { out ->
-                apk.inputStream().use { it.copyTo(out) }
-                session.fsync(out)
-            }
-            // Mutable: the installer fills in the status and, when it needs the owner, the
-            // confirmation intent.
-            val flags = PendingIntent.FLAG_UPDATE_CURRENT or
-                (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
-            val reply = PendingIntent.getBroadcast(context, id, Intent(context, Result::class.java), flags)
-            session.commit(reply.intentSender)
+    /** Otherwise its staged bytes stay on the device until Android expires the session, and every
+     *  retry leaves another. */
+    fun abandon(context: Context, id: Int) {
+        runCatching { context.packageManager.packageInstaller.abandonSession(id) }
+    }
+
+    /**
+     * Unsticks [installing] when Android has dropped the session without a final answer: a
+     * confirmation left with Home rather than Cancel sends none on some versions, and nor does a
+     * session Android expired.
+     */
+    fun forgetIfGone(context: Context) {
+        val id = committed ?: return
+        if (context.packageManager.packageInstaller.getSessionInfo(id) == null) {
+            committed = null
+            awaitingConfirm = null
+            finish()
         }
     }
 

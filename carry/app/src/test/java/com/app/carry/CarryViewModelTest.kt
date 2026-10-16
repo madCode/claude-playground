@@ -743,7 +743,9 @@ class CarryViewModelTest {
         var handedOver = false
         model.download = { _, f -> f.writeText("apk"); downloading.complete(Unit); kotlinx.coroutines.runBlocking { typed.await() } }
         model.isNewer = { true }
-        model.handOver = { handedOver = true }
+        model.stage = { 7 }
+        model.commit = { handedOver = true }
+        model.abandon = {}
         model.installUpdate()
         until { downloading.isCompleted }
         model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
@@ -762,7 +764,8 @@ class CarryViewModelTest {
         var handedOver = false
         model.download = { _, f -> f.writeText("apk") }
         model.isNewer = { true }
-        model.handOver = { handedOver = true }
+        model.stage = { 7 }
+        model.commit = { handedOver = true }
         model.installUpdate()
         until { handedOver }
         assertTrue("still installing until Android answers", model.installing.value)
@@ -780,5 +783,43 @@ class CarryViewModelTest {
         handle[CarryViewModel.DRAFT] = draft.replace(Regex("\"sheetId\":\\s*\"[^\"]*\""), "\"sheetId\": \"another-day\"")
         assertTrue("the draft must now name another session", handle.get<String>(CarryViewModel.DRAFT)!!.contains("another-day"))
         assertFalse(model.unsaved)
+    }
+
+    @Test
+    fun `typing while the build is copied to the installer abandons it rather than installing`() = runTest(dispatcher) {
+        UpdateInstaller.finish()
+        val model = viewModel()
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        val copying = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val typed = kotlinx.coroutines.CompletableDeferred<Unit>()
+        var committed = false
+        var abandoned: Int? = null
+        model.download = { _, f -> f.writeText("apk") }
+        model.isNewer = { true }
+        model.stage = { copying.complete(Unit); kotlinx.coroutines.runBlocking { typed.await() }; 7 }
+        model.commit = { committed = true }
+        model.abandon = { abandoned = it }
+        model.installUpdate()
+        until { copying.isCompleted }
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        typed.complete(Unit)
+        until { model.updateProblem.value != null }
+        assertFalse("nothing may be committed over typing", committed)
+        assertEquals("the staged session must not be left behind", 7, abandoned)
+        assertTrue(model.unsaved)
+    }
+
+    @Test
+    fun `a failure writing to the installer is not called a failed download`() = runTest(dispatcher) {
+        UpdateInstaller.finish()
+        val model = viewModel()
+        model.download = { _, f -> f.writeText("apk") }
+        model.isNewer = { true }
+        model.stage = { throw java.io.IOException("No space left on device") }
+        model.installUpdate()
+        until { model.updateProblem.value != null }
+        assertEquals("Android couldn't take the update: No space left on device.", model.updateProblem.value!!.why)
+        assertFalse(model.installing.value)
     }
 }

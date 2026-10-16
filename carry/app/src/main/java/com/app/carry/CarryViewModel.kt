@@ -124,7 +124,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     internal var download: (String, java.io.File) -> Unit = { url, dest -> UpdateInstaller.download(url, dest) }
     internal var isNewer: (java.io.File) -> Boolean =
         { UpdateInstaller.isNewerSelf(getApplication(), it, BuildConfig.VERSION_CODE.toLong()) }
-    internal var handOver: (java.io.File) -> Unit = { UpdateInstaller.install(getApplication(), it) }
+    internal var stage: (java.io.File) -> Int = { UpdateInstaller.stage(getApplication(), it) }
+    internal var commit: (Int) -> Unit = { UpdateInstaller.commit(getApplication(), it) }
+    internal var abandon: (Int) -> Unit = { UpdateInstaller.abandon(getApplication(), it) }
 
     /**
      * Downloads the newest build and hands it to Android's installer. The owner can type while
@@ -134,25 +136,39 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     fun installUpdate() {
         if (!UpdateInstaller.start()) return
         val app = getApplication<Application>()
+        var handedOver = false
         viewModelScope.launch {
             val problem = try {
                 val apk = withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val dir = java.io.File(app.cacheDir, "updates").apply { mkdirs() }
                     java.io.File(dir, "carry-debug.apk").apply { delete(); download(DebugUpdates.DOWNLOAD, this) }
                 }
-                when {
-                    !withContext(kotlinx.coroutines.Dispatchers.IO) { isNewer(apk) } ->
-                        UpdateProblem("The download isn't a newer Carry, so it wasn't installed.", offerLink = false)
-                    unsaved ->
+                if (!withContext(kotlinx.coroutines.Dispatchers.IO) { isNewer(apk) }) {
+                    UpdateProblem("The download isn't a newer Carry, so it wasn't installed.", offerLink = false)
+                } else {
+                    val id = try {
+                        withContext(kotlinx.coroutines.Dispatchers.IO) { stage(apk) }
+                    } catch (e: java.io.IOException) {
+                        throw InstallFailed(e)
+                    }
+                    // Checked here, on the main thread, after the slow parts and immediately
+                    // before the commit, so nothing typed during them can be installed over.
+                    if (unsaved) {
+                        abandon(id)
                         UpdateProblem("Save the After tab first, then tap the notice again. Updating restarts Carry.", offerLink = false)
-                    else -> {
-                        withContext(kotlinx.coroutines.Dispatchers.IO) { handOver(apk) }
+                    } else {
+                        commit(id)
+                        handedOver = true
                         null
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
-                UpdateInstaller.finish()
+                // Once committed, Android's answer still comes; only an attempt that never got
+                // there is over.
+                if (!handedOver) UpdateInstaller.finish()
                 throw e
+            } catch (e: InstallFailed) {
+                UpdateProblem("Android couldn't take the update: ${e.cause?.message ?: "no room?"}.", offerLink = true)
             } catch (e: java.io.IOException) {
                 UpdateProblem("Couldn't download the update: ${e.message ?: "no connection"}.", offerLink = true)
             } catch (e: Exception) {
@@ -166,6 +182,8 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
             }
         }
     }
+
+    private class InstallFailed(cause: Throwable) : Exception(cause)
 
     /** How the folder is read. Replaced in tests so the stall path and the
      *  keep-last-good path can be exercised without a real provider; there
