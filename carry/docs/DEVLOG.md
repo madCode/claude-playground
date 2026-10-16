@@ -28,6 +28,14 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 63: the hard chip goes
+
+- The After tab no longer offers *hard*, and a past session no longer
+  shows it. The coach treats a finished set as finished however it felt.
+- Files that already say `hard` still read, and Carry leaves the field
+  alone.
+- Nothing drops out of the post: it never counted *hard* as "did it".
+
 ## 2026-10-16 — cycle 58: the After screen checks what the importer refuses
 
 - A weight over 1000, reps over 1000, or reps with a fraction now show a

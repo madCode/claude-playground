@@ -58,7 +58,7 @@ Two consequences worth stating, because they look like missing features:
    prominent.
 
 **After** — what you did. One row per exercise, two lines tall: weight,
-reps, and five chips (*easy*, *hard*, *mod*, *hurt*, *skip*) — six on a timed
+reps, and four chips (*easy*, *mod*, *hurt*, *skip*) — five on a timed
 row, which also gets *done*. Plus **add a row**, for anything the sheet didn't
 list.
 
@@ -72,12 +72,15 @@ number to put in them, and a weight against a set you did not do is the
 wrong number this app exists to avoid. Un-skipping does not bring the old
 number back, because nobody re-entered it.
 
-*easy* and *hard* are one question with two answers, so they are mutually
-exclusive. The coach reads them in opposite directions, and until
-2026-10-12 it could only hear one of them: `easy` earned a bump a session
-early while `hard` appeared nowhere in the engine at all, so every
-qualitative signal pushed the weight up and none held it. Found by reading
-the owner's own replies, where "ok hard" appears as readily as "ok, easy".
+**There is no *hard* chip.** The coach treats a completed set as completed
+however it felt (madCode's decision, 2026-10-16; gym-coach is changing to
+match), so *hard* told it nothing it acts on. *easy* and *hurt* stay
+because nothing else can tell the coach those things (below). A file
+that already says `"hard": true` still reads, and Carry leaves the field
+as it is: the reader keeps it, the save writes back what the file held,
+and a row answered only by it still counts as a set that happened. It
+isn't shown, on the After tab or in a past session. It is not part of
+the post's "did it" test, which never counted it.
 
 *mod* is "I did the easier version" — knees, a box under the step-up. It
 exists because **a large share of this owner's logged sets carry no weight**, and
@@ -340,7 +343,9 @@ sets, next at 25 pounds"* rather than joining them into a sentence that
 would.
 
 A row leaves it the moment the owner's own answer contradicts it: marked
-*hard*, or logged **below** the weight the count is about. Those are the
+*hard* (only an older file can say so now; dropping this check is due
+once the runner stops reading `hard`), or logged **below** the weight the
+count is about. Those are the
 runner's own signals that the next bump is blocked. Logged at that weight
 stays — the count is then stale by one and understates, which is the safe
 direction — and logged heavier stays, because going up unprompted is the

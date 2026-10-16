@@ -7,6 +7,13 @@ that hold become rules in CLAUDE.md or the cycles skill.
 
 ## 2026-10-16 run (cloud session)
 
+### Cycle 63 — build: drop the hard chip
+
+- **A layout test can lose its premise when a chip goes.** The timed-row
+  test asserted `skip` wraps below `done`; with one chip fewer it fits.
+  Assert what the test guards (skip on screen), not the layout that once
+  carried it.
+
 ### Cycle 58 — build: the After screen checks what the importer refuses
 
 - **Read the parse next to the check.** The range check was the ask, but
