@@ -83,16 +83,6 @@ not a thing anyone is blocked from building.
   open are kept there, not here, since this repository is public
   *(audit: security)*
 
-- [ ] **The weight guard only sees decimal digits, and only on a typed
-  name.** `Char.isDigit` is Unicode `Nd`, so a load written as a word or a
-  symbol publishes silently — verified unflagged: `ybell deadlift heavy`,
-  `deadlift twenty six`, `deadlift ½ rack`. And the other way: a
-  legitimate name with a digit in it IS flagged when hand-typed —
-  `bicep curl 21s`, `90/90 hip stretch`, `3 way shoulder` — which is the
-  false alarm that costs the guard its meaning. Both directions are the
-  same question: is a digit test the right instrument at all, or should
-  this be a "you typed this name, read it" prompt with no claim about
-  weights? Needs deciding before patching *(audit: security)*
 - [ ] **Two identical bullets can appear in one post, and both get
   marked.** `IntelPost` dedupes by (prescription, name), which is right —
   it is what keeps a hand-typed row from eating the sheet's own — but a
@@ -454,6 +444,12 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **The weight guard is gone; a typed name is shown back instead.**
+  The digit test missed "deadlift twenty six" and "½ rack" and flagged
+  "bicep curl 21s". After a save, the screen shows each typed name and
+  asks whether the weight is in the weight box. The number boxes are
+  labelled "lb" and "reps" *(you asked: "show the typed name back, no
+  digit check")*
 - [x] **The bars on *Heaviest by what it trains* are gone; the number
   stays.** They encoded every weight in the family with no scale and no
   time direction, and their count varied with how many sets the family had,

@@ -28,6 +28,16 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 62: a typed name shown back, and labelled boxes
+
+- The post no longer marks lines with a digit in them. That check missed
+  weights written as words or symbols and flagged real movements.
+- Instead, after a save, the After tab shows each name you typed and
+  asks whether the weight is in the weight box. It stays until you edit
+  again. TalkBack reads it out.
+- The weight and reps boxes now say "lb" and "reps" under them, so "the
+  weight box" is easy to find.
+
 ## 2026-10-16 — cycle 58: the After screen checks what the importer refuses
 
 - A weight over 1000, reps over 1000, or reps with a fraction now show a

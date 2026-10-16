@@ -7,6 +7,12 @@ that hold become rules in CLAUDE.md or the cycles skill.
 
 ## 2026-10-16 run (cloud session)
 
+### Cycle 62 — build: show a typed name back
+
+- **`clearAndSetSemantics` takes a node out of the test tree too.** To
+  hide a visible label from TalkBack and still assert on it, use
+  `hideFromAccessibility()` and check `SemanticsProperties.HideFromAccessibility`.
+
 ### Cycle 58 — build: the After screen checks what the importer refuses
 
 - **Read the parse next to the check.** The range check was the ask, but
