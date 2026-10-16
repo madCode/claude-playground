@@ -325,6 +325,21 @@ Only a real phone can answer these.
   and look exactly like a first run. Partly done 2026-10-12 **on an emulator**: the
   grant was taken through the real picker and held across a force-stop and
   relaunch. **A phone and a reinstall are still owed** *(device)*
+- [ ] **Does tapping a notification preserve typed-but-unsaved numbers?**
+  The tap itself is confirmed — it opens the app on the Before tab. What is
+  NOT confirmed is the property the `SINGLE_TOP` fix exists for: that the
+  activity is brought forward rather than finished and rebuilt, so
+  `CarryViewModel`'s edits, added rows and in-flight save survive.
+
+  The 2026-10-16 test could not exercise it. The test sheet was blank and
+  nothing had been typed, so there was no state to lose and a broken
+  version would have looked identical. Worth saying plainly because "the
+  tap works" reads like the fix is proven, and it is not.
+
+  The sequence: type a weight on the After tab, do NOT save, background the
+  app, then tap a notification when one arrives. Numbers still there means
+  the fix holds; empty boxes mean the activity was rebuilt, which for this
+  app is the cardinal failure *(device)*
 - [ ] Bottom-edge insets against the navigation bar with a long session *(device)*
 - [x] ~~The round trip through Syncthing, end to end~~ **Confirmed on the
   owner's own phone, 2026-10-16.** A blank, labelled session file placed in
@@ -335,8 +350,8 @@ Only a real phone can answer these.
   swallowing it, and the 06:00 rule had to hold it through the small hours
   instead of buzzing at midnight. Both held.
 
-  Not yet exercised on a device: tapping the notification (the SINGLE_TOP
-  fix, that it does not destroy typed-but-unsaved numbers) *(device)*
+  Tapping it opens the app on the Before tab: confirmed on the device the
+  same morning.
 
 
 ## Feature proposals
