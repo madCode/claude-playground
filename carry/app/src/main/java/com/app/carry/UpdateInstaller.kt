@@ -19,6 +19,23 @@ import java.net.URL
  * saved yet: losing typed numbers is the one failure this app exists to avoid.
  */
 object UpdateInstaller {
+    private val _installing = kotlinx.coroutines.flow.MutableStateFlow(false)
+    /** From the tap until Android's installer gives a final answer: the notice can't start a
+     *  second download and session meanwhile. */
+    val installing: kotlinx.coroutines.flow.StateFlow<Boolean> = _installing
+
+    /** False when an attempt is already under way. */
+    fun start(): Boolean = _installing.compareAndSet(expect = false, update = true)
+    fun finish() { _installing.value = false }
+
+    /** Whether Carry's window is in front, kept by MainActivity: Android won't let a receiver
+     *  open the confirmation over another app. */
+    @Volatile var inFront = false
+
+    /** The installer's confirmation, held when it arrived while Carry wasn't in front; shown on
+     *  the next return, once. */
+    @Volatile var awaitingConfirm: Intent? = null
+
     /** What a tap on "Build N is out" does next. */
     enum class Step { SaveFirst, AllowInstalls, Install }
 
@@ -96,6 +113,17 @@ object UpdateInstaller {
             }
         }
         val id = installer.createSession(params)
+        try {
+            commit(context, installer, id, apk)
+        } catch (e: Exception) {
+            // Otherwise its staged bytes stay on the device until Android expires the session,
+            // and every retry leaves another.
+            runCatching { installer.abandonSession(id) }
+            throw e
+        }
+    }
+
+    private fun commit(context: Context, installer: PackageInstaller, id: Int, apk: File) {
         installer.openSession(id).use { session ->
             session.openWrite("carry.apk", 0, apk.length()).use { out ->
                 apk.inputStream().use { it.copyTo(out) }
@@ -116,13 +144,17 @@ object UpdateInstaller {
             when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
                 PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                     @Suppress("DEPRECATION")
-                    val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT) ?: return
-                    context.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+                        ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) ?: return finish()
+                    if (!inFront || runCatching { context.startActivity(confirm) }.isFailure) {
+                        awaitingConfirm = confirm
+                    }
                 }
-                PackageInstaller.STATUS_SUCCESS -> Unit
+                PackageInstaller.STATUS_SUCCESS -> finish()
                 // The owner backing out of the confirmation is not an error worth a toast.
-                PackageInstaller.STATUS_FAILURE_ABORTED -> Unit
+                PackageInstaller.STATUS_FAILURE_ABORTED -> finish()
                 else -> {
+                    finish()
                     val why = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "status $status"
                     Toast.makeText(context, "The update didn't install: $why", Toast.LENGTH_LONG).show()
                 }

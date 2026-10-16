@@ -159,7 +159,7 @@ class UpdateDownloadTest {
     }
 
     @Test
-    fun `a refusal leaves no file behind`() {
+    fun `a refusal is an error, not a file`() {
         server.enqueue(MockResponse.Builder().code(404).build())
         org.junit.Assert.assertThrows(IOException::class.java) { UpdateInstaller.download(server.url("/x").toString(), dest) }
         assertEquals(emptyList<String>(), dir.list()!!.toList())

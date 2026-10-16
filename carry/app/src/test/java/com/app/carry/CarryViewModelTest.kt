@@ -713,16 +713,72 @@ class CarryViewModelTest {
         assertEquals(UpdateInstaller.Step.Install, UpdateInstaller.next(model.unsaved, canInstall = true))
     }
 
+    private suspend fun kotlinx.coroutines.test.TestScope.until(what: () -> Boolean) =
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) { while (!what()) { dispatcher.scheduler.advanceUntilIdle(); delay(5) } }
+        }
+
     @Test
-    fun `a failed download says why and lets the owner try again`() = runTest(dispatcher) {
+    fun `a failed download says why, offers the link, and lets the owner try again`() = runTest(dispatcher) {
+        UpdateInstaller.finish()
         val model = viewModel()
         model.download = { _, _ -> throw java.io.IOException("the download answered 404") }
-        var said: String? = null
-        model.installUpdate(onFailed = { said = it })
-        withContext(Dispatchers.Default) {
-            withTimeout(5_000) { while (said == null) { dispatcher.scheduler.advanceUntilIdle(); delay(5) } }
-        }
-        assertEquals("Couldn't download the update: the download answered 404.", said)
+        model.installUpdate()
+        until { model.updateProblem.value != null }
+        assertEquals(UpdateProblem("Couldn't download the update: the download answered 404.", offerLink = true),
+            model.updateProblem.value)
         assertFalse("the notice must be tappable again", model.installing.value)
+    }
+
+    @Test
+    fun `typing during the download stops the install, and the typing stays`() = runTest(dispatcher) {
+        // The tap found nothing typed; the owner then typed while the build downloaded. Handing
+        // it to Android now would replace the app under those numbers.
+        UpdateInstaller.finish()
+        val model = viewModel()
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        val downloading = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val typed = kotlinx.coroutines.CompletableDeferred<Unit>()
+        var handedOver = false
+        model.download = { _, f -> f.writeText("apk"); downloading.complete(Unit); kotlinx.coroutines.runBlocking { typed.await() } }
+        model.isNewer = { true }
+        model.handOver = { handedOver = true }
+        model.installUpdate()
+        until { downloading.isCompleted }
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        typed.complete(Unit)
+        until { model.updateProblem.value != null }
+        assertFalse("nothing may be installed over typing", handedOver)
+        assertFalse(model.updateProblem.value!!.offerLink)
+        assertTrue("the typing must still be there", model.unsaved)
+        assertFalse(model.installing.value)
+    }
+
+    @Test
+    fun `with nothing typed the build is handed to Android`() = runTest(dispatcher) {
+        UpdateInstaller.finish()
+        val model = viewModel()
+        var handedOver = false
+        model.download = { _, f -> f.writeText("apk") }
+        model.isNewer = { true }
+        model.handOver = { handedOver = true }
+        model.installUpdate()
+        until { handedOver }
+        assertTrue("still installing until Android answers", model.installing.value)
+        UpdateInstaller.finish()
+    }
+
+    @Test
+    fun `a draft left from another session does not hold back an update`() = runTest(dispatcher) {
+        val handle = SavedStateHandle()
+        val model = viewModel(handle)
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        val draft = handle.get<String>(CarryViewModel.DRAFT)!!
+        handle[CarryViewModel.DRAFT] = draft.replace(Regex("\"sheetId\":\\s*\"[^\"]*\""), "\"sheetId\": \"another-day\"")
+        assertTrue("the draft must now name another session", handle.get<String>(CarryViewModel.DRAFT)!!.contains("another-day"))
+        assertFalse(model.unsaved)
     }
 }

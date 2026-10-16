@@ -55,6 +55,8 @@ data class Draft(
     val added: List<AddedSet>,
 )
 
+data class UpdateProblem(val why: String, val offerLink: Boolean)
+
 class CarryViewModel(app: Application, private val handle: SavedStateHandle) : AndroidViewModel(app) {
 
     val folder = SessionFolder(app)
@@ -98,42 +100,70 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         checking = viewModelScope.launch { updates.checkIfDue() }
     }
 
-    /** True while typing hasn't been saved: the draft is kept from the first keystroke until a
-     *  save or a discard clears it. */
-    val unsaved: Boolean get() = handle.contains(DRAFT) || _saving.value == SaveState.Saving
+    /** True while typing for the session on screen hasn't been saved: its draft is kept from
+     *  the first keystroke until a save or a discard clears it. A draft left from another
+     *  session isn't on this form, so it doesn't count. */
+    val unsaved: Boolean get() {
+        if (_saving.value == SaveState.Saving) return true
+        val draft = savedDraft() ?: return false
+        val showing = (_state.value as? CarryState.Ready)?.session?.sheetId ?: return true
+        return draft.sheetId == showing
+    }
 
-    private val _installing = mutableStateOf(false)
-    /** True from the tap until the APK is with Android's installer, or the attempt fails. */
-    val installing: State<Boolean> = _installing
+    /** True from the tap until Android's installer has answered. Process-wide, because the
+     *  answer arrives at a receiver, not here. */
+    val installing: kotlinx.coroutines.flow.StateFlow<Boolean> = UpdateInstaller.installing
 
-    /** Downloads the newest build and hands it to the installer. [onFailed] gets a sentence for
-     *  the owner; the caller decides how to show it. */
+    /** Why the last attempt didn't install, for the screen to say once; [UpdateProblem.offerLink]
+     *  when the download link in a browser would still help. */
+    private val _updateProblem = mutableStateOf<UpdateProblem?>(null)
+    val updateProblem: State<UpdateProblem?> = _updateProblem
+    fun updateProblemShown() { _updateProblem.value = null }
+
+    // Seams for the tests: the network, the archive check and the hand-off to Android.
     internal var download: (String, java.io.File) -> Unit = { url, dest -> UpdateInstaller.download(url, dest) }
+    internal var isNewer: (java.io.File) -> Boolean =
+        { UpdateInstaller.isNewerSelf(getApplication(), it, BuildConfig.VERSION_CODE.toLong()) }
+    internal var handOver: (java.io.File) -> Unit = { UpdateInstaller.install(getApplication(), it) }
 
-    fun installUpdate(onFailed: (String) -> Unit) {
-        if (_installing.value) return
-        _installing.value = true
+    /**
+     * Downloads the newest build and hands it to Android's installer. The owner can type while
+     * it downloads, so unsaved typing is checked again on the main thread just before the
+     * hand-off, not only at the tap: an install started over it would lose it.
+     */
+    fun installUpdate() {
+        if (!UpdateInstaller.start()) return
         val app = getApplication<Application>()
         viewModelScope.launch {
-            val failure = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                val dir = java.io.File(app.cacheDir, "updates").apply { mkdirs() }
-                val apk = java.io.File(dir, "carry-debug.apk").apply { delete() }
-                try {
-                    download(DebugUpdates.DOWNLOAD, apk)
-                    if (!UpdateInstaller.isNewerSelf(app, apk, BuildConfig.VERSION_CODE.toLong())) {
-                        "The download isn't a newer Carry, so it wasn't installed."
-                    } else {
-                        UpdateInstaller.install(app, apk)
+            val problem = try {
+                val apk = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val dir = java.io.File(app.cacheDir, "updates").apply { mkdirs() }
+                    java.io.File(dir, "carry-debug.apk").apply { delete(); download(DebugUpdates.DOWNLOAD, this) }
+                }
+                when {
+                    !withContext(kotlinx.coroutines.Dispatchers.IO) { isNewer(apk) } ->
+                        UpdateProblem("The download isn't a newer Carry, so it wasn't installed.", offerLink = false)
+                    unsaved ->
+                        UpdateProblem("Save the After tab first, then tap the notice again. Updating restarts Carry.", offerLink = false)
+                    else -> {
+                        withContext(kotlinx.coroutines.Dispatchers.IO) { handOver(apk) }
                         null
                     }
-                } catch (e: java.io.IOException) {
-                    "Couldn't download the update: ${e.message ?: "no connection"}."
-                } catch (e: SecurityException) {
-                    "Android wouldn't take the update: ${e.message ?: "not allowed"}."
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                UpdateInstaller.finish()
+                throw e
+            } catch (e: java.io.IOException) {
+                UpdateProblem("Couldn't download the update: ${e.message ?: "no connection"}.", offerLink = true)
+            } catch (e: Exception) {
+                // Anything Android's installer or an archive parser throws: said, never a crash,
+                // because a crash takes unsaved typing with it.
+                UpdateProblem("Android wouldn't take the update: ${e.message ?: e.javaClass.simpleName}.", offerLink = true)
             }
-            _installing.value = false
-            failure?.let(onFailed)
+            if (problem != null) {
+                UpdateInstaller.finish()
+                _updateProblem.value = problem
+            }
         }
     }
 

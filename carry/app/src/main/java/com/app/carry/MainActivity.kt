@@ -71,6 +71,15 @@ class MainActivity : ComponentActivity() {
                     model.folder.remember(tree)
                 }
             }
+            // Said once, from state rather than a callback held across the download, which
+            // would outlive a rotated Activity.
+            model.updateProblem.value?.let { problem ->
+                androidx.compose.runtime.LaunchedEffect(problem) {
+                    say(problem.why)
+                    if (problem.offerLink) openDownload()
+                    model.updateProblemShown()
+                }
+            }
             Box(Modifier.fillMaxSize().background(Look.Slate)) {
                 CarryApp(
                     state = model.state.value,
@@ -91,7 +100,7 @@ class MainActivity : ComponentActivity() {
                         since = model.since.value,
                         onShare = ::share,
                         newerBuild = model.updates.newer.collectAsState().value,
-                        installing = model.installing.value,
+                        installing = model.installing.collectAsState().value,
                         onGetBuild = ::getBuild,
                     ),
                 )
@@ -131,7 +140,7 @@ class MainActivity : ComponentActivity() {
      */
     private fun getBuild() {
         when (UpdateInstaller.next(model.unsaved, UpdateInstaller.canInstall(this))) {
-            UpdateInstaller.Step.SaveFirst -> say("Save the After tab first. Updating restarts Carry.")
+            UpdateInstaller.Step.SaveFirst -> say("Save the After tab first, then tap the notice again. Updating restarts Carry.")
             UpdateInstaller.Step.AllowInstalls -> {
                 val settings = android.content.Intent(
                     android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
@@ -143,7 +152,7 @@ class MainActivity : ComponentActivity() {
                     openDownload()
                 }
             }
-            UpdateInstaller.Step.Install -> model.installUpdate(onFailed = { why -> say(why); openDownload() })
+            UpdateInstaller.Step.Install -> model.installUpdate()
         }
     }
 
@@ -162,8 +171,19 @@ class MainActivity : ComponentActivity() {
 
     /** The normal case is a sync dropping the day's session in while the
      *  app is backgrounded, so the folder is re-read on every resume. */
+    override fun onPause() {
+        super.onPause()
+        UpdateInstaller.inFront = false
+    }
+
     override fun onResume() {
         super.onResume()
+        UpdateInstaller.inFront = true
+        // An installer confirmation that arrived while Carry was behind another app.
+        UpdateInstaller.awaitingConfirm?.let { confirm ->
+            UpdateInstaller.awaitingConfirm = null
+            runCatching { startActivity(confirm) }.onFailure { UpdateInstaller.finish() }
+        }
         model.refresh()
         model.checkForUpdate()
         maybeAskToNotify()
