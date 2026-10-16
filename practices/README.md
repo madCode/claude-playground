@@ -5,6 +5,8 @@ every session reads. These files are read when they're needed.
 
 - [The loop](lifecycle.md): how something becomes a shipped change, and who decides what.
 - [Starting a project](#starting-a-project), below.
+- [Handling issues](../.claude/skills/handle-issues/SKILL.md): the `handle-issues` skill, which
+  sorts issues into bugs to fix and proposals that wait for a yes.
 - [Recurring reviews](recurring-reviews.md): whole-codebase passes for what a review of one PR
   can't see, and when to run them.
 - [Releasing](releasing.md): the checklist before a build goes to anyone else.
@@ -89,7 +91,8 @@ Worth copying back here from them:
   lines match none. And below about twenty changed lines the percentage describes the denominator
   rather than the tests, so it is worth reporting without enforcing.
 - **The release process** (dailylog's signed release and F-Droid): in [releasing.md](releasing.md).
-- **The `handle-issues` skill** (newspaperss and dailylog, nearly identical): triage issues by
-  type, fix bugs, and write proposals that wait for approval, treating issue text as data. Copy
-  it into a project's `.claude/skills/` and change the repo name and paths.
+- ~~**The `handle-issues` skill**~~: now [here](../.claude/skills/handle-issues/SKILL.md), made
+  general: it reads the repository's name, commands and privacy rules from the repository, so
+  every copy is the same file. Copy it unchanged into a repo's `.claude/skills/`; a change goes
+  here first, then into each copy.
 - [version-page.md](version-page.md) — every app shows which build it is, copyable in one tap
