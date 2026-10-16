@@ -200,6 +200,63 @@ class LogScreenTest {
     }
 
     @Test
+    fun `a weight over 1000 is kept as typed and the row says what is wrong`() {
+        // The importer refuses the whole day over this one box. Dropping
+        // the last key would make 2500 into 250, a wrong number; clamping
+        // makes it 1000. So the box keeps what was typed and says so, in
+        // words under the row and on the box itself for TalkBack.
+        show()
+        val field = compose.onNodeWithContentDescription("bench press weight in pounds")
+        "2500".forEach { field.performTextInput(it.toString()) }
+        assertEquals(2500.0, edits.value[0]!!.weight!!, 0.001)
+        field.assertTextEquals("2500")
+        compose.onNodeWithText("Weight 2500 is over 1000. Fix it to save.").assertIsDisplayed()
+        field.assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, "weight 2500 is over 1000"))
+        shoot("29-out-of-range")
+
+        field.performTextReplacement("250")
+        compose.onAllNodesWithText("over 1000", substring = true).assertCountEquals(0)
+        field.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Error))
+    }
+
+    @Test
+    fun `reps with a fraction are held, not stored as blank`() {
+        // The box takes one '.', so 8.5 can be typed. Stored as null it
+        // would save as "no reps" under a box reading 8.5; the importer
+        // wants a whole number, so the row is held and flagged instead.
+        show()
+        val field = compose.onNodeWithContentDescription("bench press reps")
+        "8.".forEach { field.performTextInput(it.toString()) }
+        assertEquals("mid-typing is not a mistake", SessionPatch.Entry(reps = 8), edits.value[0])
+        compose.onAllNodesWithText("whole number", substring = true).assertCountEquals(0)
+        field.performTextInput("5")
+        field.assertTextEquals("8.5")
+        assertEquals(SessionPatch.Entry(fractionalReps = 8.5), edits.value[0])
+        compose.onNodeWithText("Reps 8.5 isn't a whole number. Fix it to save.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `an added row says what is wrong with its numbers too`() {
+        show()
+        reach("+ Add something the sheet missed"); compose.onNodeWithText("+ Add something the sheet missed").performClick()
+        compose.onNodeWithContentDescription("added exercise name").performTextReplacement("pop squat")
+        compose.onNodeWithContentDescription("added exercise reps").performTextReplacement("1200")
+        assertEquals(1200, added.value.single().reps)
+        compose.onNodeWithText("Reps 1200 is over 1000. Fix it to save.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a refused save is announced, not only shown`() {
+        // The tap gives a listener no other sign that nothing was written.
+        val why = "1 row needs fixing: bench press weight 2500 is over 1000. Nothing was saved."
+        show(SaveState.Failed(why, damaged = false))
+        reach("Nothing was saved")
+        compose.onNodeWithText(why).assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, androidx.compose.ui.semantics.LiveRegionMode.Polite))
+        shoot("30-save-refused")
+    }
+
+    @Test
     fun `a row with a number and no name asks for the name in the row`() {
         // The save refuses this row, so the ask belongs in the box that
         // fixes it. Finding out at the save button is how the number got

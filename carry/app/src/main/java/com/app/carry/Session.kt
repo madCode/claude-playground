@@ -236,6 +236,9 @@ data class AddedSet(
     val easier: Boolean = false,
     val hurt: Boolean = false,
     val note: String? = null,
+    /** As [SessionPatch.Entry.fractionalReps]: reps typed as 8.5, held so
+     *  the save is refused rather than writing null under a box showing it. */
+    val fractionalReps: Double? = null,
     /**
      * The row exactly as the file held it, carried so that a key this
      * build has never heard of is handed back rather than dropped.
@@ -255,7 +258,7 @@ data class AddedSet(
     /** A row the owner added and never filled in. Nothing to save, and
      *  nothing lost by leaving it out of the file. */
     val blank: Boolean get() =
-        name.isBlank() && weight == null && reps == null &&
+        name.isBlank() && weight == null && reps == null && fractionalReps == null &&
             !easy && !hard && !easier && !hurt && note.isNullOrBlank()
 
     companion object {

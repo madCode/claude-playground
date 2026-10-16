@@ -181,6 +181,25 @@ numbers someone just entered cannot, so they get the protection:
   against, and a save compares each edited row's identity between then and
   now, refusing if they differ.
 
+### Numbers the importer would refuse
+
+The importer refuses a **whole session file** over one bad number, so one
+typo would lose every other number typed that day. The After screen checks
+the same rules as `validate` in the companion's `session_file.py`:
+
+- A weight is from 0 to 1000.
+- Reps are a whole number from 0 to 1000. The box takes one `.`, so `8.5`
+  can be typed; it is held as typed, not stored as blank.
+- An added row holding anything needs a name.
+
+A box that breaks one gets a brick border, a line under its row ("Weight
+2500 is over 1000. Fix it to save.") and the same words as its TalkBack
+error. Save is refused while any row is wrong, with one message naming
+the rows ("2 rows need fixing: …. Nothing was saved."), announced as it
+appears. Nothing is clamped or dropped: 2500 turned into 1000 or 250 is a
+wrong number, and the owner fixes the box. The patch refuses the same
+numbers again before writing, in case anything else reaches it.
+
 ## Rules worth keeping
 
 - **A blank row is blank.** Never silently "skipped". The old survey logged

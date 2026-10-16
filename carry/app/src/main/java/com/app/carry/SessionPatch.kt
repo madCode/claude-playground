@@ -55,9 +55,13 @@ object SessionPatch {
         val hurt: Boolean = false,
         val skipped: Boolean = false,
         val note: String? = null,
+        /** Reps typed with a fractional part, such as 8.5. Not a rep count
+         *  the importer accepts, and not null either: null would let a save
+         *  drop what the box shows. [LogCheck] refuses the save while it is set. */
+        val fractionalReps: Double? = null,
     ) {
         val blank: Boolean get() =
-            weight == null && reps == null && !easy && !hard && !easier &&
+            weight == null && reps == null && fractionalReps == null && !easy && !hard && !easier &&
                 !done && !hurt && !skipped && note == null
     }
 
@@ -183,6 +187,14 @@ object SessionPatch {
                 "Name the ${if (unnamed == 1) "exercise" else "$unnamed exercises"} you added, " +
                     "or clear ${if (unnamed == 1) "its" else "their"} numbers, before saving."
             )
+        }
+        // The screen refuses these first, naming the rows; this is the
+        // last line before the file, because the importer refuses the whole
+        // day over one of them.
+        val outOfRange = edits.values.count { LogCheck.row(it.weight, it.reps, it.fractionalReps).isNotEmpty() } +
+            keep.count { LogCheck.row(it.weight, it.reps, it.fractionalReps).isNotEmpty() }
+        if (outOfRange > 0) {
+            return Outcome.Refused("A number on this sheet is one the coach can't import, so nothing was changed.")
         }
 
         val current = entriesIn(original)
@@ -322,6 +334,7 @@ object SessionPatch {
                 val entry = Entry(
                     weight = (set["weight"] as? JsonPrimitive)?.content?.toDoubleOrNull(),
                     reps = (set["reps"] as? JsonPrimitive)?.content?.toIntOrNull(),
+                    fractionalReps = (set["reps"] as? JsonPrimitive).fractional(),
                     easy = (set["easy"] as? JsonPrimitive)?.content.toBoolean(),
                     hard = (set["hard"] as? JsonPrimitive)?.content.toBoolean(),
                     easier = (set["easier"] as? JsonPrimitive)?.content.toBoolean(),
@@ -444,6 +457,7 @@ object SessionPatch {
             name = (row["name"] as? JsonPrimitive)?.takeIf { it != JsonNull }?.content.orEmpty(),
             weight = (row["weight"] as? JsonPrimitive)?.content?.toDoubleOrNull(),
             reps = (row["reps"] as? JsonPrimitive)?.content?.toIntOrNull(),
+            fractionalReps = (row["reps"] as? JsonPrimitive).fractional(),
             easy = (row["easy"] as? JsonPrimitive)?.content.toBoolean(),
             hard = (row["hard"] as? JsonPrimitive)?.content.toBoolean(),
             easier = (row["easier"] as? JsonPrimitive)?.content.toBoolean(),
@@ -451,6 +465,16 @@ object SessionPatch {
             note = (row["note"] as? JsonPrimitive)?.takeIf { it != JsonNull }?.content,
             asRead = row,
         )
+    }
+
+    /** A `reps` the file holds that is a number but not a whole one, so
+     *  the box can show it and the save can refuse it. Read as an Int it
+     *  is null, which looked like a blank box over a file the importer
+     *  refuses. A whole `8.0` is not fractional: the importer takes it. */
+    private fun JsonPrimitive?.fractional(): Double? {
+        if (this == null || this == JsonNull || isString) return null
+        if (content.toIntOrNull() != null) return null
+        return content.toDoubleOrNull()?.takeIf { !it.isNaN() && it != Math.floor(it) }
     }
 
     /** Provably empty, so dropping it rather than carrying it loses

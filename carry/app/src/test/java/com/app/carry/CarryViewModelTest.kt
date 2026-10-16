@@ -461,7 +461,7 @@ class CarryViewModelTest {
         val state = model.saving.value
         assertTrue("expected a refusal, got $state", state is SaveState.Failed)
         assertFalse("a refusal is not a damaged file", (state as SaveState.Failed).damaged)
-        assertTrue(state.why, state.why.contains("Name the exercise"))
+        assertTrue(state.why, state.why.contains("an added row needs a name"))
         assertEquals("the row stays, so it can be named", 20.0, model.added.value[0].weight)
         assertTrue("and the typing is still recoverable", handle.keys().isNotEmpty())
     }
@@ -543,6 +543,57 @@ class CarryViewModelTest {
         reborn.refresh()
         advanceUntilIdle()
         assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), reborn.edits.value[0])
+    }
+
+    @Test
+    fun `a number the importer would refuse stops the save, naming every row`() = runTest(dispatcher) {
+        // The importer refuses the whole file over one weight past 1000 or
+        // one fractional rep count, so a save that let 2500 through lost
+        // every other number typed that day, and the phone said "Saved".
+        val handle = SavedStateHandle()
+        val model = viewModel(handle)
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 2500.0, reps = 8))
+        model.edit(1, SessionPatch.Entry(weight = 45.0, fractionalReps = 8.5))
+
+        var wrote = 0
+        model.write = { _, _ -> wrote++; Saved.YES }
+        model.save()
+        settled(model)
+
+        assertEquals("nothing may reach the folder", 0, wrote)
+        val state = model.saving.value as SaveState.Failed
+        assertEquals(
+            "2 rows need fixing: deadlift weight 2500 is over 1000; " +
+                "bench press reps 8.5 isn't a whole number. Nothing was saved.",
+            state.why,
+        )
+        assertEquals("not clamped, not dropped", 2500.0, model.edits.value[0]!!.weight)
+        assertTrue("the typing is still recoverable", handle.keys().isNotEmpty())
+
+        // Fixed, it goes.
+        model.edit(0, SessionPatch.Entry(weight = 250.0, reps = 8))
+        model.edit(1, SessionPatch.Entry(weight = 45.0, reps = 8))
+        val written = saved(model)
+        assertEquals(SaveState.Saved, model.saving.value)
+        assertTrue(written!!, written.contains("250"))
+    }
+
+    @Test
+    fun `a fractional rep count survives the process dying`() = runTest(dispatcher) {
+        // Held as its own field so the box and the draft agree. Restored
+        // as null, the row would come back blank and the save would go.
+        val handle = SavedStateHandle()
+        val first = viewModel(handle)
+        first.read = { ready() }
+        first.refresh(); settled(first)
+        first.edit(0, SessionPatch.Entry(fractionalReps = 8.5))
+
+        val reborn = viewModel(handle)
+        reborn.read = { ready() }
+        reborn.refresh(); settled(reborn)
+        assertEquals(SessionPatch.Entry(fractionalReps = 8.5), reborn.edits.value[0])
     }
 
     @Test
