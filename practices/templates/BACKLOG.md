@@ -19,6 +19,7 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 - [ ] Security and supply chain: before the first release
 - [ ] Architecture and test health: around cycle <N>
+- [ ] Skills and instructions: around cycle <N>
 
 ## Later
 

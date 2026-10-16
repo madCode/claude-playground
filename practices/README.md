@@ -10,7 +10,7 @@ every session reads. These files are read when they're needed.
 - [Handling issues](../.claude/skills/handle-issues/SKILL.md): the `handle-issues` skill, which
   sorts issues into bugs to fix and proposals that wait for a yes.
 - [Recurring reviews](recurring-reviews.md): whole-codebase passes for what a review of one PR
-  can't see, and when to run them.
+  can't see, including one over the skills and CLAUDE.md files, and when to run them.
 - [Android apps](android.md): what every Android app has from its first PR (its own icon, a
   build you can name, debug builds that say when there's a newer one), and when it gets releases.
 - [Releasing](releasing.md): the checklist before a build goes to anyone else.
