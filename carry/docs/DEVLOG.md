@@ -6,7 +6,8 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** each debug build numbered, in its version code and its
+- **Lately:** a newer build named on the Since tab and installed from
+  the app (#108, cycle 51); each debug build numbered, in its version code and its
   file name (cycle 49); an icon of its own, and a real one in notifications
   (cycle 48); the bump band withheld rather than quietly becoming
   yesterday's answer (#89); a day missing from the Since totals without a
@@ -31,6 +32,26 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-16 — cycles 50 and 51: a newer build, found and installed
+
+**The owner was on a build from 22:02 that predated the first-run fix, and
+nothing said so.** Two PRs, on the owner's word in #107 ("Okay to add
+Internet permission and build the upgrade path"):
+
+- **#108:** a CI debug build asks GitHub at most every three hours whether
+  a newer build is out, and the Since tab says "Build N is out" at the top.
+  This is Carry's first network use, and CLAUDE.md and DESIGN.md now say
+  it is for what the owner approves, one use at a time.
+- **This one:** a tap installs that build from inside the app. The first
+  time, Android asks to allow Carry to install apps. After that it's
+  Android's "Update this app?", or nothing at all where Android 12 lets an
+  app update itself. It never installs over typing that isn't saved, and
+  any failure falls back to the download link.
+
+Left: how the first self-update behaves on the owner's phone is a phone
+check. Whether Android skips the confirmation depends on what installed
+Carry first.
 
 ## 2026-10-16 — cycle 49: each debug build numbers itself
 

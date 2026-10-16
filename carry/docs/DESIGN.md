@@ -351,15 +351,16 @@ rows, an in-flight save — with it. Landing on a particular tab is not
 worth losing numbers for, so the intent is `SINGLE_TOP` and the folder is
 re-read on resume as it always was.
 
-**The app holds six Android permissions, and this feature brought five
+**The app holds seven Android permissions, and this feature brought five
 of them.** `aapt2 dump permissions` on the built APK is the only honest
 source for this, because a library brings its own. It also lists a
 seventh, `<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which
 androidx.core defines for the app's own receivers; it grants nothing
 outside the app.
 
-Two are ours: `POST_NOTIFICATIONS`, required on API 33+ to post anything,
-and `INTERNET`, for the update check below. The other four arrive with
+Three are ours: `POST_NOTIFICATIONS`, required on API 33+ to post
+anything, and `INTERNET` and `REQUEST_INSTALL_PACKAGES`, for the update
+below. The other four arrive with
 `androidx.work`, and the app can't opt out of them while using it:
 
 | permission | why WorkManager wants it |
@@ -423,14 +424,35 @@ routing the build number through the synced folder, so Carry declares
   among its files; a body over 256 KB is not read.
 - **The Since tab says it**, at the top, even when the folder has nothing
   countable (a folder this build can't read is when a newer build is most
-  likely the fix): "Build N is out — download it", in chalk rather than
-  amber. The tap opens the fixed download link, or copies it when nothing
-  can open it.
+  likely the fix): "Build N is out — install it", in chalk rather than
+  amber.
 - **The whole request has 30 seconds**, not only each read, so a slow
   server can't hold the check open.
 - **PR builds count too.** PR and main runs share one run counter, so an
   installed PR build is offered the next main build, which may not contain
   that PR.
+
+A tap installs it from inside the app (`UpdateInstaller`), in this order:
+
+1. **Not over unsaved typing.** Installing replaces the running app, and
+   Android doesn't restore its saved state afterwards, so the draft would
+   be lost. With a draft, or a save in progress, the tap only says "Save
+   the After tab first".
+2. **Asks once for "install unknown apps".** Android's own switch, for
+   Carry; the tap opens it, and the owner taps the notice again after.
+3. **Downloads the fixed link** into the app's cache, following GitHub's
+   redirect, with a 200 MB cap and five minutes in all. A partial file is
+   never kept.
+4. **Checks the file** is this app at a higher version code, then hands it
+   to Android's `PackageInstaller`. On Android 12 and later it asks to
+   skip the confirmation, which Android allows when an app updates itself;
+   otherwise the owner sees Android's "Update this app?". Android also
+   refuses an APK signed with another key, which every CI build shares.
+5. **Any failure says why** in a toast and opens the download link in a
+   browser instead, so the old way still works.
+
+The notice reads "Downloading build N…" and can't be tapped again until
+the file is with the installer or the attempt fails.
 
 The session files still leave only through the share sheet.
 
