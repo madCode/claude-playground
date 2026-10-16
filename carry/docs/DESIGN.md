@@ -435,8 +435,8 @@ routing the build number through the synced folder, so Carry declares
 A tap installs it from inside the app (`UpdateInstaller`), in this order:
 
 1. **Not over unsaved typing.** Installing replaces the running app, and
-   Android doesn't restore its saved state afterwards, so the draft would
-   be lost. With a draft, or a save in progress, the tap only says "Save
+   nothing promises its saved state survives that, so the draft could be
+   lost. With a draft, or a save in progress, the tap only says "Save
    the After tab first".
 2. **Asks once for "install unknown apps".** Android's own switch, for
    Carry; the tap opens it, and the owner taps the notice again after.
