@@ -296,8 +296,13 @@ object Growth {
      *   that simply ends earlier -- they are the same input -- and that
      *   difference decides whether [Since.nearBump] is an answer about
      *   now or an older day's answer wearing today's label.
+     *
+     * @param newest the text of the sheet the band is taken from, chosen by
+     *   the caller from the file NAMES, the same rule as [newestRead]. Null
+     *   leaves the choice to the dates inside the files, which can disagree
+     *   with the names on a hand-made file.
      */
-    fun of(files: List<String>, newestRead: NewestRead = NewestRead.FINE): Since {
+    fun of(files: List<String>, newestRead: NewestRead = NewestRead.FINE, newest: String? = null): Since {
         // Paired with the text it was parsed from, and with its rows, because
         // the rows the owner ADDED are not part of [Session] — a row with no
         // `name` key threw during deserialization once and cost the whole
@@ -405,9 +410,12 @@ object Growth {
         // There is nothing to compute from, so the band is WITHHELD and
         // the screen says why. A blank band is a missing answer; an older
         // day's band under the words "part way to a bump" is a wrong one.
-        val newest = read.map { it.session }
-            .takeIf { newestRead == NewestRead.FINE }?.maxByOrNull { it.date }
-        val nearBump = newest?.sets.orEmpty().mapNotNull { set ->
+        val newestSession = when {
+            newestRead != NewestRead.FINE -> null
+            newest != null -> SessionFiles.parse(newest)
+            else -> read.map { it.session }.maxByOrNull { it.date }
+        }
+        val nearBump = newestSession?.sets.orEmpty().mapNotNull { set ->
             // A row they said they did not do, the same exclusion `lifted`
             // and `liftsOf` make below. The streak behind it is real, but
             // the band is capped now, so a movement declined today would

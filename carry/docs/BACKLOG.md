@@ -293,14 +293,6 @@ These are the open paths to one, hardest first.
 
 
 
-- [ ] **`Growth.of` picks the newest session by the date INSIDE the file,
-  while the gate that decides whether to trust it reads the date from the
-  FILENAME.** They agree on everything the runner writes, so this is
-  latent: a file whose content date is blank or older than its name's
-  would take the band while the gate called the folder fine. Found by the
-  #89 review. The fix is to pick by one rule — most likely by passing the
-  newest text in rather than letting `Growth.of` choose *(audit)*
-
 - [ ] **Two classes at the newest date, the readable one with no bump
   rows and the damaged one holding the streaks: the band disappears with
   no "we cannot tell" marker.** The date-based gate says that day read
@@ -425,6 +417,10 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **`Growth.of` picked the newest session by the date inside the file,
+  while its gate read the filename.** `growthOf` now passes in the newest
+  file by name that parses, so the band and the gate pick the same day
+  *(audit)*
 - [x] **A file whose `read` came back null was invisible to `Since.short`.**
   `growthOf` now passes it on as empty text, so it's counted with the files
   that didn't read, and the Since tab says a session is missing *(audit)*
