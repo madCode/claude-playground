@@ -79,7 +79,7 @@ qualitative signal pushed the weight up and none held it. Found by reading
 the owner's own replies, where "ok hard" appears as readily as "ok, easy".
 
 *mod* is "I did the easier version" — knees, a box under the step-up. It
-exists because **a third of this owner's logged sets carry no weight**, and
+exists because **a large share of this owner's logged sets carry no weight**, and
 a third of a typical sheet is bodyweight: for all of that the coach's
 "what weight next" model has nothing to say. It is the only progression
 axis those movements have, and three clean modified sets earn "try one as

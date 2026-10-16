@@ -3,6 +3,12 @@
 The running plan. Each cycle picks what matters most next, builds it with tests, and moves it
 to Done.
 
+## Done when
+
+What has to be true for a run of cycles to stop, if it stops on an outcome rather than a date.
+
+- [ ] <Outcome>
+
 ## Next
 
 - [ ] <Item> *(where it came from: you, a device, a review)*

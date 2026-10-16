@@ -160,7 +160,7 @@ class GrowthTest {
 
     @Test
     fun `the quiet band explains itself only while the quiet needs explaining`() {
-        // 19 of 20 distinct: almost nothing repeats, the streak rule
+        // Almost all distinct: almost nothing repeats, the streak rule
         // almost never fires, and the sheets look empty for a reason worth
         // saying out loud.
         fun since(n: Int, repeats: Int) = Growth.of(

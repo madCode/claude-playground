@@ -30,6 +30,50 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 47: measuring the backlog instead of reading it
+
+**The owner asked what could be deprecated, and the answer came from the
+owner's own files rather than from judgement.** Several items are gated on
+a condition nobody had checked. One pass over every session file in the
+synced folder checked nine shapes the backlog worries about:
+
+| shape | occurrences |
+|---|---|
+| no `schema` key | 0 |
+| `prescribed_duration_sec` outside 1..3600 | 0 |
+| a short day (fewer rows than sets) | 0 |
+| an empty `sets` | 0 |
+| two classes at the newest date | 0 |
+| the date inside disagreeing with the filename | 0 |
+| an added row with no `id` | 0 |
+| a `ref` that is not an integer | 0 |
+| duplicate `ref`s | 0 |
+
+**One item dropped on its own terms.** *Showing a short day's rows on the
+Since tab* said "worth doing only if this ever happens to a real file". It
+has not, so it is closed with the measurement rather than left to be
+re-read every cycle.
+
+**One reframed.** *Read the class from the phone's own calendar* justified
+itself as freeing the coach from its own calendar config. That config
+works — the laptop's trigger read the calendar tonight and correctly
+reported no class — so the benefit is void. It is now marked BLOCKED on
+the brain moving to the phone rather than sitting in the queue looking
+actionable.
+
+**And eight items deliberately NOT dropped despite reading zero.** The
+malformed-file guards protect against a file written by something other
+than the runner, which is precisely the case that has not happened yet.
+"The bad input has not arrived" is the reason to keep a guard. Tonight's
+quoted-`ref` bug was exactly that shape and it was real, found by probing
+rather than by waiting.
+
+**For the next cycle:** a backlog item that states its own gate is worth
+more than one that states a priority, because the gate can be MEASURED and
+the priority can only be argued. Two of these had gates; both resolved in
+one command. When filing something speculative, write the condition that
+would make it real.
+
 ## 2026-10-16 — cycle 46: four things the notification got wrong
 
 **#93 was already merged, so these were live.** A read-only review found
@@ -1446,11 +1490,17 @@ honest answer and the useful one are the same one.
 I'm still on knee pushups. I should know when to push myself to do more
 full pushups. But maybe that's too much to include in the app."*
 
-Not too much — the largest uncovered area there is. **37% of your logged
-sets carry no weight at all**, and across 98 real sheets 31% of lines are
-bodyweight, median a third of any given sheet. The coach's whole model is
-"what weight next"; for a third of your training there is no weight, so it
-said "no weight needed" and nothing else, for ever.
+Not too much — the largest uncovered area there is. **A large share of
+your logged sets carry no weight at all**, and bodyweight lines are a
+substantial minority of every real sheet in the corpus. The coach's whole
+model is "what weight next"; for much of your training there is no weight,
+so it said "no weight needed" and nothing else, for ever.
+
+(The figures that were here were converted 2026-10-16. They were the
+reason this cycle happened and are not needed to understand it, and this
+repository is public — the test the privacy rule sets is whether a
+stranger learns something about the owner's training from the sentence,
+which a percentage fails. The numbers themselves live with the data.)
 
 **And it was worse than silent.** The bodyweight path already had a rule:
 three clean sets in a row earned *"full form 3x in a row, push it: faster
@@ -1592,7 +1642,7 @@ would have:
   sitting in the folder was being counted as a session and contributing
   eleven movements to the very figure that explains why the coach is quiet.
 - **It had its own idea of "the same exercise".** Hashing the whole variant
-  made 20 of 20 lifts look distinct, when the engine says 19 — because the
+  made EVERY lift look distinct, when the engine finds a repeat — because the
   engine's key deliberately leaves out intensity, grip and reps. This is
   exactly the two-implementations-drift failure I had warned about in the
   proposal one hour earlier, and then walked into. The runner writes the
