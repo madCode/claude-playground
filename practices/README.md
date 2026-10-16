@@ -5,6 +5,8 @@ every session reads. These files are read when they're needed.
 
 - [The loop](lifecycle.md): how something becomes a shipped change, and who decides what.
 - [Starting a project](#starting-a-project), below.
+- [Cycles](../.claude/skills/cycles/SKILL.md): the `cycles` skill, for unattended work on a
+  project one piece at a time, on a schedule or for a set run.
 - [Recurring reviews](recurring-reviews.md): whole-codebase passes for what a review of one PR
   can't see, and when to run them.
 - [Releasing](releasing.md): the checklist before a build goes to anyone else.
