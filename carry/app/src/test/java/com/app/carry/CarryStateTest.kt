@@ -338,11 +338,12 @@ class CarryStateTest {
             // The older NAME carries the later inner date.
             contents = mapOf("d1" to sheet("2026-10-20", "lunge"), "d2" to sheet("2026-10-14", "squat")),
         ))
-        assertEquals(listOf("squat"), since.nearBump.map { it.name })
+        assertEquals(listOf("squat", "lunge"), since.nearBump.map { it.name })
+        assertEquals("the older NAME is the one dated", listOf(null, "2026-10-20"), since.nearBump.map { it.asOf })
     }
 
     @Test
-    fun `on a two-class day the band is the sheet the Before tab shows`() {
+    fun `on a two-class day the band leads with the sheet the Before tab shows`() {
         fun sheet(cls: String, move: String) = """{"schema":"gym-session/1","sheet_id":"2026-10-14:$cls","date":"2026-10-14","sets":[
             {"ref":0,"line":"10 x $move","canonical":"$move","key":"$move","family":"legs",
              "suggested_weight":45,"streak_done":2,"streak_needed":3,"weight":45,"reps":10}
@@ -354,7 +355,10 @@ class CarryStateTest {
                 contents = mapOf(names[0] to sheet("2G", "lunge"), names[1] to sheet("3G", "squat")),
             ))
             assertEquals(SessionFiles.newest(names), names[1])
-            assertEquals("listed as $order", listOf("squat"), since.nearBump.map { it.name })
+            // Both classes' movements, the Before tab's sheet first, and
+            // neither dated: they are the same day.
+            assertEquals("listed as $order", listOf("squat", "lunge"), since.nearBump.map { it.name })
+            assertEquals(listOf(null, null), since.nearBump.map { it.asOf })
         }
     }
 

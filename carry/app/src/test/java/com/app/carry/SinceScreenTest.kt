@@ -365,6 +365,33 @@ class SinceScreenTest {
         compose.onNodeWithText("and 4 more").assertIsDisplayed()
     }
 
+    @Test
+    fun `the band reaches back past a newest sheet with nothing part way, and dates what it found`() {
+        // From the files to the screen, through the real `Growth.of`. The
+        // newest sheet holds only a plank, so the band used to vanish; now
+        // it shows the older sheets' movements, each saying how old its
+        // count is, aloud as well as on screen.
+        fun sheet(date: String, sets: String) =
+            """{"schema":"gym-session/1","sheet_id":"$date:3G","date":"$date","class":"3G","sets":[$sets]}"""
+        fun row(ref: Int, name: String, family: String, done: Int, weight: Int) =
+            """{"ref":$ref,"line":"10 x $name","canonical":"$name","key":"$name","family":"$family",
+               "suggested_weight":$weight,"streak_done":$done,"streak_needed":3}"""
+        val history = Growth.of(listOf(
+            sheet("2026-09-27", row(0, "sumo squat", "legs", 1, 50) + "," + row(1, "low row", "pull", 1, 30)),
+            sheet("2026-10-04", row(0, "single-arm row", "pull", 2, 40)),
+            sheet("2026-10-11", """{"ref":0,"line":"45 sec plank","canonical":"plank","key":"plank","family":"core"}"""),
+        ))
+        compose.setContent { SinceScreen(since.copy(nearBump = history.nearBump)) }
+        compose.onNodeWithText("Part way to a bump".uppercase()).assertIsDisplayed()
+        compose.onNodeWithText("single-arm row").assertIsDisplayed()
+        compose.onNodeWithText("Sun 4 Oct").assertIsDisplayed()
+        compose.onNodeWithText("sumo squat").assertIsDisplayed()
+        compose.onNodeWithContentDescription(
+            "single-arm row, 2 of 3 clean sets, next at 40 pounds, as of Sun 4 Oct"
+        ).assertIsDisplayed()
+        shoot("32-since-band-history")
+    }
+
     private fun shoot(name: String) {
         compose.waitForIdle()
         val shot = compose.onRoot().captureToImage().asAndroidBitmap()

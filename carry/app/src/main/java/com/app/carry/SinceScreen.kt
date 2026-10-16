@@ -156,12 +156,12 @@ fun SinceScreen(
                 //
                 // The pips are worth keeping; the word "close" was not --
                 // and nor was "each one", which read as every movement
-                // trained. This band is five exclusions deep: one sheet
-                // (so the second class of a two-class day is absent), rows
-                // not skipped, a streak the runner wrote, one strictly in
-                // progress, a suggested weight (so a bodyweight movement
-                // part way through is dropped), and then five of those.
-                // This claims nothing but what every row in it IS.
+                // trained. Each movement is its newest listing across the
+                // sheets, and that listing must be: not skipped, a streak
+                // the runner wrote, one strictly in progress, a suggested
+                // weight (so a bodyweight movement part way through is
+                // dropped); then five of those. A row from an older sheet
+                // says its date. This claims nothing but what every row IS.
                 item { Band("Part way to a bump") }
                 // Fewest sets away first, and capped so the band cannot
                 // take the screen from the ones under it. On a sheet where
@@ -279,6 +279,7 @@ private fun spoken(bump: Growth.Bump): String = listOfNotNull(
     // made that claim; it shows three things side by side. This label
     // joined them into a sentence, which is how it became one.
     "next at ${figure(bump.weight)} pounds",
+    bump.asOf?.let { "as of ${SessionFiles.formatDate(it)}" },
 ).joinToString(", ")
 
 /** The one actionable thing in the data: another clean set moves it. */
@@ -304,6 +305,14 @@ private fun BumpRow(bump: Growth.Bump) {
             bump.name, color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.NameSize,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
         )
+        // Outside the name's ellipsis, so a long name can't cut it: the
+        // date is what says this count may have moved since.
+        bump.asOf?.let {
+            Text(
+                SessionFiles.formatDate(it), color = Look.ChalkDim, fontFamily = Look.Name,
+                fontSize = Look.SmallSize, maxLines = 1,
+            )
+        }
         // Past ten, pips cannot tell the truth and are not countable at a
         // glance anyway. Clamping `needed` alone LIES: 12 of 40 draws ten
         // lit pips and no unlit ones -- the picture of a bump already

@@ -242,17 +242,67 @@ class GrowthTest {
     }
 
     @Test
-    fun `near-a-bump comes from the newest sheet and nowhere else`() {
-        // A streak is a statement about where the owner stands TODAY; an
-        // older file's is a fact about a day that has been and gone.
+    fun `the band is every movement, each from the newest sheet that lists it`() {
+        // The owner's call, 2026-10-16: "'Since' should be a history ...
+        // Anything where if I happened to do that exercise today at that
+        // level, I would achieve a bump." The newest sheet's own rows lead
+        // and carry no date; an older sheet's rows follow and say theirs.
         val since = Growth.of(
             listOf(
-                file("2026-09-13", sets = set(0, "deadlift", "legs", weight = "25", done = "2", needed = "3", suggested = "25")),
-                file("2026-10-11", sets = set(0, "row", "pull", weight = "30", done = "1", needed = "3", suggested = "30")),
+                file("2026-09-13", sets = set(0, "deadlift", "legs", done = "2", needed = "3", suggested = "25")),
+                file("2026-10-11", sets = set(0, "row", "pull", done = "1", needed = "3", suggested = "30")),
             )
         )
-        assertEquals(1, since.nearBump.size)
-        assertEquals("row", since.nearBump.single().name)
+        assertEquals(listOf("deadlift", "row"), since.nearBump.map { it.name })
+        assertEquals(listOf("2026-09-13", null), since.nearBump.map { it.asOf })
+    }
+
+    @Test
+    fun `a newest sheet with no streak rows does not blank the band`() {
+        // The bug this replaced: the band read only the newest sheet, so a
+        // day whose sheet had nothing part way showed nothing at all.
+        val since = Growth.of(
+            listOf(
+                file("2026-10-01", sets = set(0, "goblet squat", "legs", done = "1", needed = "3", suggested = "25")),
+                file("2026-10-11", sets = set(0, "plank", "core")),
+            )
+        )
+        assertEquals(listOf("goblet squat"), since.nearBump.map { it.name })
+        assertEquals("2026-10-01", since.nearBump.single().asOf)
+    }
+
+    @Test
+    fun `the newest listing of a movement decides, even when it leaves the band`() {
+        // An older count is from before the newer set. When the newer row
+        // is out of the band -- marked hard, the streak finished, or no
+        // streak written -- the older count must not stand in for it.
+        val older = file("2026-10-01", sets = listOf(
+            set(0, "squat", "legs", done = "2", needed = "3", suggested = "25"),
+            set(1, "row", "pull", done = "2", needed = "3", suggested = "30"),
+            set(2, "press", "push", done = "2", needed = "3", suggested = "20"),
+            set(3, "lunge", "legs", done = "1", needed = "3", suggested = "20"),
+        ).joinToString(","))
+        val newer = file("2026-10-11", sets = listOf(
+            set(0, "squat", "legs", done = "1", needed = "3", suggested = "25", hard = true),
+            set(1, "row", "pull", done = "3", needed = "3", suggested = "35"),
+            set(2, "press", "push"),
+            set(3, "lunge", "legs", done = "2", needed = "3", suggested = "20"),
+        ).joinToString(","))
+        val since = Growth.of(listOf(older, newer))
+        assertEquals(listOf("lunge"), since.nearBump.map { it.name })
+        assertEquals("the newer count, not the older", 2, since.nearBump.single().done)
+        assertNull(since.nearBump.single().asOf)
+    }
+
+    @Test
+    fun `an older row with no key is left out, since nothing says whether it was superseded`() {
+        val since = Growth.of(
+            listOf(
+                file("2026-10-01", sets = set(0, "row", "pull", done = "2", needed = "3", suggested = "30", key = null)),
+                file("2026-10-11", sets = set(0, "squat", "legs", done = "1", needed = "3", suggested = "25", key = null)),
+            )
+        )
+        assertEquals(listOf("squat"), since.nearBump.map { it.name })
     }
 
     @Test

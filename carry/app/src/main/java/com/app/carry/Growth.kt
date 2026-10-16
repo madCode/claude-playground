@@ -136,8 +136,19 @@ object Growth {
         val rows: List<Row> = emptyList(),
     )
 
-    /** A row the runner says is close to earning more weight. */
-    data class Bump(val name: String, val family: String?, val weight: Double, val done: Int, val needed: Int)
+    /**
+     * A row the runner says is part way to earning more weight.
+     *
+     * [asOf] is the date of the sheet it came from when that is older than
+     * the newest sheet, and null otherwise. The count is the runner's as of
+     * that sheet: a later set of the same movement that left no row with
+     * its key in the folder (a row typed by hand, a day with no sheet) is
+     * one this app cannot see, so the row says how old its count is.
+     */
+    data class Bump(
+        val name: String, val family: String?, val weight: Double, val done: Int, val needed: Int,
+        val asOf: String? = null,
+    )
 
     data class Since(
         val sessions: Int,
@@ -177,13 +188,12 @@ object Growth {
          * [days], [movements] and [repeated] because their file did not
          * read cleanly.
          *
-         * NOT [nearBump], which is taken from the newest sheet whether it
-         * read SHORT or not — dropping a short day there would not leave
-         * a gap, it would promote yesterday's sheet into the answer to
-         * "where do I stand today". The band is deliberately the one
-         * figure here that is about today rather than about the record,
-         * so the sentence on screen says "these totals" rather than
-         * "here".
+         * NOT [nearBump], which reads every sheet whether it read SHORT
+         * or not — dropping a short newest day there would not leave a
+         * gap, it would hand its movements to an older sheet's counts.
+         * The band is about where each movement stands now rather than
+         * about the record, so the sentence on screen says "these
+         * totals" rather than "here".
          *
          * A newest sheet that will not parse at all is a third case and
          * [newestRead] carries it: there is nothing to take a streak
@@ -297,12 +307,12 @@ object Growth {
      *   difference decides whether [Since.nearBump] is an answer about
      *   now or an older day's answer wearing today's label.
      *
-     * @param newest the text of the sheet the band is taken from, chosen by
-     *   the caller from the file NAMES, the same rule as [newestRead]. Null
-     *   leaves the choice to the dates inside the files, which can disagree
-     *   with the names on a hand-made file.
+     * @param byName the texts the band reads, newest first by file NAME,
+     *   the same rule as [newestRead] and the Before tab. Null orders them
+     *   by the dates inside the files, which can disagree with the names on
+     *   a hand-made file.
      */
-    fun of(files: List<String>, newestRead: NewestRead = NewestRead.FINE, newest: String? = null): Since {
+    fun of(files: List<String>, newestRead: NewestRead = NewestRead.FINE, byName: List<String>? = null): Since {
         // Paired with the text it was parsed from, and with its rows, because
         // the rows the owner ADDED are not part of [Session] — a row with no
         // `name` key threw during deserialization once and cost the whole
@@ -388,51 +398,38 @@ object Growth {
             }
             .sortedByDescending { it.best.weight }
 
-        // Only from the newest sheet: a streak is a statement about where
-        // the owner stands TODAY, and an older file's is a fact about a
-        // day that has already been and gone.
+        // Every movement across the sheets, each from the NEWEST sheet that
+        // lists it. The owner's call, 2026-10-16: "'Since' should be a
+        // history ... Anything where if I happened to do that exercise
+        // today at that level, I would achieve a bump." Reading only the
+        // newest sheet blanked the band on any day whose sheet had no
+        // streak rows. "The same movement" is the runner's `key`; a row
+        // without one is only taken from the newest sheet, because nothing
+        // could tell whether a later sheet listed it.
         //
-        // From the UNFILTERED read, unlike everything above. Dropping a
-        // short day here would not leave a gap, it would silently promote
-        // yesterday's sheet into the answer to "where do I stand today" --
-        // the exact substitution these three lines exist to prevent. The
-        // rows that did decode carry the runner's own counts, so a short
-        // newest sheet gives a shorter band rather than a wrong one.
+        // The newest listing decides, and a row it excludes (skipped, hard,
+        // lighter, no streak) does NOT fall back to an older sheet: that
+        // older count is from before the set that superseded it.
         //
-        // A newest sheet that will not parse AT ALL is not in `read`, so
-        // the same substitution happens by the back door -- and silently,
-        // because an older day's streak is a perfectly well-formed number.
-        // There is nothing to compute from, so the band is WITHHELD and
-        // the screen says why. A blank band is a missing answer; an older
-        // day's band under the words "part way to a bump" is a wrong one.
-        val newestSession = when {
-            newestRead != NewestRead.FINE -> null
-            newest != null -> SessionFiles.parse(newest)
-            else -> read.map { it.session }.maxByOrNull { it.date }
+        // From the UNFILTERED read, unlike the totals. A short newest
+        // sheet's rows that did decode carry the runner's own counts.
+        //
+        // A newest date where nothing parsed withholds the band and the
+        // screen says why: that sheet is the likeliest to supersede the
+        // older counts, and there is no telling which.
+        val sheets = when {
+            newestRead != NewestRead.FINE -> emptyList()
+            byName != null -> byName.mapNotNull(SessionFiles::parse)
+            else -> read.map { it.session }.sortedByDescending { it.date }
         }
-        val nearBump = newestSession?.sets.orEmpty().mapNotNull { set ->
-            // A row they said they did not do, the same exclusion `lifted`
-            // and `liftsOf` make below. The streak behind it is real, but
-            // the band is capped now, so a movement declined today would
-            // take a slot from one they actually worked on.
-            if (set.skipped) return@mapNotNull null
-            val needed = set.streakNeeded ?: return@mapNotNull null
-            val done = set.streakDone ?: 0
-            val weight = set.suggestedWeight ?: return@mapNotNull null
-            // The count was written before the class and the owner has
-            // since filled the row in, so these two say the streak is
-            // about to break: the runner's own rules are that `hard`
-            // blocks the next bump, and a lighter set is not a set at
-            // this weight. Either way "part way to a bump" is no longer
-            // true of the row, and the band is capped, so it would be
-            // taking a slot from one that is.
-            //
-            // Logged AT the weight is left alone. That count is stale by
-            // one and understates, which is the safe direction -- and
-            // re-deriving it here is the one thing this file must not do.
-            if (set.hard || (set.weight != null && set.weight < weight)) return@mapNotNull null
-            if (done <= 0 || done >= needed) null
-            else Bump(set.displayName, set.family, weight, done, needed)
+        val newestDate = sheets.firstOrNull()?.date
+        val seen = HashSet<String>()
+        val nearBump = sheets.flatMapIndexed { i, session ->
+            session.sets.mapNotNull { set ->
+                val key = set.key ?: if (i == 0) "\u0000ref:${set.ref}" else return@mapNotNull null
+                if (!seen.add(key)) return@mapNotNull null
+                bumpOf(set, asOf = session.date.takeIf { it != newestDate })
+            }
             // How many sets away, not how far along. The row's own line is
             // "another clean set moves it", and under a fraction a row at
             // 8 of 10 (two sets away) outranks one at 2 of 3 (one set
@@ -440,10 +437,9 @@ object Growth {
             // set would bump could be the one cut. Not reachable while
             // every `needed` is 3; the runner's rule is free to differ.
             //
-            // Ties keep the sheet's own order: `sortedWith` is stable, and
-            // the input is the sheet's rows in file order. Most sheets are
-            // one rung all the way down, so this is usually not a ranking
-            // at all -- see the cap's own note.
+            // Ties keep the sheets' order, newest first and each in its
+            // board order: `sortedWith` is stable. Most rows are one rung,
+            // so this is usually not a ranking at all -- see the cap's note.
         }.sortedWith(compareBy({ it.needed - it.done }, { -(it.done.toDouble() / it.needed) }))
 
         // Over what was actually LIFTED, not over every row on every sheet.
@@ -497,6 +493,28 @@ object Growth {
         )
     }
 
+
+    /** One sheet row as a band row, or null when it is not part way. */
+    private fun bumpOf(set: ExerciseSet, asOf: String?): Bump? {
+        // A row they said they did not do, the same exclusion `lifted` and
+        // `liftsOf` make below: the band is capped, so a movement declined
+        // would take a slot from one they actually worked on.
+        if (set.skipped) return null
+        val needed = set.streakNeeded ?: return null
+        val done = set.streakDone ?: 0
+        val weight = set.suggestedWeight ?: return null
+        // The count was written before the class and the owner has since
+        // filled the row in, so these two say the streak is about to
+        // break: the runner's own rules are that `hard` blocks the next
+        // bump, and a lighter set is not a set at this weight.
+        //
+        // Logged AT the weight is left alone. That count is stale by one
+        // and understates, which is the safe direction -- and re-deriving
+        // it here is the one thing this file must not do.
+        if (set.hard || (set.weight != null && set.weight < weight)) return null
+        if (done <= 0 || done >= needed) return null
+        return Bump(set.displayName, set.family, weight, done, needed, asOf)
+    }
 
     /**
      * One session's weighted sets, from the ROWS rather than from
