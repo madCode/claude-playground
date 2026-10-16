@@ -358,6 +358,26 @@ class GrowthTest {
             ),
         )
         assertEquals(listOf(Growth.OLDER_SHEET), since.nearBump.map { it.asOf })
+
+        // Both dates blank: still not the newest sheet, so still dated.
+        val blank = Growth.of(
+            emptyList(),
+            byName = listOf(
+                "2026-10-11" to file("", sets = set(0, "plank", "core")),
+                "2026-10-04" to file("", sets = set(0, "row", "pull", done = "2", needed = "3", suggested = "30")),
+            ),
+        )
+        assertEquals(listOf(Growth.OLDER_SHEET), blank.nearBump.map { it.asOf })
+
+        // An older file carrying the newest sheet's date inside it.
+        val copied = Growth.of(
+            emptyList(),
+            byName = listOf(
+                "2026-10-11" to file("2026-10-11", sets = set(0, "plank", "core")),
+                "2026-10-04" to file("2026-10-11", sets = set(0, "row", "pull", done = "2", needed = "3", suggested = "30")),
+            ),
+        )
+        assertEquals(listOf(Growth.OLDER_SHEET), copied.nearBump.map { it.asOf })
     }
 
     @Test

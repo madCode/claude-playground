@@ -432,8 +432,8 @@ object Growth {
             byName != null -> byName.map { (day, text) -> Triple(day, SessionFiles.parse(text), text) }
             else -> read.sortedByDescending { it.session.date }.map { Triple(it.session.date, it.session, it.text) }
         }
-        val newest = ordered.firstNotNullOfOrNull { it.second }
-        val newestDate = newest?.date
+        val newestEntry = ordered.firstOrNull { it.second != null }
+        val newest = newestEntry?.second
         val seen = HashSet<String>()
         val found = mutableListOf<Bump>()
         // A sheet that won't read may list any movement with a newer count,
@@ -458,7 +458,8 @@ object Growth {
                 val held = here[key]
                 if (held == null || (held.skipped && !set.skipped)) here[key] = set
             }
-            here.values.mapNotNullTo(found) { bumpOf(it, asOf(session.date, newestDate)) }
+            val age = if (session === newest) null else asOf(day, session.date, newestEntry?.first, newest?.date)
+            here.values.mapNotNullTo(found) { bumpOf(it, age) }
             seen += here.keys
             // A row that didn't decode still lists its movement on this
             // sheet, so an older count for it is superseded all the same.
@@ -530,16 +531,21 @@ object Growth {
 
 
     /**
-     * What a row from an older sheet says about its age: that sheet's date,
-     * or [OLDER_SHEET] when the date won't read or isn't before the newest
-     * sheet's (a hand-made file can carry any date). Null on the newest
-     * sheet's own day, which a two-class day shares.
+     * What a row from a sheet other than the newest says about its age:
+     * null on the newest sheet's own day (the other class of a two-class
+     * day), that sheet's date, or [OLDER_SHEET] when the date won't read
+     * or isn't before the newest sheet's -- a hand-made file can carry any
+     * date. "The same day" needs the file-name day AND the inner date to
+     * agree, so a sheet copied with a newer date inside isn't taken for
+     * today's.
      */
-    private fun asOf(date: String, newest: String?): String? = when {
-        date == newest -> null
-        newest != null && date < newest &&
-            runCatching { java.time.LocalDate.parse(date) }.isSuccess -> date
-        else -> OLDER_SHEET
+    private fun asOf(day: String?, date: String, newestDay: String?, newestDate: String?): String? {
+        val reads = runCatching { java.time.LocalDate.parse(date) }.isSuccess
+        return when {
+            reads && day == newestDay && date == newestDate -> null
+            reads && newestDate != null && date < newestDate -> date
+            else -> OLDER_SHEET
+        }
     }
 
     /** Every `key` on the sheet's rows, decoded or not. */
