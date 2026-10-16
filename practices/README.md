@@ -9,11 +9,16 @@ every session reads. These files are read when they're needed.
   project one piece at a time, on a schedule or for a set run.
 - [Recurring reviews](recurring-reviews.md): whole-codebase passes for what a review of one PR
   can't see, and when to run them.
+- [Android apps](android.md): what every Android app has from its first PR (its own icon, a
+  build you can name, debug builds that say when there's a newer one), and when it gets releases.
 - [Releasing](releasing.md): the checklist before a build goes to anyone else.
 - [templates/](templates/): starting points for a project's CLAUDE.md and docs.
 - [Instruction files](#instruction-files) and [other repos](#other-repos), below.
 
 ## Starting a project
+
+The [`new-project` skill](../.claude/skills/new-project/SKILL.md) works out the design with
+madCode, carries out this list, then hands the project to cycles.
 
 1. A folder named for the project, with `CLAUDE.md`, `README.md` and `docs/` copied from
    [templates/](templates/). Fill in what the project is and its one rule worth keeping
@@ -27,9 +32,10 @@ every session reads. These files are read when they're needed.
    - actions pinned to a commit SHA, with Dependabot bumping them (and Gradle) after a
      7-day cooldown, which lets most poisoned releases be caught first;
    - Gradle wrapper validation.
-4. From the first cycle: tests that run the app the way a person would, a `ScreenshotTest`
+4. For an Android app, everything in [android.md](android.md).
+5. From the first cycle: tests that run the app the way a person would, a `ScreenshotTest`
    for each screen, and a coverage floor in CI.
-5. A Room database starts with exported schemas, so the first schema change can have a
+6. A Room database starts with exported schemas, so the first schema change can have a
    migration and a test.
 
 ## Instruction files
