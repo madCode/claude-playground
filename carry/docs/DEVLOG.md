@@ -30,6 +30,47 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 45: a quoted id is the same id
+
+**The cycle's first job was checking whether the item was real, and the
+second was checking whether a different one was already done.** Both
+checks changed what got built.
+
+The approved list in the cron prompt opens with "the owner's principle
+*make sure I know when I can push myself* into `docs/DESIGN.md`". It is
+already there, at line 17 of *What it is for*, in their words. Cycle 31
+recorded that months of cycles ago; my own grep for "push myself" missed
+it because the section says "knows when they can push themselves". So:
+read the target, and grep for the idea rather than the phrasing.
+
+**What got built instead was the first real item in *Wrong numbers*, and
+it holds.** `ExerciseSet.ref` is an `Int` and the decode accepts `"3"` for
+it. So a `sets` array holding both `"ref": 3` and `"ref": "3"` puts TWO
+rows on screen, both keyed 3 — while `refOf` skipped quoted values, so the
+duplicate-id guard saw one ref and had nothing to refuse.
+
+Probed before changing anything, and the result is the failure this whole
+save path exists to prevent: a 20 lb weight typed against `goblet squat`
+was written onto `low row`, outcome **`Patched`**, with `unreadableRows`
+reporting **0**. A wrong number in the owner's history, no refusal, no
+warning, nothing anywhere to notice it.
+
+`refOf` now reads `ref` the way the decoder reads it. All five callers
+want that same reading — the duplicate guard, the placeable-refs check,
+the write, and the two that seed the screen from the file — so this is one
+ref read one way rather than a guard bolted on the front. It also fixed
+the opposite error: a lone quoted ref used to make its row *unplaceable*,
+refusing the entire save because of a row that was visibly on screen.
+
+**For the next cycle:** the probe was worth more than the fix. Writing a
+throwaway test that printed what actually happened took three minutes and
+replaced a chain of plausible reasoning — `coerceInputValues` is on but
+`isLenient` is not, and the config's own comment says it does not rescue a
+wrong type, so I had talked myself into expecting the decode to throw and
+the item to be stale. It did not throw. **When a backlog item says a file
+shape does something, build the file shape and print what happens** before
+reasoning from the config.
+
 ## 2026-10-16 — cycle 44: the app notices a sheet arriving
 
 **Built to a design that had been sitting unbuilt since the folder picker
