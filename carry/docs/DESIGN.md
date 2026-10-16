@@ -343,9 +343,18 @@ had nothing part way, a plank-only day for instance.
 - **The newest listing decides.** If it is out of the band (skipped,
   *hard*, lighter, a streak finished or none written), the movement is
   out. An older sheet's count never stands in for it, because that count
-  is from before the newer set.
+  is from before the newer set. A row on the newer sheet that didn't
+  decode still counts as a listing, by the `key` in its raw JSON. On one
+  sheet listing a movement twice, a skipped copy doesn't hide the other.
+- **A sheet that won't read stops the band.** It may list any movement
+  with a newer count, so rows from older days are left out and the band
+  says "A sheet didn't read, so nothing older than it is shown here." The
+  other class on that sheet's own day still counts, since both were
+  written from the same history.
 - **A row from an older sheet shows that sheet's date**, beside the pips
-  and in its spoken label ("as of Sun 4 Oct"). The runner counted it from
+  under its name and in its spoken label ("as of Sun 4 Oct"), or "as of an
+  older sheet" when that date won't read or isn't before the newest
+  sheet's. The runner counted it from
   the history it had when it wrote that sheet. A later set that left no
   row with that key in the folder, such as a row typed by hand or a day
   with no sheet, is one Carry cannot see. So the row says how old its
@@ -777,9 +786,8 @@ the band is **withheld** and says so, rather than quietly becoming the
 previous session's. That needs the filenames, which `Growth` never sees:
 it cannot tell a newest sheet that failed from a folder that ends earlier
 — they are the same input — so the question is answered one layer up and
-passed in. An older file failing costs the band nothing; the line
-above the totals says a session is missing, and the date on each older
-row says how old its count is.
+passed in. An older file failing cuts the band at that file's day
+rather than withholding it, and says so under the rows.
 
 The question asked there is about the newest **date**, not the newest
 file: two classes on one day are two files, and if either read there is a

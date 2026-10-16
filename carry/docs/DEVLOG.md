@@ -40,6 +40,8 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 - A row from an older sheet shows that sheet's date, on screen and
   aloud, because a later set Carry can't see could have moved it. No
   cutoff yet; that is a question in the backlog.
+- A sheet that won't read stops the band at its day, and the band says
+  so, since that sheet may hold newer counts.
 
 ## 2026-10-16 — cycle 58: the After screen checks what the importer refuses
 

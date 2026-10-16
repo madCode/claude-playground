@@ -445,11 +445,10 @@ means the After tab, which is a form built for afterwards. Unsketched.
   It now covers every movement across the sheets, each from the newest
   sheet that lists it, and a row from an older sheet shows that sheet's
   date. This also settles **two classes at the newest date with the
-  streaks in the damaged one**: the band no longer disappears, since
-  the older sheets' rows show, dated, under the line saying a session is
-  missing. A movement the damaged file listed can still show its older
-  count; the date is what says so *(you asked: "'Since' should be a
-  history")*
+  streaks in the damaged one**: the band now says "A sheet didn't read,
+  so nothing older than it is shown here" instead of going blank without
+  a word, and still shows the readable class's rows *(you asked:
+  "'Since' should be a history")*
 - [x] **The bars on *Heaviest by what it trains* are gone; the number
   stays.** They encoded every weight in the family with no scale and no
   time direction, and their count varied with how many sets the family had,
