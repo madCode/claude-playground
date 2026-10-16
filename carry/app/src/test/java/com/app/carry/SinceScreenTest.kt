@@ -379,7 +379,8 @@ class SinceScreenTest {
         var asked = 0
         compose.setContent { SinceScreen(since, newerBuild = 131, onGetBuild = { asked++ }) }
         compose.onNodeWithText("Build 131 is out", substring = true).assertIsDisplayed()
-            .performClick()
+        shoot("27-since-newer-build")
+        compose.onNodeWithText("Build 131 is out", substring = true).performClick()
         assertEquals(1, asked)
     }
 
