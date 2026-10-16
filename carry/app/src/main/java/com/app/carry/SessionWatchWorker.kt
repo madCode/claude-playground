@@ -16,8 +16,11 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
-import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
 /**
@@ -35,38 +38,48 @@ class SessionWatchWorker(
 ) : CoroutineWorker(context, params) {
 
     /**
-     * A CoroutineWorker with a timeout, not a plain Worker, for the reason
+     * A CoroutineWorker with a timeout, for the reason
      * `CarryViewModel.refresh` already gives about the identical call: a
      * document provider can block for ever, `openInputStream` has no
      * timeout and `runCatching` never fires. On the UI thread that strands
-     * the owner on "Reading"; here it would hold one of WorkManager's few
-     * executor threads and a WAKE_LOCK until the 10-minute cap, every hour,
-     * on the phone this feature was meant to be gentle with.
+     * the owner on "Reading"; here it would hold a WorkManager executor
+     * thread and a WAKE_LOCK until the 10-minute cap, every hour, on the
+     * phone this feature was meant to be gentle with.
      *
-     * The timeout cannot interrupt a stuck binder call -- nothing can --
-     * but it frees the worker to finish instead of waiting on it.
+     * The blocking work runs in its own `async` on Dispatchers.IO and is
+     * AWAITED under the timeout. That await is the suspension point, and
+     * without it the timeout does nothing at all: the first version
+     * wrapped the blocking call directly, and `withTimeoutOrNull` can only
+     * cancel at a suspension point, so it would have sat there for the
+     * full ten minutes while a comment two lines up claimed otherwise.
+     *
+     * Nothing can interrupt a stuck binder call, so the IO thread is still
+     * lost when a provider wedges. What this buys is the worker finishing
+     * instead of waiting on it.
      */
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result = coroutineScope {
         // Never Result.retry(): there is nothing here worth retrying. The
         // next period comes round soon enough, and a retry storm against a
         // provider that is simply unavailable costs battery for nothing.
-        withTimeoutOrNull(CarryViewModel.STALL_AFTER_MS) {
+        val work = async(Dispatchers.IO) {
             runCatching {
                 SessionWatcher.watchOnce(
                     folder = SessionFolder(context),
                     seen = PrefsSeen(context),
-                    today = LocalDate.now(),
+                    now = LocalDateTime.now(),
                     post = { found -> notify(context, found) },
                 )
             }
         }
-        return Result.success()
+        if (withTimeoutOrNull(CarryViewModel.STALL_AFTER_MS) { work.await() } == null) {
+            work.cancel()
+        }
+        Result.success()
     }
 
     companion object {
         private const val WORK = "session-watch"
         private const val CHANNEL = "sheets"
-        private const val ID = 1
 
         /**
          * One hour, not the fifteen-minute floor. The session file lands
@@ -166,7 +179,13 @@ class SessionWatchWorker(
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED
             ) return
-            runCatching { NotificationManagerCompat.from(context).notify(ID, note) }
+            // An id per (date, class), not one shared id. A borrowed day
+            // brings 2G and 3G an hour apart, and with a constant id the
+            // second post REPLACED the first -- whose file was already
+            // recorded, so it never came back. The owner would be told
+            // about one of the two sheets they are walking in with.
+            val id = found.joinToString("|") { it.name }.hashCode()
+            runCatching { NotificationManagerCompat.from(context).notify(id, note) }
         }
     }
 }

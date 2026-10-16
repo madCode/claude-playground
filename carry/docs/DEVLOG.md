@@ -30,6 +30,48 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 46: four things the notification got wrong
+
+**#93 was already merged, so these were live.** A read-only review found
+four; all four verified before fixing; three were mine rather than
+pre-existing.
+
+**Tomorrow's sheet was announced just after midnight, with sound.** The
+runner writes it the evening before, and cycle 44's own future-date fix
+made it eligible the instant that date arrived — 00:00. Worse than the
+hour: a notice dismissed, swiped or buried by morning is never posted
+again, and this is now the only path that tells the owner their sheet
+arrived. So the fix for one bug created the next one a layer down, which
+is a shape this devlog keeps recording. Nothing is announced before
+06:00, and a sheet found earlier is deliberately NOT recorded, so the
+morning run says it.
+
+**One notification id for everything.** A borrowed day brings a 2G and a
+3G file an hour apart, and `notify(1, …)` meant the second REPLACED the
+first — whose file was already recorded, so it never came back. The owner
+would have been told about one of the two sheets they were walking in
+with. The id is per set of files announced now.
+
+**The timeout did nothing, and the comment above it said otherwise.**
+`withTimeoutOrNull` can only cancel at a suspension point, and
+`watchOnce` never suspends, so the worker would have sat for the full
+ten-minute cap holding a thread and a WAKE_LOCK — the exact cost the
+comment claimed to be avoiding. The blocking work runs in
+`async(Dispatchers.IO)` and is awaited under the timeout; the await is
+the suspension point.
+
+**A test that could not fail.** The pruning test built 40 names from
+`1 + it % 9`, which collapse to nine distinct strings, then asserted
+`kept.size < old.size` — 10 < 40, true with the pruning deleted.
+
+**For the next cycle, and this one is procedural rather than clever:**
+I lost an uncommitted fix to `git checkout --` for the THIRD time
+tonight, having already written the lesson twice. "Remember to commit
+first" plainly does not work as a rule. The version that does is
+checkable: **`git status --porcelain` must be EMPTY before breaking
+anything.** If it is not, commit or stash — then break, then restore.
+A restore cannot eat work that is already in a commit.
+
 ## 2026-10-16 — cycle 45: a quoted id is the same id
 
 **The cycle's first job was checking whether the item was real, and the
