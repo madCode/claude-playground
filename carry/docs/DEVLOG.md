@@ -86,6 +86,27 @@ mechanism would have been a second way to choose a session. And lint was
 right to reject a permission check hidden behind a helper — the grant can
 be revoked between the check and the post, so the test is repeated inline.
 
+**Then the review found that none of it worked for the case it was built
+for.** The pass recorded every name it saw, regardless of date, while the
+decision filtered already-seen names BEFORE testing the date. So a sheet
+written the evening before — the runner's normal behaviour, and the exact
+case the design opens with — was marked seen on sight, and when its day
+arrived it could never be announced. The owner would have been told about
+nothing at all. Only names dated today or earlier are recorded now. The
+cloud session reading `gym.py` found the same hole from the other end
+within minutes, which is some comfort about it being real.
+
+Three more, all fixed: a chosen folder that momentarily could not be
+listed wiped the record and re-announced today's sheet on every blip
+(`list()` answers empty for a thrown query, a restarting provider, an
+unmounted volume and a genuinely empty folder, and none of those can be
+told apart — so the record unions and prunes rather than replacing). The
+notification's `CLEAR_TOP` intent would have finished and rebuilt the
+activity, taking the ViewModel and any typed-but-unsaved weights with it,
+which for this app is the cardinal failure. And `markAsked` ran before
+`launch`, inside a `runCatching` that exists because the launch can throw
+— so a throw spent the only permission ask the app ever makes, silently.
+
 **For the next cycle:** two of my four falsification attempts on
 `NewSession` proved nothing, and both failures looked like successes.
 Dropping a null-guard was a COMPILE error, so no test ran at all; removing
