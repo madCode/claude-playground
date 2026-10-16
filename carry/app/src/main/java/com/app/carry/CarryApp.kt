@@ -154,6 +154,9 @@ fun growthOf(folder: Folder): Growth.Since {
     val atNewest = sheets.filter { SessionFiles.dateIn(it.name) == newestDate }
     return Growth.of(
         texts,
+        // The band's sheet, by the same rule as the gate below: the newest
+        // NAME that parses, so the two can't pick different days.
+        newest = atNewest.firstOrNull { SessionFiles.parse(it.text.orEmpty()) != null }?.text,
         newestRead = when {
             // `any`, so a readable first file stops the rest being
             // parsed again for an answer already known.

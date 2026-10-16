@@ -325,6 +325,23 @@ class CarryStateTest {
     }
 
     @Test
+    fun `the band comes from the newest file by name, even when its inner date disagrees`() {
+        // The gate reads names; the band used to pick by the date inside the
+        // file, so a hand-made file could take the band while the gate
+        // vouched for another day.
+        fun sheet(date: String, move: String) = """{"schema":"gym-session/1","sheet_id":"$date","date":"$date","sets":[
+            {"ref":0,"line":"10 x $move","canonical":"$move","key":"$move","family":"legs",
+             "suggested_weight":45,"streak_done":2,"streak_needed":3,"weight":45,"reps":10}
+        ]}"""
+        val since = growthOf(FakeFolder(
+            files = listOf("d1" to "session-2026-10-01-2G.json", "d2" to "session-2026-10-14-3G.json"),
+            // The older NAME carries the later inner date.
+            contents = mapOf("d1" to sheet("2026-10-20", "lunge"), "d2" to sheet("2026-10-14", "squat")),
+        ))
+        assertEquals(listOf("squat"), since.nearBump.map { it.name })
+    }
+
+    @Test
     fun `the folder decides whether the newest sheet read, not Growth`() {
         // The wiring, which no test of `Growth.of` can cover: it sees text
         // and nothing else, so it cannot tell a newest sheet that failed
