@@ -147,7 +147,9 @@ anything still true in it has become a rule.
 
 ## Stopping
 
-When the stop rule is met: a closing DEVLOG.md entry (what the run did, what waits on madCode,
+When the stop rule is met, first check the machine against the run's baseline as well as this
+cycle's start: small leftovers that each cycle let pass add up over a run. Then a closing
+DEVLOG.md entry (what the run did, what waits on madCode,
 where a next run should start), then turn the scheduled task off with `update_trigger`
 (`enabled: false`; a session the task started can't delete it), and say so.
 
@@ -156,7 +158,8 @@ where a next run should start), then turn the scheduled task off with `update_tr
 Every cycle, before it ends. In a cloud container this is the background-work rule above. On
 madCode's own computer, also: nothing you started still running (`ps`), no temporary files or
 checkouts left behind, and free disk and load what they were when the cycle began; note both at
-the start so there is something to compare with. Anything you can't put back is the first line
+the start so there is something to compare with. The first cycle of a run also writes them in
+its cycle log entry, as the run's baseline. Anything you can't put back is the first line
 of the summary.
 
 **Emulators above all.** A cycle that starts an emulator shuts it down before it ends
