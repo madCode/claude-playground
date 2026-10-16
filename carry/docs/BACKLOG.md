@@ -18,8 +18,30 @@ should start at the first line of *Wrong numbers*.
 
 ### Your call — nothing moves until you decide
 
-Four decisions. Each is a question about what you want the app to claim,
+Five decisions. Each is a question about what you want the app to claim,
 not a thing anyone is blocked from building.
+- [ ] **Which marks say "I did this movement"?** You answered the narrow
+  version on 2026-10-16 — `done` qualifies a movement for the post — and
+  that shipped. But `done` is only offered on a TIMED row, because a timed
+  hold is the case where the number boxes are empty by definition. So a
+  wholly BODYWEIGHT class still has no post: air squats, push-ups and jump
+  lunges have no duration, so they get no `done` chip, and nothing else on
+  the row says the movement happened.
+
+  The marks that would fix it are `easy`, `hard` and `easier`. Each does
+  imply a set happened — you cannot call a set easy without doing it — so
+  the argument for counting them is decent. The argument against is that
+  they are judgements about a set rather than a record of one, and `hurt`
+  is the proof the distinction matters: tapping it while deciding is not
+  evidence you did the movement, which is why it stays out.
+
+  Two ways to go: count `easy`/`hard`/`easier` as evidence too, or draw the
+  `done` chip on every row rather than only timed ones. The second is the
+  smaller claim and probably the better one — it adds a way to say "I did
+  it" instead of reinterpreting marks that mean something else — but it
+  puts a chip on rows where the number boxes are the normal answer, which
+  is the reason it was timed-only to begin with *(you asked for the narrow
+  version; this is what it left out)*
 - [ ] **Aggregate facts about the owner's training are in this public repo,
   predating tonight.** `CLAUDE.md`'s Privacy section rules them out — "the
   test is whether a stranger learns something about the owner's training

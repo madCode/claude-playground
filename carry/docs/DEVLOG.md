@@ -30,6 +30,48 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 43: a timed class can be posted, and only a timed one
+
+**The owner answered a question the code had been holding open in a
+comment**: *"whether a weightless row is worth posting is the owner's call
+and has not been asked"*. They said yes — let `done` qualify a movement
+for the post. A timed block used to offer no post at all, because every
+row was empty by definition, so `did` came back empty and `compose`
+returned null. A whole class the subreddit never heard about.
+
+**The first version of the change was too broad in two ways, and the
+fresh-eyes review caught both.** It read `entry.done` without asking what
+kind of row it sat on.
+
+The `done` chip is drawn only for a timed row, so that is the only shape
+the owner can set it on — but `done` is also seeded from the raw file. A
+runner re-run that drops `prescribed_duration_sec` leaves the flag on a
+row whose chip has vanished: invisible in the form, while a single Save
+tap is the whole condition for offering a post. And not a bare bullet
+either — `prescription` falls back to the rep text, so it would publish
+**"10 x plank"**, a prescription nobody answered in that sitting. The gate
+now asks for `entry.done && set.timed`.
+
+The second was my own claim. The commit said "a bodyweight or timed class
+can be posted", and a wholly bodyweight class still cannot: an untimed row
+has no `done` chip at all. **The test I wrote to prove the bodyweight case
+built its session from two timed planks**, so it proved the timed case and
+was named for the other one. Renamed, and what the owner's answer did not
+cover is now a backlog decision for them rather than an implied promise.
+
+Two findings were verified and left, both failing safe: `!skipped` cannot
+fire for an added row, and the editor's byte caps now also decide whether a
+very large added row reaches the aggregates.
+
+**For the next cycle:** commit the fix BEFORE falsifying it. Cycle 42's
+lesson was "falsify with git, not file copies", and I followed it and still
+lost the fix — `git checkout -- <file>` restores the COMMITTED state, so
+with the fix uncommitted it restored the broken version and left the test
+behind. The red that followed looked like a logic error and I spent three
+tool calls reading the code before checking the file. The rule that
+actually holds: commit, then break, then `git checkout --`. A restore is an
+edit, so "verify by reading the file back" applies to it too.
+
 ## 2026-10-16 — cycle 42: the review found what the change could not see
 
 **#91 merged, with three fixes the fresh-eyes review found and the
