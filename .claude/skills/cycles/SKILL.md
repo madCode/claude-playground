@@ -159,6 +159,13 @@ checkouts left behind, and free disk and load what they were when the cycle bega
 the start so there is something to compare with. Anything you can't put back is the first line
 of the summary.
 
+**Emulators above all.** A cycle that starts an emulator shuts it down before it ends
+(`adb emu kill`, then check `adb devices` and that no `qemu` or `emulator` process is left),
+even when the next cycle will want one: starting it again costs a few minutes, and one left
+running has run for eight hours. At the start, an emulator already running is noted. If the
+cycle log says an earlier cycle started it, stop it; otherwise it may be madCode's, so leave it
+and put it first in the summary and on the morning page.
+
 ## Finish
 
 A short summary: what was picked and why, what was measured, what changed (with PR links), what
