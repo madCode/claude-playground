@@ -60,9 +60,21 @@ object NewSession {
      * — the owner's numbers do not belong on a lock screen, and this is the
      * one function that decides what does.
      */
-    fun text(found: List<Found>): String? = when (found.size) {
-        0 -> null
-        1 -> "${found[0].classTag} sheet is ready"
-        else -> found.joinToString(" and ") { it.classTag } + " sheets are ready"
+    fun text(found: List<Found>): String? = when {
+        found.isEmpty() -> null
+        found.size == 1 -> "${found[0].classTag} sheet is ready"
+        // Capped. Joining every match looks harmless with the two files a
+        // borrowed day produces, but the count is not bounded by anything
+        // -- a record wiped by an unreadable folder makes every file in the
+        // folder look new at once -- and an oversized notification throws
+        // on post, which would be swallowed into a silently missing
+        // notification rather than a crash.
+        found.size <= MAX_NAMED ->
+            found.joinToString(" and ") { it.classTag } + " sheets are ready"
+        else ->
+            found.take(MAX_NAMED).joinToString(", ") { it.classTag } +
+                " and ${found.size - MAX_NAMED} more are ready"
     }
+
+    private const val MAX_NAMED = 3
 }

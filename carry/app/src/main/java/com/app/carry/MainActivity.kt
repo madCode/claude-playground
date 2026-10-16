@@ -37,7 +37,14 @@ class MainActivity : ComponentActivity() {
      * chosen anything, is a question about a feature they have not met.
      */
     private val askNotify =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            // Marked here, on an answer, rather than before launching. The
+            // launch is inside a runCatching because it can throw, and
+            // marking first meant a throw burned the only ask the app ever
+            // makes: no dialog, no notifications, and nothing anywhere that
+            // says so.
+            SessionWatchWorker.markAsked(this)
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -131,7 +138,6 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
         if (!model.folder.chosen || SessionWatchWorker.canNotify(this)) return
         if (SessionWatchWorker.asked(this)) return
-        SessionWatchWorker.markAsked(this)
         runCatching { askNotify.launch(android.Manifest.permission.POST_NOTIFICATIONS) }
     }
 }

@@ -14,8 +14,9 @@ import androidx.core.content.ContextCompat
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import androidx.work.Worker
+import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
@@ -31,19 +32,33 @@ import java.util.concurrent.TimeUnit
 class SessionWatchWorker(
     private val context: Context,
     params: WorkerParameters,
-) : Worker(context, params) {
+) : CoroutineWorker(context, params) {
 
-    override fun doWork(): Result {
+    /**
+     * A CoroutineWorker with a timeout, not a plain Worker, for the reason
+     * `CarryViewModel.refresh` already gives about the identical call: a
+     * document provider can block for ever, `openInputStream` has no
+     * timeout and `runCatching` never fires. On the UI thread that strands
+     * the owner on "Reading"; here it would hold one of WorkManager's few
+     * executor threads and a WAKE_LOCK until the 10-minute cap, every hour,
+     * on the phone this feature was meant to be gentle with.
+     *
+     * The timeout cannot interrupt a stuck binder call -- nothing can --
+     * but it frees the worker to finish instead of waiting on it.
+     */
+    override suspend fun doWork(): Result {
         // Never Result.retry(): there is nothing here worth retrying. The
-        // next period comes round soon enough, and a retry storm on a
+        // next period comes round soon enough, and a retry storm against a
         // provider that is simply unavailable costs battery for nothing.
-        runCatching {
-            SessionWatcher.watchOnce(
-                folder = SessionFolder(context),
-                seen = PrefsSeen(context),
-                today = LocalDate.now().toString(),
-                post = { found -> notify(context, found) },
-            )
+        withTimeoutOrNull(CarryViewModel.STALL_AFTER_MS) {
+            runCatching {
+                SessionWatcher.watchOnce(
+                    folder = SessionFolder(context),
+                    seen = PrefsSeen(context),
+                    today = LocalDate.now(),
+                    post = { found -> notify(context, found) },
+                )
+            }
         }
         return Result.success()
     }
@@ -106,15 +121,26 @@ class SessionWatchWorker(
                 NotificationChannel(CHANNEL, "New sheets", NotificationManager.IMPORTANCE_DEFAULT)
             )
 
-            // No extras and no deep link: `tab` defaults to the Before tab
-            // and the folder is re-read on every resume, so launching the
-            // activity already lands on the sheet. A routing mechanism here
-            // would be a second way to choose a session, and the app is
-            // better with one.
+            // SINGLE_TOP, and emphatically NOT CLEAR_TOP. With a standard
+            // launch mode, CLEAR_TOP FINISHES the running activity and
+            // builds a new one, which clears the ViewModelStore --
+            // CarryViewModel's edits, added rows and in-flight save with
+            // it. The owner types the After tab's weights, locks the phone,
+            // the second sheet of a borrowed day lands, they tap the
+            // notification to look: numbers gone. For this app that is the
+            // cardinal failure, and a tap arriving mid-save could cancel
+            // the coroutine between the write and the verify-and-restore
+            // that SessionFolder.save exists for.
+            //
+            // The cost is that the app comes back on whatever tab they
+            // left, not necessarily Before. That is the right trade: `tab`
+            // is rememberSaveable because where you were is worth keeping,
+            // and losing typed numbers to land on a particular tab is not a
+            // bargain.
             val open = PendingIntent.getActivity(
                 context, 0,
                 Intent(context, MainActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 

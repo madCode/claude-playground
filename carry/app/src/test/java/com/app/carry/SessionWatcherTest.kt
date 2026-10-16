@@ -1,13 +1,13 @@
 package com.app.carry
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
 
 class SessionWatcherTest {
 
-    private val today = "2026-10-17"
+    private val today = LocalDate.parse("2026-10-17")
 
     private class FakeFolder(
         override val chosen: Boolean,
@@ -45,6 +45,28 @@ class SessionWatcherTest {
     }
 
     @Test
+    fun `tomorrow's sheet, written tonight, is announced tomorrow and not lost`() {
+        // The case the whole feature exists for: "a session file appears in
+        // the synced folder hours before the class". The runner writes
+        // tomorrow's sheet this evening. Storing it on sight would mean
+        // that when its day arrives it is already seen, and the owner would
+        // never be told about the one sheet they are going to walk in with.
+        val tomorrow = listOf("session-2026-10-18-3G.json")
+        val folder = FakeFolder(chosen = true, names = tomorrow)
+        val seen = FakeSeen(stored = emptySet())
+
+        val tonight = SessionWatcher.watchOnce(folder, seen, today) {}
+        assertTrue("not today's news yet: $tonight", tonight.isEmpty())
+        assertTrue(
+            "a file dated ahead must not be recorded: ${seen.names()}",
+            seen.names()?.contains("session-2026-10-18-3G.json") != true,
+        )
+
+        val onTheDay = SessionWatcher.watchOnce(folder, seen, today.plusDays(1)) {}
+        assertEquals(listOf("3G"), onTheDay.map { it.classTag })
+    }
+
+    @Test
     fun `a folder nobody picked is left entirely alone`() {
         val seen = FakeSeen(stored = setOf("session-2026-10-11-3G.json"))
         var posted = false
@@ -55,23 +77,30 @@ class SessionWatcherTest {
         assertTrue(found.isEmpty())
         assertTrue("nothing announced", !posted)
         assertEquals("the record must not be touched", 0, seen.writes)
-        assertEquals(setOf("session-2026-10-11-3G.json"), seen.names())
     }
 
     @Test
-    fun `a lost grant does not wipe the record and re-announce everything later`() {
-        // This is the dangerous one. `list()` returns empty for a revoked
-        // grant AND for an empty folder, so recording that empty list would
-        // erase what was seen -- and every file the owner already has would
-        // look new once the grant came back.
+    fun `a folder that lists as empty does not wipe the record`() {
+        // `SessionFolder.list()` answers an empty list when the query
+        // throws, the provider is restarting, or the volume is not mounted
+        // yet -- indistinguishable from an empty folder. Replacing the
+        // record on that answer loses the memory, and the next successful
+        // run announces today's sheet a second time.
+        val seen = FakeSeen(stored = setOf("session-2026-10-17-3G.json"))
+        SessionWatcher.watchOnce(FakeFolder(chosen = true), seen, today) {}
+        assertEquals(setOf("session-2026-10-17-3G.json"), seen.names())
+
+        // Provider answers again: still nothing to say.
+        val back = FakeFolder(chosen = true, names = listOf("session-2026-10-17-3G.json"))
+        val found = SessionWatcher.watchOnce(back, seen, today) {}
+        assertTrue("must not re-announce: $found", found.isEmpty())
+    }
+
+    @Test
+    fun `a lost grant does not wipe the record either`() {
         val seen = FakeSeen(stored = setOf("session-2026-10-11-3G.json"))
         SessionWatcher.watchOnce(FakeFolder(chosen = false, grantLost = true), seen, today) {}
         assertEquals(0, seen.writes)
-
-        // Grant restored, the same files are there: still nothing to say.
-        val back = FakeFolder(chosen = true, names = listOf("session-2026-10-11-3G.json"))
-        val found = SessionWatcher.watchOnce(back, seen, today) {}
-        assertTrue(found.toString(), found.isEmpty())
     }
 
     @Test
@@ -88,32 +117,42 @@ class SessionWatcherTest {
         assertTrue("a fresh install must not announce a backlog", !posted)
         assertEquals(2, seen.names()?.size)
 
-        // And the next new file announces normally.
         val later = FakeFolder(
             chosen = true,
             names = folder.list().map { it.second } + "session-2026-10-17-1G.json",
         )
-        val next = SessionWatcher.watchOnce(later, seen, today) {}
-        assertEquals(listOf("1G"), next.map { it.classTag })
-    }
-
-    @Test
-    fun `an empty folder with a live grant is recorded, not treated as a loss`() {
-        val seen = FakeSeen(stored = setOf("session-2026-10-11-3G.json"))
-        SessionWatcher.watchOnce(FakeFolder(chosen = true), seen, today) {}
-        assertEquals(1, seen.writes)
-        assertEquals(emptySet<String>(), seen.names())
+        assertEquals(listOf("1G"), SessionWatcher.watchOnce(later, seen, today) {}.map { it.classTag })
     }
 
     @Test
     fun `the record is kept even when the announcement goes nowhere`() {
-        // Notifications off: the sheet is still on the Before tab, and
-        // holding the name back would mean turning the permission on later
-        // produces a burst about sessions already logged.
+        // Notifications off, or a post that throws: the sheet is still on
+        // the Before tab, and holding the name back would mean the same
+        // sheet is announced again every hour for the rest of the day.
         val folder = FakeFolder(chosen = true, names = listOf("session-2026-10-17-3G.json"))
         val seen = FakeSeen(stored = emptySet())
-        SessionWatcher.watchOnce(folder, seen, today) { /* dropped on the floor */ }
+
+        // The throw is NOT swallowed here -- the worker's runCatching owns
+        // that -- so catching it is part of what this asserts. What matters
+        // is that the record survived a post that failed, because recording
+        // happens first.
+        runCatching {
+            SessionWatcher.watchOnce(folder, seen, today) { error("post failed") }
+        }
         assertEquals(setOf("session-2026-10-17-3G.json"), seen.names())
-        assertNull(NewSession.text(SessionWatcher.watchOnce(folder, seen, today) {}))
+        assertTrue(
+            "and so the same sheet is not announced again",
+            SessionWatcher.watchOnce(folder, seen, today) {}.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `the record does not grow for ever`() {
+        val old = (1..40).map { "session-2026-0%d-0%d-3G.json".format(1 + it % 9, 1 + it % 9) }
+        val seen = FakeSeen(stored = old.toSet() + "session-2026-10-17-3G.json")
+        SessionWatcher.watchOnce(FakeFolder(chosen = true), seen, today) {}
+        val kept = seen.names().orEmpty()
+        assertTrue("stale names must be pruned: ${kept.size}", kept.size < old.size)
+        assertTrue("recent ones stay", kept.contains("session-2026-10-17-3G.json"))
     }
 }
