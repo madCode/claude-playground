@@ -45,6 +45,11 @@ where you can. Don't feed code inputs it can never receive, or write a test only
 coverage. A test that waits for the screen or the database waits for the condition, not a fixed
 time. When a change has no behaviour to test, say so in the PR instead of inventing a test.
 
+Where the last step happens in another app or on a device (a share, a widget's host, an
+e-reader), a test can prove the hand-off but not what the other side does with it. A doc in the
+project says how a person checks the rest, and a change to that path says it's due; a test that
+only asserts the request again raises coverage without covering anything.
+
 ## Documentation
 
 Docs are for people: keep them readable, current and short.
@@ -85,6 +90,8 @@ On Android, also:
   Android versions).
 
 Ask for concrete findings only: file:line and a failure scenario, most severe first, no edits.
+For logic over input (a parser, a regex, an HTML cleaner), ask the reviewer to run it on real
+inputs in a small harness, not only read it: that is what finds the misses and false positives.
 Ask for bugs and gaps against what the change is for, not style or what might be nice: a reviewer
 asked for gaps finds some, and chasing every one adds code nobody needed.
 Verify each finding before acting on it, and say in the PR what the review found and what was
