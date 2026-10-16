@@ -68,13 +68,16 @@ not a thing anyone is blocked from building.
   "eleven rows of one lit pip" in this file, and the same figure in
   `DEVLOG.md` twice, once in a section heading *(audit)*
 
-- [ ] **Should a movement done once appear in the progress band at all?**
-  #79 kept it and capped the band to five rows with the rest counted; #80
-  settled the heading at *part way to a bump*. The alternative is to show only what is genuinely close
-  (2 of 3), which on today's data empties the band. Keeping it shows
-  progress; cutting it keeps the screen to signals you can act on. The
-  "why the coach is often quiet" band already explains why they all sit at
-  one, which argues for keeping *(you asked — your call)*
+- [x] ~~**Should a movement done once appear in the progress band at all?**~~
+  **ANSWERED 2026-10-16 by the owner: keep it — "Keep — show everything
+  part way".** Which is what #79 and #80 had already built, so there is no
+  work: the band keeps movements at one of three, capped at five rows with
+  the rest counted, under the heading *part way to a bump*. The "why the
+  coach is often quiet" band explains why they all sit at one.
+
+  Recorded here because the item sat open for a day after being answered,
+  which is its own small cost: a cycle reading "the top unfinished item"
+  reads a settled question first *(you asked — answered)*
 - [x] ~~**The intel post still demands a number**, so a wholly bodyweight or
   timed class offers no post at all.~~ The owner was asked and said yes, and
   the TIMED half shipped 2026-10-16 (#92): `done` qualifies a movement. The
