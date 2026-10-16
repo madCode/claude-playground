@@ -123,9 +123,6 @@ data class ExerciseSet(
     val skipped: Boolean = false,
     val note: String? = null,
 ) {
-    /** A row the owner actually filled in. Blank stays blank: never "skipped". */
-    val answered: Boolean get() = weight != null || reps != null || skipped
-
     /**
      * The board asked for seconds, not reps.
      *

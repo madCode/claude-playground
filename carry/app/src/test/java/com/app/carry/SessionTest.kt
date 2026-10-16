@@ -112,16 +112,6 @@ class SessionTest {
     }
 
     @Test
-    fun `a blank row is not answered, and skipping is a deliberate answer`() {
-        // Never silently "skipped": a wrong number in a training history is
-        // worse than a missing one, because nothing downstream can tell.
-        val blank = SampleSession.today.sets.first()
-        assertFalse(blank.answered)
-        assertTrue(blank.copy(skipped = true).answered)
-        assertTrue(blank.copy(reps = 8).answered)
-    }
-
-    @Test
     fun `a change is only a change when there is something to compare`() {
         val set = SampleSession.today.sets.first { it.canonical == "bench press" }
         assertEquals(5.0, set.change!!, 0.001)
