@@ -7,6 +7,12 @@ that hold become rules in CLAUDE.md or the cycles skill.
 
 ## 2026-10-16 run (cloud session)
 
+### Cycle 61 — build: require the schema label
+
+- **A field's default can hide a rule.** `schema` defaulted to our own
+  label, so a missing key passed the gate by construction. Check a gate
+  against the raw input, not the decoded model.
+
 ### Cycle 58 — build: the After screen checks what the importer refuses
 
 - **Read the parse next to the check.** The range check was the ask, but

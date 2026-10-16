@@ -365,6 +365,15 @@ class SinceScreenTest {
         compose.onNodeWithText("and 4 more").assertIsDisplayed()
     }
 
+    @Test
+    fun `files without a format label are counted in their own words, not as damage`() {
+        compose.setContent { SinceScreen(since.copy(unlabelled = 2)) }
+        compose.onNodeWithText(
+            "2 files in the folder have a missing or unknown \"schema\" label", substring = true,
+        ).assertIsDisplayed()
+        compose.onNodeWithText("A sync part way through", substring = true).assertDoesNotExist()
+    }
+
     private fun shoot(name: String) {
         compose.waitForIdle()
         val shot = compose.onRoot().captureToImage().asAndroidBitmap()

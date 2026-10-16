@@ -133,7 +133,7 @@ Carry never writes it; anything that needs words goes in the note.
 
 ### When there is no sheet to show
 
-Seven states, and they are separate because each needs different words. A
+Nine states, and they are separate because each needs different words. A
 wrong diagnosis sends someone to fix the wrong thing:
 
 | State | What it means | What it offers |
@@ -143,6 +143,7 @@ wrong diagnosis sends someone to fix the wrong thing:
 | Lost the folder | chosen, but the grant is gone — asked of the system, never guessed from an empty folder | the picker |
 | Nothing to carry | folder readable, no session written yet | the picker |
 | Can't read that session / Carry is out of date | a file that is there but truncated mid-sync, or written by a newer coach | the picker |
+| No format label / Unknown format label | a file that reads as JSON but has no `"schema"`, or one that isn't `gym-session/1` or a later `gym-session/N`; the message names the file and quotes an unknown label | the picker |
 | Folder isn't answering | the read passed 15 seconds; a provider can block forever with no timeout to set | the picker |
 | That's your whole phone | a whole volume picked rather than a folder | the picker |
 
@@ -708,9 +709,18 @@ importer drops.
 unknown key is ignored, so a newer runner can add fields without breaking
 an older build; and a `null` where a plain value is expected falls back to
 that field's default, so one odd key cannot cost a whole day's numbers.
-`schema` is the exception and is deliberately nullable: it is what decides
-the file is ours at all, and a non-nullable `schema` would have coercion
-hand the gate its own default back.
+
+**`"schema": "gym-session/1"` is required.** It is checked on the raw JSON
+before anything is decoded, so no default or coercion can vouch for a
+file. A missing or `null` label, or any other value (a bare number
+included), is refused with the file named and the label quoted, not as
+damage: the file read fine, and "wait for the sync" would not help. A
+later `gym-session/N` still says to update Carry. The coach writes the
+label on every file and its importer refuses a file without one. The save
+checks it again and copies every top-level key, so every file Carry
+writes keeps it. The Since tab counts unlabelled files in their own
+sentence. The new-sheet notification goes by file name and does not
+read the label.
 
 **The rows are decoded one at a time**, so a row this build cannot read
 costs that row rather than the day — a value of the wrong type, or a
@@ -725,7 +735,7 @@ that is not an object, two rows sharing a `ref` — and both the read and
 the save refuse exactly those. (What depends on the owner's own input,
 like an edit naming a row that has gone, stays in the save: it is
 answerable from the screen.) On top of that the read refuses a file that
-is not JSON, one whose `schema` is not ours, and one whose `sheet_id` or
+is not JSON, one whose `schema` is missing or not ours, and one whose `sheet_id` or
 `date` will not read.
 
 A reader that accepts what its writer rejects is worse than one that
