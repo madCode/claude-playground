@@ -498,16 +498,46 @@ class LogScreenTest {
         show(SaveState.Saved)
         reach("You typed")
         val note = compose.onNodeWithText(
-            "You typed: \"deadlift twenty six\", \"\u00bd rack row\". Is each weight in its weight box?"
+            "You typed: \"\u2068deadlift twenty six\u2069\", \"\u2068\u00bd rack row\u2069\". " +
+                "Is each weight in its weight box?"
         )
         note.assertIsDisplayed()
         // Announced when it appears, without taking focus.
         note.assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+        // Above the button just tapped, not below it where the list may end.
+        assertTrue(
+            "the line must sit above the Saved button",
+            note.getUnclippedBoundsInRoot().bottom <= compose.onNodeWithText("Saved").getUnclippedBoundsInRoot().top,
+        )
         shoot("35-typed-back")
+        // And it goes with "Saved": the next edit sets the form back to Idle.
+        saving.value = SaveState.Idle
+        compose.onNodeWithText("You typed", substring = true).assertDoesNotExist()
     }
 
     @Test
-    fun `nothing is shown back before the save, or when no name was typed`() {
+    fun `a typed name is shown back on one line, whole, and cut visibly only past 200`() {
+        // A line separator in a name read from the file would break the
+        // sentence; a weight at the end of a long name must still show.
+        val long = "a".repeat(180) + " deadlift 26 lb"
+        added.value = listOf(
+            AddedSet(id = "a", name = "row\u2028machine", weight = 30.0),
+            AddedSet(id = "b", name = long, weight = 26.0),
+            AddedSet(id = "c", name = "x".repeat(300), weight = 10.0),
+        )
+        show(SaveState.Saved)
+        // The long names make their own boxes scrollable; the list is the
+        // first scrollable node, being their ancestor.
+        compose.onAllNodes(hasScrollAction())[0].performScrollToNode(hasText("You typed", substring = true))
+        val text = compose.onNode(hasText("You typed", substring = true))
+            .fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("")
+        assertTrue(text, "\u2068row machine\u2069" in text)
+        assertTrue(text, "deadlift 26 lb\u2069" in text)
+        assertTrue(text, "x".repeat(200) + "\u2026\u2069" in text)
+    }
+
+    @Test
+    fun `nothing is shown back before the save`() {
         added.value = listOf(AddedSet(id = "a", name = "deadlift twenty six", weight = 26.0))
         show(SaveState.Idle)
         reach("Save")
@@ -544,6 +574,7 @@ class LogScreenTest {
         compose.onNodeWithText("The movements only. A name you typed goes out as you typed it.").assertIsDisplayed()
         // No description on the preview, so it stays navigable line by line.
         preview.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
+        shoot("36-post-typed-digits")
     }
 
     @Test
@@ -559,6 +590,7 @@ class LogScreenTest {
         assertTrue(reps.fetchSemanticsNodes().isNotEmpty())
         lb[0].assertIsDisplayed()
         lb[0].assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.HideFromAccessibility))
+        reps[0].assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.HideFromAccessibility))
     }
 
     @Test

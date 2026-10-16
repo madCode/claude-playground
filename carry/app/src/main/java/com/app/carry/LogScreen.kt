@@ -183,8 +183,7 @@ fun LogScreen(
                 itemsIndexed(added, sessionKey, onEditAdded)
                 item { AddRow(onAdd, loud = false) }
             }
-            item { SaveButton(saving, onSave) }
-            if (saving is SaveState.Saved) item { TypedBack(added) }
+            item { SaveButton(saving, onSave, added) }
             // Only once it is written down. Before that the post would be
             // offering to publish numbers that are not yet anywhere, and
             // the moment to hand intel over is when the logging is done.
@@ -583,16 +582,18 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
  *
  * Carry can't tell a load from a movement in free text (a digit test
  * missed "deadlift twenty six" and "½ rack" and flagged "bicep curl 21s"),
- * and it never guesses an identity, so it asks. It is a line under the
- * button rather than a dialog: a dialog on every save with an added row
- * is one the owner learns to dismiss unread, and this one stays until
- * the next edit. Announced politely when it appears, so TalkBack reads it
- * without moving focus. What is written to the file is unchanged.
+ * and it never guesses an identity, so it asks. A line, not a dialog: a
+ * dialog on every save with an added row is one the owner learns to
+ * dismiss unread. It shows with "Saved" and goes with it, at the next
+ * edit or re-read. Announced politely, so TalkBack reads it without
+ * moving focus. What is written to the file is unchanged.
  */
 @Composable
 private fun TypedBack(added: List<AddedSet>) {
+    // `(?U)` so `\\s` also folds U+2028 and friends, which would break the
+    // sentence across lines.
     val names = added.mapNotNull { row ->
-        row.name.readable().replace(Regex("\\s+"), " ").trim().takeIf { it.isNotEmpty() }?.take(MAX_TYPED_NAME)
+        row.name.readable().replace(Regex("(?U)\\s+"), " ").trim().takeIf { it.isNotEmpty() }?.let(::clip)
     }.distinct()
     if (names.isEmpty()) return
     Text(
@@ -607,16 +608,26 @@ private fun TypedBack(added: List<AddedSet>) {
     )
 }
 
-/** The words of [TypedBack], kept apart so a test can read them whole. */
+/** At [MAX_TYPED_NAME] code points, with an ellipsis so the cut shows
+ *  and never half a character. */
+private fun clip(name: String): String =
+    if (name.codePointCount(0, name.length) <= MAX_TYPED_NAME) name
+    else name.substring(0, name.offsetByCodePoints(0, MAX_TYPED_NAME)) + "\u2026"
+
+/**
+ * The words of [TypedBack], kept apart so a test can read them whole.
+ * Each name is a directional isolate (U+2068 to U+2069), so a right-to-left
+ * name doesn't pull the quotes, the comma or a digit to the wrong side.
+ */
 internal fun typedBack(names: List<String>): String {
-    val quoted = names.joinToString(", ") { "\"$it\"" }
+    val quoted = names.joinToString(", ") { "\"\u2068$it\u2069\"" }
     return if (names.size == 1) "You typed: $quoted. Is the weight in the weight box?"
     else "You typed: $quoted. Is each weight in its weight box?"
 }
 
-/** A typed name is shown back whole up to this, which no movement's name
- *  reaches; past it the draft is not a name. */
-private const val MAX_TYPED_NAME = 80
+/** A typed name is shown back whole up to this, well past any movement's
+ *  name, so a weight typed at the end of a long one still shows. */
+private const val MAX_TYPED_NAME = 200
 
 sealed interface SaveState {
     data object Idle : SaveState
@@ -628,7 +639,7 @@ sealed interface SaveState {
 }
 
 @Composable
-private fun SaveButton(state: SaveState, onSave: () -> Unit) {
+private fun SaveButton(state: SaveState, onSave: () -> Unit, added: List<AddedSet>) {
     val label = when (state) {
         SaveState.Idle -> "Save"
         SaveState.Saving -> "Saving…"
@@ -646,6 +657,10 @@ private fun SaveButton(state: SaveState, onSave: () -> Unit) {
                 modifier = Modifier.padding(bottom = 8.dp).semantics { liveRegion = LiveRegionMode.Polite },
             )
         }
+        // In the button's own item and above it, where the owner just
+        // tapped: a separate item below could land off the bottom of the
+        // list, and an item that isn't composed is neither seen nor read.
+        if (state is SaveState.Saved) TypedBack(added)
         Text(
             label, color = Look.Slate, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
             fontSize = 14.sp, textAlign = TextAlign.Center,
