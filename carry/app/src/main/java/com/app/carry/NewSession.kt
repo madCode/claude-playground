@@ -18,8 +18,11 @@ object NewSession {
      * decode of a file that may be half-written by the runner at the
      * moment the worker looks.
      *
-     * Anchored, and the tag is bounded: a provider is allowed to return
-     * any display name at all, and this string reaches a notification.
+     * The tag is bounded because a provider may return any display name
+     * at all and this string reaches a notification. The `^`/`$` are
+     * decorative — [matchEntire] is what anchors it, and removing them
+     * changes nothing, which a falsification run showed rather than
+     * argued.
      */
     private val NAME = Regex("""^session-(\d{4}-\d{2}-\d{2})-([A-Za-z0-9]{1,8})\.json$""")
 
