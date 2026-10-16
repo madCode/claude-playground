@@ -134,24 +134,61 @@ class SessionWatcherTest {
     }
 
     @Test
-    fun `the first run ever records what it saw and announces nothing`() {
+    fun `a first run stays silent but leaves today's sheet announceable`() {
+        // The anti-burst rule used to record EVERYTHING on a first run,
+        // which silenced today's sheet for good. Found by a live test on
+        // the owner's phone: the file synced, showed on the Before tab,
+        // and could never have been announced, because the first run was
+        // always going to record it first. The burst worth preventing is
+        // old sessions; today's was never the point.
         val folder = FakeFolder(
             chosen = true,
-            names = listOf("session-2026-10-17-2G.json", "session-2026-10-17-3G.json"),
+            names = listOf(
+                "session-2026-09-13-2G.json",   // weeks old: record, never announce
+                "session-2026-10-17-3G.json",   // today: leave announceable
+            ),
         )
+        val seen = FakeSeen(stored = null)
+        var posted = false
+
+        val first = SessionWatcher.watchOnce(folder, seen, today) { posted = true }
+        assertTrue("a first run announces nothing: $first", first.isEmpty())
+        assertTrue("and posts nothing", !posted)
+        assertEquals(
+            "the old one is recorded, today's is not",
+            setOf("session-2026-09-13-2G.json"), seen.names(),
+        )
+
+        val second = SessionWatcher.watchOnce(folder, seen, today) {}
+        assertEquals("so the next run says today's", listOf("3G"), second.map { it.classTag })
+    }
+
+    @Test
+    fun `a fresh install never announces the backlog`() {
+        // A backlog is OLD sessions, which is what this used to get wrong:
+        // the fixture was two TODAY-dated files, and two sheets for today
+        // are not a backlog, they are a borrowed day. Six weeks of logged
+        // sessions is the thing that must stay silent, now and after the
+        // record exists.
+        val old = listOf(
+            "session-2026-09-13-2G.json", "session-2026-09-19-3G.json",
+            "session-2026-09-20-3G.json", "session-2026-09-27-3G.json",
+            "session-2026-10-10-3G.json", "session-2026-10-11-3G.json",
+        )
+        val folder = FakeFolder(chosen = true, names = old)
         val seen = FakeSeen(stored = null)
         var posted = false
 
         val found = SessionWatcher.watchOnce(folder, seen, today) { posted = true }
         assertTrue(found.toString(), found.isEmpty())
         assertTrue("a fresh install must not announce a backlog", !posted)
-        assertEquals(2, seen.names()?.size)
+        assertEquals("all of it recorded, so it can never be announced", old.toSet(), seen.names())
 
-        val later = FakeFolder(
-            chosen = true,
-            names = folder.list().map { it.second } + "session-2026-10-17-1G.json",
-        )
-        assertEquals(listOf("1G"), SessionWatcher.watchOnce(later, seen, today) {}.map { it.classTag })
+        // And a backfill arriving later is still not news.
+        val backfilled = FakeFolder(chosen = true, names = old + "session-2026-09-06-2G.json")
+        val next = SessionWatcher.watchOnce(backfilled, seen, today) { posted = true }
+        assertTrue("a backfilled old day is not news: $next", next.isEmpty())
+        assertTrue(!posted)
     }
 
     @Test
