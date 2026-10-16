@@ -18,13 +18,8 @@ should start at the first line of *Wrong numbers*.
 
 ### Your call — nothing moves until you decide
 
-Six decisions. Each is a question about what you want the app to claim,
+Five decisions. Each is a question about what you want the app to claim,
 not a thing anyone is blocked from building.
-- [ ] **Say when a newer debug build is out**, without Carry reaching the
-  network: the laptop's sheets job writes the newest build number into the
-  synced folder, and the Since tab says "Build N is out". Proposal and
-  alternatives in [#107](https://github.com/madCode/claude-playground/issues/107)
-  *(waiting on you)*
 - [ ] **Which marks say "I did this movement"?** You answered the narrow
   version on 2026-10-16 — `done` qualifies a movement for the post — and
   that shipped. But `done` is only offered on a TIMED row, because a timed
@@ -274,7 +269,7 @@ These are the open paths to one, hardest first.
   arrive with `androidx.work`. They appear only in the merged manifest, so
   I had written "one permission" in DESIGN.md and it was false until
   `aapt2 dump permissions` on the built APK said otherwise. `DESIGN.md`
-  carries the table. Still no `INTERNET` *(design:
+  carries the table *(design:
   [new-session-notification](designs/new-session-notification.md))*
 - [ ] **Time the notification to the class, not to the clock.** The owner's
   idea, 2026-10-16, and it is better than what shipped — it also fixes a
@@ -468,6 +463,11 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **Say when a newer debug build is out.** The owner chose Carry asking
+  GitHub itself (#107) over routing the number through the folder, which
+  brought the `INTERNET` permission. A CI debug build asks at most every
+  three hours, and the Since tab says "Build N is out" at the top. Next,
+  installing it from the app: on the owner's word in #107 *(you asked)*
 - [x] **A logo, and a launcher icon of its own.** The H3 "pulse on a dot"
   concept the owner picked on 2026-10-16: an interval heartbeat in the five
   heart-rate zones with a chalk dot at the peak. Adaptive icon, a monochrome

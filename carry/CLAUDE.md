@@ -23,12 +23,16 @@ can tell the difference.
 
 - `app/`: Android, Jetpack Compose. The two screens, the folder picker (SAF),
   and reading/writing the session file.
-- Session files are the only I/O, with one deliberate exception: after a
-  save, Carry can hand a composed text post to the share sheet. It opens
-  no connection and keeps no account — the owner's own app does the
-  posting, and the text is shown in full before it goes. Anything else
-  that reaches off the device means something has gone wrong with the
-  design rather than grown.
+- Session files are the only I/O for the owner's data, with one
+  deliberate exception: after a save, Carry can hand a composed text post
+  to the share sheet. It keeps no account — the owner's own app does the
+  posting, and the text is shown in full before it goes.
+- The network is for what the owner has approved, one use at a time:
+  today, a CI debug build asking GitHub whether a newer build is out
+  (`DebugUpdates`, #107), sending nothing of theirs. Fetching the board
+  from Reddit is expected to follow, when the brain moves to the phone.
+  Anything else that reaches off the device means something has gone
+  wrong with the design rather than grown.
 - No account, and no database that outlives a session file.
 
 ## Commands

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -371,5 +372,31 @@ class SinceScreenTest {
         File(out, "$name.png").outputStream().use {
             shot.compress(Bitmap.CompressFormat.PNG, 100, it)
         }
+    }
+
+    @Test
+    fun `a newer build is named at the top and the tap asks for it`() {
+        var asked = 0
+        compose.setContent { SinceScreen(since, newerBuild = 131, onGetBuild = { asked++ }) }
+        compose.onNodeWithText("Build 131 is out", substring = true).assertIsDisplayed()
+        shoot("27-since-newer-build")
+        compose.onNodeWithText("Build 131 is out", substring = true).performClick()
+        assertEquals(1, asked)
+    }
+
+    @Test
+    fun `a newer build is named even when the folder has nothing countable`() {
+        // The case where a newer build is most likely the fix: files this build can't read.
+        val unreadable = since.copy(sessions = 0, sets = 0, peaks = emptyList(), nearBump = emptyList(),
+            days = emptyList(), movements = 0, repeated = 0, movementSets = 0, newerSchema = 2)
+        compose.setContent { SinceScreen(unreadable, newerBuild = 131) }
+        compose.onNodeWithText("Nothing in that folder could be counted.").assertIsDisplayed()
+        compose.onNodeWithText("Build 131 is out", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun `with no newer build there is no notice`() {
+        compose.setContent { SinceScreen(since) }
+        compose.onNodeWithText("is out", substring = true).assertDoesNotExist()
     }
 }

@@ -351,14 +351,16 @@ rows, an in-flight save — with it. Landing on a particular tab is not
 worth losing numbers for, so the intent is `SINGLE_TOP` and the folder is
 re-read on resume as it always was.
 
-**This is why the app went from zero Android permissions to five.** Not
-one, which is what the first version of this paragraph claimed before the
-built APK was checked — `aapt2 dump permissions` on the release build is
-the only honest source for this, because a library brings its own.
+**The app holds six Android permissions, and this feature brought five
+of them.** `aapt2 dump permissions` on the built APK is the only honest
+source for this, because a library brings its own. It also lists a
+seventh, `<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which
+androidx.core defines for the app's own receivers; it grants nothing
+outside the app.
 
-One is ours: `POST_NOTIFICATIONS`, required on API 33+ to post anything.
-The other four arrive with `androidx.work` and the app cannot opt out of
-them while using it:
+Two are ours: `POST_NOTIFICATIONS`, required on API 33+ to post anything,
+and `INTERNET`, for the update check below. The other four arrive with
+`androidx.work`, and the app can't opt out of them while using it:
 
 | permission | why WorkManager wants it |
 |---|---|
@@ -367,13 +369,9 @@ them while using it:
 | `ACCESS_NETWORK_STATE` | read connectivity, for network constraints |
 | `FOREGROUND_SERVICE` | run expedited work |
 
-`ACCESS_NETWORK_STATE` is the one a careful reader will stop on, so it is
-worth being exact: it permits *reading whether a network exists*, not
-using one. **There is still no `INTERNET` permission**, so the app cannot
-open a connection even in principle — which was always the property worth
-checking, and it still holds. The share sheet remains the only way
-anything leaves, and the notification text carries the class alone,
-because a lock screen is not somewhere the owner's weights belong.
+`ACCESS_NETWORK_STATE` permits *reading whether a network exists*, not
+using one. The notification text carries the class alone, because a lock
+screen is not somewhere the owner's weights belong.
 
 Until 2026-10-16 this app declared no permissions at all, and that was
 checkable by opening one file. That is no longer true, and the honest
@@ -406,11 +404,40 @@ tomorrow's sheet the evening before, which is the case this feature exists
 for; storing it on sight meant that when its day arrived it was already
 seen and was silently never announced.
 
+## Asking whether a newer build is out
+
+The one connection the app opens. The owner chose it on 2026-10-16
+([#107](https://github.com/madCode/claude-playground/issues/107)) over
+routing the build number through the synced folder, so Carry declares
+`INTERNET` for this alone. `DebugUpdates` works like newspaperss's:
+
+- **Only a CI debug build asks.** The installed build number comes from the
+  version name (`0.1.0-debug.131+…`); a local or release build has none and
+  never asks.
+- **At most every three hours**, on a return to the app. Any answer counts
+  as asked, refusals too, so a rate limit isn't spent again on every
+  resume. No answer at all (offline) doesn't count, so it asks again next
+  time.
+- **It sends nothing of the owner's.** A GET of the `carry-debug` release's
+  public JSON. The newest build is the highest `carry-debug-<run>.apk`
+  among its files; a body over 256 KB is not read.
+- **The Since tab says it**, at the top, even when the folder has nothing
+  countable (a folder this build can't read is when a newer build is most
+  likely the fix): "Build N is out — download it", in chalk rather than
+  amber. The tap opens the fixed download link, or copies it when nothing
+  can open it.
+- **The whole request has 30 seconds**, not only each read, so a slow
+  server can't hold the check open.
+- **PR builds count too.** PR and main runs share one run counter, so an
+  installed PR build is offered the next main build, which may not contain
+  that PR.
+
+The session files still leave only through the share sheet.
+
 ## Handing the block over
 
-The preview is the whole of the egress control -- the app has no
-`INTERNET` permission, so the share sheet is the only way anything
-leaves -- and it marks a suspect line in the TEXT as well as in red.
+The preview is the whole of the egress control -- the share sheet is the
+only way anything of the owner's leaves -- and it marks a suspect line in the TEXT as well as in red.
 Colour alone is unreadable in glare, on a greyscale display, or to
 anyone with a colour vision deficiency, and it is silent to TalkBack.
 The caption above the preview names that mark rather than the colour.

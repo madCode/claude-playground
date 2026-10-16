@@ -54,7 +54,12 @@ import androidx.compose.ui.unit.sp
  * part every empty row looks like a broken app.
  */
 @Composable
-fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
+fun SinceScreen(
+    since: Growth.Since,
+    modifier: Modifier = Modifier,
+    newerBuild: Int? = null,
+    onGetBuild: () -> Unit = {},
+) {
     // There is no nav library here and this does not justify adding one:
     // the app is three tabs, and one nullable id inside this screen keeps
     // it that way.
@@ -102,6 +107,10 @@ fun SinceScreen(since: Growth.Since, modifier: Modifier = Modifier) {
             fontSize = Look.SmallSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 3.dp, bottom = 4.dp),
         )
+
+        // At the top and above the empty check: a folder the app can't read is when a newer
+        // build is most likely the fix, and the bottom of a long history is where nobody looks.
+        if (newerBuild != null) NewerBuild(newerBuild, onGetBuild)
 
         // ABOVE the empty check, deliberately: if every file in the folder
         // read short there are no days at all, and "Nothing logged yet" on
@@ -470,6 +479,19 @@ private fun Quiet(since: Growth.Since) {
             modifier = Modifier.padding(top = 8.dp),
         )
     }
+}
+
+/** In chalk, not amber: amber is kept for the number the owner came for. */
+@Composable
+private fun NewerBuild(build: Int, onGet: () -> Unit) {
+    Text(
+        "Build $build is out \u2014 download it",
+        color = Look.Chalk, fontFamily = Look.Figure, fontSize = Look.SmallSize,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onGet)
+            .padding(vertical = 14.dp),
+    )
 }
 
 /**

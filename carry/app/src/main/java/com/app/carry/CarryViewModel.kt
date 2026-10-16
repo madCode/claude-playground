@@ -84,6 +84,20 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     private val _saving = mutableStateOf<SaveState>(SaveState.Idle)
     val saving: State<SaveState> = _saving
 
+    /** Whether a newer debug build is out. Null on a release or local build, which never asks. */
+    val updates = DebugUpdates(
+        app.getSharedPreferences("debug-updates", android.content.Context.MODE_PRIVATE),
+        DebugUpdates.buildOf(BuildConfig.VERSION_NAME),
+    )
+    private var checking: Job? = null
+
+    /** On every resume; [DebugUpdates] decides whether it is due. One at a time, so two quick
+     *  resumes can't both ask before the first has recorded that it did. */
+    fun checkForUpdate() {
+        if (checking?.isActive == true) return
+        checking = viewModelScope.launch { updates.checkIfDue() }
+    }
+
     /** How the folder is read. Replaced in tests so the stall path and the
      *  keep-last-good path can be exercised without a real provider; there
      *  is no other way in, because the read is deliberately not injectable
