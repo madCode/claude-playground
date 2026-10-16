@@ -45,8 +45,17 @@ before building it:
 - **Is it already done**, in whole or part? Grep for the idea, not the item's wording.
 - **Is the cause the one it names?** An item names the cause its author could see.
 
-An item that turns out to need a decision about what people see or do stops and becomes a
-proposal for madCode ([the loop, step 2](https://github.com/madCode/claude-playground/blob/main/practices/lifecycle.md#2-it-is-sorted-before-it-is-built)).
+An item that turns out to need a decision stops there. How it waits depends on its size:
+
+- **A larger feature proposal** (a change to what people see or do, or to how the thing is
+  built, too big for one cycle) becomes a GitHub issue, written as the `handle-issues`
+  skill's *Proposals* section says: mockups or a diagram, alternatives, the approval asked
+  for, labelled `waiting on madCode`. The BACKLOG.md item links the issue, and the issue check
+  picks up the answer
+  ([the loop, steps 2 and 3](https://github.com/madCode/claude-playground/blob/main/practices/lifecycle.md#2-it-is-sorted-before-it-is-built)).
+  Search the open issues first, so it isn't filed twice.
+- **A smaller call** (a wording, a threshold, which of two behaviours) stays in BACKLOG.md,
+  under the project's "your call" heading.
 
 **Audit**: one persona reading the real thing (the app as built, its real output, real data
 where the project allows it), never fixtures. The project's CLAUDE.md or the prompt names the
@@ -58,7 +67,8 @@ is due, that is the audit.
 **Backlog grooming** is an audit of BACKLOG.md itself: drop or merge what is stale, done or
 duplicated (checked against the code, not the wording), split items too big for one cycle, and
 put *Next* in the order cycles should take it, the project's own ordering rule first, then what
-readers would notice most. A change of priority madCode set is a question for them, not an edit.
+readers would notice most. A larger feature idea sitting in the backlog becomes an issue, as
+above. A change of priority madCode set is a question for them, not an edit.
 
 Fix small clear things now. The rest goes into BACKLOG.md, checked
 against the code first: about a third of findings don't hold.
@@ -106,6 +116,23 @@ Two readers, so two files:
 In BACKLOG.md, tick the item and move it to *Done* (if the file has no *Done* section, add
 one), and add what the cycle found to *Next*.
 
+### The morning page
+
+BACKLOG.md and DEVLOG.md hold what waits on madCode. On top of them, the run keeps one page
+madCode reads on their phone in the morning, across every project: what needs them, and what
+ran. The scheduled task's prompt gives its link; without one, skip this.
+
+- Read the page (`Artifact`, `action: "read"`), change only this project's section, and
+  publish to the same link. Another project's cycle may have published since; build on what the
+  read returned and never drop another project's section.
+- First, what needs madCode, most blocking first: one line each saying what is needed and why,
+  linked to where they answer (the PR, the issue, the BACKLOG.md line on GitHub). Then a line
+  per cycle since the morning: what shipped, with its PR.
+- Everything on it is also in BACKLOG.md or DEVLOG.md, so the page can always be rebuilt from
+  them. An item answered or done comes off.
+- It is private, but it follows the project's privacy rules anyway: no figures about anyone's
+  own data.
+
 ### Lessons become rules
 
 A lesson the log already holds, learned again, is a missing rule, not a lesson. Make it a check
@@ -141,7 +168,7 @@ The scheduled task's prompt stays short, since this skill holds the procedure:
     <Project> cycles: use the cycles skill.
     Repositories: <which, and anything unusual about them>.
     Stop: after cycle <N> | on <date> | when BACKLOG.md's Done when is ticked.
-    Scheduled task: <id>. Mix: <build/audit>. Approved: <items>.
+    Scheduled task: <id>. Morning page: <link>. Mix: <build/audit>. Approved: <items>.
 
 The id exists only once the task does, so create it, then edit its prompt to add the id. The
 session needs the repository holding this skill checked out alongside the project. Space the
