@@ -287,11 +287,77 @@ class GrowthTest {
             set(1, "row", "pull", done = "3", needed = "3", suggested = "35"),
             set(2, "press", "push"),
             set(3, "lunge", "legs", done = "2", needed = "3", suggested = "20"),
+            set(4, "curl", "pull", done = "2", needed = "3", suggested = "15", skipped = true),
+            set(5, "fly", "push", weight = "10", done = "2", needed = "3", suggested = "15"),
         ).joinToString(","))
-        val since = Growth.of(listOf(older, newer))
+        val olderToo = older.replaceFirst("]", ",${set(4, "curl", "pull", done = "1", needed = "3", suggested = "15")}," +
+            "${set(5, "fly", "push", done = "1", needed = "3", suggested = "15")}]")
+        val since = Growth.of(listOf(olderToo, newer))
         assertEquals(listOf("lunge"), since.nearBump.map { it.name })
         assertEquals("the newer count, not the older", 2, since.nearBump.single().done)
         assertNull(since.nearBump.single().asOf)
+    }
+
+    @Test
+    fun `a newer row that didn't decode still supersedes the older count`() {
+        // The newest sheet lists squat, but its row won't decode, so the
+        // parsed sheet has no squat. Its key is still on the raw row.
+        val older = file("2026-10-01", sets = set(0, "squat", "legs", done = "2", needed = "3", suggested = "25"))
+        val newer = file("2026-10-11", sets = set(0, "squat", "legs", done = "1", needed = "3", suggested = "25")
+            .replace("\"weight\":null", "\"weight\":\"heavy\""))
+        assertEquals("the fixture's row must not decode", 0, SessionFiles.parse(newer)!!.sets.size)
+        assertEquals(emptyList<Growth.Bump>(), Growth.of(listOf(older, newer)).nearBump)
+    }
+
+    @Test
+    fun `a sheet that won't read stops the band there, and says so`() {
+        // It may list any movement with a newer count, so nothing older
+        // can be shown as current.
+        val oldest = file("2026-09-27", sets = set(0, "row", "pull", done = "2", needed = "3", suggested = "30"))
+        val broken = """{"schema":"gym-session/1","sheet_id":"x","date":"2026-10-0"""
+        val newest = file("2026-10-11", sets = set(0, "squat", "legs", done = "1", needed = "3", suggested = "25"))
+        val since = Growth.of(
+            listOf(oldest, broken, newest),
+            byName = listOf("2026-10-11" to newest, "2026-10-04" to broken, "2026-09-27" to oldest),
+        )
+        assertEquals(listOf("squat"), since.nearBump.map { it.name })
+        assertTrue(since.bandCut)
+        assertFalse(
+            Growth.of(listOf(oldest, newest), byName = listOf("2026-10-11" to newest, "2026-09-27" to oldest)).bandCut
+        )
+        // The other class of the broken sheet's own day is not cut: both
+        // sheets were written from the same history.
+        val sameDay = file("2026-10-04", cls = "2G", sets = set(0, "lunge", "legs", done = "1", needed = "3", suggested = "20"))
+        val twoClass = Growth.of(
+            listOf(oldest, broken, sameDay, newest),
+            byName = listOf("2026-10-11" to newest, "2026-10-04" to broken, "2026-10-04" to sameDay, "2026-09-27" to oldest),
+        )
+        assertEquals(listOf("squat", "lunge"), twoClass.nearBump.map { it.name })
+        assertTrue(twoClass.bandCut)
+    }
+
+    @Test
+    fun `a movement listed twice on one sheet is not hidden by its skipped copy`() {
+        val since = Growth.of(listOf(file("2026-10-11", sets = listOf(
+            set(0, "squat", "legs", done = "2", needed = "3", suggested = "25", skipped = true),
+            set(1, "squat", "legs", done = "2", needed = "3", suggested = "25"),
+        ).joinToString(","))))
+        assertEquals(listOf("squat"), since.nearBump.map { it.name })
+    }
+
+    @Test
+    fun `an older sheet whose date won't read is dated as an older sheet`() {
+        val since = Growth.of(
+            listOf(
+                file("2026-10-11", sets = set(0, "plank", "core")),
+                file("", sets = set(0, "row", "pull", done = "2", needed = "3", suggested = "30")),
+            ),
+            byName = listOf(
+                "2026-10-11" to file("2026-10-11", sets = set(0, "plank", "core")),
+                "2026-10-04" to file("", sets = set(0, "row", "pull", done = "2", needed = "3", suggested = "30")),
+            ),
+        )
+        assertEquals(listOf(Growth.OLDER_SHEET), since.nearBump.map { it.asOf })
     }
 
     @Test

@@ -159,7 +159,7 @@ fun growthOf(folder: Folder): Growth.Since {
         // two-class day the sheet the Before tab shows leads, not whichever
         // the provider happened to list first.
         byName = sheets.sortedWith(compareBy({ SessionFiles.dateIn(it.name) }, { it.name }))
-            .reversed().map { it.text.orEmpty() },
+            .reversed().map { SessionFiles.dateIn(it.name) to it.text.orEmpty() },
         newestRead = when {
             // `any`, so a readable first file stops the rest being
             // parsed again for an answer already known.

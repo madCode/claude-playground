@@ -339,7 +339,9 @@ class CarryStateTest {
             contents = mapOf("d1" to sheet("2026-10-20", "lunge"), "d2" to sheet("2026-10-14", "squat")),
         ))
         assertEquals(listOf("squat", "lunge"), since.nearBump.map { it.name })
-        assertEquals("the older NAME is the one dated", listOf(null, "2026-10-20"), since.nearBump.map { it.asOf })
+        // Dated as an older sheet, not as the 20th: a date after the newest
+        // sheet's would read as a newer count.
+        assertEquals("the older NAME is the one dated", listOf(null, Growth.OLDER_SHEET), since.nearBump.map { it.asOf })
     }
 
     @Test

@@ -144,7 +144,7 @@ fun SinceScreen(
         }
 
         LazyColumn(Modifier.weight(1f), state = list) {
-            if (since.nearBump.isNotEmpty()) {
+            if (since.nearBump.isNotEmpty() || since.bandCut) {
                 // "Close to a bump" was a claim the rows could not
                 // support. The runner counts a streak from the first clean
                 // set, so a movement done ONCE arrives here at 1 of 3 --
@@ -171,6 +171,15 @@ fun SinceScreen(
                 items(since.nearBump.take(MAX_BUMP_ROWS)) { BumpRow(it) }
                 if (since.nearBump.size > MAX_BUMP_ROWS) {
                     item { More(since.nearBump.size - MAX_BUMP_ROWS) }
+                }
+                if (since.bandCut) {
+                    item {
+                        Text(
+                            "A sheet didn't read, so nothing older than it is shown here.",
+                            color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                            modifier = Modifier.padding(vertical = 10.dp),
+                        )
+                    }
                 }
             } else if (since.newestRead != Growth.NewestRead.FINE) {
                 // The heading with nothing under it, which the band never
@@ -279,8 +288,13 @@ private fun spoken(bump: Growth.Bump): String = listOfNotNull(
     // made that claim; it shows three things side by side. This label
     // joined them into a sentence, which is how it became one.
     "next at ${figure(bump.weight)} pounds",
-    bump.asOf?.let { "as of ${SessionFiles.formatDate(it)}" },
+    bump.asOf?.let { "as of ${asOfText(it)}" },
 ).joinToString(", ")
+
+/** A [Growth.Bump.asOf] in words: the sheet's date, or "an older sheet"
+ *  when its date can't be shown. */
+private fun asOfText(asOf: String): String =
+    if (asOf == Growth.OLDER_SHEET) "an older sheet" else SessionFiles.formatDate(asOf)
 
 /** The one actionable thing in the data: another clean set moves it. */
 @Composable
@@ -301,17 +315,19 @@ private fun BumpRow(bump: Growth.Bump) {
         Look.family(bump.family)?.let { hue ->
             Box(Modifier.width(3.dp).height(22.dp).clip(RoundedCornerShape(2.dp)).background(hue))
         }
-        Text(
-            bump.name, color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.NameSize,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-        )
-        // Outside the name's ellipsis, so a long name can't cut it: the
-        // date is what says this count may have moved since.
-        bump.asOf?.let {
+        // The date on a line of its own under the name, so neither cuts the
+        // other at large text: it is what says this count may have moved.
+        Column(Modifier.weight(1f)) {
             Text(
-                SessionFiles.formatDate(it), color = Look.ChalkDim, fontFamily = Look.Name,
-                fontSize = Look.SmallSize, maxLines = 1,
+                bump.name, color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.NameSize,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(),
             )
+            bump.asOf?.let {
+                Text(
+                    "as of ${asOfText(it)}", color = Look.ChalkDim, fontFamily = Look.Name,
+                    fontSize = Look.SmallSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         // Past ten, pips cannot tell the truth and are not countable at a
         // glance anyway. Clamping `needed` alone LIES: 12 of 40 draws ten

@@ -384,12 +384,19 @@ class SinceScreenTest {
         compose.setContent { SinceScreen(since.copy(nearBump = history.nearBump)) }
         compose.onNodeWithText("Part way to a bump".uppercase()).assertIsDisplayed()
         compose.onNodeWithText("single-arm row").assertIsDisplayed()
-        compose.onNodeWithText("Sun 4 Oct").assertIsDisplayed()
+        compose.onNodeWithText("as of Sun 4 Oct").assertIsDisplayed()
         compose.onNodeWithText("sumo squat").assertIsDisplayed()
         compose.onNodeWithContentDescription(
             "single-arm row, 2 of 3 clean sets, next at 40 pounds, as of Sun 4 Oct"
         ).assertIsDisplayed()
         shoot("32-since-band-history")
+    }
+
+    @Test
+    fun `a band cut short by a sheet that didn't read says so`() {
+        compose.setContent { SinceScreen(since.copy(nearBump = emptyList(), bandCut = true)) }
+        compose.onNodeWithText("Part way to a bump".uppercase()).assertIsDisplayed()
+        compose.onNodeWithText("A sheet didn't read, so nothing older than it is shown here.").assertIsDisplayed()
     }
 
     private fun shoot(name: String) {

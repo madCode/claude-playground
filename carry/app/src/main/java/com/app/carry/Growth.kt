@@ -1,5 +1,6 @@
 package com.app.carry
 
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -239,6 +240,11 @@ object Growth {
          * band would have been rather than in the line above.
          */
         val newestRead: NewestRead = NewestRead.FINE,
+        /**
+         * The band stopped at a sheet that didn't read, so rows older than
+         * it are left out: that sheet may hold newer counts for them.
+         */
+        val bandCut: Boolean = false,
     ) {
         /**
          * There is nothing to show at all.
@@ -307,12 +313,16 @@ object Growth {
      *   difference decides whether [Since.nearBump] is an answer about
      *   now or an older day's answer wearing today's label.
      *
-     * @param byName the texts the band reads, newest first by file NAME,
-     *   the same rule as [newestRead] and the Before tab. Null orders them
-     *   by the dates inside the files, which can disagree with the names on
-     *   a hand-made file.
+     * @param byName the files the band reads as (date in the NAME, text),
+     *   newest first by name, the same rule as [newestRead] and the Before
+     *   tab. Null orders them by the dates inside the files, which can
+     *   disagree with the names on a hand-made file.
      */
-    fun of(files: List<String>, newestRead: NewestRead = NewestRead.FINE, byName: List<String>? = null): Since {
+    fun of(
+        files: List<String>,
+        newestRead: NewestRead = NewestRead.FINE,
+        byName: List<Pair<String?, String>>? = null,
+    ): Since {
         // Paired with the text it was parsed from, and with its rows, because
         // the rows the owner ADDED are not part of [Session] — a row with no
         // `name` key threw during deserialization once and cost the whole
@@ -417,30 +427,54 @@ object Growth {
         // A newest date where nothing parsed withholds the band and the
         // screen says why: that sheet is the likeliest to supersede the
         // older counts, and there is no telling which.
-        val sheets = when {
+        val ordered: List<Triple<String?, Session?, String>> = when {
             newestRead != NewestRead.FINE -> emptyList()
-            byName != null -> byName.mapNotNull(SessionFiles::parse)
-            else -> read.map { it.session }.sortedByDescending { it.date }
+            byName != null -> byName.map { (day, text) -> Triple(day, SessionFiles.parse(text), text) }
+            else -> read.sortedByDescending { it.session.date }.map { Triple(it.session.date, it.session, it.text) }
         }
-        val newestDate = sheets.firstOrNull()?.date
+        val newest = ordered.firstNotNullOfOrNull { it.second }
+        val newestDate = newest?.date
         val seen = HashSet<String>()
-        val nearBump = sheets.flatMapIndexed { i, session ->
-            session.sets.mapNotNull { set ->
-                val key = set.key ?: if (i == 0) "\u0000ref:${set.ref}" else return@mapNotNull null
-                if (!seen.add(key)) return@mapNotNull null
-                bumpOf(set, asOf = session.date.takeIf { it != newestDate })
+        val found = mutableListOf<Bump>()
+        // A sheet that won't read may list any movement with a newer count,
+        // so nothing from an older DAY can be shown as current: the band
+        // stops there and says so. Its own day's other class goes on, since
+        // both sheets were written from the same history.
+        var cutOn: String? = null
+        var damaged = false
+        var bandCut = false
+        for ((day, session, text) in ordered) {
+            if (damaged && (cutOn == null || day == null || day < cutOn)) { bandCut = true; break }
+            if (session == null) {
+                if (!damaged) { damaged = true; cutOn = day }
+                continue
             }
-            // How many sets away, not how far along. The row's own line is
-            // "another clean set moves it", and under a fraction a row at
-            // 8 of 10 (two sets away) outranks one at 2 of 3 (one set
-            // away) -- so with the band capped, the one movement a single
-            // set would bump could be the one cut. Not reachable while
-            // every `needed` is 3; the runner's rule is free to differ.
-            //
-            // Ties keep the sheets' order, newest first and each in its
-            // board order: `sortedWith` is stable. Most rows are one rung,
-            // so this is usually not a ranking at all -- see the cap's note.
-        }.sortedWith(compareBy({ it.needed - it.done }, { -(it.done.toDouble() / it.needed) }))
+            val here = LinkedHashMap<String, ExerciseSet>()
+            for (set in session.sets) {
+                val key = set.key ?: if (session === newest) "\u0000ref:${set.ref}" else continue
+                if (key in seen) continue
+                // Listed twice on one sheet: a skipped copy doesn't speak
+                // for the one that was done.
+                val held = here[key]
+                if (held == null || (held.skipped && !set.skipped)) here[key] = set
+            }
+            here.values.mapNotNullTo(found) { bumpOf(it, asOf(session.date, newestDate)) }
+            seen += here.keys
+            // A row that didn't decode still lists its movement on this
+            // sheet, so an older count for it is superseded all the same.
+            seen += rawKeys(text)
+        }
+        // How many sets away, not how far along. The row's own line is
+        // "another clean set moves it", and under a fraction a row at 8 of
+        // 10 (two sets away) outranks one at 2 of 3 (one set away) -- so
+        // with the band capped, the one movement a single set would bump
+        // could be the one cut. Not reachable while every `needed` is 3;
+        // the runner's rule is free to differ.
+        //
+        // Ties keep the sheets' order, newest first and each in its board
+        // order: `sortedWith` is stable. Most rows are one rung, so this is
+        // usually not a ranking at all -- see the cap's note.
+        val nearBump = found.sortedWith(compareBy({ it.needed - it.done }, { -(it.done.toDouble() / it.needed) }))
 
         // Over what was actually LIFTED, not over every row on every sheet.
         // Grouped by the runner's own key, or not at all: all of them carry
@@ -490,9 +524,32 @@ object Growth {
             short = short,
             newerSchema = newerSchema,
             newestRead = newestRead,
+            bandCut = bandCut,
         )
     }
 
+
+    /**
+     * What a row from an older sheet says about its age: that sheet's date,
+     * or [OLDER_SHEET] when the date won't read or isn't before the newest
+     * sheet's (a hand-made file can carry any date). Null on the newest
+     * sheet's own day, which a two-class day shares.
+     */
+    private fun asOf(date: String, newest: String?): String? = when {
+        date == newest -> null
+        newest != null && date < newest &&
+            runCatching { java.time.LocalDate.parse(date) }.isSuccess -> date
+        else -> OLDER_SHEET
+    }
+
+    /** Every `key` on the sheet's rows, decoded or not. */
+    private fun rawKeys(text: String): List<String> = runCatching {
+        ((Session.json.parseToJsonElement(text) as? JsonObject)?.get("sets") as? JsonArray).orEmpty()
+            .mapNotNull { ((it as? JsonObject)?.get("key") as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
+    }.getOrDefault(emptyList())
+
+    /** [Bump.asOf] for an older sheet whose date can't be shown. */
+    const val OLDER_SHEET = "older"
 
     /** One sheet row as a band row, or null when it is not part way. */
     private fun bumpOf(set: ExerciseSet, asOf: String?): Bump? {
