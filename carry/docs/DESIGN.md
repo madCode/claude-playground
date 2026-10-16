@@ -4,7 +4,7 @@
 
 No phone in the studio. So Carry is never open while you train — it is a
 glance before and a form after, and anything that assumes otherwise is
-wrong for this app. Two screens, no live timer, no during-workout logging.
+wrong for this app. Two screens for the studio, plus a third read at home, no live timer, no during-workout logging.
 
 Measured against the owner's real sheets: a typical one carries **a handful
 of numbers worth remembering, and most often no weight changes at all**.
@@ -47,21 +47,22 @@ Two consequences worth stating, because they look like missing features:
 
 ## Screens
 
-**Today** — what to carry in. Ordered by what you can't guess:
+**Before** — what to carry in. Ordered by what you can't guess:
 
 1. Weights that **changed** since last time, with what they were. A bump is
    the only number you'd get wrong from memory, because by feel you repeat
    last session's weight.
 2. The other history-backed numbers, one line each.
 3. Everything with no number — first-timers, bodyweight, untracked — folded
-   into a single tail line. Present, not prominent.
+   into a tail of at most two lines: by feel, and no weight. Present, not
+   prominent.
 
-**Log** — what you did. One row per exercise, two lines tall: weight,
+**After** — what you did. One row per exercise, two lines tall: weight,
 reps, and five chips (*easy*, *hard*, *mod*, *hurt*, *skip*) — six on a timed
 row, which also gets *done*. Plus **add a row**, for anything the sheet didn't
 list.
 
-*skip* is a different kind of thing from the other two: it is not a quality
+*skip* is a different kind of thing from the other chips: it is not a quality
 of a set, it is the statement that there wasn't one. It had been in the
 schema, in the patch and in the importer — which logs skipped items so the
 coach stops re-asking — since before this screen existed, with no way to
@@ -109,7 +110,7 @@ with markers counted as never having happened. It now asks the same
 question the row does — of the sheet's own rows. Whether a session logged
 entirely by hand belongs on that screen is still open.
 
-The other two are the two things that cannot be derived:
+*easy* and *hurt* are the two things that cannot be derived:
 
 - *easy* — finishing a set says nothing about what was left in reserve, and
   this is the only signal measured as able to raise the owner above their own
@@ -132,7 +133,7 @@ Carry never writes it; anything that needs words goes in the note.
 
 ### When there is no sheet to show
 
-Five states, and they are separate because each needs different words. A
+Seven states, and they are separate because each needs different words. A
 wrong diagnosis sends someone to fix the wrong thing:
 
 | State | What it means | What it offers |
@@ -143,12 +144,13 @@ wrong diagnosis sends someone to fix the wrong thing:
 | Nothing to carry | folder readable, no session written yet | the picker |
 | Can't read that session / Carry is out of date | a file that is there but truncated mid-sync, or written by a newer coach | the picker |
 | Folder isn't answering | the read passed 15 seconds; a provider can block forever with no timeout to set | the picker |
+| That's your whole phone | a whole volume picked rather than a folder | the picker |
 
-**A sheet that is not today's says so above the numbers**, in the same
-place and the same voice as the borrowed-block warning, because it is the
-same kind of mistake: a sheet that looks authoritative and is not about
-today. The likeliest cause is simply that the sync has not run. A date the
-app cannot parse is admitted rather than assumed to be today.
+**A past sheet is headed "No sheet for today"**, with "Showing the most
+recent" under it: on a rest day that is the ordinary state, not a failed
+sync. A sheet dated ahead of today, or a date the app cannot parse, gets a
+warning above the numbers in the borrowed-block warning's voice, because
+those look authoritative and are not about today.
 
 **Known limit: two machines, two notions of "today".** The date in the file
 is a calendar date written by the Mac; "today" is the phone's. They agree
@@ -202,9 +204,10 @@ reads as a room rather than a dashboard. Dark first, because 6am in a lobby.
 
 **Two colour systems, kept apart on purpose.**
 
-- **Amber `#E0A33E` means one thing: this weight moved.** It appears on the
-  figure and nowhere else. If amber is on screen there is something to
-  remember, and that is the whole reason the screen exists. A `+5` chip on
+- **Amber `#E0A33E` means one thing: this weight moved.** Among the numbers
+  it appears only on a weight that moved; outside them it marks the
+  selected tab, the save action and *easy*. If a figure is amber there is
+  something to remember, and that is the whole reason the screen exists. A `+5` chip on
   that row names the change rather than leaving it to be subtracted.
 - **Hue says what kind of movement it is**, on a 3px left edge and never on
   a number: legs `#8AD17F`, push `#5FA8E8`, pull `#C98BE0`, core `#4FC7C0`,
@@ -272,7 +275,7 @@ weight the marker is the whole record. The same test decides whether the
 session appears on that screen at all.
 
 It is a **record, not a form**, and says so. There is nothing on it to type
-into: the one editable session is today's, on the Log screen, and two ways
+into: the one editable session is today's, on the After tab, and two ways
 to write one file is how a wrong number gets in. A back-filled day — a
 record of training from before this app — says that instead.
 
@@ -418,7 +421,7 @@ seen and was silently never announced.
 
 ## Asking whether a newer build is out
 
-The one connection the app opens. The owner chose it on 2026-10-16
+The app's only network use. The owner chose it on 2026-10-16
 ([#107](https://github.com/madCode/claude-playground/issues/107)) over
 routing the build number through the synced folder, so Carry declares
 `INTERNET` for this alone. `DebugUpdates` works like newspaperss's:
@@ -433,9 +436,10 @@ routing the build number through the synced folder, so Carry declares
 - **It sends nothing of the owner's.** A GET of the `carry-debug` release's
   public JSON. The newest build is the highest `carry-debug-<run>.apk`
   among its files; a body over 256 KB is not read.
-- **The Since tab says it**, at the top, even when the folder has nothing
+- **The Since tab says it**, at the top, even when nothing on it is
   countable (a folder this build can't read is when a newer build is most
-  likely the fix): "Build N is out — install it", in chalk rather than
+  likely the fix), though only while a sheet is on screen; a newest file
+  that can't be read at all shows its own message and no notice: "Build N is out — install it", in chalk rather than
   amber.
 - **The whole request has 30 seconds**, not only each read, so a slow
   server can't hold the check open.
@@ -545,7 +549,8 @@ Three rules, and a review of the first version found it breaking all three.
   into `line` would have published a weight with no change here and no test
   failing. A row Carry cannot name itself is left out rather than guessed.
 
-Only rows answered with a number count, and the post is **shown in full
+Sheet rows count when answered with a number, or *done* on a timed row;
+added rows count by name. The post is **shown in full
 before it is sent**. That last one is the load-bearing guard: the text is
 built from a file written on another machine, so no amount of care in this
 file is worth as much as the owner reading the thing first.
@@ -557,7 +562,7 @@ Cycle 1 measured why: re-encoding drops a field a newer runner added, and
 turns a weight of `45` into `45.0`. A model cannot faithfully reproduce a
 document it only partly describes, and CLAUDE.md promises unfilled rows
 come back untouched. So every key the runner wrote is copied through and
-only the six a person can edit are replaced.
+only the nine a person can edit are replaced.
 
 Two consequences worth keeping:
 
