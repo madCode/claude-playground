@@ -111,6 +111,32 @@ All the project's rules apply. These are for unattended work, each learned by ge
 - **Render a changed screen and look at it.** A test on the data doesn't show the screen.
 - **Leave the tree alone while a review agent reads it**, and stop any background work in the
   step that reads its result.
+- **A test that can't fail looks like one that passes.** Known ways: asserting on a `LazyColumn`
+  row never scrolled into view (it isn't composed, so `assertDoesNotExist` passes); a
+  `captureToImage` that came back flat; a fixture that names something real as "unknown"; a
+  fixture with one of a thing, which can't tell a ratio from a count; inputs that route to the
+  other branch. A falsification run where every break stays green is more likely a broken
+  harness (grepping for a line the runner never prints) than useless tests.
+- **Test the thing the person sees.** One assertion goes against the screen or the printed
+  report, not only the model under it, and two halves that talk get one fixture made by the
+  real producer and read by the real consumer.
+- **A flake is fixed when it's counted**: reproduce it first, then at least twenty runs before
+  and after, with the numbers in the PR.
+- **Snapshots lie by omission**: `git archive` leaves out gitignored files, and after a CI
+  re-run `gh run view --log` shows the latest attempt.
+
+### Briefing an agent
+
+When a cycle hands work to an agent:
+
+- Have it check it is in the right repository first, and stop and say so if not. A worktree is
+  cut from the session's current directory.
+- Land any spec on the branch it starts from, as a document in the repository, and point the
+  brief at it. Say what is already settled, with file and line, so it isn't rediscovered.
+- State the gate ("raises X without raising Y"), and say that "built it, measured it, not
+  shipping it" is a good outcome.
+- Name what is out of bounds, keep commits to its own paths, and say who merges.
+- Ask for a report: the PR, what was built, what the review found, and what could not be done.
 
 ## 4. Ship it
 
