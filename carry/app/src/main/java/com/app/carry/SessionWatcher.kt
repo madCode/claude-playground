@@ -104,9 +104,31 @@ object SessionWatcher {
      */
     private fun record(before: Set<String>?, now: List<String>, today: LocalDate): Set<String> {
         val cutoff = today.minusDays(KEEP_DAYS).toString()
-        val eligible = now.mapNotNull(NewSession::parse)
+        val parsed = now.mapNotNull(NewSession::parse)
+
+        // On a FIRST run -- a fresh install, a reinstall that lost the set,
+        // or simply the first time this feature ever ran on an existing
+        // install -- today's files are left OUT of the record, so the next
+        // run announces them.
+        //
+        // The anti-burst rule this refines is still intact, because the
+        // burst it prevents is entirely OLD sessions: "six notifications
+        // for sessions logged weeks ago" was the failure, and those are
+        // all recorded and silenced here exactly as before. Silencing
+        // TODAY's was never the point, and doing it swallowed the one
+        // sheet the owner cares about. Found by a live test on the owner's
+        // own phone (2026-10-16): the test file synced, appeared on the
+        // Before tab, and could never have been announced, because the
+        // first run was always going to record it first.
+        //
+        // A borrowed day puts two files at today's date, so this can
+        // announce two at once on a first run. That is correct rather than
+        // a burst: both are sheets they are about to walk in with.
+        val eligible = parsed
             .filter { it.date <= today.toString() }
+            .filter { before != null || it.date != today.toString() }
             .map { it.name }
+
         return ((before ?: emptySet()) + eligible)
             .filter { name -> NewSession.parse(name)?.let { it.date >= cutoff } ?: false }
             .toSet()
