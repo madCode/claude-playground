@@ -1490,11 +1490,17 @@ honest answer and the useful one are the same one.
 I'm still on knee pushups. I should know when to push myself to do more
 full pushups. But maybe that's too much to include in the app."*
 
-Not too much — the largest uncovered area there is. **37% of your logged
-sets carry no weight at all**, and across 98 real sheets 31% of lines are
-bodyweight, median a third of any given sheet. The coach's whole model is
-"what weight next"; for a third of your training there is no weight, so it
-said "no weight needed" and nothing else, for ever.
+Not too much — the largest uncovered area there is. **A large share of
+your logged sets carry no weight at all**, and bodyweight lines are a
+substantial minority of every real sheet in the corpus. The coach's whole
+model is "what weight next"; for much of your training there is no weight,
+so it said "no weight needed" and nothing else, for ever.
+
+(The figures that were here were converted 2026-10-16. They were the
+reason this cycle happened and are not needed to understand it, and this
+repository is public — the test the privacy rule sets is whether a
+stranger learns something about the owner's training from the sentence,
+which a percentage fails. The numbers themselves live with the data.)
 
 **And it was worse than silent.** The bodyweight path already had a rule:
 three clean sets in a row earned *"full form 3x in a row, push it: faster

@@ -49,7 +49,7 @@ not a thing anyone is blocked from building.
   Four that are already on `main`: `SinceScreen.kt` ("26 distinct movements
   across 32 sets and exactly one of them done twice"), `DESIGN.md`
   ("20 of 20 lifts"), `GrowthTest.kt` ("19 of 20 distinct"), and the
-  "a third of this owner's logged sets" line repeated in `DESIGN.md`,
+  "a large share of this owner's logged sets" line repeated in `DESIGN.md`,
   `LogScreen.kt`, `LogScreenTest.kt`, `PastSessionScreenTest.kt` and
   — found by the #85 review, missed by every earlier pass over this
   list — `SessionPatch.kt`. Three more in `TodayScreenTest.kt`, found
