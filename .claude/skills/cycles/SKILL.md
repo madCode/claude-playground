@@ -51,9 +51,16 @@ proposal for madCode ([the loop, step 2](https://github.com/madCode/claude-playg
 **Audit**: one persona reading the real thing (the app as built, its real output, real data
 where the project allows it), never fixtures. The project's CLAUDE.md or the prompt names the
 personas; otherwise pick from someone the app is for, a UX designer, a security researcher, an
-architect after simple code, test health, and a documentation pass. When BACKLOG.md says a
+architect after simple code, test health, a documentation pass, and backlog grooming. When BACKLOG.md says a
 [recurring review](https://github.com/madCode/claude-playground/blob/main/practices/recurring-reviews.md)
-is due, that is the audit. Fix small clear things now. The rest goes into BACKLOG.md, checked
+is due, that is the audit.
+
+**Backlog grooming** is an audit of BACKLOG.md itself: drop or merge what is stale, done or
+duplicated (checked against the code, not the wording), split items too big for one cycle, and
+put *Next* in the order cycles should take it, the project's own ordering rule first, then what
+readers would notice most. A change of priority madCode set is a question for them, not an edit.
+
+Fix small clear things now. The rest goes into BACKLOG.md, checked
 against the code first: about a third of findings don't hold.
 
 One thing per cycle. Time left over goes into the records, not a second feature.
@@ -96,7 +103,8 @@ Two readers, so two files:
   last, then the one or two things the next cycle should do differently. What was built is in
   DEVLOG.md; link it rather than repeat it.
 
-Tick the item in BACKLOG.md and add what the cycle found.
+In BACKLOG.md, tick the item and move it to *Done* (if the file has no *Done* section, add
+one), and add what the cycle found to *Next*.
 
 ### Lessons become rules
 
@@ -112,6 +120,14 @@ anything still true in it has become a rule.
 When the stop rule is met: a closing DEVLOG.md entry (what the run did, what waits on madCode,
 where a next run should start), then turn the scheduled task off with `update_trigger`
 (`enabled: false`; a session the task started can't delete it), and say so.
+
+## Leave the machine as you found it
+
+Every cycle, before it ends. In a cloud container this is the background-work rule above. On
+madCode's own computer, also: nothing you started still running (`ps`), no temporary files or
+checkouts left behind, and free disk and load what they were when the cycle began; note both at
+the start so there is something to compare with. Anything you can't put back is the first line
+of the summary.
 
 ## Finish
 
