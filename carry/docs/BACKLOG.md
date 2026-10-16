@@ -326,7 +326,17 @@ Only a real phone can answer these.
   grant was taken through the real picker and held across a force-stop and
   relaunch. **A phone and a reinstall are still owed** *(device)*
 - [ ] Bottom-edge insets against the navigation bar with a long session *(device)*
-- [ ] The round trip through Syncthing, end to end *(device)*
+- [x] ~~The round trip through Syncthing, end to end~~ **Confirmed on the
+  owner's own phone, 2026-10-16.** A blank, labelled session file placed in
+  the synced folder on the laptop reached the phone, parsed, appeared on the
+  Before tab, and the notification arrived. Which also confirms the two
+  fixes it was dated to exercise: the file was dated TOMORROW when placed,
+  so the future-date rule had to leave it unrecorded overnight rather than
+  swallowing it, and the 06:00 rule had to hold it through the small hours
+  instead of buzzing at midnight. Both held.
+
+  Not yet exercised on a device: tapping the notification (the SINGLE_TOP
+  fix, that it does not destroy typed-but-unsaved numbers) *(device)*
 
 
 ## Feature proposals
