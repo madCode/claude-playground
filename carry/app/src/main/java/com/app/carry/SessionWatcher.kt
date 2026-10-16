@@ -76,9 +76,16 @@ object SessionWatcher {
         // sheet is held on its own: one whose class is soon is not kept
         // waiting for another's.
         val ids = listing.associate { (id, name) -> name to id }
-        val (ready, held) = found.partition { due(it, now) { ids[it.name]?.let(folder::read) } }
+        val (due, held) = found.partition { due(it, now) { ids[it.name]?.let(folder::read) } }
 
-        seen.remember(record(seen.names(), names, today) - held.map { it.name }.toSet())
+        // Read again: a provider read can block, for longer than the hour
+        // between runs, and a later run may have announced and recorded one
+        // of these meanwhile. Against the stale record this run would
+        // announce it a second time, or un-record it so the next one did.
+        val fresh = seen.names()
+        val ready = due.filter { fresh?.contains(it.name) != true }
+        val stillHeld = held.filter { fresh?.contains(it.name) != true }.map { it.name }.toSet()
+        seen.remember(record(fresh, names, today) - stillHeld)
 
         // AFTER recording, deliberately. Anything that throws while posting
         // -- a channel that will not create, a notification too large --

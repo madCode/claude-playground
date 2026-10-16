@@ -283,4 +283,26 @@ class SessionWatcherTest {
             assertEquals("announced from six for $bad", 1, SessionWatcher.watchOnce(folder, seen, at("06:05")) {}.size)
         }
     }
+
+    @Test
+    fun `a run whose read stalled past the next run does not announce again`() {
+        // The next run announced and recorded the sheet while this one's read hung.
+        val name = "session-2026-10-17-3G.json"
+        val seen = FakeSeen(stored = emptySet())
+        val folder = object : Folder {
+            override val label: String? = "Sync/gym"
+            override val chosen = true
+            override val grantLost = false
+            override fun list() = listOf("id-$name" to name)
+            override fun read(documentId: String): String? {
+                seen.remember(setOf(name))
+                return startingAt("11:00")
+            }
+            override fun write(documentId: String, text: String) = false
+        }
+        var posted = false
+        assertTrue(SessionWatcher.watchOnce(folder, seen, at("10:00")) { posted = true }.isEmpty())
+        assertTrue("announced once, by the other run", !posted)
+        assertTrue("and still recorded, so nothing announces it again", name in seen.names()!!)
+    }
 }
