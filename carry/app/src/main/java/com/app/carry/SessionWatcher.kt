@@ -33,6 +33,10 @@ object SessionWatcher {
      */
     internal const val EARLIEST_HOUR = 6
 
+    /** How long before its class a sheet that says when the class starts is announced. The
+     *  check is hourly, so in practice this is "within the hour after that moment". */
+    internal const val LEAD_MINUTES = 90L
+
     /**
      * How far back the record keeps names. It only needs to be long enough
      * that a file cannot be announced twice, and the folder holds a handful
@@ -62,23 +66,50 @@ object SessionWatcher {
         // empty list cannot be told apart from an empty folder.
         if (!folder.chosen) return emptyList()
 
-        val names = folder.list().map { (_, name) -> name }
+        val listing = folder.list()
+        val names = listing.map { (_, name) -> name }
         val found = NewSession.pick(seen.names(), names, today.toString())
 
-        // Too early to tell anyone, so tell nobody and remember nothing --
-        // recording here would spend the announcement on an hour the owner
-        // is asleep for. The morning run says it instead.
-        if (found.isNotEmpty() && now.hour < EARLIEST_HOUR) return emptyList()
+        // Too early to tell anyone, so that sheet is neither announced nor
+        // remembered -- recording it would spend the announcement on an hour
+        // the owner may be asleep for, and a later run says it instead. Each
+        // sheet is held on its own: one whose class is soon is not kept
+        // waiting for another's.
+        val ids = listing.associate { (id, name) -> name to id }
+        val (ready, held) = found.partition { due(it, now) { ids[it.name]?.let(folder::read) } }
 
-        seen.remember(record(seen.names(), names, today))
+        seen.remember(record(seen.names(), names, today) - held.map { it.name }.toSet())
 
         // AFTER recording, deliberately. Anything that throws while posting
         // -- a channel that will not create, a notification too large --
         // must not leave the file unrecorded, or the same sheet is
         // announced again every hour for the rest of the day.
-        if (found.isNotEmpty()) post(found)
-        return found
+        if (ready.isNotEmpty()) post(ready)
+        return ready
     }
+
+    /**
+     * Whether a sheet may be announced now: from [LEAD_MINUTES] before its class when the file
+     * says when that is (`starts_at`, written by the runner from the calendar), else from
+     * [EARLIEST_HOUR]. The hour stays as the fallback for every file without the field --
+     * backfills, hand-written days and everything written before it existed -- or those could
+     * never be announced at all.
+     */
+    internal fun due(found: NewSession.Found, now: LocalDateTime, text: () -> String?): Boolean {
+        val start = startsAt(text(), found.date) ?: return now.hour >= EARLIEST_HOUR
+        return !now.isBefore(start.minusMinutes(LEAD_MINUTES))
+    }
+
+    /** The class's start from a session file, or null when it has none, it can't be read, or it
+     *  isn't on the file's own date, which would be the runner's mistake, not a time to trust. */
+    internal fun startsAt(text: String?, date: String): LocalDateTime? = runCatching {
+        val value = Session.json.parseToJsonElement(text ?: return null)
+            .let { it as? kotlinx.serialization.json.JsonObject }
+            ?.get("starts_at")
+            ?.let { it as? kotlinx.serialization.json.JsonPrimitive }
+            ?.takeIf { it.isString }?.content ?: return null
+        LocalDateTime.parse(value).takeIf { it.toLocalDate().toString() == date }
+    }.getOrNull()
 
     /**
      * The record to keep, given what was kept before and what is in the

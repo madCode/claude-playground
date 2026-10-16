@@ -14,10 +14,11 @@ class SessionWatcherTest {
         override val chosen: Boolean,
         override val grantLost: Boolean = false,
         private val names: List<String> = emptyList(),
+        private val texts: Map<String, String> = emptyMap(),
     ) : Folder {
         override val label: String? = "Sync/gym"
         override fun list(): List<Pair<String, String>> = names.map { "id-$it" to it }
-        override fun read(documentId: String): String? = null
+        override fun read(documentId: String): String? = texts[documentId.removePrefix("id-")]
         override fun write(documentId: String, text: String): Boolean = false
     }
 
@@ -227,5 +228,59 @@ class SessionWatcherTest {
         SessionWatcher.watchOnce(FakeFolder(chosen = true), seen, today) {}
 
         assertEquals("every fresh name kept, every stale one dropped", fresh.toSet(), seen.names())
+    }
+
+    private fun startsAt(value: String) = """{"schema":"gym-session/1","date":"2026-10-17","starts_at":"$value"}"""
+    private fun startingAt(time: String) = startsAt("2026-10-17T$time")
+
+    private fun at(time: String) = LocalDateTime.parse("2026-10-17T$time")
+
+    @Test
+    fun `an early class is announced before six, ninety minutes ahead of it`() {
+        // The floor alone would announce a 05:30 class after it started.
+        val name = "session-2026-10-17-2G.json"
+        val folder = FakeFolder(chosen = true, names = listOf(name), texts = mapOf(name to startingAt("05:30")))
+        val seen = FakeSeen(stored = emptySet())
+        assertTrue(SessionWatcher.watchOnce(folder, seen, at("03:55")) {}.isEmpty())
+        assertEquals(listOf("2G"), SessionWatcher.watchOnce(folder, seen, at("04:05")) {}.map { it.classTag })
+    }
+
+    @Test
+    fun `a mid-morning class waits for its own time, and is still announced when it comes`() {
+        val name = "session-2026-10-17-3G.json"
+        val folder = FakeFolder(chosen = true, names = listOf(name), texts = mapOf(name to startingAt("11:00")))
+        val seen = FakeSeen(stored = emptySet())
+        assertTrue("not at 06:05 for an 11:00 class", SessionWatcher.watchOnce(folder, seen, at("06:05")) {}.isEmpty())
+        assertTrue("and not recorded meanwhile", seen.names()!!.isEmpty())
+        assertEquals(listOf("3G"), SessionWatcher.watchOnce(folder, seen, at("09:35")) {}.map { it.classTag })
+    }
+
+    @Test
+    fun `two sheets on one day are each held for their own class`() {
+        val early = "session-2026-10-17-2G.json"
+        val late = "session-2026-10-17-3G.json"
+        val folder = FakeFolder(chosen = true, names = listOf(early, late),
+            texts = mapOf(early to startingAt("07:00"), late to startingAt("12:00")))
+        val seen = FakeSeen(stored = emptySet())
+        assertEquals(listOf("2G"), SessionWatcher.watchOnce(folder, seen, at("06:00")) {}.map { it.classTag })
+        assertEquals(listOf("3G"), SessionWatcher.watchOnce(folder, seen, at("10:40")) {}.map { it.classTag })
+    }
+
+    @Test
+    fun `a time that is missing, unreadable or on another day falls back to six`() {
+        val unusable = listOf(
+            """{"date":"2026-10-17"}""",
+            startsAt("soon"),
+            startsAt("2026-10-18T05:30"),
+            """{"date":"2026-10-17","starts_at":5}""",
+            "not json",
+        )
+        for (bad in unusable) {
+            val name = "session-2026-10-17-3G.json"
+            val folder = FakeFolder(chosen = true, names = listOf(name), texts = mapOf(name to bad))
+            val seen = FakeSeen(stored = emptySet())
+            assertTrue("held before six for $bad", SessionWatcher.watchOnce(folder, seen, at("05:00")) {}.isEmpty())
+            assertEquals("announced from six for $bad", 1, SessionWatcher.watchOnce(folder, seen, at("06:05")) {}.size)
+        }
     }
 }
