@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status-bar icon: Android draws only its alpha, so it is the pulse in a single colour, its
+     dot lifted clear of the peak so the two don't merge at status-bar size. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <group
+        android:scaleX="0.9"
+        android:scaleY="0.9"
+        android:translateX="5"
+        android:translateY="13.3">
+        <path
+            android:pathData="M14,56 L27,56"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="10"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M27,56 L35,40"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="10"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M35,40 L46,72"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="10"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M46,72 L58,24"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="10"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M58,24 L68,56 L86,56"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="10"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M52.5,5 a5.5,5.5 0 1,0 11,0 a5.5,5.5 0 1,0 -11,0"
+            android:fillColor="#FFFFFF" />
+    </group>
+</vector>

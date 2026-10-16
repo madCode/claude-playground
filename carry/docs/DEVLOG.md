@@ -6,7 +6,8 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** the bump band withheld rather than quietly becoming
+- **Lately:** an icon of its own, and a real one in notifications
+  (cycle 48); the bump band withheld rather than quietly becoming
   yesterday's answer (#89); a day missing from the Since totals without a
   word (#88); one bad ROW no longer costing a whole day, and both tabs
   saying how many did not read (#87); one null key no longer costing one
@@ -29,6 +30,23 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-16 — cycle 48: an icon of its own
+
+**Carry had no icon, so it looked like every other app**, and its
+notification showed Android's grey info symbol. Now it has the pulse the
+owner picked from the logo concepts: the five heart-rate zones as one
+interval beat, a chalk dot at the peak, on the app's slate.
+
+- An adaptive launcher icon with a monochrome layer, so Android 13's themed
+  icons get a one-colour pulse instead of a blank.
+- The notification's status-bar icon is the same pulse in one colour.
+- `IconTest` renders all three, fails if the drawing leaves the circle a
+  launcher may crop to or the status-bar icon gains a colour, and writes the
+  PNGs for review. Both checks were falsified: scaling the drawing up and
+  colouring one segment each turned its test red.
+- Left: how it looks on a real launcher is a phone check; the picture in
+  the PR is Robolectric's.
 
 ## 2026-10-16 — cycle 47: measuring the backlog instead of reading it
 

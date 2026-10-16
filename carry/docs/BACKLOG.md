@@ -320,8 +320,6 @@ These are the open paths to one, hardest first.
   preconditions — do not pick this up before that *(design:
   [read-class-from-calendar](designs/read-class-from-calendar.md))*
 
-- [ ] **A logo** — chalk on slate, and it has to work as a one-colour launcher
-  icon at 48dp *(you asked, design: [logo](designs/logo.md))*
 
 
 - [ ] **`Growth.of` picks the newest session by the date INSIDE the file,
@@ -347,11 +345,6 @@ These are the open paths to one, hardest first.
   this way *(audit)*
 
 ### Health and tidying
-- [ ] **A launcher icon of its own.** Carry has none, so it shows Android's
-  default and can't be told apart from the other apps on the phone. An
-  adaptive icon (vector foreground, plain background, a monochrome layer for
-  themed icons) drawn for Carry, as
-  [practices/android.md](../../practices/android.md) asks *(you asked)*
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on
   instructions.** The gate is real but it is counting the wrong thing for
   a codebase this full of fail-closed guards — a third of branches have
@@ -470,6 +463,12 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **A logo, and a launcher icon of its own.** The H3 "pulse on a dot"
+  concept the owner picked on 2026-10-16: an interval heartbeat in the five
+  heart-rate zones with a chalk dot at the peak. Adaptive icon, a monochrome
+  layer for themed icons, and the notification's status-bar icon, which was
+  Android's info symbol. `IconTest` keeps the drawing inside the safe circle
+  and the status-bar icon one colour *(you asked; [logo](designs/logo.md))*
 - [x] ~~**Write the streak into the session file so the dots can light.**~~
   **The diagnosis was wrong and nothing needed writing.** `session_file.py`
   has written `streak_done`/`streak_needed` all along; what was null was
