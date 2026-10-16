@@ -1,0 +1,24 @@
+// Puts Google's mirror of Maven Central ahead of every build's own
+// repositories. Cloud sessions share an address that Maven Central
+// rate-limits, and Gradle reports the refusals as "Could not find", so a
+// build fails with what looks like a missing dependency.
+// install-android-sdk.sh copies it into ~/.gradle/init.d; a laptop that
+// never ran that script is unaffected.
+def mirror = 'https://maven-central.storage-download.googleapis.com/maven2/'
+
+beforeSettings { settings ->
+    settings.pluginManagement.repositories {
+        maven { url = mirror; name = 'MavenCentralMirror' }
+    }
+    settings.dependencyResolutionManagement.repositories {
+        maven { url = mirror; name = 'MavenCentralMirror' }
+    }
+}
+
+// Robolectric downloads its Android jars itself, outside Gradle, from Maven
+// Central; point that at the mirror too.
+allprojects {
+    tasks.withType(Test).configureEach {
+        systemProperty 'robolectric.dependency.repo.url', mirror
+    }
+}
