@@ -99,6 +99,17 @@ not a thing anyone is blocked from building.
   it *(audit: security)*
 
 ### Wrong numbers, or a road to one
+- [ ] **A weight over 1000 saves on the phone, and the importer then
+  refuses the whole day.** Since 2026-10-16 the companion importer refuses
+  a session file holding a weight or rep count outside 0 to 1000. That
+  stops a typo from corrupting the record, but the number boxes take up to
+  six characters, so a slip like `2500` saves on the phone and loses the
+  day's import, and Carry never says so. Dropping the keystroke would turn
+  `2500` into `250`, a wrong number. Blanking it while showing it breaks
+  "the box and the stored value never disagree". The two ways that keep
+  both rules: refuse the save, naming the row; or mark the box and say
+  "not saved" next to it. A question about what Save may refuse
+  *(found by the importer's security fix)*
 
 The app's stated worst outcome is a wrong number in a training history.
 These are the open paths to one, hardest first.
