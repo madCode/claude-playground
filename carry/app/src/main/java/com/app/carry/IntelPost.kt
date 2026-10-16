@@ -66,24 +66,35 @@ object IntelPost {
 
         val did = session.sets.mapNotNull { set ->
             val entry = entries[set.ref] ?: return@mapNotNull null
-            // A number, or `done`. This goes to the subreddit, and the
-            // test is "was this movement in the block" — which a number
-            // answers, and which `done` ("I did it, and there is nothing
-            // to say about it") answers for a timed hold that takes no
-            // weight and prescribes no reps. Asked and answered by the
-            // owner, 2026-10-16: a wholly bodyweight or timed class used
-            // to offer no post at all, because every row was empty by
+            // A number, or `done` ON A TIMED ROW. This goes to the
+            // subreddit, and the question is "was this movement in the
+            // block" — which a number answers, and which `done` ("I did
+            // it, and there is nothing to say about it") answers for a
+            // timed hold that takes no weight and prescribes no reps.
+            // Asked and answered by the owner, 2026-10-16: a timed block
+            // used to offer no post at all, because every row was empty by
             // definition.
+            //
+            // `set.timed` is in the test on purpose and is not
+            // belt-and-braces. The `done` chip is drawn only for a timed
+            // row (LogScreen), so that is the only shape the owner can set
+            // it on — but `done` is ALSO seeded from the raw file, and a
+            // runner re-run that drops `prescribed_duration_sec` leaves
+            // the flag on a row whose chip has vanished. Without this
+            // clause that row publishes a bullet the owner can neither see
+            // nor clear, and `prescription` falls back to the rep text, so
+            // it reads "10 x plank" — a prescription nobody answered in
+            // this sitting.
             //
             // `hurt` deliberately does NOT qualify: tapping it while
             // deciding is not a record that the movement was done. Nor do
-            // `easy`/`hard`/`easier`, which is a narrower reading than it
-            // may look — they do imply a set happened, but the owner named
-            // `done`, and widening their answer is on the backlog as a
-            // question rather than taken here.
-            if (entry.skipped || (entry.weight == null && entry.reps == null && !entry.done)) {
-                return@mapNotNull null
-            }
+            // `easy`/`hard`/`easier`, which do imply a set happened — but
+            // the owner named `done`, and widening their answer is a
+            // backlog question rather than one to take here. The same
+            // question leaves a wholly BODYWEIGHT (untimed) class still
+            // unpostable, because such a row has no `done` chip at all.
+            val qualifies = entry.weight != null || entry.reps != null || (entry.done && set.timed)
+            if (entry.skipped || !qualifies) return@mapNotNull null
             val name = set.ownName() ?: return@mapNotNull null
             // `prescription`, never `prescribedReps`: that one is the
             // runner's math number, so publishing it would tell the

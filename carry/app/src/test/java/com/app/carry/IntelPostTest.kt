@@ -68,7 +68,8 @@ class IntelPostTest {
     fun `only the rows that say the movement was in the block`() {
         val post = IntelPost.compose(
             session(sets = listOf(set(0, "bench press"), set(1, "deadlift"), set(2, "squat"),
-                                 set(3, "row"), set(4, "plank"))),
+                                 set(3, "row"),
+                                 set(4, "plank", durationSec = 45, prescribed = null, prescribedText = null))),
             mapOf(
                 0 to SessionPatch.Entry(weight = 45.0),        // did it
                 1 to SessionPatch.Entry(skipped = true),       // explicitly did not
@@ -80,7 +81,9 @@ class IntelPostTest {
                 // "I did it, and there is nothing to say about it", which
                 // is the only thing a timed hold can say: it takes no
                 // weight and prescribes no reps, so the boxes are empty by
-                // definition. The owner's call, 2026-10-16.
+                // definition. The owner's call, 2026-10-16. The row is
+                // TIMED because that is the only shape the chip is drawn
+                // for -- see the file-sourced test below.
                 4 to SessionPatch.Entry(done = true),
             ),
             emptyList(),
@@ -93,11 +96,15 @@ class IntelPostTest {
     }
 
     @Test
-    fun `a class that was wholly bodyweight still has a post`() {
-        // Before the owner answered this, a timed or bodyweight class
-        // offered no post at all: every row was empty by definition, so
-        // `did` came back empty and compose returned null. That is a whole
-        // class the subreddit never heard about.
+    fun `a class that was wholly timed still has a post`() {
+        // Before the owner answered this, a timed class offered no post at
+        // all: every row was empty by definition, so `did` came back empty
+        // and compose returned null. That is a whole class the subreddit
+        // never heard about.
+        //
+        // Deliberately NOT named "bodyweight": an untimed bodyweight row
+        // has no `done` chip, so it still cannot be posted. Widening the
+        // chip is the owner's call and is on the backlog.
         val post = IntelPost.compose(
             session(sets = listOf(set(0, "plank", durationSec = 45, prescribed = null, prescribedText = null),
                                  set(1, "side plank", durationSec = 30, prescribed = null, prescribedText = null))),
@@ -117,6 +124,23 @@ class IntelPostTest {
     }
 
     // ---------------------------------------------------------------- what it leaks
+
+    @Test
+    fun `a done flag on a row with no done chip cannot reach the post`() {
+        // `done` is seeded from the raw file as well as from the chip, and
+        // the chip is drawn only for a timed row. So a runner re-run that
+        // drops `prescribed_duration_sec` leaves the flag on a row whose
+        // chip has vanished: invisible in the form, and one Save tap is
+        // the whole condition for offering a post. Worse than a bare
+        // bullet -- `prescription` falls back to the rep text, so it would
+        // read "10 x plank", a prescription nobody answered this sitting.
+        val post = IntelPost.compose(
+            session(sets = listOf(set(0, "plank"))),   // no durationSec: not timed
+            mapOf(0 to SessionPatch.Entry(done = true)),
+            emptyList(),
+        )
+        assertNull("a row the owner cannot see or clear must not publish", post)
+    }
 
     @Test
     fun `a weight the runner wrote into free text cannot reach the post`() {
