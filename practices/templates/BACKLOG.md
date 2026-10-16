@@ -23,4 +23,8 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Later
 
+## Not doing
+
+What doesn't serve what the app is for, each with a line on why, so it isn't proposed again.
+
 ## Done

@@ -69,7 +69,10 @@ is due, that is the audit.
 duplicated (checked against the code, not the wording), split items too big for one cycle, and
 put *Next* in the order cycles should take it, the project's own ordering rule first, then what
 readers would notice most. A larger feature idea sitting in the backlog becomes an issue, as
-above. A change of priority madCode set is a question for them, not an edit.
+above. An item that doesn't serve what the app is for (DESIGN.md's *What it's for*, the one rule
+in CLAUDE.md) moves to *Not doing* with a line on why, rather than being deleted, so it isn't
+proposed again. A change of priority madCode set, or dropping an item they asked for, is a
+question for them, not an edit.
 
 **An instructions pass** reads the skills, the CLAUDE.md files and the scheduled task's prompt
 the way the next session will, and asks whether they helped the sessions that used them:
