@@ -353,8 +353,8 @@ re-read on resume as it always was.
 
 **The app holds seven Android permissions, and this feature brought five
 of them.** `aapt2 dump permissions` on the built APK is the only honest
-source for this, because a library brings its own. It also lists a
-seventh, `<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which
+source for this, because a library brings its own. It also lists
+`<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which
 androidx.core defines for the app's own receivers; it grants nothing
 outside the app.
 
@@ -436,23 +436,32 @@ A tap installs it from inside the app (`UpdateInstaller`), in this order:
 
 1. **Not over unsaved typing.** Installing replaces the running app, and
    nothing promises its saved state survives that, so the draft could be
-   lost. With a draft, or a save in progress, the tap only says "Save
-   the After tab first".
+   lost. With a draft for the session on screen, or a save in progress,
+   the tap only says "Save the After tab first". The owner can type while
+   the build downloads, so this is checked again just before the hand-off,
+   and an install it stops says the same. A draft left from another
+   session isn't on the form and doesn't count.
 2. **Asks once for "install unknown apps".** Android's own switch, for
    Carry; the tap opens it, and the owner taps the notice again after.
 3. **Downloads the fixed link** into the app's cache, following GitHub's
    redirect, with a 200 MB cap and five minutes in all. A partial file is
    never kept.
 4. **Checks the file** is this app at a higher version code, then hands it
-   to Android's `PackageInstaller`. On Android 12 and later it asks to
-   skip the confirmation, which Android allows when an app updates itself;
-   otherwise the owner sees Android's "Update this app?". Android also
-   refuses an APK signed with another key, which every CI build shares.
-5. **Any failure says why** in a toast and opens the download link in a
-   browser instead, so the old way still works.
+   to Android's `PackageInstaller`. The first in-app update always asks
+   "Update this app?". On Android 12 and later, once Carry has installed
+   itself, later ones may skip that, which is why it asks to. Android also
+   refuses an APK signed with another key, which every CI build shares. A
+   session that fails before it's committed is abandoned, so nothing is
+   left staged.
+5. **Failures are said.** A download or hand-off that fails says why in a
+   toast and opens the download link in a browser, so the old way still
+   works. A failure Android reports after the hand-off is a toast only.
 
 The notice reads "Downloading build N…" and can't be tapped again until
-the file is with the installer or the attempt fails.
+Android's installer has answered, so a second tap can't start a second
+download. If that answer is a confirmation while Carry is behind another
+app, Android won't let it open there; it's shown when the owner comes
+back.
 
 The session files still leave only through the share sheet.
 

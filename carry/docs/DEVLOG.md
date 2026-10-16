@@ -6,8 +6,8 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** a newer build named on the Since tab and installed from
-  the app (#108, cycle 51); each debug build numbered, in its version code and its
+- **Lately:** a newer build named on the Since tab (#108, cycle 50) and
+  installed from the app (cycle 51); each debug build numbered, in its version code and its
   file name (cycle 49); an icon of its own, and a real one in notifications
   (cycle 48); the bump band withheld rather than quietly becoming
   yesterday's answer (#89); a day missing from the Since totals without a
@@ -45,9 +45,10 @@ Internet permission and build the upgrade path"):
   it is for what the owner approves, one use at a time.
 - **This one:** a tap installs that build from inside the app. The first
   time, Android asks to allow Carry to install apps. After that it's
-  Android's "Update this app?", or nothing at all where Android 12 lets an
-  app update itself. It never installs over typing that isn't saved, and
-  any failure falls back to the download link.
+  Android's "Update this app?", and later perhaps nothing at all where
+  Android 12 lets an app update itself. It never installs over typing that
+  isn't saved, checked at the tap and again after the download, and a
+  failed download falls back to the link.
 
 Left: how the first self-update behaves on the owner's phone is a phone
 check. Whether Android skips the confirmation depends on what installed
