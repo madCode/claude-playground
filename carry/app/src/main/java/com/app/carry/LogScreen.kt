@@ -290,13 +290,11 @@ private fun LogRow(
                     val (reps, fractional) = parseReps(text)
                     onChange(entry.copy(reps = reps, fractionalReps = fractional))
                 }
-                // easy and hard are one question with two answers, so
-                // turning one on turns the other off. A set is not both.
+                // No `hard` chip: the coach treats a completed set as
+                // completed however it felt (madCode, 2026-10-16). A file
+                // that already says `hard` keeps it, untouched.
                 Chip("easy", entry.easy, Look.Amber) {
-                    onChange(entry.copy(easy = !entry.easy, hard = false))
-                }
-                Chip("hard", entry.hard, Look.BrickInk) {
-                    onChange(entry.copy(hard = !entry.hard, easy = false))
+                    onChange(entry.copy(easy = !entry.easy))
                 }
                 // "I did the easier version" -- knees, a box under the
                 // step-up. For much of this owner's training there is no
@@ -390,8 +388,7 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
                 val (reps, fractional) = parseReps(it)
                 onChange(row.copy(reps = reps, fractionalReps = fractional))
             }
-            Chip("easy", row.easy, Look.Amber) { onChange(row.copy(easy = !row.easy, hard = false)) }
-            Chip("hard", row.hard, Look.BrickInk) { onChange(row.copy(hard = !row.hard, easy = false)) }
+            Chip("easy", row.easy, Look.Amber) { onChange(row.copy(easy = !row.easy)) }
             Chip("mod", row.easier, Look.ChalkDim) { onChange(row.copy(easier = !row.easier)) }
             Chip("hurt", row.hurt, Look.Brick) { onChange(row.copy(hurt = !row.hurt)) }
             // No skip: a row you added is one you did. Skipping it is

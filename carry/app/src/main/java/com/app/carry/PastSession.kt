@@ -268,7 +268,6 @@ private fun Mark(text: String) {
 private fun accent(mark: String) = when (mark) {
     "done" -> Look.Chalk
     "easy" -> Look.Amber
-    "hard" -> Look.BrickInk
     "hurt" -> Look.Brick
     else -> Look.ChalkDim
 }

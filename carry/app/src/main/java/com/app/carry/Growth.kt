@@ -76,6 +76,8 @@ object Growth {
          * A row with none of this is blank, and is shown blank.
          */
         val answered: Boolean get() =
+            // `hard` is no longer offered or shown, but an older file that
+            // says it still records that a set happened.
             weight != null || reps != null || skipped ||
                 easy || hard || easier || done || hurt || !note.isNullOrBlank() ||
                 // An ADDED row's name is itself the answer: the sheet never
@@ -90,7 +92,6 @@ object Growth {
          *  offers them, so the two screens read the same way round. */
         val marks: List<String> get() = buildList {
             if (easy) add("easy")
-            if (hard) add("hard")
             if (easier) add("mod")
             if (done) add("done")
             if (hurt) add("hurt")

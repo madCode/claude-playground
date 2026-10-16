@@ -333,17 +333,17 @@ class LogScreenTest {
     }
 
     @Test
-    fun `easy and hard are one question with two answers`() {
-        // A set is not both. The coach reads them in opposite directions —
-        // easy earns a bump early, hard blocks the next one — so holding
-        // both at once would mean nothing.
+    fun `there is no hard chip, and a row the file marked hard keeps it`() {
+        // madCode, 2026-10-16: the coach treats a completed set as completed
+        // however it felt, so `hard` is no longer offered. A file that
+        // already says it keeps it: tapping `easy` doesn't clear it, because
+        // Carry doesn't change what it no longer shows.
+        edits.value = mapOf(0 to SessionPatch.Entry(hard = true))
         show()
+        compose.onAllNodesWithText("easy")[0].assertIsDisplayed()
+        compose.onNodeWithText("hard").assertDoesNotExist()
         compose.onAllNodesWithText("easy")[0].performClick()
-        assertEquals(SessionPatch.Entry(easy = true), edits.value[0])
-        compose.onAllNodesWithText("hard")[0].performClick()
-        assertEquals(SessionPatch.Entry(hard = true), edits.value[0])
-        compose.onAllNodesWithText("easy")[0].performClick()
-        assertEquals(SessionPatch.Entry(easy = true), edits.value[0])
+        assertEquals(SessionPatch.Entry(easy = true, hard = true), edits.value[0])
     }
 
     @Test
@@ -353,8 +353,8 @@ class LogScreenTest {
         // it is independent of how it felt.
         show()
         compose.onAllNodesWithText("mod")[0].performClick()
-        compose.onAllNodesWithText("hard")[0].performClick()
-        assertEquals(SessionPatch.Entry(easier = true, hard = true), edits.value[0])
+        compose.onAllNodesWithText("easy")[0].performClick()
+        assertEquals(SessionPatch.Entry(easier = true, easy = true), edits.value[0])
     }
 
     @Test
@@ -381,18 +381,17 @@ class LogScreenTest {
         // otherwise the form reads as unfinished with nothing left to do.
         compose.onNodeWithText("1 of 10 filled", substring = true).assertIsDisplayed()
 
-        // Six chips do not fit on one 411dp line, and what slid off the
+        // A timed row carries the most chips, and what once slid off the
         // right edge was `skip` -- the one chip on the row that says a set
         // did not happen, on the one row shape that has no number to say it
-        // with instead. So the chips wrap, and the proof is that this row's
-        // `skip` sits on a line BELOW `done` rather than beside it.
+        // with instead. The chips wrap when they must; either way this
+        // row's `skip` (the first at or below `done`) is inside the screen.
         val done = compose.onAllNodesWithText("done")[0].getUnclippedBoundsInRoot()
-        val skips = (0 until compose.onAllNodesWithText("skip").fetchSemanticsNodes().size)
+        val width = compose.onRoot().getUnclippedBoundsInRoot().right
+        val skip = (0 until compose.onAllNodesWithText("skip").fetchSemanticsNodes().size)
             .map { compose.onAllNodesWithText("skip")[it].getUnclippedBoundsInRoot() }
-        assertTrue(
-            "no skip chip wrapped below done: $skips vs $done",
-            skips.any { it.top >= done.bottom },
-        )
+            .filter { it.bottom >= done.top }.minBy { it.top }
+        assertTrue("the timed row's skip is off the screen: $skip in $width", skip.right <= width)
 
         reach("+ Add something the sheet missed")
         shoot("22-timed-row")
