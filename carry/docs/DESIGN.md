@@ -341,9 +341,15 @@ the owner's memory.
 A `WorkManager` check runs hourly — not the fifteen-minute floor, because
 the file lands hours ahead and the extra precision would buy nothing but
 battery — lists the folder, and notifies when a name appears that is new
-AND dated today. Tapping it opens the app, which is enough: the Before tab
-is the default tab and the folder is re-read on every resume, so no deep
-link or second way of choosing a session was needed.
+AND dated today.
+
+Tapping it brings the app forward, on whatever tab the owner left. It does
+NOT force the Before tab, and that is a deliberate reversal: forcing it
+needs `CLEAR_TOP`, which with a standard launch mode finishes the running
+activity and rebuilds it, taking the ViewModel — typed weights, added
+rows, an in-flight save — with it. Landing on a particular tab is not
+worth losing numbers for, so the intent is `SINGLE_TOP` and the folder is
+re-read on resume as it always was.
 
 **This is why the app went from zero Android permissions to five.** Not
 one, which is what the first version of this paragraph claimed before the
@@ -383,11 +389,22 @@ exists because its opposite is the failure the owner would feel:
   that lost the set — nothing is announced at all. Re-announcing nothing
   beats announcing a backlog of sessions logged weeks ago.
 
-A folder nobody picked and a folder whose grant was revoked both list as
-empty, and empty is indistinguishable from an empty folder, so the watcher
-returns without touching its record in that case. Recording an empty list
-would erase what was seen and make every existing file look new when the
-grant came back — the "announce everything" failure by a side door.
+Two further rules exist because an empty listing lies. `list()` answers an
+empty list for a folder nobody picked, for a revoked grant, for a query
+that threw, for a provider still restarting, and for a folder that is
+genuinely empty — and none of those can be told apart from the answer.
+
+So the watcher returns early when no folder is readable, and when one is,
+it UNIONS what it saw into the record rather than replacing it, pruning by
+date so the set cannot grow for ever. Replacing would erase the memory on
+any momentary blip and announce today's sheet again on the next
+successful run — the "announce everything" failure by a side door, and it
+would repeat on every blip.
+
+A name dated AFTER today is not recorded at all. The runner writes
+tomorrow's sheet the evening before, which is the case this feature exists
+for; storing it on sight meant that when its day arrived it was already
+seen and was silently never announced.
 
 ## Handing the block over
 
