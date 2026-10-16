@@ -469,17 +469,9 @@ means the After tab, which is a form built for afterwards. Unsketched.
   from 90 minutes before its class. A 05:30 class is no longer announced
   after it started. 06:00 stays the fallback for files without it *(you
   asked)*
-- [ ] **How long before the class should the notice arrive — 90 minutes or
-  60?** `SessionWatcher.LEAD_MINUTES` is 90, which was a guess made while
-  building the timing, not a choice anyone made. The owner's words were
-  "within an hour or two of the class start", which 90 sits inside, so
-  this is a preference to settle rather than a bug. It is a one-constant
-  change plus the tests that pin it. The trade: earlier means the sheet is
-  in hand while there is still time to think about it, later means the
-  notice is harder to forget by the time it matters. Worth knowing before
-  deciding: the check runs hourly, so the real arrival is anywhere in the
-  hour after the lead time passes, and shortening the lead makes that
-  window a larger share of it *(you asked)*
+- [x] **How long before the class should the notice arrive — 90 minutes or
+  60?** The owner chose 90, so `SessionWatcher.LEAD_MINUTES` stays as it is
+  *(you asked)*
 - [x] **Say when a newer debug build is out.** The owner chose Carry asking
   GitHub itself (#107) over routing the number through the folder, which
   brought the `INTERNET` permission. A CI debug build asks at most every
