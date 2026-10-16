@@ -60,7 +60,8 @@ An item that turns out to need a decision stops there. How it waits depends on i
 **Audit**: one persona reading the real thing (the app as built, its real output, real data
 where the project allows it), never fixtures. The project's CLAUDE.md or the prompt names the
 personas; otherwise pick from someone the app is for, a UX designer, a security researcher, an
-architect after simple code, test health, a documentation pass, and backlog grooming. When BACKLOG.md says a
+architect after simple code, test health, a documentation pass, backlog grooming, and an
+instructions pass. When BACKLOG.md says a
 [recurring review](https://github.com/madCode/claude-playground/blob/main/practices/recurring-reviews.md)
 is due, that is the audit.
 
@@ -69,6 +70,20 @@ duplicated (checked against the code, not the wording), split items too big for 
 put *Next* in the order cycles should take it, the project's own ordering rule first, then what
 readers would notice most. A larger feature idea sitting in the backlog becomes an issue, as
 above. A change of priority madCode set is a question for them, not an edit.
+
+**An instructions pass** reads the skills, the CLAUDE.md files and the scheduled task's prompt
+the way the next session will, and asks whether they helped the sessions that used them:
+
+- **Ignored or relearned**: a lesson in the cycle log that a rule already stated means the rule
+  is buried, too long or unclear. Move it up, shorten it, or make it a check.
+- **Never needed**: a rule no session's work has touched in many cycles is weight on every read.
+- **Contradicted or duplicated** between files: one copy goes, and the rest points to it.
+- **Stale**: a file, command, path or tool that no longer exists.
+- **Skill descriptions** that wouldn't make a session reach for the skill when it should.
+
+Base each finding on what the logs, PRs and summaries show sessions actually did, not on how
+the text reads. Cutting what is stale or duplicated is fine; changing what a rule asks is
+madCode's call. A change to a shared skill goes to claude-playground first, then its copies.
 
 Fix small clear things now. The rest goes into BACKLOG.md, checked
 against the code first: about a third of findings don't hold.

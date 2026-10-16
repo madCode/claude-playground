@@ -40,3 +40,9 @@ tidying ([#163–#166](https://github.com/madCode/newspaperss/pulls?q=is%3Apr+au
 - Tests that can never fail, waits that flake under load, copied test helpers, coverage that
   counts generated code.
 - Docs and the CLAUDE.md files checked against the code: stale, contradictory or long rules cut.
+
+## Skills and instructions
+
+Every 15–20 cycles, and after a run that relearned a lesson its instructions already held. The
+instructions pass in the [cycles skill](../.claude/skills/cycles/SKILL.md): the skills, every
+CLAUDE.md and the scheduled tasks' prompts, judged by what sessions actually did with them.
