@@ -138,10 +138,14 @@ one), and add what the cycle found to *Next*.
 
 BACKLOG.md and DEVLOG.md hold what waits on madCode. On top of them, the run keeps one page
 madCode reads on their phone in the morning, across every project: what needs them, then a
-report of what the cycles did. The scheduled task's prompt gives its link; without one, skip this.
+report of what the cycles did. Every run keeps it, in any repo, whether or not the prompt names
+it. Without a link in the prompt, find it with `Artifact` (`action: "list"`): it is titled
+**Waiting on You**, and each project's section sits between `<!-- project:<name> -->` and
+`<!-- /project:<name> -->`. When two pages could be it, the one with those markers is; never
+start another. Only if none exists, create it with that title and those markers, and say so.
 
-- Read the page (`Artifact`, `action: "read"`), change only this project's section, and
-  publish to the same link. Another project's cycle may have published since; build on what the
+- Read the page (`Artifact`, `action: "read"`), change only this project's section (adding it,
+  between its markers, if it has none), and publish to the same link. Another project's cycle may have published since; build on what the
   read returned and never drop another project's section.
 - First, what needs madCode, most blocking first: one line each saying what is needed and why,
   linked to where they answer (the PR, the issue, the BACKLOG.md line on GitHub).
@@ -221,7 +225,7 @@ The scheduled task's prompt stays short, since this skill holds the procedure:
     <Project> cycles: use the cycles skill.
     Repositories: <which, and anything unusual about them>.
     Stop: after cycle <N> | on <date> | when BACKLOG.md's Done when is ticked.
-    Scheduled task: <id>. Morning page: <link>. Mix: <build/audit>. Approved: <items>.
+    Scheduled task: <id>. Mix: <build/audit>. Approved: <items>.
 
 The id exists only once the task does, so create it, then edit its prompt to add the id. The
 session needs the repository holding this skill checked out alongside the project. Space the
