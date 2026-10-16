@@ -57,6 +57,8 @@ Propose the run and wait for a yes; a scheduled task works unattended in madCode
 - **Stop**: the stop rule from phase 1.
 - **How often**: every few hours, so each cycle's CI has come back before the next.
 - **Mix**: build and audit, about 60/40, or mostly build while the first slice is unbuilt.
+- **The morning page**: the one madCode already has, whose link the other runs' prompts carry,
+  so this project gets a section on it rather than a page of its own.
 - **Repositories** each run needs: the project's, claude-playground for the skills, and any
   data repository, read-only unless madCode says otherwise.
 
