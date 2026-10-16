@@ -291,7 +291,7 @@ class LogScreenTest {
 
     @Test
     fun `saying you did the easier version is its own answer`() {
-        // Knee push-ups. For a third of this owner's sets there is no
+        // Knee push-ups. For much of this owner's training there is no
         // weight to progress, so this is the only axis they have — and
         // it is independent of how it felt.
         show()

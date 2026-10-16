@@ -49,7 +49,7 @@ not a thing anyone is blocked from building.
   Four that are already on `main`: `SinceScreen.kt` ("26 distinct movements
   across 32 sets and exactly one of them done twice"), `DESIGN.md`
   ("20 of 20 lifts"), `GrowthTest.kt` ("19 of 20 distinct"), and the
-  "a third of this owner's logged sets" line repeated in `DESIGN.md`,
+  "a large share of this owner's logged sets" line repeated in `DESIGN.md`,
   `LogScreen.kt`, `LogScreenTest.kt`, `PastSessionScreenTest.kt` and
   — found by the #85 review, missed by every earlier pass over this
   list — `SessionPatch.kt`. Three more in `TodayScreenTest.kt`, found
@@ -68,13 +68,16 @@ not a thing anyone is blocked from building.
   "eleven rows of one lit pip" in this file, and the same figure in
   `DEVLOG.md` twice, once in a section heading *(audit)*
 
-- [ ] **Should a movement done once appear in the progress band at all?**
-  #79 kept it and capped the band to five rows with the rest counted; #80
-  settled the heading at *part way to a bump*. The alternative is to show only what is genuinely close
-  (2 of 3), which on today's data empties the band. Keeping it shows
-  progress; cutting it keeps the screen to signals you can act on. The
-  "why the coach is often quiet" band already explains why they all sit at
-  one, which argues for keeping *(you asked — your call)*
+- [x] ~~**Should a movement done once appear in the progress band at all?**~~
+  **ANSWERED 2026-10-16 by the owner: keep it — "Keep — show everything
+  part way".** Which is what #79 and #80 had already built, so there is no
+  work: the band keeps movements at one of three, capped at five rows with
+  the rest counted, under the heading *part way to a bump*. The "why the
+  coach is often quiet" band explains why they all sit at one.
+
+  Recorded here because the item sat open for a day after being answered,
+  which is its own small cost: a cycle reading "the top unfinished item"
+  reads a settled question first *(you asked — answered)*
 - [x] ~~**The intel post still demands a number**, so a wholly bodyweight or
   timed class offers no post at all.~~ The owner was asked and said yes, and
   the TIMED half shipped 2026-10-16 (#92): `done` qualifies a movement. The
@@ -241,13 +244,18 @@ These are the open paths to one, hardest first.
   was dropping them — and the question is about the newest DATE, since
   two classes on one day are two files and either reading is enough.
   Pinned from both sides: an older broken file must not cost the band.
-- [ ] **Showing a short day's rows on the Since tab, rather than omitting
-  the day.** The genuinely better answer, and the one the Before and After
-  tabs got. It needs more than a count: `sets`, `movements`, `repeated`
-  and `peaks` would all silently undercount, and `Day.best`/`lifts` would
-  have to be withheld for that day the way `movements` is already withheld
-  when a lifted set has no `key`. Worth doing only if this ever happens to
-  a real file *(audit)*
+- [x] ~~**Showing a short day's rows on the Since tab, rather than omitting
+  the day.**~~ **Dropped 2026-10-16, on the gate the item set itself:**
+  "worth doing only if this ever happens to a real file". Measured across
+  every session file in the owner's synced folder — a short day has never
+  occurred, nor has any of the eight other shapes checked in the same pass
+  (no `schema` key, a duration outside 1..3600, an empty `sets`, two
+  classes at the newest date, a filename disagreeing with the date inside,
+  an added row with no id, a non-integer `ref`, duplicate `ref`s).
+
+  Kept in mind rather than forgotten: the work it described is real and
+  the reasoning below still holds. If a short day ever shows up, this is
+  the design *(audit)*
 - [x] ~~**A `sets` holding both `"ref": 3` and `"ref": "3"` shows two rows
   that share a ref, and an edit typed against the second is written onto
   the first.** `refOf` excludes the string one from duplicate detection,
@@ -331,6 +339,35 @@ These are the open paths to one, hardest first.
   `aapt2 dump permissions` on the built APK said otherwise. `DESIGN.md`
   carries the table. Still no `INTERNET` *(design:
   [new-session-notification](designs/new-session-notification.md))*
+- [ ] **Time the notification to the class, not to the clock.** The owner's
+  idea, 2026-10-16, and it is better than what shipped — it also fixes a
+  real bug in it. `EARLIEST_HOUR = 6` holds a sheet found overnight until
+  06:00, which is right as a floor and wrong as the only rule: a 05:30
+  class would be announced AFTER it started. Their classes run mid-morning
+  today, so the shipped rule is safe by luck rather than by design.
+
+  **The time is not in the session file.** Every key across the owner's
+  eight real files: `added, backfilled, borrowed_from, class, date,
+  recovered_from, schema, sets, sheet_id`. The brain has it —
+  `gym_calendar.py` reads `DTSTART`, and `scheduled_surveys.jsonl` already
+  stores derived times — but nothing carries it to the phone.
+
+  So this is two-sided, and **gym-coach goes first**: Carry does not own
+  the schema, and a field added here is one the importer silently drops.
+
+  - gym-coach writes `starts_at`, ISO local, from the calendar event.
+  - Carry announces when `now >= starts_at - 90min` rather than consulting
+    the hour.
+  - The 06:00 floor STAYS as the fallback for any file without
+    `starts_at`: backfills, hand-written days, and everything the runner
+    wrote before the field existed. Deleting the fallback would make those
+    files silently un-announceable, which is the failure this whole
+    feature exists to prevent.
+
+  Granularity note: the check is hourly, so "90 minutes before" means
+  "within the hour after that moment". Adequate for a sheet read in a
+  lobby. Tighter would need a one-shot alarm scheduled from `starts_at`,
+  which is more machinery than this earns *(you asked)*
 - [ ] **Can two of WorkManager's four permissions be stripped?**
   `ACCESS_NETWORK_STATE` and `FOREGROUND_SERVICE` are for features this app
   does not use — no network constraint, no expedited work — so
@@ -342,9 +379,13 @@ These are the open paths to one, hardest first.
   `WAKE_LOCK` and `RECEIVE_BOOT_COMPLETED` must stay — the work would stop
   surviving reboots without them *(found by checking the built APK rather
   than the source manifest)*
-- [ ] **Read the class from the phone's own calendar** — frees the coach from its
-  own calendar config. Bigger than it looks: needs a protocol change agreed on the
-  runner side first *(design:
+- [ ] **Read the class from the phone's own calendar** — BLOCKED, and its
+  stated benefit is void. It justified itself as freeing the coach from its
+  own calendar config; that config works, demonstrated 2026-10-16 when the
+  laptop's trigger read the calendar and correctly reported no class. So
+  there is nothing to free. This only becomes work if the brain moves to
+  the phone, which is its own entry under *Feature proposals* with its own
+  preconditions — do not pick this up before that *(design:
   [read-class-from-calendar](designs/read-class-from-calendar.md))*
 
 - [ ] **A logo** — chalk on slate, and it has to work as a one-colour launcher

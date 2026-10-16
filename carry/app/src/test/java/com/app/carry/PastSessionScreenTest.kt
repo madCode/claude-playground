@@ -129,7 +129,7 @@ class PastSessionScreenTest {
 
     @Test
     fun `a bodyweight row answered only with a marker is not called blank`() {
-        // For the movements that carry no weight -- a third of this owner's
+        // For the movements that carry no weight -- much of this owner's
         // sets -- *mod* is the only progression axis there is, so the
         // marker IS the record. Reading it back as "blank" would tell them
         // they left empty the one row they did answer.

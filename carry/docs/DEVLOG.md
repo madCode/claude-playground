@@ -30,6 +30,92 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 47: measuring the backlog instead of reading it
+
+**The owner asked what could be deprecated, and the answer came from the
+owner's own files rather than from judgement.** Several items are gated on
+a condition nobody had checked. One pass over every session file in the
+synced folder checked nine shapes the backlog worries about:
+
+| shape | occurrences |
+|---|---|
+| no `schema` key | 0 |
+| `prescribed_duration_sec` outside 1..3600 | 0 |
+| a short day (fewer rows than sets) | 0 |
+| an empty `sets` | 0 |
+| two classes at the newest date | 0 |
+| the date inside disagreeing with the filename | 0 |
+| an added row with no `id` | 0 |
+| a `ref` that is not an integer | 0 |
+| duplicate `ref`s | 0 |
+
+**One item dropped on its own terms.** *Showing a short day's rows on the
+Since tab* said "worth doing only if this ever happens to a real file". It
+has not, so it is closed with the measurement rather than left to be
+re-read every cycle.
+
+**One reframed.** *Read the class from the phone's own calendar* justified
+itself as freeing the coach from its own calendar config. That config
+works — the laptop's trigger read the calendar tonight and correctly
+reported no class — so the benefit is void. It is now marked BLOCKED on
+the brain moving to the phone rather than sitting in the queue looking
+actionable.
+
+**And eight items deliberately NOT dropped despite reading zero.** The
+malformed-file guards protect against a file written by something other
+than the runner, which is precisely the case that has not happened yet.
+"The bad input has not arrived" is the reason to keep a guard. Tonight's
+quoted-`ref` bug was exactly that shape and it was real, found by probing
+rather than by waiting.
+
+**For the next cycle:** a backlog item that states its own gate is worth
+more than one that states a priority, because the gate can be MEASURED and
+the priority can only be argued. Two of these had gates; both resolved in
+one command. When filing something speculative, write the condition that
+would make it real.
+
+## 2026-10-16 — cycle 46: four things the notification got wrong
+
+**#93 was already merged, so these were live.** A read-only review found
+four; all four verified before fixing; three were mine rather than
+pre-existing.
+
+**Tomorrow's sheet was announced just after midnight, with sound.** The
+runner writes it the evening before, and cycle 44's own future-date fix
+made it eligible the instant that date arrived — 00:00. Worse than the
+hour: a notice dismissed, swiped or buried by morning is never posted
+again, and this is now the only path that tells the owner their sheet
+arrived. So the fix for one bug created the next one a layer down, which
+is a shape this devlog keeps recording. Nothing is announced before
+06:00, and a sheet found earlier is deliberately NOT recorded, so the
+morning run says it.
+
+**One notification id for everything.** A borrowed day brings a 2G and a
+3G file an hour apart, and `notify(1, …)` meant the second REPLACED the
+first — whose file was already recorded, so it never came back. The owner
+would have been told about one of the two sheets they were walking in
+with. The id is per set of files announced now.
+
+**The timeout did nothing, and the comment above it said otherwise.**
+`withTimeoutOrNull` can only cancel at a suspension point, and
+`watchOnce` never suspends, so the worker would have sat for the full
+ten-minute cap holding a thread and a WAKE_LOCK — the exact cost the
+comment claimed to be avoiding. The blocking work runs in
+`async(Dispatchers.IO)` and is awaited under the timeout; the await is
+the suspension point.
+
+**A test that could not fail.** The pruning test built 40 names from
+`1 + it % 9`, which collapse to nine distinct strings, then asserted
+`kept.size < old.size` — 10 < 40, true with the pruning deleted.
+
+**For the next cycle, and this one is procedural rather than clever:**
+I lost an uncommitted fix to `git checkout --` for the THIRD time
+tonight, having already written the lesson twice. "Remember to commit
+first" plainly does not work as a rule. The version that does is
+checkable: **`git status --porcelain` must be EMPTY before breaking
+anything.** If it is not, commit or stash — then break, then restore.
+A restore cannot eat work that is already in a commit.
+
 ## 2026-10-16 — cycle 45: a quoted id is the same id
 
 **The cycle's first job was checking whether the item was real, and the
@@ -1404,11 +1490,17 @@ honest answer and the useful one are the same one.
 I'm still on knee pushups. I should know when to push myself to do more
 full pushups. But maybe that's too much to include in the app."*
 
-Not too much — the largest uncovered area there is. **37% of your logged
-sets carry no weight at all**, and across 98 real sheets 31% of lines are
-bodyweight, median a third of any given sheet. The coach's whole model is
-"what weight next"; for a third of your training there is no weight, so it
-said "no weight needed" and nothing else, for ever.
+Not too much — the largest uncovered area there is. **A large share of
+your logged sets carry no weight at all**, and bodyweight lines are a
+substantial minority of every real sheet in the corpus. The coach's whole
+model is "what weight next"; for much of your training there is no weight,
+so it said "no weight needed" and nothing else, for ever.
+
+(The figures that were here were converted 2026-10-16. They were the
+reason this cycle happened and are not needed to understand it, and this
+repository is public — the test the privacy rule sets is whether a
+stranger learns something about the owner's training from the sentence,
+which a percentage fails. The numbers themselves live with the data.)
 
 **And it was worse than silent.** The bodyweight path already had a rule:
 three clean sets in a row earned *"full form 3x in a row, push it: faster

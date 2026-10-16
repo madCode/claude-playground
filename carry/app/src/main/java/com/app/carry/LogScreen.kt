@@ -295,7 +295,7 @@ private fun LogRow(
                     onChange(entry.copy(hard = !entry.hard, easy = false))
                 }
                 // "I did the easier version" -- knees, a box under the
-                // step-up. For a third of this owner's sets there is no
+                // step-up. For much of this owner's training there is no
                 // weight to progress, so this is the only axis they have.
                 Chip("mod", entry.easier, Look.ChalkDim) {
                     onChange(entry.copy(easier = !entry.easier))

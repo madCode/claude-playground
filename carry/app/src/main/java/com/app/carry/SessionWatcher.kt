@@ -1,6 +1,7 @@
 package com.app.carry
 
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 /**
  * What [SessionWatcher.watchOnce] needs to remember between runs, behind an
@@ -16,6 +17,21 @@ interface Seen {
 }
 
 object SessionWatcher {
+
+    /**
+     * The earliest hour a notification may be posted.
+     *
+     * The runner writes tomorrow's sheet the evening before, so the first
+     * run after local midnight is the one that finds it new and dated
+     * today. Posting there means a sound at 00-something for a class many
+     * hours away -- and worse, a notice dismissed, swiped or buried by
+     * morning is never posted again, on what is now the only path that
+     * tells the owner their sheet arrived.
+     *
+     * A sheet found before this hour is held and NOT recorded, so the
+     * morning run announces it normally.
+     */
+    internal const val EARLIEST_HOUR = 6
 
     /**
      * How far back the record keeps names. It only needs to be long enough
@@ -37,9 +53,10 @@ object SessionWatcher {
     fun watchOnce(
         folder: Folder,
         seen: Seen,
-        today: LocalDate,
+        now: LocalDateTime,
         post: (List<NewSession.Found>) -> Unit,
     ): List<NewSession.Found> {
+        val today = now.toLocalDate()
         // A folder nobody picked, or one whose grant is gone, must not
         // touch the record: `list()` returns an empty list for both, and an
         // empty list cannot be told apart from an empty folder.
@@ -47,6 +64,11 @@ object SessionWatcher {
 
         val names = folder.list().map { (_, name) -> name }
         val found = NewSession.pick(seen.names(), names, today.toString())
+
+        // Too early to tell anyone, so tell nobody and remember nothing --
+        // recording here would spend the announcement on an hour the owner
+        // is asleep for. The morning run says it instead.
+        if (found.isNotEmpty() && now.hour < EARLIEST_HOUR) return emptyList()
 
         seen.remember(record(seen.names(), names, today))
 

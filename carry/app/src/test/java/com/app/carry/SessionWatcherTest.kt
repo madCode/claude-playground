@@ -4,10 +4,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 class SessionWatcherTest {
 
-    private val today = LocalDate.parse("2026-10-17")
+    private val today = LocalDateTime.parse("2026-10-17T09:00")
 
     private class FakeFolder(
         override val chosen: Boolean,
@@ -64,6 +65,35 @@ class SessionWatcherTest {
 
         val onTheDay = SessionWatcher.watchOnce(folder, seen, today.plusDays(1)) {}
         assertEquals(listOf("3G"), onTheDay.map { it.classTag })
+    }
+
+    @Test
+    fun `a sheet found in the small hours waits for the morning`() {
+        // The runner writes tomorrow's sheet in the evening, so the first
+        // run after local midnight is the one that finds it new and dated
+        // today. Posting there is a sound at 00-something for a class many
+        // hours away -- and a notice dismissed or buried by morning is
+        // never posted again, on what is now the only path that tells the
+        // owner their sheet arrived.
+        val folder = FakeFolder(chosen = true, names = listOf("session-2026-10-17-3G.json"))
+        val seen = FakeSeen(stored = emptySet())
+        var posted = false
+
+        val night = SessionWatcher.watchOnce(
+            folder, seen, LocalDateTime.parse("2026-10-17T00:30"),
+        ) { posted = true }
+        assertTrue("nothing at half past midnight: $night", night.isEmpty())
+        assertTrue("and nothing posted", !posted)
+        assertTrue(
+            "and NOT recorded, or the morning run would have nothing to say",
+            seen.names()?.isEmpty() != false,
+        )
+
+        val morning = SessionWatcher.watchOnce(
+            folder, seen, LocalDateTime.parse("2026-10-17T06:05"),
+        ) { posted = true }
+        assertEquals(listOf("3G"), morning.map { it.classTag })
+        assertTrue("posted in the morning", posted)
     }
 
     @Test
@@ -147,12 +177,18 @@ class SessionWatcherTest {
     }
 
     @Test
-    fun `the record does not grow for ever`() {
-        val old = (1..40).map { "session-2026-0%d-0%d-3G.json".format(1 + it % 9, 1 + it % 9) }
-        val seen = FakeSeen(stored = old.toSet() + "session-2026-10-17-3G.json")
+    fun `the record keeps the recent names and drops the stale ones`() {
+        // The first version of this test could not fail. It built 40 names
+        // from `1 + it % 9`, which collapse to NINE distinct strings, then
+        // asserted `kept.size < old.size` -- 10 < 40, true with the
+        // pruning deleted. Distinct dates and an exact assertion now.
+        val day = today.toLocalDate()
+        val stale = (1..30).map { "session-${day.minusDays(60L + it)}-3G.json" }
+        val fresh = (0..5).map { "session-${day.minusDays(it.toLong())}-3G.json" }
+        val seen = FakeSeen(stored = (stale + fresh).toSet())
+
         SessionWatcher.watchOnce(FakeFolder(chosen = true), seen, today) {}
-        val kept = seen.names().orEmpty()
-        assertTrue("stale names must be pruned: ${kept.size}", kept.size < old.size)
-        assertTrue("recent ones stay", kept.contains("session-2026-10-17-3G.json"))
+
+        assertEquals("every fresh name kept, every stale one dropped", fresh.toSet(), seen.names())
     }
 }
