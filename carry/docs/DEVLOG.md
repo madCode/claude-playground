@@ -1642,7 +1642,7 @@ would have:
   sitting in the folder was being counted as a session and contributing
   eleven movements to the very figure that explains why the coach is quiet.
 - **It had its own idea of "the same exercise".** Hashing the whole variant
-  made 20 of 20 lifts look distinct, when the engine says 19 — because the
+  made EVERY lift look distinct, when the engine finds a repeat — because the
   engine's key deliberately leaves out intensity, grip and reps. This is
   exactly the two-implementations-drift failure I had warned about in the
   proposal one hour earlier, and then walked into. The runner writes the
