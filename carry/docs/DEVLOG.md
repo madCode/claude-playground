@@ -6,33 +6,35 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** the sheet's notice timed to the class (cycle 52); a newer
-  build named on the Since tab (#108, cycle 50) and
-  installed from the app (cycle 51); each debug build numbered, in its version code and its
-  file name (cycle 49); an icon of its own, and a real one in notifications
-  (cycle 48); the bump band withheld rather than quietly becoming
-  yesterday's answer (#89); a day missing from the Since totals without a
-  word (#88); one bad ROW no longer costing a whole day, and both tabs
-  saying how many did not read (#87); one null key no longer costing one
-  either (#86); the post preview's flagged lines marked in the text and
-  spoken on the caption, not by colour alone (#85); the band no longer
-  believing a count the owner has already answered (#81); the progress
-  band finished — honest heading, sorted by the question its rows answer
-  (#80); the save path's own tests, which it had never had, and the
-  wrong-number bug they exposed (#78); the *done* chip for timed holds
-  (#77); the prescription on every row and the intel post (#60).
+- **Lately:** a newer debug build named at the top of the Since tab
+  (#108) and installed from inside the app (#109); the sheet's notice timed
+  to the class (#110); each debug build numbered (#106); an icon of its own
+  (#105); the Since tab counting a file it couldn't read (#112) and taking
+  its band from the sheet on screen (#113). Older entries are below.
 - **Watching:** a session logged entirely by hand is still not listed on the
   Since tab at all — it moves the screen's aggregates, so it is its own
   decision rather than a bug fix. A session logged only with markers *is*
   listed now (#77); that one was a wrong answer rather than a missing
   feature.
-- **Waiting on you:** three checks only a real phone can answer (the folder
-  grant surviving a reinstall, bottom insets, the Syncthing round trip), and
-  the GitHub Support request in the backlog.
+- **Waiting on you:** on the phone, the first in-app update (Android asks
+  once to let Carry install apps, then "Update this app?"), how the icon
+  looks on your launcher, and three older checks: the folder grant
+  surviving a reinstall, bottom insets, the Syncthing round trip. And the
+  GitHub Support request in the backlog.
 
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-16 — cycles 53 to 55: three small corrections
+
+- **#111:** `ExerciseSet.answered` is deleted. Nothing used it, and it was
+  the one definition of "filled in" that ignored `done`.
+- **#112:** a file the phone couldn't read at all now counts on the Since
+  tab as a session that didn't read, rather than vanishing.
+- **#113:** the "part way to a bump" band and the check that guards it now
+  pick the newest sheet the same way, by name. On a two-class day it's the
+  sheet the Before tab shows.
 
 ## 2026-10-16 — cycle 52: the notice keeps the class's time
 
