@@ -345,14 +345,33 @@ AND dated today. Tapping it opens the app, which is enough: the Before tab
 is the default tab and the folder is re-read on every resume, so no deep
 link or second way of choosing a session was needed.
 
-**This is why the app now declares one Android permission.**
-`POST_NOTIFICATIONS` is required on API 33+, and until 2026-10-16 the app
-declared none at all — a property a reader could check by opening one
-manifest. That sentence is no longer true and is not worth pretending
-about. What remains true is the part that matters: there is still no
-`INTERNET` permission, nothing leaves the device, and the notification
-text carries the class and nothing else, because a lock screen is not
-somewhere the owner's weights belong.
+**This is why the app went from zero Android permissions to five.** Not
+one, which is what the first version of this paragraph claimed before the
+built APK was checked — `aapt2 dump permissions` on the release build is
+the only honest source for this, because a library brings its own.
+
+One is ours: `POST_NOTIFICATIONS`, required on API 33+ to post anything.
+The other four arrive with `androidx.work` and the app cannot opt out of
+them while using it:
+
+| permission | why WorkManager wants it |
+|---|---|
+| `WAKE_LOCK` | hold the device awake long enough to finish a check |
+| `RECEIVE_BOOT_COMPLETED` | re-register the periodic work after a reboot |
+| `ACCESS_NETWORK_STATE` | read connectivity, for network constraints |
+| `FOREGROUND_SERVICE` | run expedited work |
+
+`ACCESS_NETWORK_STATE` is the one a careful reader will stop on, so it is
+worth being exact: it permits *reading whether a network exists*, not
+using one. **There is still no `INTERNET` permission**, so the app cannot
+open a connection even in principle — which was always the property worth
+checking, and it still holds. The share sheet remains the only way
+anything leaves, and the notification text carries the class alone,
+because a lock screen is not somewhere the owner's weights belong.
+
+Until 2026-10-16 this app declared no permissions at all, and that was
+checkable by opening one file. That is no longer true, and the honest
+replacement is the table above rather than a smaller number.
 
 Three rules sit in the decision rather than in the plumbing, and each
 exists because its opposite is the failure the owner would feel:

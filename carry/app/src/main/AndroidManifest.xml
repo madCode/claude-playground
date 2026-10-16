@@ -6,10 +6,15 @@
       tab depended on the owner remembering to open the app.
 
       Local: nothing leaves the device, and the notification text carries
-      the class and the date only (see NewSession.text). But docs/DESIGN.md
-      used to state "declares no Android permissions at all" as a property
-      that could be checked by reading this file, and that sentence is now
-      rewritten rather than quietly false.
+      the class only (see NewSession.text).
+
+      THIS FILE IS NO LONGER THE WHOLE ANSWER. androidx.work brings four
+      more (WAKE_LOCK, RECEIVE_BOOT_COMPLETED, ACCESS_NETWORK_STATE and
+      FOREGROUND_SERVICE) which appear only in the MERGED manifest, so
+      "read one file to see what this app asks for" stopped being true
+      when WorkManager was added. `aapt2 dump permissions` on the built
+      APK is the honest check; docs/DESIGN.md carries the table and the
+      reasons. There is still no INTERNET permission.
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
