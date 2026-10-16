@@ -58,9 +58,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # One at a time, and never cancelled: cancellation isn't instant, so two jobs overlap long
+    # enough to collide on the release's assets (newspaperss #210). A later push waits its turn.
     concurrency:
       group: carry-debug
-      cancel-in-progress: true
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: .
@@ -76,12 +78,19 @@ jobs:
           mv app-debug.apk carry-debug.apk
           build="${{ github.run_number }}"
           short="${GITHUB_SHA::7}"
+          # The same build under a numbered name, so a download can't be mistaken for an older one.
+          numbered="carry-debug-$build.apk"
+          cp carry-debug.apk "$numbered"
           title="Carry debug build $build · $short"
           notes="Build $build from main ($short). Installs as com.app.carry.debug."
           if gh release view carry-debug > /dev/null 2>&1; then
-            gh release upload carry-debug carry-debug.apk --clobber
+            gh release upload carry-debug carry-debug.apk "$numbered" --clobber
             gh api -X PATCH "repos/$GH_REPO/git/refs/tags/carry-debug" -f sha="$GITHUB_SHA" -F force=true > /dev/null
             gh release edit carry-debug --title "$title" --notes "$notes"
+            # Only the newest numbered copy stays.
+            gh release view carry-debug --json assets --jq '.assets[].name' \
+              | { grep -E '^carry-debug-[0-9]+\.apk$' || true; } | { grep -vx "$numbered" || true; } \
+              | while read -r old; do gh release delete-asset carry-debug "$old" -y; done
           else
-            gh release create carry-debug carry-debug.apk --prerelease --target "$GITHUB_SHA" --title "$title" --notes "$notes"
+            gh release create carry-debug carry-debug.apk "$numbered" --prerelease --target "$GITHUB_SHA" --title "$title" --notes "$notes"
           fi

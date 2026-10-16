@@ -85,6 +85,14 @@ android {
     }
 }
 
+// A CI debug build's version code is its run number, so each build from main installs over the
+// one before and a phone can tell which is newer. Local builds keep 1.
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        ciRun?.let { run -> variant.outputs.forEach { it.versionCode.set(run) } }
+    }
+}
+
 dependencies {
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
