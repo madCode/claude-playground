@@ -382,6 +382,55 @@ Only a real phone can answer these.
 
 Ideas worth doing, not yet planned. Each gets a sketch before it moves to Next.
 
+### Maybe allow editing a past session *(you asked)*
+
+The owner's words, 2026-10-16: *"I don't see why editing a past session
+wouldn't be allowed"*, and then *"maybe allow editing a past session"* —
+filed as a proposal rather than approved work, because the "maybe" is
+theirs and the risk is real.
+
+**Today:** `PastSession.kt` states "The only session you can change is
+today's", and a `backfilled` day is read-only on top of that. The Past
+screen is a reader.
+
+**Why it is not a small change.** This is the save path, which is where a
+wrong number in the owner's training history would come from, and that is
+the stated worst outcome in the project. It also stops being Carry's
+decision alone: gym-coach now imports filled session files into history
+the day after a class, so an edit to a past day has to reach the record
+too, and the two sides have to agree on what an edit MEANS.
+
+**Constraints the gym-coach side has already committed to**, so Carry must
+be built to them rather than against them:
+
+- **`ref` must stay stable for a sheet row.** A ref reused for a different
+  exercise is refused by the importer as "now a different exercise; it may
+  have been regenerated". Carry never generates a ref today — it reads
+  them off the runner's rows and writes them back — so this holds as long
+  as past-session editing does not start assigning any.
+- **Clearing a row means writing it back BLANK, not dropping it from
+  `sets`.** A row that simply disappears from the file is reported and
+  left alone, never removed from history. So the editor must blank rather
+  than delete.
+- **Signal-era rows whose only content was an "ok" or a breakdown word
+  read as blank in Carry**, and can never be cleared from there. Those
+  days are not safely editable until they have been adopted.
+
+**Open questions for whoever builds it:**
+
+- Which days are editable? "Any past day" is the owner's instinct;
+  "adopted days only" is the safe subset, since those have row ids and
+  came from Carry's own schema.
+- Does the Before tab's one-glance purpose survive a Past screen that is
+  also a form? The two screens exist because afterwards is a different job
+  from beforehand.
+- What does the owner see when an edit cannot reach history — a Signal-era
+  blank-looking row, say? Silence is the failure mode this project keeps
+  finding.
+
+Not sketched further. It wants its own cycle and its own fresh-eyes
+review, not a late-evening addition to an unrelated branch.
+
 ### The brain moves to the phone, eventually
 
 The owner's direction, 2026-10-16: *"once we feel confident that the brain
