@@ -74,7 +74,8 @@ class DebugUpdates(
             versionName?.let { BUILD_IN_VERSION.find(it) }?.groupValues?.get(1)?.toIntOrNull()
 
         /** GETs [url] on the calling thread: the release's JSON, null on a non-200 answer. */
-        fun fetchRelease(url: String = RELEASE_API): String? {
+        fun fetchRelease(url: String = RELEASE_API, budgetMillis: Long = 30_000, clock: () -> Long = System::currentTimeMillis): String? {
+            val deadline = clock() + budgetMillis
             val connection = URL(url).openConnection() as HttpURLConnection
             try {
                 connection.connectTimeout = 10_000
@@ -91,6 +92,9 @@ class DebugUpdates(
                         if (n < 0) break
                         out.write(chunk, 0, n)
                         if (out.size() > MAX_BODY) return null
+                        // readTimeout is per read, so a server dripping a byte every few seconds
+                        // would hold this check, and every later one, indefinitely without it.
+                        if (clock() > deadline) throw IOException("release took over ${budgetMillis / 1000} s")
                     }
                 }
                 return out.toString(Charsets.UTF_8.name())

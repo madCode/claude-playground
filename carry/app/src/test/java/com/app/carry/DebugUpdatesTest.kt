@@ -128,6 +128,13 @@ class FetchReleaseTest {
     }
 
     @Test
+    fun `a server that drips the answer is given up on`() {
+        server.enqueue(MockResponse.Builder().body("x".repeat(4 * 1024))
+            .throttleBody(64, 50, java.util.concurrent.TimeUnit.MILLISECONDS).build())
+        org.junit.Assert.assertThrows(IOException::class.java) { DebugUpdates.fetchRelease(url(), budgetMillis = 300) }
+    }
+
+    @Test
     fun `a body far larger than any release is not read`() {
         server.enqueue(MockResponse.Builder().body("x".repeat(300 * 1024)).build())
         assertNull(DebugUpdates.fetchRelease(url()))

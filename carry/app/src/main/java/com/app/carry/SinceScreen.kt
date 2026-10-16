@@ -108,6 +108,10 @@ fun SinceScreen(
             modifier = Modifier.padding(top = 3.dp, bottom = 4.dp),
         )
 
+        // At the top and above the empty check: a folder the app can't read is when a newer
+        // build is most likely the fix, and the bottom of a long history is where nobody looks.
+        if (newerBuild != null) NewerBuild(newerBuild, onGetBuild)
+
         // ABOVE the empty check, deliberately: if every file in the folder
         // read short there are no days at all, and "Nothing logged yet" on
         // its own would be a flat lie about a folder full of sessions.
@@ -208,7 +212,6 @@ fun SinceScreen(
                 items(since.days) { day -> DayRow(day) { opened = day.sheetId } }
             }
             if (since.explainsTheQuiet) item { Quiet(since) }
-            if (newerBuild != null) item { NewerBuild(newerBuild, onGetBuild) }
             item { Version() }
         }
     }
@@ -478,6 +481,19 @@ private fun Quiet(since: Growth.Since) {
     }
 }
 
+/** In chalk, not amber: amber is kept for the number the owner came for. */
+@Composable
+private fun NewerBuild(build: Int, onGet: () -> Unit) {
+    Text(
+        "Build $build is out \u2014 download it",
+        color = Look.Chalk, fontFamily = Look.Figure, fontSize = Look.SmallSize,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onGet)
+            .padding(vertical = 14.dp),
+    )
+}
+
 /**
  * Which build this is, tappable to copy.
  *
@@ -490,19 +506,6 @@ private fun Quiet(since: Growth.Since) {
  * On the Since tab rather than behind a menu: this is the screen read at
  * home and not in a hurry, and the other two have a job to do.
  */
-/** In chalk, not amber: amber is kept for the number the owner came for. */
-@Composable
-private fun NewerBuild(build: Int, onGet: () -> Unit) {
-    Text(
-        "Build $build is out \u2014 tap to download",
-        color = Look.Chalk, fontFamily = Look.Figure, fontSize = Look.SmallSize,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onGet)
-            .padding(top = 18.dp, bottom = 10.dp),
-    )
-}
-
 @Composable
 private fun Version() {
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current

@@ -351,14 +351,13 @@ rows, an in-flight save — with it. Landing on a particular tab is not
 worth losing numbers for, so the intent is `SINGLE_TOP` and the folder is
 re-read on resume as it always was.
 
-**This is why the app went from zero Android permissions to five.** Not
-one, which is what the first version of this paragraph claimed before the
-built APK was checked — `aapt2 dump permissions` on the release build is
-the only honest source for this, because a library brings its own.
+**The app holds six Android permissions, and this feature brought five
+of them.** `aapt2 dump permissions` on the built APK is the only honest
+source for this, because a library brings its own.
 
-One is ours: `POST_NOTIFICATIONS`, required on API 33+ to post anything.
-The other four arrive with `androidx.work` and the app cannot opt out of
-them while using it:
+Two are ours: `POST_NOTIFICATIONS`, required on API 33+ to post anything,
+and `INTERNET`, for the update check below. The other four arrive with
+`androidx.work`, and the app can't opt out of them while using it:
 
 | permission | why WorkManager wants it |
 |---|---|
@@ -419,9 +418,16 @@ routing the build number through the synced folder, so Carry declares
 - **It sends nothing of the owner's.** A GET of the `carry-debug` release's
   public JSON. The newest build is the highest `carry-debug-<run>.apk`
   among its files; a body over 256 KB is not read.
-- **The Since tab says it**, under the history: "Build N is out — tap to
-  download", in chalk rather than amber. The tap opens the fixed download
-  link, or copies it when nothing can open it.
+- **The Since tab says it**, at the top, even when the folder has nothing
+  countable (a folder this build can't read is when a newer build is most
+  likely the fix): "Build N is out — download it", in chalk rather than
+  amber. The tap opens the fixed download link, or copies it when nothing
+  can open it.
+- **The whole request has 30 seconds**, not only each read, so a slow
+  server can't hold the check open.
+- **PR builds count too.** PR and main runs share one run counter, so an
+  installed PR build is offered the next main build, which may not contain
+  that PR.
 
 The session files still leave only through the share sheet.
 
