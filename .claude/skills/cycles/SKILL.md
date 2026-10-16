@@ -31,6 +31,8 @@ A scheduled task's prompt, or madCode, says:
    cycle's work before anything new.
 5. The answers on the project's morning page (see [The morning page](#the-morning-page)): a
    decision madCode answered there is approval to build it, or a reason not to.
+6. The project's domain notes, when its CLAUDE.md names a file of them (gym-coach's
+   `TRAINING.md`), before an audit of the advice or a change to a rule that rests on one.
 
 Then check the stop rule. If it is met, go to [Stopping](#stopping).
 
@@ -161,6 +163,24 @@ Two readers, so two files:
 
 In BACKLOG.md, tick the item and move it to *Done* (if the file has no *Done* section, add
 one), and add what the cycle found to *Next*.
+
+### Research answers
+
+A question answered by research (a cycle's, or an agent's for madCode) goes into the project's
+domain notes as well as the morning page. The notes are the file its CLAUDE.md names; start one
+if the project has none and the answer will matter again. The morning page gets the plain-words
+version and is gone in a few days; the notes keep it for every later session. Each entry has:
+
+- the finding in plain words, and how sure it is (several meta-analyses agree, consistent but
+  thin, or reasoned from neighbouring evidence);
+- what it means for the project: the rule it supports, or the gap it shows;
+- its sources, linked to the paper itself (DOI or PubMed, not a blog's summary of it), each
+  checked to resolve to the paper it is cited for, with the one finding it supports and whether
+  only the abstract was read;
+- leads worth a future search, kept apart from conclusions.
+
+Newer evidence replaces an entry rather than stacking beside it. A rule that rests on an entry
+names its section, so a changed entry sends the next cycle to the rules it touches.
 
 ### The morning page
 

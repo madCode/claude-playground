@@ -20,7 +20,12 @@ should start at the first line of *Wrong numbers*.
 
 Five decisions. Each is a question about what you want the app to claim,
 not a thing anyone is blocked from building.
-- [ ] **Which marks say "I did this movement"?** You answered the narrow
+- [ ] **A minimum After page:
+  [#127](https://github.com/madCode/claude-playground/issues/127).** A UX
+  audit of every control, with personas, a mockup and the cost of each
+  change. It proposes a ✓ on every row, and with it an answer to the item
+  below. It also found that gym-coach never reads *hurt* *(audit: UX)*
+- [ ] **Which marks say "I did this movement"?** Folded into #127. You answered the narrow
   version on 2026-10-16 — `done` qualifies a movement for the post — and
   that shipped. But `done` is only offered on a TIMED row, because a timed
   hold is the case where the number boxes are empty by definition. So a
