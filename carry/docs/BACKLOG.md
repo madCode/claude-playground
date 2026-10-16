@@ -75,12 +75,20 @@ not a thing anyone is blocked from building.
   progress; cutting it keeps the screen to signals you can act on. The
   "why the coach is often quiet" band already explains why they all sit at
   one, which argues for keeping *(you asked — your call)*
-- [ ] **The intel post still demands a number**, so a wholly bodyweight or timed
-  class offers no post at all. `done` is the one marker that states the movement
-  WAS in the block, which is this path's publishing criterion — but what goes to
-  r/orangetheory is the owner's call, so ask before changing it *(audit)*
-- [ ] **A session logged entirely by hand is not listed at all.**
-  `Growth.of` decides what counts as a session from the SHEET's rows, so a
+- [x] ~~**The intel post still demands a number**, so a wholly bodyweight or
+  timed class offers no post at all.~~ The owner was asked and said yes, and
+  the TIMED half shipped 2026-10-16 (#92): `done` qualifies a movement. The
+  bodyweight half does not, because an untimed row has no `done` chip at
+  all — that remainder is the *Which marks say "I did this movement"?*
+  decision above, which is theirs rather than work *(audit)*
+- [x] ~~**A session logged entirely by hand is not listed at all.**~~ Shipped
+  2026-10-16 (#91), with two defects of its own found by the review and
+  fixed in #92's branch: the quiet band printed `movements` over `sets`
+  once those stopped being the same population, and a weighted row with no
+  name could displace the named lift that describes a day. The reasoning
+  below is kept because it is the record of the owner's decision.
+
+  `Growth.of` decided what counted as a session from the SHEET's rows, so a
   borrowed day whose sheet rows are blank and whose real content is in
   `added` never reaches *Every session*.
 
@@ -240,7 +248,7 @@ These are the open paths to one, hardest first.
   have to be withheld for that day the way `movements` is already withheld
   when a lifted set has no `key`. Worth doing only if this ever happens to
   a real file *(audit)*
-- [ ] **A `sets` holding both `"ref": 3` and `"ref": "3"` shows two rows
+- [x] ~~**A `sets` holding both `"ref": 3` and `"ref": "3"` shows two rows
   that share a ref, and an edit typed against the second is written onto
   the first.** `refOf` excludes the string one from duplicate detection,
   so the save does not refuse — it silently misplaces. Verified by the
@@ -249,6 +257,14 @@ These are the open paths to one, hardest first.
   that file too. Note that two rows sharing a plain integer ref IS now
   refused by both halves, so this is the one remaining hole in that
   guard, and it is the quiet one *(audit)*
+
+  **Fixed 2026-10-16.** Re-measured before touching it, because a third of
+  review findings do not hold — this one did. `refOf` now reads `ref` the
+  way the DECODER reads it, so the duplicate guard sees both rows and
+  refuses the file. The probe before the fix: 20 lb typed against `goblet
+  squat` written onto `low row`, outcome `Patched`, `unreadableRows` 0.
+  It also fixed the other side — a lone quoted ref made its row
+  unplaceable, refusing a save for a row visibly on screen.
 - [ ] **A sheet with no rows blanks the "part way to a bump" band, even
   when older sheets have something to say.** `Growth.of` picks `newest` from
   every parsed session rather than from the ones with rows, so an empty
