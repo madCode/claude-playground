@@ -342,6 +342,23 @@ class CarryStateTest {
     }
 
     @Test
+    fun `on a two-class day the band is the sheet the Before tab shows`() {
+        fun sheet(cls: String, move: String) = """{"schema":"gym-session/1","sheet_id":"2026-10-14:$cls","date":"2026-10-14","sets":[
+            {"ref":0,"line":"10 x $move","canonical":"$move","key":"$move","family":"legs",
+             "suggested_weight":45,"streak_done":2,"streak_needed":3,"weight":45,"reps":10}
+        ]}"""
+        val names = listOf("session-2026-10-14-2G.json", "session-2026-10-14-3G.json")
+        for (order in listOf(names, names.reversed())) {
+            val since = growthOf(FakeFolder(
+                files = order.map { it to it },
+                contents = mapOf(names[0] to sheet("2G", "lunge"), names[1] to sheet("3G", "squat")),
+            ))
+            assertEquals(SessionFiles.newest(names), names[1])
+            assertEquals("listed as $order", listOf("squat"), since.nearBump.map { it.name })
+        }
+    }
+
+    @Test
     fun `the folder decides whether the newest sheet read, not Growth`() {
         // The wiring, which no test of `Growth.of` can cover: it sees text
         // and nothing else, so it cannot tell a newest sheet that failed

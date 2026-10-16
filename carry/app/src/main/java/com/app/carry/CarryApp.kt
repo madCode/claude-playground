@@ -155,8 +155,12 @@ fun growthOf(folder: Folder): Growth.Since {
     return Growth.of(
         texts,
         // The band's sheet, by the same rule as the gate below: the newest
-        // NAME that parses, so the two can't pick different days.
-        newest = atNewest.firstOrNull { SessionFiles.parse(it.text.orEmpty()) != null }?.text,
+        // NAME that parses, so the two can't pick different days. Ties on a
+        // two-class day break by name, as [SessionFiles.newest] does for the
+        // Before tab, so the band is the sheet on screen, not whichever the
+        // provider happened to list first.
+        newest = atNewest.sortedByDescending { it.name }
+            .firstOrNull { SessionFiles.parse(it.text.orEmpty()) != null }?.text,
         newestRead = when {
             // `any`, so a readable first file stops the rest being
             // parsed again for an answer already known.
