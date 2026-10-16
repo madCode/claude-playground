@@ -30,6 +30,49 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 42: the review found what the change could not see
+
+**#91 merged, with three fixes the fresh-eyes review found and the
+change itself had no way to notice.** Both real defects were the same
+shape: counting added rows as lifts was right, and each of its
+consequences one layer down was wrong.
+
+**The quiet band's two numbers stopped describing the same thing.**
+`Since.sets` became `lifts.size` over rows, so hand-typed rows count.
+`Since.movements` deliberately did not follow, because an added row has
+no runner key and feeding it in would trip the withholding guard and hide
+the count entirely. Those two are printed in one sentence. A borrowed day
+logged by hand read **"1 different movements in 5 sets"** — a wrong
+number on the one band whose whole job is explaining why the numbers are
+thin. Before #91 the two were provably the same population, which is why
+nothing caught it: `DESIGN.md` reasoned carefully about keeping
+`movements` on sheet rows and never mentioned that `sets` was its printed
+denominator. `Since.movementSets` now carries the denominator that
+matches its numerator.
+
+**A weighted row with no name could become the day's heaviest.** The Log
+editor shows such a row on purpose — the save refuses it, and a refusal
+the owner cannot see is one they cannot act on — but it entered `liftsOf`
+as `Lift(name = "")` and could win `maxByOrNull { it.weight }`. It did
+not merely add itself, it *displaced* the named lift that describes the
+day: the Since row rendered as a date and nothing, and `spoken(day)` read
+out "heaviest , 99 pounds". `liftsOf` now requires a name, which is the
+same predicate `Row.answered` already uses for an added row.
+
+Two further findings were verified and left, both naming real couplings
+that fail in the safe direction: `!skipped` can never fire for an added
+row (`AddedSet` has no such field by design), and the editor's byte caps
+now also decide whether a very large added row reaches the aggregates.
+
+**For the next cycle:** my own falsification ate the fix. Backing up
+`Growth.kt` to `/tmp`, breaking it, and copying back left the tree with
+the test but *without* the guard — and the next run was red for a reason
+I spent three tool calls misreading as a logic error. **Falsify with
+`git`, not with file copies**: commit first, break, then
+`git checkout -- <file>`. The working tree is the one thing a backup
+dance can silently corrupt, and "verify the edit by reading the file
+back" applies after a restore just as much as after an edit.
+
 ## 2026-10-16 — cycle 41: a day logged by hand is a day you trained
 
 **The owner's call, and the second cycle driven by an answer rather than a
