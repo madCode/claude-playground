@@ -327,10 +327,6 @@ These are the open paths to one, hardest first.
   SAF plumbing the emulator is honest about and unit tests are not, so it
   is the one place a device check earns its keep; the second is a plain
   data holder *(audit: CI health)*
-- [ ] `ExerciseSet.answered` has no production callers and is the only one of the
-  three definitions of "answered" across the two repos that omits `done`. Delete it
-  or make it the shared one *(audit)*
-
 ### Owed on a device
 
 Only a real phone can answer these.
@@ -434,6 +430,10 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **`ExerciseSet.answered` had no production callers**, and was the one
+  definition of "answered" that left out `done`. Deleted, with the test that
+  only exercised it. `Growth.Row.answered`, which counts the markers too, is
+  the one the screens use *(audit)*
 - [x] **Time the notification to the class, not to the clock.** gym-coach
   writes `starts_at` (gym-coach #15), and a sheet with one is announced
   from 90 minutes before its class. A 05:30 class is no longer announced

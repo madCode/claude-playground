@@ -67,9 +67,8 @@ object Growth {
         /**
          * Anything at all was recorded against this row.
          *
-         * Wider than [ExerciseSet.answered], which asks whether there is a
-         * number — because for the third of this owner's sets that carry no
-         * weight, the marker IS the record. *mod* is the only progression
+         * Not just whether there is a number: for the third of this owner's
+         * sets that carry no weight, the marker IS the record. *mod* is the only progression
          * axis a bodyweight movement has, so a plank with nothing but
          * `easier` on it is a row they answered, and calling it blank tells
          * them they skipped the one thing they did say.
