@@ -455,9 +455,13 @@ private fun Quiet(since: Growth.Since) {
     // none.
     val movements = since.movements ?: return
     val repeated = since.repeated ?: return
+    // Not since.sets: that counts hand-typed rows this movement count
+    // deliberately excludes, so the two numbers in one sentence came from
+    // different populations.
+    val inSets = since.movementSets ?: return
     Column(Modifier.padding(top = 18.dp, bottom = 24.dp)) {
         Band("Why the coach is often quiet")
-        Stat("$movements", "different movements in ${since.sets} sets")
+        Stat("$movements", "different movements in $inSets sets")
         Stat("$repeated", if (repeated == 1) "you have done twice at the same variant"
              else "you have done more than once at the same variant")
         Text(

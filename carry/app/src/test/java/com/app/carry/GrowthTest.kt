@@ -101,6 +101,28 @@ class GrowthTest {
         assertEquals(2, since.sessions)
         assertNotNull("the count must survive a keyless hand-typed lift", since.movements)
         assertEquals(1, since.movements)
+        // And the band's denominator comes from the same population as its
+        // numerator. `sets` counts the hand-typed lift; `movementSets`
+        // must not, or the band reads "1 different movements in 2 sets".
+        assertEquals(2, since.sets)
+        assertEquals(1, since.movementSets)
+    }
+
+    @Test
+    fun `a weighted row with no name does not become the day's heaviest`() {
+        // The Log editor shows a nameless weighted row on purpose -- the
+        // save refuses it, and an invisible refusal cannot be acted on.
+        // Counting it here would DISPLACE the named lift that describes
+        // the day, leaving the screen reading "heaviest , 99 pounds".
+        val day = borrowedDay(
+            "2026-10-11",
+            """{"id":"a","name":"ybell deadlift","weight":26,"reps":12},{"id":"b","weight":99,"reps":5}""",
+        )
+        val since = Growth.of(listOf(day))
+        assertEquals(1, since.sessions)
+        assertEquals("the nameless row is not a lift", 1, since.sets)
+        assertEquals("ybell deadlift", since.days.single().best?.name)
+        assertEquals(26.0, since.days.single().best?.weight)
     }
 
     @Test

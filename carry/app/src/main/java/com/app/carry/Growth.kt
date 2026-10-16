@@ -165,6 +165,15 @@ object Growth {
         val movements: Int?,
         val repeated: Int?,
         /**
+         * The set count [movements] was counted over -- NOT [sets], which
+         * also counts hand-typed rows that [movements] deliberately
+         * excludes. The band prints one over the other in a sentence, and
+         * with [sets] as the denominator a borrowed day logged by hand read
+         * "1 different movements in 5 sets": a wrong number on the one
+         * screen whose job is explaining why the numbers are thin.
+         */
+        val movementSets: Int?,
+        /**
          * Sessions left out of [sessions], [sets], [from], [to], [peaks],
          * [days], [movements] and [repeated] because their file did not
          * read cleanly.
@@ -322,11 +331,6 @@ object Growth {
         // number threw away the whole day, not just the row — which is the
         // same mistake as calling a marked row blank, one layer up.
         //
-        // Sheet rows only, deliberately. Whether a session logged ENTIRELY
-        // by hand belongs on this screen is a separate, open question — it
-        // moves the aggregates rather than fixing a wrong one — and
-        // answering it by accident here is how a decision gets made without
-        // anyone deciding it.
         // Sheet rows AND added rows. The owner's call, 2026-10-16: "Yes if
         // the 2G was incomplete/completely off or I left a class early
         // after only doing the row session, it should still count." A
@@ -484,6 +488,7 @@ object Growth {
             days = days,
             movements = counts?.size,
             repeated = counts?.count { it.value > 1 },
+            movementSets = counts?.let { lifted.size },
             short = short,
             newerSchema = newerSchema,
             newestRead = newestRead,
@@ -491,21 +496,30 @@ object Growth {
     }
 
 
-    /** One session's weighted sets. A blank row is not a zero, and
-     *  `weight: 0` in the oldest records meant both "bodyweight" and
-     *  "skipped" — neither is a lift. */
     /**
-     * From the ROWS, not from `session.sets` -- the rows already hold the
-     * sheet's and the owner's own, with the same names and families.
+     * One session's weighted sets, from the ROWS rather than from
+     * `session.sets` -- the rows already hold the sheet's and the owner's
+     * own, with the same names and families.
+     *
+     * A blank row is not a zero, and `weight: 0` in the oldest records
+     * meant both "bodyweight" and "skipped" — neither is a lift.
      *
      * Reading only `sets` meant a day logged entirely by hand rendered
      * "0 lifts" above a list with weights in it. An added row carries no
      * family, deliberately (Carry never invents an exercise's identity),
      * so it counts toward the day's lifts and its heaviest but never
      * reaches [Since.peaks], which is grouped by family.
+     *
+     * A weighted row with no name is left out: [Day.best] names the day on
+     * this screen and reads aloud as "heaviest <name>, <n> pounds", so a
+     * nameless row does not merely add itself, it DISPLACES the named lift
+     * that would otherwise have described the day. The Log editor shows
+     * such a row on purpose (the save refuses it, and a refusal the owner
+     * cannot see is one they cannot act on), which is exactly why it must
+     * not also become history.
      */
     private fun liftsOf(read: Read): List<Lift> =
-        read.rows.filter { !it.skipped && (it.weight ?: 0.0) > 0.0 }
+        read.rows.filter { !it.skipped && it.name.isNotBlank() && (it.weight ?: 0.0) > 0.0 }
             .map { Lift(read.session.date, it.name, it.family, it.weight!!, it.reps) }
 
     /**
