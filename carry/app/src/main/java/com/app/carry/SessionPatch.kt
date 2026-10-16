@@ -127,8 +127,27 @@ object SessionPatch {
         return null
     }
 
+    /**
+     * The row's ref, read the way the DECODER reads it — a quoted `"3"`
+     * included.
+     *
+     * The quoted form used to be excluded here, and that one difference
+     * silently misplaced a weight. `ExerciseSet.ref` is an `Int` and the
+     * decode accepts `"3"` for it, so a `sets` holding both `"ref": 3` and
+     * `"ref": "3"` puts TWO rows on screen, both keyed 3 — while this
+     * function saw only one, so the duplicate-id guard had nothing to
+     * refuse. An edit typed against the second row was then written onto
+     * the first: measured 2026-10-16 as a 20 lb weight typed against
+     * `goblet squat` landing on `low row`, outcome `Patched`, with
+     * `unreadableRows` reporting 0. A wrong number in the owner's history
+     * and no sign of it anywhere.
+     *
+     * Every caller wants this same reading: the duplicate guard, the
+     * placeable-refs check, the write, and the two that seed the screen
+     * from the file. One ref, read one way.
+     */
     private fun refOf(set: JsonObject): Int? =
-        (set["ref"] as? JsonPrimitive)?.takeIf { it.isString.not() }?.content?.toIntOrNull()
+        (set["ref"] as? JsonPrimitive)?.content?.toIntOrNull()
 
     /**
      * @param edits the desired state of each row it names, not a list of

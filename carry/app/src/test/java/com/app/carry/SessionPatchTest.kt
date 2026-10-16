@@ -219,6 +219,31 @@ class SessionPatchTest {
     }
 
     @Test
+    fun `a quoted id is the same id, and two of them are refused`() {
+        // The quiet half of the duplicate-id hole, measured 2026-10-16
+        // before it was closed: `ExerciseSet.ref` is an Int and the decode
+        // accepts `"0"` for it, so the row appeared on screen keyed 0 like
+        // its twin -- while `refOf` skipped quoted values, leaving the
+        // duplicate guard nothing to refuse. A 20 lb weight typed against
+        // the second row was written onto the FIRST, outcome Patched, with
+        // nothing reporting an unreadable row. One weight typed once,
+        // landing on a movement the owner never lifted it for.
+        val dupes = original.replace("\"ref\": 1,", "\"ref\": \"0\",")
+        assertTrue(refused(dupes, filled).contains("same id"))
+    }
+
+    @Test
+    fun `a quoted id on its own is still editable`() {
+        // The other side of reading `ref` the decoder's way. The row is on
+        // screen, so an edit typed against it must land on it -- and used
+        // to be refused as unplaceable instead, because `refOf` could not
+        // see the row at all.
+        val quoted = original.replace("\"ref\": 1,", "\"ref\": \"1\",")
+        val out = patched(quoted, mapOf(1 to SessionPatch.Entry(weight = 20.0)))
+        assertTrue("the weight must land on the quoted row: $out", out.contains("20"))
+    }
+
+    @Test
     fun `an edit that cannot be placed stops the whole save`() {
         // The likeliest cause is the file having been replaced by a sync
         // while the owner was filling it in -- so the rows they were
