@@ -37,19 +37,14 @@ package com.app.carry
 object IntelPost {
 
     /**
-     * The text to hand over, plus the lines worth a second look before it
-     * goes.
+     * The text to hand over.
      *
-     * [suspect] holds bullets whose MOVEMENT NAME carries a digit —
-     * "ybell deadlift 26". The screen promises "the movements only, never
-     * your weights", and that promise is one this app cannot keep on its
-     * own: a name is typed by hand. Rather than strip trailing numbers,
-     * which would silently mangle "bicep curl 21s" (a real movement), the
-     * preview calls them out where the owner is already deciding whether
-     * to send. The prescription is excluded from the test — "10 total x"
-     * is digits by design, and flagging on it would mark every line.
+     * Nothing here guesses whether a typed name holds a weight. A digit
+     * test missed "deadlift twenty six" and "½ rack" and flagged "bicep
+     * curl 21s" and "90/90 hip stretch". The After screen shows each typed
+     * name back after the save instead, and asks; see `LogScreen`.
      */
-    data class Post(val text: String, val suspect: Set<String> = emptySet())
+    data class Post(val text: String)
 
     /**
      * The post to hand over, or null when there is nothing honest to post
@@ -128,35 +123,12 @@ object IntelPost {
             lines.forEach { append("- ").append(it.line).append('\n') }
             if (!prescribing) append("\n(Reported after the fact — no intel was posted for this class.)\n")
         }
-        return Post(text, lines.filter { it.carriesANumber }.map { "- " + it.line }.toSet())
+        return Post(text)
     }
 
-    /** A bullet, split so the digit test can see the name on its own. */
+    /** A bullet: the board's prescription, if any, and the movement. */
     private data class Named(val name: String, val asked: String?, val typed: Boolean) {
         val line: String get() = asked?.let { "$it $name" } ?: name
-
-        /**
-         * Only a name the OWNER typed can be flagged, because a typed name
-         * is the only place a weight can have been entered: a canonical
-         * comes from the coach's knowledge base, which holds movements and
-         * not loads.
-         *
-         * The reasoning is NOT "runner names legitimately hold digits, so
-         * exempt them" — that was the first version of this note and it is
-         * backwards. `bicep curl 21s`, `90/90 hip stretch` and `3 way
-         * shoulder` all hold a digit legitimately, and all three are
-         * flagged when the owner types one into "+ Add something the sheet
-         * missed", which is exactly where such a name gets typed. So the
-         * false alarm this gate was meant to avoid is still reachable, on
-         * the one path that can reach it. What the gate buys is that it
-         * cannot fire on an intel day the owner had no hand in — which is
-         * most of them.
-         *
-         * A false alarm costs the guard its meaning, which is the one
-         * thing it cannot afford, so narrowing it is on the backlog as a
-         * question rather than a patch.
-         */
-        val carriesANumber: Boolean get() = typed && name.any(Char::isDigit)
     }
 
     /** The name the runner parsed, never the raw sheet line. Null when

@@ -36,14 +36,12 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -186,6 +184,7 @@ fun LogScreen(
                 item { AddRow(onAdd, loud = false) }
             }
             item { SaveButton(saving, onSave) }
+            if (saving is SaveState.Saved) item { TypedBack(added) }
             // Only once it is written down. Before that the post would be
             // offering to publish numbers that are not yet anywhere, and
             // the moment to hand intel over is when the logging is done.
@@ -283,10 +282,10 @@ private fun LogRow(
             // A skipped row offers no boxes and no feel chips. There is no
             // number to put in them, and no set to have found easy.
             if (!entry.skipped) {
-                NumberField(entry.weight.asWeightField(), "$key-w", "$name weight in pounds", weightProblem) { text ->
+                NumberField(entry.weight.asWeightField(), "$key-w", "$name weight in pounds", "lb", weightProblem) { text ->
                     onChange(entry.copy(weight = text.toDoubleOrNull()))
                 }
-                NumberField(repsField(entry.reps, entry.fractionalReps), "$key-r", "$name reps", repsProblem) { text ->
+                NumberField(repsField(entry.reps, entry.fractionalReps), "$key-r", "$name reps", "reps", repsProblem) { text ->
                     val (reps, fractional) = parseReps(text)
                     onChange(entry.copy(reps = reps, fractionalReps = fractional))
                 }
@@ -383,10 +382,10 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            NumberField(row.weight.asWeightField(), "$key-w", "added exercise weight in pounds", weightProblem) {
+            NumberField(row.weight.asWeightField(), "$key-w", "added exercise weight in pounds", "lb", weightProblem) {
                 onChange(row.copy(weight = it.toDoubleOrNull()))
             }
-            NumberField(repsField(row.reps, row.fractionalReps), "$key-r", "added exercise reps", repsProblem) {
+            NumberField(repsField(row.reps, row.fractionalReps), "$key-r", "added exercise reps", "reps", repsProblem) {
                 val (reps, fractional) = parseReps(it)
                 onChange(row.copy(reps = reps, fractionalReps = fractional))
             }
@@ -415,40 +414,51 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
  * session the owner's keystrokes are the only thing that changes it.
  */
 @Composable
-private fun NumberField(initial: String, key: Any, label: String, problem: String?, onChange: (String) -> Unit) {
+private fun NumberField(
+    initial: String, key: Any, label: String, unit: String, problem: String?, onChange: (String) -> Unit,
+) {
     var text by rememberSaveable(key) { mutableStateOf(initial) }
-    BasicTextField(
-        value = text,
-        onValueChange = { typed ->
-            // '0'..'9' rather than isDigit(): a Hindi or Arabic keyboard
-            // offers digits that pass isDigit() and then fail to parse, so
-            // the box would blank on every keystroke with no explanation.
-            val cleaned = typed.filter { it in '0'..'9' || it == '.' }
-            if (cleaned.count { it == '.' } <= 1 && cleaned.length <= 6) {
-                text = cleaned
-                onChange(cleaned)
-            }
-        },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        textStyle = TextStyle(
-            color = Look.Chalk, fontFamily = Look.Figure, fontSize = 15.sp,
-            textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold,
-        ),
-        cursorBrush = SolidColor(Look.Amber),
-        modifier = Modifier
-            .width(50.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(Look.SlateRaised)
-            .border(if (problem != null) 2.dp else 1.dp, if (problem != null) Look.BrickInk else Look.RuleStrong, RoundedCornerShape(4.dp))
-            .padding(vertical = 11.dp)
-            .semantics {
-                contentDescription = label
-                // Spoken on the box itself, so a listener who lands on it
-                // hears what is wrong without finding the line below.
-                if (problem != null) error(problem)
+    // The unit under the box, visible, not a placeholder that vanishes
+    // once typed in: "the weight box" has to be findable at a glance.
+    // Hidden from TalkBack, whose label on the box already says it.
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        BasicTextField(
+            value = text,
+            onValueChange = { typed ->
+                // '0'..'9' rather than isDigit(): a Hindi or Arabic keyboard
+                // offers digits that pass isDigit() and then fail to parse, so
+                // the box would blank on every keystroke with no explanation.
+                val cleaned = typed.filter { it in '0'..'9' || it == '.' }
+                if (cleaned.count { it == '.' } <= 1 && cleaned.length <= 6) {
+                    text = cleaned
+                    onChange(cleaned)
+                }
             },
-    )
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            textStyle = TextStyle(
+                color = Look.Chalk, fontFamily = Look.Figure, fontSize = 15.sp,
+                textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold,
+            ),
+            cursorBrush = SolidColor(Look.Amber),
+            modifier = Modifier
+                .width(50.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Look.SlateRaised)
+                .border(if (problem != null) 2.dp else 1.dp, if (problem != null) Look.BrickInk else Look.RuleStrong, RoundedCornerShape(4.dp))
+                .padding(vertical = 11.dp)
+                .semantics {
+                    contentDescription = label
+                    // Spoken on the box itself, so a listener who lands on it
+                    // hears what is wrong without finding the line below.
+                    if (problem != null) error(problem)
+                },
+        )
+        Text(
+            unit, color = Look.ChalkDim, fontFamily = Look.Figure, fontSize = 11.sp,
+            modifier = Modifier.semantics { hideFromAccessibility() },
+        )
+    }
 }
 
 /**
@@ -532,62 +542,22 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
                 .clickable { open = !open }
                 .padding(vertical = 12.dp),
         )
-        // Everything about WHICH lines are flagged is said HERE, on a short
-        // node of its own, and nothing about it is said on the preview --
-        // see [spokenFlags].
-        val flagged = post.text.lines().filter { it in post.suspect }
+        // Not "never your weights": a name is typed by hand, and nothing
+        // here can promise what it holds. The save already showed each typed
+        // name back and asked (see [TypedBack]).
         Text(
-            // The honest version of the claim. A name is typed by hand, so
-            // "never your weights" is not something this screen can promise
-            // on its own — what it can do is show you the lines where you
-            // may have typed one.
-            if (flagged.isEmpty()) "The movements only \u2014 never your weights."
-            else "\u26a0 marks the lines that look like they carry a weight.",
-            color = if (flagged.isEmpty()) Look.ChalkFaint else Look.BrickInk,
-            fontFamily = Look.Name, fontSize = Look.SmallSize,
+            "The movements only. A name you typed goes out as you typed it.",
+            color = Look.ChalkFaint, fontFamily = Look.Name, fontSize = Look.SmallSize,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
-                .then(
-                    spokenFlags(flagged)
-                        ?.let { said -> Modifier.semantics { contentDescription = said } }
-                        ?: Modifier
-                ),
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
         )
         if (open) {
-            // Marked in the TEXT, not only in red. This preview is the
-            // one check standing between a hand-typed weight and a public
-            // subreddit, and until 2026-10-16 which lines were flagged
-            // was carried by colour alone -- unavailable to anyone with a
-            // colour vision deficiency, in glare, or on a greyscale
-            // display, and invisible to TalkBack, which read the whole
-            // block as one undifferentiated string.
-            //
-            // Only the PREVIEW is marked. What goes to the share sheet is
-            // `post.text`, built separately and handed over untouched, so
-            // the mark can never reach the subreddit.
+            // No `contentDescription`: Compose offers LINE and PAGE
+            // navigation only to a text node whose description is empty,
+            // so a listener can step through the post a bullet at a time.
             Text(
-                buildAnnotatedString {
-                    post.text.lines().forEachIndexed { i, line ->
-                        if (i > 0) append('\n')
-                        if (line in post.suspect) {
-                            withStyle(SpanStyle(color = Look.BrickInk)) { append("⚠ $line") }
-                        } else {
-                            append(line)
-                        }
-                    }
-                },
+                post.text,
                 color = Look.ChalkDim, fontFamily = Look.Figure, fontSize = 11.sp,
-                // DELIBERATELY no `contentDescription`. One on this node
-                // cost more than it gave, three ways at once: Compose
-                // offers LINE and PAGE navigation only to a text node
-                // whose description is empty, so a listener lost the
-                // ability to step through the post a bullet at a time;
-                // the label named the flagged lines and then read the
-                // whole post, so every flagged line was spoken twice and
-                // a full post's label ran past 3 kB; and joining the
-                // lines with ", " turned the blank line under the heading
-                // into a bare comma. The text itself carries the marks,
-                // and the caption above says how many and which.
                 modifier = Modifier
                     .fillMaxWidth().padding(top = 10.dp)
                     .clip(RoundedCornerShape(4.dp)).background(Look.SlateRaised)
@@ -608,50 +578,45 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
 }
 
 /**
- * The caption, read out: how many lines are marked, and which.
+ * Each name the owner typed, shown back once the save has landed, with the
+ * one question a typed name raises: is the weight in the weight box?
  *
- * On the CAPTION rather than on the preview, which is the whole point.
- * The caption's own words name a glyph ("`⚠` marks the lines..."), and a
- * glyph is exactly what a listener does not get -- no bundled font even
- * carries U+26A0, so it renders through system fallback and is spoken by
- * whatever name the reader's engine has for it, if any. So this node says
- * in words what the sighted reader gets from the mark.
- *
- * The preview itself keeps NO description, so it is still navigable line
- * by line and the post is never read out twice. That was the trade the
- * first version got backwards.
- *
- * Returns null when nothing is flagged: the caption's visible text is
- * already the whole of what there is to say, and a description that
- * merely repeats it would suppress the node's own text for no gain.
- *
- * Past [MAX_SPOKEN_FLAGS] it names the first few and COUNTS the rest,
- * rather than dropping the names for a bare total. A bare total would
- * hand identification back to the `⚠` in the preview, which is the one
- * channel this whole change exists because a listener may not get.
+ * Carry can't tell a load from a movement in free text (a digit test
+ * missed "deadlift twenty six" and "½ rack" and flagged "bicep curl 21s"),
+ * and it never guesses an identity, so it asks. It is a line under the
+ * button rather than a dialog: a dialog on every save with an added row
+ * is one the owner learns to dismiss unread, and this one stays until
+ * the next edit. Announced politely when it appears, so TalkBack reads it
+ * without moving focus. What is written to the file is unchanged.
  */
-private fun spokenFlags(flagged: List<String>): String? {
-    if (flagged.isEmpty()) return null
-    // `removePrefix`, not `trimStart(' ', '-')`: the bullet is exactly what
-    // the post prepends, and trimming every leading hyphen would turn a
-    // typed `-26 lb curl` into `26 lb curl` -- changing a name while
-    // reading it out, on the screen whose job is to show what was typed.
-    val named = flagged.take(MAX_SPOKEN_FLAGS).joinToString("; ") { it.removePrefix("- ") }
-    val rest = flagged.size - MAX_SPOKEN_FLAGS
-    val which = if (rest > 0) "$named; and $rest more" else named
-    return if (flagged.size == 1) {
-        "One line in the post is marked, because it looks like it carries a weight: $which."
-    } else {
-        "${flagged.size} lines in the post are marked, because they look like " +
-            "they carry a weight: $which."
-    }
+@Composable
+private fun TypedBack(added: List<AddedSet>) {
+    val names = added.mapNotNull { row ->
+        row.name.readable().replace(Regex("\\s+"), " ").trim().takeIf { it.isNotEmpty() }?.take(MAX_TYPED_NAME)
+    }.distinct()
+    if (names.isEmpty()) return
+    Text(
+        typedBack(names),
+        color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.SmallSize,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 6.dp)
+            .border(1.dp, Look.RuleStrong, RoundedCornerShape(4.dp))
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+    )
 }
 
-/** How many flagged lines are named out loud before the rest are counted.
- *  A label is spoken start to finish with no way to skim, so this is a
- *  sentence's worth; the names are capped at 80 characters each, which
- *  bounds the whole label at a few hundred. */
-private const val MAX_SPOKEN_FLAGS = 3
+/** The words of [TypedBack], kept apart so a test can read them whole. */
+internal fun typedBack(names: List<String>): String {
+    val quoted = names.joinToString(", ") { "\"$it\"" }
+    return if (names.size == 1) "You typed: $quoted. Is the weight in the weight box?"
+    else "You typed: $quoted. Is each weight in its weight box?"
+}
+
+/** A typed name is shown back whole up to this, which no movement's name
+ *  reaches; past it the draft is not a name. */
+private const val MAX_TYPED_NAME = 80
 
 sealed interface SaveState {
     data object Idle : SaveState
