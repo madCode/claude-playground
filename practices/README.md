@@ -13,6 +13,9 @@ every session reads. These files are read when they're needed.
 
 ## Starting a project
 
+The [`new-project` skill](../.claude/skills/new-project/SKILL.md) works out the design with
+madCode, carries out this list, then hands the project to cycles.
+
 1. A folder named for the project, with `CLAUDE.md`, `README.md` and `docs/` copied from
    [templates/](templates/). Fill in what the project is and its one rule worth keeping
    ("it never guesses a station"); leave out what the root CLAUDE.md already says.
