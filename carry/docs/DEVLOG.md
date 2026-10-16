@@ -30,6 +30,91 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 44: the app notices a sheet arriving
+
+**Built to a design that had been sitting unbuilt since the folder picker
+shipped**, because the owner changed what it was for. Their words:
+*"finish decoupling the app from Signal. We build the notification system
+in the app. We let the trigger run on the local computer, and it creates
+the session file. When the app notices the session file, it sends a
+notification."* The session file stops being a side effect of a Signal
+message and becomes the delivery channel.
+
+An hourly `WorkManager` check lists the folder and notifies when a name
+appears that is new AND dated today. Hourly rather than the
+fifteen-minute floor: the file lands hours before the class, so finer
+precision buys battery cost and nothing else.
+
+**The app went from zero Android permissions to five, and I wrote "one"
+three times before checking.** `POST_NOTIFICATIONS` is ours.
+`androidx.work` brings `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED`,
+`ACCESS_NETWORK_STATE` and `FOREGROUND_SERVICE`, and they appear only in
+the MERGED manifest — so the source manifest, DESIGN.md and the backlog
+all said one permission, and all three were false. `aapt2 dump
+permissions` on the built release APK is the only honest source, and
+running it is what caught this.
+
+`ACCESS_NETWORK_STATE` is the one that matters, because this app's stated
+identity is that it cannot reach the network. It permits reading *whether*
+a network exists, not using one, and there is still no `INTERNET`
+permission — so the property holds. But "read one manifest to see what
+this app asks for" stopped being true, and DESIGN.md now carries the table
+instead of a smaller number. Whether two of the four can be stripped with
+`tools:node="remove"` is a backlog item, deliberately not done blind:
+removing a permission a library expects fails at runtime, in a background
+worker, silently.
+
+**Three rules live in the decision rather than the plumbing**, each
+because its opposite is the failure the owner would actually feel: a file
+already seen is never announced twice; a file dated other than today is
+never announced, so backfilling an old day stays silent; and when nothing
+has ever been recorded — fresh install, or a reinstall that lost the set —
+nothing is announced at all, because a burst about sessions logged weeks
+ago is worse than silence.
+
+The one that took thought: a folder nobody picked and a folder whose grant
+was revoked BOTH list as empty, and empty is indistinguishable from an
+empty folder. Recording that would erase the memory and make every
+existing file look new when the grant came back — "announce everything"
+arriving by a side door. So the pass returns before touching its record
+unless the folder is actually readable.
+
+Two things turned out already solved. Tapping the notification needed no
+deep link: `tab` defaults to the Before tab and the folder is re-read on
+every resume, so launching the activity lands on the sheet, and a routing
+mechanism would have been a second way to choose a session. And lint was
+right to reject a permission check hidden behind a helper — the grant can
+be revoked between the check and the post, so the test is repeated inline.
+
+**Then the review found that none of it worked for the case it was built
+for.** The pass recorded every name it saw, regardless of date, while the
+decision filtered already-seen names BEFORE testing the date. So a sheet
+written the evening before — the runner's normal behaviour, and the exact
+case the design opens with — was marked seen on sight, and when its day
+arrived it could never be announced. The owner would have been told about
+nothing at all. Only names dated today or earlier are recorded now. The
+cloud session reading `gym.py` found the same hole from the other end
+within minutes, which is some comfort about it being real.
+
+Three more, all fixed: a chosen folder that momentarily could not be
+listed wiped the record and re-announced today's sheet on every blip
+(`list()` answers empty for a thrown query, a restarting provider, an
+unmounted volume and a genuinely empty folder, and none of those can be
+told apart — so the record unions and prunes rather than replacing). The
+notification's `CLEAR_TOP` intent would have finished and rebuilt the
+activity, taking the ViewModel and any typed-but-unsaved weights with it,
+which for this app is the cardinal failure. And `markAsked` ran before
+`launch`, inside a `runCatching` that exists because the launch can throw
+— so a throw spent the only permission ask the app ever makes, silently.
+
+**For the next cycle:** two of my four falsification attempts on
+`NewSession` proved nothing, and both failures looked like successes.
+Dropping a null-guard was a COMPILE error, so no test ran at all; removing
+the regex's `^` was a no-op because `matchEntire` anchors regardless. A
+non-zero exit is not evidence a test went red. **Check that the specific
+test name appears as FAILED**, not merely that the command failed — and if
+a break produces no failure, suspect the break before trusting the test.
+
 ## 2026-10-16 — cycle 43: a timed class can be posted, and only a timed one
 
 **The owner answered a question the code had been holding open in a

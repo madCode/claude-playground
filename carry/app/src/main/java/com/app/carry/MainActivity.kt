@@ -1,6 +1,7 @@
 package com.app.carry
 
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,9 +31,27 @@ class MainActivity : ComponentActivity() {
     // is read again from scratch.
     private val model: CarryViewModel by viewModels()
 
+    /**
+     * Asked for once, and only when there is a folder for a session file to
+     * land in — a permission dialog on first launch, before the owner has
+     * chosen anything, is a question about a feature they have not met.
+     */
+    private val askNotify =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            // Marked here, on an answer, rather than before launching. The
+            // launch is inside a runCatching because it can throw, and
+            // marking first meant a throw burned the only ask the app ever
+            // makes: no dialog, no notifications, and nothing anywhere that
+            // says so.
+            SessionWatchWorker.markAsked(this)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // KEEP, so this is safe on every launch: it will not restart the
+        // period and leave the check never actually running.
+        SessionWatchWorker.schedule(this)
 
         setContent {
             val pick = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -106,5 +125,19 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         model.refresh()
+        maybeAskToNotify()
+    }
+
+    /**
+     * The app held no permissions at all until 2026-10-16, and asks for
+     * this one only when it has somewhere to watch: a folder is chosen,
+     * notifications are not already possible, and the owner has not been
+     * asked before.
+     */
+    private fun maybeAskToNotify() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (!model.folder.chosen || SessionWatchWorker.canNotify(this)) return
+        if (SessionWatchWorker.asked(this)) return
+        runCatching { askNotify.launch(android.Manifest.permission.POST_NOTIFICATIONS) }
     }
 }

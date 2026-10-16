@@ -305,10 +305,27 @@ These are the open paths to one, hardest first.
   with no scale and no time direction; the bar count varies by how many sets the
   family has, which reads as meaning something it doesn't. Propose cutting them
   and keeping the number *(you asked)*
-- [ ] **Notify when a new session file lands** — the glance still depends on
-  remembering to open the app. Forces a decision: the app currently declares no
-  Android permissions at all *(design:
+- [x] ~~**Notify when a new session file lands**~~ Built 2026-10-16, to the
+  design as written — and the permission question it forced had a bigger
+  answer than the design or I expected. The app went from zero permissions
+  to **five**: `POST_NOTIFICATIONS` is ours, and `WAKE_LOCK`,
+  `RECEIVE_BOOT_COMPLETED`, `ACCESS_NETWORK_STATE` and `FOREGROUND_SERVICE`
+  arrive with `androidx.work`. They appear only in the merged manifest, so
+  I had written "one permission" in DESIGN.md and it was false until
+  `aapt2 dump permissions` on the built APK said otherwise. `DESIGN.md`
+  carries the table. Still no `INTERNET` *(design:
   [new-session-notification](designs/new-session-notification.md))*
+- [ ] **Can two of WorkManager's four permissions be stripped?**
+  `ACCESS_NETWORK_STATE` and `FOREGROUND_SERVICE` are for features this app
+  does not use — no network constraint, no expedited work — so
+  `tools:node="remove"` in the manifest should drop them, leaving a set
+  that is entirely explicable. NOT done blind: removing a permission a
+  library expects fails at runtime, in a background worker, silently, which
+  is the worst failure shape this app has. Needs an install on a device and
+  a confirmed check actually running after a reboot before it is believed.
+  `WAKE_LOCK` and `RECEIVE_BOOT_COMPLETED` must stay — the work would stop
+  surviving reboots without them *(found by checking the built APK rather
+  than the source manifest)*
 - [ ] **Read the class from the phone's own calendar** — frees the coach from its
   own calendar config. Bigger than it looks: needs a protocol change agreed on the
   runner side first *(design:
@@ -370,6 +387,39 @@ Only a real phone can answer these.
 ## Feature proposals
 
 Ideas worth doing, not yet planned. Each gets a sketch before it moves to Next.
+
+### The brain moves to the phone, eventually
+
+The owner's direction, 2026-10-16: *"once we feel confident that the brain
+is working we do eventually want to move it to the phone."* Not planned,
+and nothing here should be built toward it yet — but it changes what
+counts as a good decision in the meantime, so it is written down.
+
+Tonight's work is a step toward it rather than away: the session file is
+now the delivery channel and the app notices it, so Signal is leaving the
+path. The remaining distance is the brain itself — the matcher
+(`gym_lib` + `variants.py` + 104 movements in `exercises.yaml`), a WOD
+fetch, and the history the suggestions read.
+
+**The precondition, and it is not negotiable.** Carry's one rule exists so
+there is exactly ONE derivation of exercise identity; the system this
+replaced lost about a third of what was reported by re-deriving identity
+from free text in a second place. A brain that MOVES keeps one derivation
+and is fine. A Kotlin reimplementation living alongside the Python one
+creates two, and the two will drift silently — the owner's history would
+be wrong before anyone noticed.
+
+So before any port: a shared corpus of (line, expected parse) fixtures
+that BOTH implementations must pass, checked in where both can read it.
+Without that there is no way to tell a faithful port from one that has
+quietly lost a third of the lines, because the only witness is the
+owner's own training record months later.
+
+Two smaller things it would also need: the `INTERNET` permission and
+stored Reddit credentials, which is a much bigger change to this app's
+stated properties than the one notification permission; and the history
+on the phone, which currently lives beside the coach and is deliberately
+read-only to Claude.
 
 ### Quick-add from the lobby
 Nothing exists for "the sheet is wrong and I know it now". Adding a row currently

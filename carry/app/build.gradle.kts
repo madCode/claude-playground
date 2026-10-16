@@ -94,6 +94,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.coroutines.android)
     implementation(libs.serialization.json)
+    implementation(libs.work.runtime)
 
     debugImplementation(libs.compose.ui.test.manifest)
 

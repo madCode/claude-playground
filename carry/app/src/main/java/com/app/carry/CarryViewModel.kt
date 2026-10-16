@@ -430,7 +430,14 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         counting = viewModelScope.launch { _since.value = readSince() }
     }
 
-    private companion object {
+    internal companion object {
+        /**
+         * How long any provider call gets before it is treated as wedged.
+         *
+         * Internal rather than private because [SessionWatchWorker] needs
+         * the same number for the same reason, and two timeouts for one
+         * hazard would drift.
+         */
         const val STALL_AFTER_MS = 15_000L
         const val DRAFT = "draft"
     }
