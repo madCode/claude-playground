@@ -42,6 +42,14 @@ not a thing anyone is blocked from building.
   puts a chip on rows where the number boxes are the normal answer, which
   is the reason it was timed-only to begin with *(you asked for the narrow
   version; this is what it left out)*
+- [ ] **Should an old count leave the "part way to a bump" band?** The
+  band now reaches back across every sheet, and a row from an older sheet
+  shows its date. The runner's streak has no time limit, so the band has
+  none either: a count from two months ago still shows, dated. A cutoff
+  (say 28 days, the window the runner uses for its related lines) would
+  hide counts the owner may have moved on from without logging. Leaving
+  it out shows everything and lets the date speak. Built without one
+  *(you asked for the history; this is what it left open)*
 - [x] ~~**Aggregate facts about the owner's training are in this public
   repo.**~~ **Converted 2026-10-16.** The owner was asked and said they
   were "okay with leaving them if you absolutely need them to continue to
@@ -220,14 +228,6 @@ These are the open paths to one, hardest first.
   squat` written onto `low row`, outcome `Patched`, `unreadableRows` 0.
   It also fixed the other side — a lone quoted ref made its row
   unplaceable, refusing a save for a row visibly on screen.
-- [ ] **A sheet with no rows blanks the "part way to a bump" band, even
-  when older sheets have something to say.** `Growth.of` picks `newest` from
-  every parsed session rather than from the ones with rows, so an empty
-  newest sheet — a `"sets": []`, or a day the runner wrote before matching
-  anything — takes the band to nothing. Pre-existing, found by the #86
-  review. The band is "where you stand today", so an empty sheet arguably
-  SHOULD empty it; the question is whether "the newest sheet" or "the newest
-  sheet that said anything" is the right reading *(audit)*
 - [ ] **A file with no `schema` key at all is accepted as ours.** `schema`
   defaults to `"gym-session/1"`, so another tool's JSON carrying `sheet_id`
   and `date` reads as a session. Pre-existing and narrow — the folder
@@ -299,15 +299,6 @@ These are the open paths to one, hardest first.
   [read-class-from-calendar](designs/read-class-from-calendar.md))*
 
 
-
-- [ ] **Two classes at the newest date, the readable one with no bump
-  rows and the damaged one holding the streaks: the band disappears with
-  no "we cannot tell" marker.** The date-based gate says that day read
-  fine, which it did — just not the half with the streaks in it. The top
-  line still says a session is missing, so it is not silent, but it is a
-  quieter signal than the name-based gate gave. The trade was taken
-  deliberately in #89; worth revisiting if a two-class day ever breaks
-  this way *(audit)*
 
 ### Health and tidying
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on
@@ -449,6 +440,16 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **The "part way to a bump" band is a history.** It read only the
+  newest sheet, so a sheet with no streak rows (or no rows) blanked it.
+  It now covers every movement across the sheets, each from the newest
+  sheet that lists it, and a row from an older sheet shows that sheet's
+  date. This also settles **two classes at the newest date with the
+  streaks in the damaged one**: the band no longer disappears, since
+  the older sheets' rows show, dated, under the line saying a session is
+  missing. A movement the damaged file listed can still show its older
+  count; the date is what says so *(you asked: "'Since' should be a
+  history")*
 - [x] **The bars on *Heaviest by what it trains* are gone; the number
   stays.** They encoded every weight in the family with no scale and no
   time direction, and their count varied with how many sets the family had,

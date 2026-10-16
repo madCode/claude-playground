@@ -327,8 +327,33 @@ nearly every movement fresh because the studio changes the setup most
 classes — so most of a real sheet arrives on the same rung, one clean set
 of the three a bump needs. A heading saying they were *close* to anything
 was a claim the rows could not support, and *each one* was a claim about
-scope: the band is the newest sheet only, streaks strictly in progress,
-and five of those.
+scope: streaks strictly in progress, and five of those.
+
+**It is a history, not the newest sheet.** The owner's call, 2026-10-16:
+*"'Since' should be a history, it should include the stuff where I am
+almost at a bump across. Anything where if I happened to do that exercise
+today at that level, I would achieve a bump."* So the band covers every
+movement across the sheets, each taken from the newest sheet that lists
+it. Reading the newest sheet alone blanked the band whenever that sheet
+had nothing part way, a plank-only day for instance.
+
+- **The same movement** is the runner's `key`. A row with no key is only
+  taken from the newest sheet, since nothing could tell whether a later
+  sheet listed it.
+- **The newest listing decides.** If it is out of the band (skipped,
+  *hard*, lighter, a streak finished or none written), the movement is
+  out. An older sheet's count never stands in for it, because that count
+  is from before the newer set.
+- **A row from an older sheet shows that sheet's date**, beside the pips
+  and in its spoken label ("as of Sun 4 Oct"). The runner counted it from
+  the history it had when it wrote that sheet. A later set that left no
+  row with that key in the folder, such as a row typed by hand or a day
+  with no sheet, is one Carry cannot see. So the row says how old its
+  count is rather than claiming to be current. The runner's streak has no
+  time limit, so neither does the band; whether it should is the owner's
+  call.
+- **Order and cap are unchanged.** Fewest sets away leads; ties keep the
+  sheets' order, newest sheet first and each in board order; five rows.
 
 **The two numbers on a row are about different things**, and the row says
 so. The pips count clean sets; the weight is what the runner says to use
@@ -743,16 +768,18 @@ The Since tab is the exception to all of this: a day that read short is
 left out of its history entirely. Its figures are claims rather than a
 sheet, and "heaviest 50" over a day whose heaviest row did not decode is
 a confident wrong number. The one figure taken from the unfiltered read
-is the newest sheet behind "part way to a bump", because dropping a
-short day there would not leave a gap — it would promote yesterday's
-sheet into the answer to "where do I stand today".
+is "part way to a bump", because dropping a short day there would not
+leave a gap — it would hand that day's movements to an older sheet's
+counts.
 
 A newest sheet that will not parse AT ALL is not in that read either, so
 the band is **withheld** and says so, rather than quietly becoming the
 previous session's. That needs the filenames, which `Growth` never sees:
 it cannot tell a newest sheet that failed from a folder that ends earlier
 — they are the same input — so the question is answered one layer up and
-passed in. An older file failing costs the band nothing.
+passed in. An older file failing costs the band nothing; the line
+above the totals says a session is missing, and the date on each older
+row says how old its count is.
 
 The question asked there is about the newest **date**, not the newest
 file: two classes on one day are two files, and if either read there is a
@@ -762,7 +789,9 @@ which is what the Before tab says about the same file.
 
 The sentence says *the newest sheet*, never *today's*. The newest file is
 the newest by name, which on a rest day is last week's and can be dated
-ahead; the Before tab is careful about exactly this.
+ahead; the Before tab is careful about exactly this. The band orders the
+sheets by the same rule, so on a two-class day the Before tab's sheet
+leads.
 
 Left out, but not left out quietly: the tab says how many sessions are
 not in its totals, above the figures they are missing from. This is the
@@ -775,9 +804,8 @@ other way to check.
 
 Three words in that sentence are load-bearing. **Sessions**, not days:
 two classes on one date are two files. **These totals**, not "here": the
-bump band above is drawn from the newest sheet whether it read short or
-not, so "isn't counted here" would be contradicted by the first thing
-under it. And no **part of**: a file where every row failed still parses,
+bump band above reads every sheet whether it read short or not, so
+"isn't counted here" would be contradicted by the first thing under it. And no **part of**: a file where every row failed still parses,
 so "part" is false in exactly the worst case. It ends with the clause the
 Before tab has and this one was missing — *"a sync part way through can
 do that"* — because a file being replaced reads as zero bytes for a

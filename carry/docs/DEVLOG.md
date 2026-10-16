@@ -28,6 +28,19 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 60: "part way to a bump" is a history
+
+- The band on the Since tab read only the newest sheet, so a day whose
+  sheet had nothing part way (a plank-only day, an empty sheet) showed
+  nothing. The owner asked for a history: every movement where doing it
+  today at that level would earn a bump.
+- It now covers every movement across the sheets, each from the newest
+  sheet that lists it. If that newest listing is out of the band (marked
+  hard, done lighter, finished), an older count does not stand in.
+- A row from an older sheet shows that sheet's date, on screen and
+  aloud, because a later set Carry can't see could have moved it. No
+  cutoff yet; that is a question in the backlog.
+
 ## 2026-10-16 — cycle 58: the After screen checks what the importer refuses
 
 - A weight over 1000, reps over 1000, or reps with a fraction now show a
