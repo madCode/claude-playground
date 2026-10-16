@@ -102,11 +102,35 @@ object SessionFiles {
         Session.json.parseToJsonElement(text) as? JsonObject
     }.getOrNull()?.let(::labelOf)
 
-    /** The label as written, cut short and made safe to show, for the
-     *  message that says Carry doesn't know it. */
-    fun labelText(text: String): String? = runCatching {
-        (Session.json.parseToJsonElement(text) as? JsonObject)?.get("schema")
-    }.getOrNull()?.takeIf { it !is JsonNull }?.toString()?.readable()?.take(40)
+    /**
+     * [labelOf], or for text that isn't JSON (truncated mid-sync) a later
+     * `gym-session/N` spotted by [looksLikeNewerSchema]. The regex only
+     * for the truncated case: it matches a `"schema"` nested anywhere.
+     */
+    fun labelGuess(text: String): Label? =
+        labelOf(text) ?: Label.NEWER.takeIf { looksLikeNewerSchema(text) }
+
+    /**
+     * The label as written, made safe to show, for the message that says
+     * Carry doesn't know it: no control, format or line-separator
+     * characters (they can reorder or break the line), and cut at
+     * [MAX_LABEL] code points with an ellipsis, so a cut is visible and
+     * never splits a character.
+     */
+    fun labelText(text: String): String? {
+        val raw = runCatching {
+            (Session.json.parseToJsonElement(text) as? JsonObject)?.get("schema")
+        }.getOrNull()?.takeIf { it !is JsonNull }?.toString() ?: return null
+        val shown = raw.readable().filter { c ->
+            val type = Character.getType(c).toByte()
+            !c.isISOControl() && type != Character.FORMAT &&
+                type != Character.LINE_SEPARATOR && type != Character.PARAGRAPH_SEPARATOR
+        }
+        return if (shown.codePointCount(0, shown.length) <= MAX_LABEL) shown
+        else shown.substring(0, shown.offsetByCodePoints(0, MAX_LABEL)) + "\u2026"
+    }
+
+    private const val MAX_LABEL = 40
 
     private val LABEL = Regex("gym-session/(\\d+)")
 

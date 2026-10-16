@@ -117,6 +117,24 @@ class SinceScreenTest {
     }
 
     @Test
+    fun `a newest sheet with no format label says so where the band would be`() {
+        compose.setContent {
+            SinceScreen(since.copy(nearBump = emptyList(), newestRead = Growth.NewestRead.NO_LABEL))
+        }
+        compose.onNodeWithText(
+            "The newest sheet has a missing or unknown format label. Rather than show an older day's, this is blank."
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a folder of only unlabelled files says nothing could be counted`() {
+        val none = since.copy(sessions = 0, sets = 0, peaks = emptyList(), nearBump = emptyList(),
+            days = emptyList(), unlabelled = 3)
+        compose.setContent { SinceScreen(none) }
+        compose.onNodeWithText("Nothing in that folder could be counted.").assertIsDisplayed()
+    }
+
+    @Test
     fun `an empty band on a readable sheet still says nothing at all`() {
         // The other half: with the newest sheet readable and nothing in
         // progress, the band is absent entirely, as it always was. A

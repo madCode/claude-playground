@@ -112,16 +112,13 @@ fun carryState(folder: Folder): CarryState {
 }
 
 /**
- * Why [text] did not parse, in the terms the owner can act on.
- *
- * The regex comes first because it also reads a file truncated mid-sync,
- * whose label is visible though the JSON is not. A missing or unknown
- * label is only claimed of a file that IS a JSON object: anything else is
- * damage, and "a sync part way through" is then the honest guess.
+ * Why [text] did not parse, in the terms the owner can act on. A missing
+ * or unknown label is only claimed of a file that IS a JSON object:
+ * anything else is damage, and "a sync part way through" is then the
+ * honest guess.
  */
 internal fun unreadable(name: String, text: String): CarryState.Unreadable {
-    val why = if (SessionFiles.looksLikeNewerSchema(text)) CarryState.Unreadable.Why.NEWER
-    else when (SessionFiles.labelOf(text)) {
+    val why = when (SessionFiles.labelGuess(text)) {
         SessionFiles.Label.MISSING -> CarryState.Unreadable.Why.NO_LABEL
         SessionFiles.Label.UNKNOWN -> CarryState.Unreadable.Why.UNKNOWN_LABEL
         SessionFiles.Label.NEWER -> CarryState.Unreadable.Why.NEWER
@@ -199,7 +196,7 @@ fun growthOf(folder: Folder): Growth.Since {
             // Wording, not severity: the Before tab says "update Carry"
             // about this same file, and two screens describing one intact
             // file differently is worse than either alone.
-            atNewest.all { SessionFiles.looksLikeNewerSchema(it.text.orEmpty()) } ->
+            atNewest.all { SessionFiles.labelGuess(it.text.orEmpty()) == SessionFiles.Label.NEWER } ->
                 Growth.NewestRead.NEWER_SCHEMA
             atNewest.all { Growth.unlabelledFile(it.text.orEmpty()) } -> Growth.NewestRead.NO_LABEL
             else -> Growth.NewestRead.DAMAGED
@@ -219,6 +216,9 @@ fun growthOf(folder: Folder): Growth.Since {
 fun keepLastGood(previous: CarryState, next: CarryState): CarryState = when {
     next is CarryState.Ready -> next
     next is CarryState.NeedsFolder -> next          // the folder itself is gone; say so
+    // A label problem doesn't settle like a sync does, and holding the old
+    // sheet would let a save write over the file the message is about.
+    next is CarryState.Unreadable && next.why != CarryState.Unreadable.Why.DAMAGED -> next
     previous is CarryState.Ready -> previous
     else -> next
 }

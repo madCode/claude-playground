@@ -368,7 +368,7 @@ object Growth {
         // cannot be known either way is whether the row that did NOT read
         // was the answered one; the quiet choice is the right one there.
         val unparsed = files.filterNot { it in read.map(Read::text) }
-        val short = unparsed.count { !SessionFiles.looksLikeNewerSchema(it) && !unlabelledFile(it) } +
+        val short = unparsed.count { SessionFiles.labelGuess(it).let { l -> l == null || l == SessionFiles.Label.OURS } } +
             read.count {
                 SessionFiles.unreadableRows(it.text, it.session) > 0 &&
                     // ...or NO row read at all, which is not the same thing
@@ -387,7 +387,7 @@ object Growth {
         // sheets are broken while the other tells them to update the app
         // is worse than either message alone, and this is the one case in
         // this group that is PERSISTENT rather than a sync settling.
-        val newerSchema = unparsed.count(SessionFiles::looksLikeNewerSchema)
+        val newerSchema = unparsed.count { SessionFiles.labelGuess(it) == SessionFiles.Label.NEWER }
         val unlabelled = unparsed.count(::unlabelledFile)
 
         val peaks = lifts.filter { it.family != null }
@@ -593,8 +593,7 @@ object Growth {
     /** A JSON object whose `schema` is missing or unknown, and not the
      *  newer-coach case, which has its own sentence. */
     internal fun unlabelledFile(text: String): Boolean =
-        !SessionFiles.looksLikeNewerSchema(text) &&
-            SessionFiles.labelOf(text).let { it == SessionFiles.Label.MISSING || it == SessionFiles.Label.UNKNOWN }
+        SessionFiles.labelGuess(text).let { it == SessionFiles.Label.MISSING || it == SessionFiles.Label.UNKNOWN }
 
     /** Below this there is not enough training to say anything about its
      *  shape, and the band would be reading tea leaves. */

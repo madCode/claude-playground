@@ -695,6 +695,22 @@ class CarryStateTest {
     }
 
     @Test
+    fun `the label is read at the top level, and shown back safely`() {
+        // A nested "schema" that looks like a newer coach's must not decide
+        // the message: only a truncated file falls back to that regex.
+        val nested = """{"meta":{"schema":"gym-session/2"},"schema":"other","sheet_id":"x","date":"y","sets":[]}"""
+        assertEquals(CarryState.Unreadable.Why.UNKNOWN_LABEL, unreadable("f.json", nested).why)
+        // Cut by code point with a visible ellipsis, never half a character.
+        val emoji = "\uD83D\uDE00".repeat(60)
+        val shown = SessionFiles.labelText("""{"schema":"$emoji"}""")!!
+        assertTrue(shown, shown.endsWith("\u2026"))
+        assertTrue(shown, shown.codePoints().noneMatch { it in 0xD800..0xDFFF })
+        // Characters that reorder or break a line don't reach the screen.
+        val hostile = SessionFiles.labelText("""{"schema":"a\u202Eb\u061Cc\u2028d\u200De"}""")!!
+        assertEquals("\"abcde\"", hostile)
+    }
+
+    @Test
     fun `a file cut off before its label is still damage, not an unlabelled file`() {
         // Truncated mid-sync: no JSON object to look for a label in, so
         // claiming the label is missing would send the owner to the wrong fix.
@@ -742,6 +758,12 @@ class CarryStateTest {
         val good = readyFor()
         assertEquals(good, keepLastGood(good, CarryState.NoSession))
         assertEquals(good, keepLastGood(good, CarryState.Unreadable("x.json", CarryState.Unreadable.Why.DAMAGED)))
+        // ...but a label problem does not settle, and holding the old sheet
+        // would let a save write over the file the message is about.
+        for (why in listOf(CarryState.Unreadable.Why.NO_LABEL, CarryState.Unreadable.Why.UNKNOWN_LABEL, CarryState.Unreadable.Why.NEWER)) {
+            val next = CarryState.Unreadable("x.json", why)
+            assertEquals(next, keepLastGood(good, next))
+        }
         // ...but a folder that is genuinely gone must still be reported.
         assertEquals(
             CarryState.NeedsFolder(lostGrant = true),

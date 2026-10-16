@@ -467,6 +467,32 @@ class CarryViewModelTest {
     }
 
     @Test
+    fun `a save does not write over a file replaced by one without our label`() = runTest(dispatcher) {
+        // The patch is built from the bytes last read. A file replaced in
+        // the meantime by an unlabelled one, or one from a newer coach,
+        // must not be overwritten with this session.
+        val model = viewModel()
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        model.addRow()
+        model.editAdded(0, model.added.value[0].copy(name = "pop squat", weight = 20.0))
+
+        var wrote = 0
+        model.write = { _, _ -> wrote++; Saved.YES }
+        model.readNow = { """{"sheet_id":"x","date":"2026-10-17","sets":[]}""" }
+        model.save(); settled(model)
+        assertEquals("nothing may reach the folder", 0, wrote)
+        val state = model.saving.value
+        assertTrue("expected a refusal, got $state", state is SaveState.Failed)
+        assertTrue((state as SaveState.Failed).why, "\"schema\" label" in state.why)
+
+        // The control: the same save over a labelled file goes through.
+        model.readNow = { """{"schema":"gym-session/1","sheet_id":"x","date":"2026-10-17","sets":[]}""" }
+        model.save(); settled(model)
+        assertEquals(1, wrote)
+    }
+
+    @Test
     fun `two taps in one frame write once`() = runTest(dispatcher) {
         // The composable captures `enabled` before `save()` ever runs, so
         // the second tap used to start a second write against the same
