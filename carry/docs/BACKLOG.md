@@ -70,12 +70,13 @@ not a thing anyone is blocked from building.
   figure does not need a percent sign. This item's own text had already
   warned about exactly that *(answered)*
 
-- [ ] **The Python side was not covered by this pass.** It holds the
-  credentials, the outbound writes and the allowlist that decides what may
-  leave the data directory — three things this app has none of — and a
-  later security cycle should start there rather than re-reading the app.
-  Named specifically in that repo's own notes, which is where a map of its
-  controls belongs; this one is public *(audit: security)*
+- [x] ~~**The Python side was not covered by this pass.**~~ **Done
+  2026-10-16:** a security audit of the companion script, and fixes, in
+  its own repository. That includes the importer that reads what Carry
+  saves: it now refuses a file whose numbers, types or date would corrupt
+  the record, and names the row to fix. The findings and what is still
+  open are kept there, not here, since this repository is public
+  *(audit: security)*
 
 - [ ] **The weight guard only sees decimal digits, and only on a typed
   name.** `Char.isDigit` is Unicode `Nd`, so a load written as a word or a
