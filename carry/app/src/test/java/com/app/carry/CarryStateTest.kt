@@ -66,6 +66,17 @@ class GrowthFromFolderTest {
         )
         assertEquals(0, growthOf(folder).sessions)
     }
+
+    @Test
+    fun `a file the provider will not hand over is counted as not read`() {
+        // Before, it vanished before Growth could count it, so the one
+        // kind of loss the Since tab never mentioned was a whole file.
+        val folder = FakeFolder(
+            files = listOf("gone" to "session-2026-09-27-3G.json", "here" to "session-2026-10-17-2G.json"),
+            contents = mapOf("here" to VALID),
+        )
+        assertEquals(1, growthOf(folder).short)
+    }
 }
 
 class CarryStateTest {

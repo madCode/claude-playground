@@ -134,7 +134,10 @@ fun growthOf(folder: Folder): Growth.Since {
         // That is the mistake the comment above this function exists
         // because of; a field name is what makes it unavailable.
         .map { (id, name) -> Sheet(name, folder.read(id)) }
-    val texts = sheets.mapNotNull { it.text }
+    // A file the provider would not hand over is passed on as empty text,
+    // not dropped: it is then counted with the files that did not read, so
+    // the Since tab says a session is missing rather than going quiet.
+    val texts = sheets.map { it.text.orEmpty() }
 
     // The names are kept this far for one question only: did ANYTHING at
     // the newest date read? [Growth.of] sees text and nothing else, so it
