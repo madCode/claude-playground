@@ -18,8 +18,13 @@ should start at the first line of *Wrong numbers*.
 
 ### Your call — nothing moves until you decide
 
-Five decisions. Each is a question about what you want the app to claim,
+Six decisions. Each is a question about what you want the app to claim,
 not a thing anyone is blocked from building.
+- [ ] **Say when a newer debug build is out**, without Carry reaching the
+  network: the laptop's sheets job writes the newest build number into the
+  synced folder, and the Since tab says "Build N is out". Proposal and
+  alternatives in [#107](https://github.com/madCode/claude-playground/issues/107)
+  *(waiting on you)*
 - [ ] **Which marks say "I did this movement"?** You answered the narrow
   version on 2026-10-16 — `done` qualifies a movement for the post — and
   that shipped. But `done` is only offered on a TIMED row, because a timed
