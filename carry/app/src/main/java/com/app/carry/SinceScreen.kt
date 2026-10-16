@@ -330,11 +330,9 @@ private fun BumpRow(bump: Growth.Bump) {
 }
 
 /**
- * The heaviest in a family, with the weights that led to it.
- *
- * Bars, not a line: a line between two points a fortnight apart draws a
- * trend that the points do not support, and this app's rule is that a
- * wrong number is worse than a missing one.
+ * The heaviest in a family, as a number alone. No chart of the weights
+ * before it: a family's sets are different movements at different reps,
+ * so bars of them on no scale read as progress they don't show.
  */
 @Composable
 private fun PeakRow(peak: Growth.Peak) {
@@ -354,7 +352,6 @@ private fun PeakRow(peak: Growth.Peak) {
             color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.NameSize,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
         )
-        Trail(peak.trail)
         Text(figure(peak.best.weight), color = Look.Chalk, fontFamily = Look.Figure,
             fontWeight = FontWeight.SemiBold, fontSize = Look.FigureSize)
     }
@@ -427,21 +424,6 @@ private fun spoken(day: Growth.Day): String = listOfNotNull(
     if (day.lifts == 1) "1 lift" else "${day.lifts} lifts",
     day.best?.let { "heaviest ${it.name}, ${it.weight.asWeight()} pounds" },
 ).joinToString(", ")
-
-@Composable
-private fun Trail(weights: List<Double>) {
-    val top = weights.maxOrNull() ?: return
-    if (top <= 0.0) return
-    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Bottom) {
-        weights.forEachIndexed { i, w ->
-            val tall = (MIN_BAR + (MAX_BAR - MIN_BAR) * (w / top)).dp
-            Box(
-                Modifier.width(4.dp).height(tall).clip(RoundedCornerShape(1.dp))
-                    .background(if (i == weights.lastIndex) Look.AmberDim else Look.RuleStrong)
-            )
-        }
-    }
-}
 
 /**
  * Why there is not more here.
@@ -545,8 +527,6 @@ private fun figure(weight: Double): String = weight.asWeight()
  *  why the line below counts the others rather than ranking them. */
 private const val MAX_BUMP_ROWS = 5
 private const val MAX_PIPS = 10
-private const val MIN_BAR = 5.0
-private const val MAX_BAR = 20.0
 
 /**
  * What to say about sessions left out of the totals, or null when none

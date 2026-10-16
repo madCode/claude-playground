@@ -7,6 +7,12 @@ that hold become rules in CLAUDE.md or the cycles skill.
 
 ## 2026-10-16 run (cloud session)
 
+### Cycle 57 — build: the bars beside each family's heaviest go
+
+- **A removal has no behaviour to test, so the screenshot is the guard.**
+  `17-since` already shoots this band, and its before and after are the
+  whole proof. The trail's one unit assertion went with the trail.
+
 ### Cycle 55 — audit: the band picks its sheet by name (#113)
 
 - **Falsify against the class the test is in.** A Kotlin test file can hold

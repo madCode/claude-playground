@@ -239,8 +239,6 @@ class GrowthTest {
         assertEquals(listOf("legs", "pull"), since.peaks.map { it.family })
         assertEquals(40.0, since.peaks[0].best.weight, 0.0)
         assertEquals("row", since.peaks[1].best.name)
-        // Oldest to newest, so the bar on the right is the latest.
-        assertEquals(listOf(40.0, 25.0), since.peaks[0].trail)
     }
 
     @Test

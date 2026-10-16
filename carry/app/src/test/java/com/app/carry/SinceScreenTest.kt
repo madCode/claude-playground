@@ -38,8 +38,8 @@ class SinceScreenTest {
     private val since = Growth.Since(
         sessions = 5, sets = 20, from = "2026-09-13", to = "2026-10-11",
         peaks = listOf(
-            Growth.Peak("legs", lift("2026-09-27", "sumo squat", "legs", 50.0), listOf(40.0, 30.0, 50.0)),
-            Growth.Peak("pull", lift("2026-09-20", "low row", "pull", 30.0), listOf(15.0, 30.0, 30.0)),
+            Growth.Peak("legs", lift("2026-09-27", "sumo squat", "legs", 50.0)),
+            Growth.Peak("pull", lift("2026-09-20", "low row", "pull", 30.0)),
         ),
         nearBump = listOf(Growth.Bump("single-arm row", "pull", 40.0, 2, 3)),
         days = listOf(

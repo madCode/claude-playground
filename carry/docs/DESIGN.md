@@ -253,7 +253,9 @@ disconnected dots and would read as "you are not progressing", when the
 truth is that the studio almost never repeats a movement. So the bands are:
 what is nearly earned, the heaviest in each family (the axis the data is
 dense on, because the same muscle groups come round constantly even when
-the movements do not), every session newest first, and a plain statement of
+the movements do not; a number only, because a family's sets are different
+movements at different reps and bars of them read as a trend they are
+not), every session newest first, and a plain statement of
 why there is not more. That last one is load-bearing: without it, every
 empty row on the other screens looks like a broken app.
 
