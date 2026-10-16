@@ -503,6 +503,31 @@ there as well made one odd row cost the whole day: a row with no `name`
 key threw during deserialization, the loader turned that into "Can't read
 that session", and the sheet went with it.
 
+## What counts as a session
+
+A day the owner recorded doing something, **whichever box they typed it
+into**. Their call, 2026-10-16: *"Yes if the 2G was incomplete/completely
+off or I left a class early after only doing the row session, it should
+still count."*
+
+That used to mean the printed sheet's rows only, so a borrowed day whose
+sheet was for the other block and whose real content was four rows typed
+by hand reached the history as **nothing at all**. The rows the owner adds
+now count the same as the sheet's: toward whether the day happened, toward
+its lift count, and toward its heaviest.
+
+Two things stay as they were, on purpose. An added row carries **no
+family** — Carry never invents an exercise's identity — so it never reaches
+*Heaviest by what it trains*, which is grouped by family. And the
+"different movements" count still reads the sheet's rows only: it groups
+by the runner's own key, which an added row has none of, so including them
+would trip the withholding guard and hide the count entirely on any day
+with one hand-typed weight.
+
+A row's NAME counts as an answer only on an added row. On a sheet row the
+name is the prescription rather than a reply, so counting it would make
+every untouched sheet look filled in.
+
 ## The session file
 
 Carry reads and writes one JSON per session, defined by the companion

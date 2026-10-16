@@ -57,18 +57,31 @@ not a thing anyone is blocked from building.
   class offers no post at all. `done` is the one marker that states the movement
   WAS in the block, which is this path's publishing criterion — but what goes to
   r/orangetheory is the owner's call, so ask before changing it *(audit)*
-- [ ] A session the owner logged entirely by hand is not listed at all: `Growth.of`
-  decides what counts as a session from the SHEET's rows, so a borrowed day whose
-  sheet rows are all blank and whose real content is in `added` never reaches
-  *Every session*. That is the commonest shape of a borrowed day. Changing it moves
-  the session count, the date span and the quiet-band figures, so it is its own
-  decision. (#77 widened the same filter to count markers as well as numbers, and
-  deliberately stopped at the sheet's own rows so as not to answer this in passing.)
-  Two things to fix with it, found by the #77 review:
-  `Day.lifts`/`Day.best` and the `movements` count read `session.sets` only, so such
-  a day would render "0 lifts" over a list with a weight in it; and `Row.answered`
-  ignores the typed name, so a hand-logged row with a name and nothing else is
-  written to the file and still counted as never having happened *(audit)*
+- [ ] **A session logged entirely by hand is not listed at all.**
+  `Growth.of` decides what counts as a session from the SHEET's rows, so a
+  borrowed day whose sheet rows are blank and whose real content is in
+  `added` never reaches *Every session*.
+
+  **DECIDED 2026-10-16 by the owner: yes, it should count.** Their words,
+  and the two shapes they named: *"Yes if the 2G was incomplete/completely
+  off or I left a class early after only doing the row session, it should
+  still count."* So a day is a session when the owner recorded doing
+  something, whichever box they typed it into — a short day is still a
+  day.
+
+  Changing it moves the session count, the date span and the quiet-band
+  figures, so measure those before and after. Two things to fix with it,
+  found by the #77 review: `Day.lifts`/`Day.best` and the `movements`
+  count read `session.sets` only, so such a day would render "0 lifts"
+  over a list with a weight in it; and `Row.answered` ignores the typed
+  name, so a hand-logged row with a name and nothing else is written to
+  the file and still counted as never having happened.
+
+  Context from 2026-10-16: the owner has **never** used Carry's Add button
+  — zero `added` rows across all seven session files — but they add
+  exercises the sheet missed often, via Signal (both ybell sets on 09-20).
+  So the behaviour is routine and only the ROUTE is hypothetical *(you
+  asked)*
 
 ### From the security pass, 2026-10-16
 

@@ -30,6 +30,43 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 41: a day logged by hand is a day you trained
+
+**The owner's call, and the second cycle driven by an answer rather than a
+backlog guess.** *"Yes if the 2G was incomplete/completely off or I left a
+class early after only doing the row session, it should still count."*
+
+`Growth.of` decided what counted as a session from the SHEET's rows, so a
+borrowed day whose printed sheet was for the other block, and whose real
+content was rows typed by hand, reached the history as nothing at all.
+Three changes:
+
+- **A day is a session when the owner recorded doing something**, in
+  either box.
+- **Lifts come from the rows, not `session.sets`.** The rows already hold
+  both halves with the right names and families, so this fixes the "0
+  lifts over a list with weights in it" bug in one place rather than two.
+- **A named added row is an answer.** The sheet never listed it, so typing
+  "ybell deadlift" and nothing else is a record that it happened. Gated on
+  `added`: a sheet row's name is the prescription, not a reply, and
+  without the gate every untouched sheet would read as filled in.
+
+**Measured on the owner's seven real session files: identical before and
+after**, because they have never used the Add button — zero added rows
+across all seven. The behaviour is routine (they add exercises the sheet
+missed often, via Signal) and only the ROUTE is hypothetical.
+
+**Two existing tests had to flip, and both said so themselves.**
+`GrowthTest`'s carried a note that counting added rows "would move the
+numbers on every band of the Since screen" — true, and exactly why it was
+the owner's call. `PastSessionScreenTest` asserted "4 lifts" on a fixture
+whose `added` array holds a farmer carry at 35 lb; it reads 5 now, over a
+list that always had five weights in it.
+
+Four falsifications, including the one that matters most — dropping the
+`added` gate on the name, which takes four tests red because every blank
+sheet would count as a session.
+
 ## 2026-10-16 — cycle 40: the flake that was already fixed
 
 **No code changed. The deliverable is a number, and it closes an item

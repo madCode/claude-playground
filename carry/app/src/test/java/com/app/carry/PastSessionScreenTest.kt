@@ -253,7 +253,11 @@ class PastSessionScreenTest {
         openThatDay()
         compose.onNodeWithContentDescription("bench press, 45 pounds, 10 reps, easy")
             .assertIsDisplayed()
-        compose.onNodeWithText("4 lifts", substring = true).assertIsDisplayed()
+        // FIVE, not four, as of 2026-10-16: the owner's call that a day
+        // logged by hand is a day they trained. This fixture's `added`
+        // row is a farmer carry at 35 lb, and it counts like any other
+        // lift. It used to read "4 lifts" over a list with five weights.
+        compose.onNodeWithText("5 lifts", substring = true).assertIsDisplayed()
     }
 
     @Test
