@@ -119,15 +119,18 @@ one), and add what the cycle found to *Next*.
 ### The morning page
 
 BACKLOG.md and DEVLOG.md hold what waits on madCode. On top of them, the run keeps one page
-madCode reads on their phone in the morning, across every project: what needs them, and what
-ran. The scheduled task's prompt gives its link; without one, skip this.
+madCode reads on their phone in the morning, across every project: what needs them, then a
+report of what the cycles did. The scheduled task's prompt gives its link; without one, skip this.
 
 - Read the page (`Artifact`, `action: "read"`), change only this project's section, and
   publish to the same link. Another project's cycle may have published since; build on what the
   read returned and never drop another project's section.
 - First, what needs madCode, most blocking first: one line each saying what is needed and why,
-  linked to where they answer (the PR, the issue, the BACKLOG.md line on GitHub). Then a line
-  per cycle since the morning: what shipped, with its PR.
+  linked to where they answer (the PR, the issue, the BACKLOG.md line on GitHub).
+- Then the cycles report, newest first: one card per cycle with its project and number, what it
+  picked and why in a sentence, what changed for madCode in plain words (not the code), its PR,
+  and anything that went wrong or was left, linked to the DEVLOG.md entry for the detail. Cards
+  older than a few days come off; DEVLOG.md keeps them.
 - Everything on it is also in BACKLOG.md or DEVLOG.md, so the page can always be rebuilt from
   them. An item answered or done comes off.
 - It is private, but it follows the project's privacy rules anyway: no figures about anyone's
@@ -159,7 +162,7 @@ of the summary.
 ## Finish
 
 A short summary: what was picked and why, what was measured, what changed (with PR links), what
-waits on madCode, and how many cycles are left.
+waits on madCode, how many cycles are left, and the morning page's link.
 
 ## Scheduling a run
 
