@@ -241,13 +241,18 @@ These are the open paths to one, hardest first.
   was dropping them — and the question is about the newest DATE, since
   two classes on one day are two files and either reading is enough.
   Pinned from both sides: an older broken file must not cost the band.
-- [ ] **Showing a short day's rows on the Since tab, rather than omitting
-  the day.** The genuinely better answer, and the one the Before and After
-  tabs got. It needs more than a count: `sets`, `movements`, `repeated`
-  and `peaks` would all silently undercount, and `Day.best`/`lifts` would
-  have to be withheld for that day the way `movements` is already withheld
-  when a lifted set has no `key`. Worth doing only if this ever happens to
-  a real file *(audit)*
+- [x] ~~**Showing a short day's rows on the Since tab, rather than omitting
+  the day.**~~ **Dropped 2026-10-16, on the gate the item set itself:**
+  "worth doing only if this ever happens to a real file". Measured across
+  every session file in the owner's synced folder — a short day has never
+  occurred, nor has any of the eight other shapes checked in the same pass
+  (no `schema` key, a duration outside 1..3600, an empty `sets`, two
+  classes at the newest date, a filename disagreeing with the date inside,
+  an added row with no id, a non-integer `ref`, duplicate `ref`s).
+
+  Kept in mind rather than forgotten: the work it described is real and
+  the reasoning below still holds. If a short day ever shows up, this is
+  the design *(audit)*
 - [x] ~~**A `sets` holding both `"ref": 3` and `"ref": "3"` shows two rows
   that share a ref, and an edit typed against the second is written onto
   the first.** `refOf` excludes the string one from duplicate detection,
@@ -342,9 +347,13 @@ These are the open paths to one, hardest first.
   `WAKE_LOCK` and `RECEIVE_BOOT_COMPLETED` must stay — the work would stop
   surviving reboots without them *(found by checking the built APK rather
   than the source manifest)*
-- [ ] **Read the class from the phone's own calendar** — frees the coach from its
-  own calendar config. Bigger than it looks: needs a protocol change agreed on the
-  runner side first *(design:
+- [ ] **Read the class from the phone's own calendar** — BLOCKED, and its
+  stated benefit is void. It justified itself as freeing the coach from its
+  own calendar config; that config works, demonstrated 2026-10-16 when the
+  laptop's trigger read the calendar and correctly reported no class. So
+  there is nothing to free. This only becomes work if the brain moves to
+  the phone, which is its own entry under *Feature proposals* with its own
+  preconditions — do not pick this up before that *(design:
   [read-class-from-calendar](designs/read-class-from-calendar.md))*
 
 - [ ] **A logo** — chalk on slate, and it has to work as a one-colour launcher

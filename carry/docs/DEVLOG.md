@@ -30,6 +30,50 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 47: measuring the backlog instead of reading it
+
+**The owner asked what could be deprecated, and the answer came from the
+owner's own files rather than from judgement.** Several items are gated on
+a condition nobody had checked. One pass over every session file in the
+synced folder checked nine shapes the backlog worries about:
+
+| shape | occurrences |
+|---|---|
+| no `schema` key | 0 |
+| `prescribed_duration_sec` outside 1..3600 | 0 |
+| a short day (fewer rows than sets) | 0 |
+| an empty `sets` | 0 |
+| two classes at the newest date | 0 |
+| the date inside disagreeing with the filename | 0 |
+| an added row with no `id` | 0 |
+| a `ref` that is not an integer | 0 |
+| duplicate `ref`s | 0 |
+
+**One item dropped on its own terms.** *Showing a short day's rows on the
+Since tab* said "worth doing only if this ever happens to a real file". It
+has not, so it is closed with the measurement rather than left to be
+re-read every cycle.
+
+**One reframed.** *Read the class from the phone's own calendar* justified
+itself as freeing the coach from its own calendar config. That config
+works — the laptop's trigger read the calendar tonight and correctly
+reported no class — so the benefit is void. It is now marked BLOCKED on
+the brain moving to the phone rather than sitting in the queue looking
+actionable.
+
+**And eight items deliberately NOT dropped despite reading zero.** The
+malformed-file guards protect against a file written by something other
+than the runner, which is precisely the case that has not happened yet.
+"The bad input has not arrived" is the reason to keep a guard. Tonight's
+quoted-`ref` bug was exactly that shape and it was real, found by probing
+rather than by waiting.
+
+**For the next cycle:** a backlog item that states its own gate is worth
+more than one that states a priority, because the gate can be MEASURED and
+the priority can only be argued. Two of these had gates; both resolved in
+one command. When filing something speculative, write the condition that
+would make it real.
+
 ## 2026-10-16 — cycle 46: four things the notification got wrong
 
 **#93 was already merged, so these were live.** A read-only review found
