@@ -353,7 +353,10 @@ re-read on resume as it always was.
 
 **The app holds six Android permissions, and this feature brought five
 of them.** `aapt2 dump permissions` on the built APK is the only honest
-source for this, because a library brings its own.
+source for this, because a library brings its own. It also lists a
+seventh, `<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which
+androidx.core defines for the app's own receivers; it grants nothing
+outside the app.
 
 Two are ours: `POST_NOTIFICATIONS`, required on API 33+ to post anything,
 and `INTERNET`, for the update check below. The other four arrive with
