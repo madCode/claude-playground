@@ -716,11 +716,22 @@ file. A missing or `null` label, or any other value (a bare number
 included), is refused with the file named and the label quoted, not as
 damage: the file read fine, and "wait for the sync" would not help. A
 later `gym-session/N` still says to update Carry. The coach writes the
-label on every file and its importer refuses a file without one. The save
-checks it again and copies every top-level key, so every file Carry
-writes keeps it. The Since tab counts unlabelled files in their own
-sentence. The new-sheet notification goes by file name and does not
-read the label.
+label on every file and its importer refuses a file without one.
+
+- **The save checks the file on disk**, just before writing: the form
+  was filled against bytes read earlier, and a file replaced since by
+  one whose label isn't ours is not written over.
+- **A label problem isn't held over.** A sheet on screen survives a
+  damaged refresh, because a sync settles; a missing, unknown or newer
+  label doesn't settle, so its message replaces the sheet.
+- **The label is read at the top level.** The `gym-session/N` regex is
+  only for a file cut off mid-sync, where there is no JSON to read.
+- **An unknown label is quoted back safely**: without control, format or
+  line-separator characters, and cut at 40 characters with an ellipsis.
+- **Every file Carry writes keeps the label**, since a patch copies every
+  top-level key.
+- The Since tab counts unlabelled files in their own sentence. The
+  new-sheet notification goes by file name and does not read the label.
 
 **The rows are decoded one at a time**, so a row this build cannot read
 costs that row rather than the day — a value of the wrong type, or a
