@@ -24,6 +24,20 @@ copy from there.
   hours, only on a CI debug build, and the app links to the new APK.
 - The tests, CI and Room schema rules in [Starting a project](README.md#starting-a-project).
 
+## In a cloud session
+
+Run `jekyll-poster/tools/install-android-sdk.sh` before the first build. Besides the SDK, it
+installs a Gradle init script that sends Maven Central requests to Google's mirror of it.
+Maven Central rate-limits the address cloud sessions share, and Gradle reports a refusal as
+**"Could not find"** some well-known artifact, so it reads like a broken dependency rather than
+a network problem. Robolectric fetches its Android jars outside Gradle and fails the same way
+("Failed to fetch maven artifact org.robolectric:android-all…"); the init script covers it too.
+
+To have it on every session, put the script in the cloud environment's setup script
+(environment settings, then *Setup script*):
+
+    bash /home/user/claude-playground/jekyll-poster/tools/install-android-sdk.sh
+
 ## When it gets real releases
 
 The debug channel is enough while the owner is the only person using the app. Before anyone
