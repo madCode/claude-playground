@@ -6,7 +6,8 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** an icon of its own, and a real one in notifications
+- **Lately:** each debug build numbered, in its version code and its
+  file name (cycle 49); an icon of its own, and a real one in notifications
   (cycle 48); the bump band withheld rather than quietly becoming
   yesterday's answer (#89); a day missing from the Since totals without a
   word (#88); one bad ROW no longer costing a whole day, and both tabs
@@ -30,6 +31,29 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-16 — cycle 49: each debug build numbers itself
+
+**Every CI build from main had version code 1**, so a phone could not tell
+an old build from a new one, and a downloaded `carry-debug.apk` looked the
+same whichever build it was. Two of the Android checklist's
+"from the first PR" items, as newspaperss does them:
+
+- A CI debug build's version code is now its run number. The Since tab's
+  "(N)" shows it too. Local builds keep 1.
+- The release carries the build twice: `carry-debug.apk` for the fixed link
+  above, and `carry-debug-<run>.apk`. Only the newest numbered copy is
+  kept.
+- The publish job no longer cancels a running one. Two overlapping jobs
+  collided on the release's files in newspaperss.
+
+One thing to know: an older APK no longer installs over a newer one
+(`INSTALL_FAILED_VERSION_DOWNGRADE`). Uninstall first if you ever need to
+go back.
+
+The third checklist item, the app saying a newer build is out, needs
+Carry to reach GitHub. Carry has no internet permission on purpose, so that
+one is a proposal for the owner, not a build.
 
 ## 2026-10-16 — cycle 48: an icon of its own
 
