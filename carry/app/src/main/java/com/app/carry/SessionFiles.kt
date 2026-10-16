@@ -3,6 +3,7 @@ package com.app.carry
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.decodeFromJsonElement
 
 /**
@@ -75,6 +76,40 @@ object SessionFiles {
      * a shared space -- other things write there, and a half-synced file is
      * normal, not exceptional.
      */
+    /**
+     * What a file's `"schema"` says about it. Only [OURS] is read.
+     *
+     * A missing label is NOT taken as ours. Every file the coach writes
+     * carries `gym-session/1`, and its importer refuses a file without
+     * it; a reader that accepted one would open a form for a file the
+     * importer then drops, or read another tool's JSON as a session.
+     */
+    enum class Label { OURS, NEWER, MISSING, UNKNOWN }
+
+    /** [Label] of [doc]'s `schema`: missing (absent or null), ours, a later
+     *  `gym-session/N`, or anything else, a bare number included. */
+    fun labelOf(doc: JsonObject): Label {
+        val value = doc["schema"]?.takeIf { it !is JsonNull } ?: return Label.MISSING
+        val text = (value as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return Label.UNKNOWN
+        if (text == Session.SCHEMA) return Label.OURS
+        val version = LABEL.matchEntire(text)?.groupValues?.get(1)?.toIntOrNull()
+        return if (version != null && version > 1) Label.NEWER else Label.UNKNOWN
+    }
+
+    /** [labelOf] for raw text, or null when it is not a JSON object at all
+     *  -- that is damage, which is a different message. */
+    fun labelOf(text: String): Label? = runCatching {
+        Session.json.parseToJsonElement(text) as? JsonObject
+    }.getOrNull()?.let(::labelOf)
+
+    /** The label as written, cut short and made safe to show, for the
+     *  message that says Carry doesn't know it. */
+    fun labelText(text: String): String? = runCatching {
+        (Session.json.parseToJsonElement(text) as? JsonObject)?.get("schema")
+    }.getOrNull()?.takeIf { it !is JsonNull }?.toString()?.readable()?.take(40)
+
+    private val LABEL = Regex("gym-session/(\\d+)")
+
     /** A readable file whose schema we do not know -- "update the app" and
      *  "wait for the sync" need different words. */
     fun looksLikeNewerSchema(text: String): Boolean =
@@ -103,8 +138,8 @@ object SessionFiles {
         val rows = doc?.let(::rowsIn)
         // The head is decoded with `sets` taken out, so one bad row cannot
         // take the date and the class tag with it.
-        val head = doc?.let { Session.json.decodeFromJsonElement<Session>(JsonObject(it - "sets")) }
-        if (rows == null) null else head?.takeIf { it.schema == Session.SCHEMA }?.copy(sets = rows)
+        if (doc == null || rows == null || labelOf(doc) != Label.OURS) null
+        else Session.json.decodeFromJsonElement<Session>(JsonObject(doc - "sets")).copy(sets = rows)
     } catch (_: IllegalArgumentException) {
         // SerializationException extends this, so one catch covers both.
         null

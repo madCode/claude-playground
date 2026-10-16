@@ -56,6 +56,22 @@ class SessionPatchTest {
         return (out as SessionPatch.Outcome.Refused).why
     }
     private fun doc(text: String) = Json.parseToJsonElement(text).jsonObject
+
+    @Test
+    fun `a file with no format label is not written to, and a saved file keeps its label`() {
+        // The read refuses an unlabelled file, but the file can be replaced
+        // between the read and the save. The patch copies every top-level
+        // key, so the label on the way in is the label on the way out.
+        val unlabelled = original.replace(Regex(""""schema"\s*:\s*"gym-session/1","""), "")
+        assertTrue("fixture lost its label", "schema" !in unlabelled)
+        val why = refused(unlabelled, mapOf(0 to SessionPatch.Entry(weight = 40.0)))
+        assertTrue(why, "\"schema\" label" in why)
+        val other = original.replace("gym-session/1", "workout-log/3")
+        refused(other, mapOf(0 to SessionPatch.Entry(weight = 40.0)))
+
+        val saved = patched(original, mapOf(0 to SessionPatch.Entry(weight = 40.0)))
+        assertEquals("gym-session/1", doc(saved)["schema"]!!.jsonPrimitive.content)
+    }
     private fun set(text: String, i: Int) = doc(text)["sets"]!!.jsonArray[i].jsonObject
 
     private val filled = mapOf(0 to SessionPatch.Entry(weight = 45.0, reps = 8))

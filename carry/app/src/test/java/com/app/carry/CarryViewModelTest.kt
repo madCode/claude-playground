@@ -185,7 +185,7 @@ class CarryViewModelTest {
         assertEquals(readyFor(), model.state.value)
 
         // Syncthing replaces the file; the next read lands mid-write.
-        model.read = { CarryState.Unreadable("session-2026-10-17-2G.json", wrongSchema = false) }
+        model.read = { CarryState.Unreadable("session-2026-10-17-2G.json", CarryState.Unreadable.Why.DAMAGED) }
         model.refresh()
         advanceUntilIdle()
         assertEquals(
