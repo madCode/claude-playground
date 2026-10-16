@@ -6,7 +6,8 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** a newer build named on the Since tab (#108, cycle 50) and
+- **Lately:** the sheet's notice timed to the class (cycle 52); a newer
+  build named on the Since tab (#108, cycle 50) and
   installed from the app (cycle 51); each debug build numbered, in its version code and its
   file name (cycle 49); an icon of its own, and a real one in notifications
   (cycle 48); the bump band withheld rather than quietly becoming
@@ -32,6 +33,15 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-16 — cycle 52: the notice keeps the class's time
+
+**A sheet found overnight waited for 06:00**, which is right for a
+mid-morning class and wrong for a 05:30 one: it would have been announced
+after the class began. The runner now writes the class's start into the
+file (gym-coach #15), and Carry announces a sheet from 90 minutes before it.
+Files without the time keep the 06:00 rule. Two sheets on one day each wait
+for their own class.
 
 ## 2026-10-16 — cycles 50 and 51: a newer build, found and installed
 

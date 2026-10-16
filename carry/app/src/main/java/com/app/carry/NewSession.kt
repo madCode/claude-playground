@@ -14,9 +14,10 @@ object NewSession {
     /**
      * `session-2026-10-11-3G.json`. The date and the class come from the
      * NAME rather than the file's contents, which is the whole reason this
-     * check is cheap enough to run on a timer: no read, no parse, no
-     * decode of a file that may be half-written by the runner at the
-     * moment the worker looks.
+     * check is cheap enough to run on a timer: nothing is read until a file
+     * is new and dated today. Then [SessionWatcher] reads it once for its
+     * `starts_at`, and a file half-written by the runner just reads as
+     * having none, which only falls back to the 06:00 rule.
      *
      * The tag is bounded because a provider may return any display name
      * at all and this string reaches a notification. The `^`/`$` are

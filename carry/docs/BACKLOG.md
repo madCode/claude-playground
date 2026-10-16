@@ -271,35 +271,6 @@ These are the open paths to one, hardest first.
   `aapt2 dump permissions` on the built APK said otherwise. `DESIGN.md`
   carries the table *(design:
   [new-session-notification](designs/new-session-notification.md))*
-- [ ] **Time the notification to the class, not to the clock.** The owner's
-  idea, 2026-10-16, and it is better than what shipped — it also fixes a
-  real bug in it. `EARLIEST_HOUR = 6` holds a sheet found overnight until
-  06:00, which is right as a floor and wrong as the only rule: a 05:30
-  class would be announced AFTER it started. Their classes run mid-morning
-  today, so the shipped rule is safe by luck rather than by design.
-
-  **The time is not in the session file.** Every key across the owner's
-  eight real files: `added, backfilled, borrowed_from, class, date,
-  recovered_from, schema, sets, sheet_id`. The brain has it —
-  `gym_calendar.py` reads `DTSTART`, and `scheduled_surveys.jsonl` already
-  stores derived times — but nothing carries it to the phone.
-
-  So this is two-sided, and **gym-coach goes first**: Carry does not own
-  the schema, and a field added here is one the importer silently drops.
-
-  - gym-coach writes `starts_at`, ISO local, from the calendar event.
-  - Carry announces when `now >= starts_at - 90min` rather than consulting
-    the hour.
-  - The 06:00 floor STAYS as the fallback for any file without
-    `starts_at`: backfills, hand-written days, and everything the runner
-    wrote before the field existed. Deleting the fallback would make those
-    files silently un-announceable, which is the failure this whole
-    feature exists to prevent.
-
-  Granularity note: the check is hourly, so "90 minutes before" means
-  "within the hour after that moment". Adequate for a sheet read in a
-  lobby. Tighter would need a one-shot alarm scheduled from `starts_at`,
-  which is more machinery than this earns *(you asked)*
 - [ ] **Can two of WorkManager's four permissions be stripped?**
   `ACCESS_NETWORK_STATE` and `FOREGROUND_SERVICE` are for features this app
   does not use — no network constraint, no expedited work — so
@@ -463,6 +434,11 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **Time the notification to the class, not to the clock.** gym-coach
+  writes `starts_at` (gym-coach #15), and a sheet with one is announced
+  from 90 minutes before its class. A 05:30 class is no longer announced
+  after it started. 06:00 stays the fallback for files without it *(you
+  asked)*
 - [x] **Say when a newer debug build is out.** The owner chose Carry asking
   GitHub itself (#107) over routing the number through the folder, which
   brought the `INTERNET` permission. A CI debug build asks at most every

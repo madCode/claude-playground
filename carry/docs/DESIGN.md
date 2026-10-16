@@ -343,6 +343,15 @@ the file lands hours ahead and the extra precision would buy nothing but
 battery — lists the folder, and notifies when a name appears that is new
 AND dated today.
 
+**When it notifies** is the class's business, not the clock's. The runner
+writes `starts_at`, the class's local start, and a sheet that has one is
+announced from 90 minutes before it, which with an hourly check means
+within the hour after that. A sheet without one (a backfill, a hand-written
+day, anything older) waits for 06:00, so one found overnight doesn't ring
+in the small hours. Each sheet is held on its own, and a held sheet is not
+recorded as seen, so the run that's due still announces it. A `starts_at`
+that won't parse, or names another day, is treated as absent.
+
 Tapping it brings the app forward, on whatever tab the owner left. It does
 NOT force the Before tab, and that is a deliberate reversal: forcing it
 needs `CLEAR_TOP`, which with a standard launch mode finishes the running
