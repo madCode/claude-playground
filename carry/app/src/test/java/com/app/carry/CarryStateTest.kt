@@ -758,12 +758,11 @@ class CarryStateTest {
         val good = readyFor()
         assertEquals(good, keepLastGood(good, CarryState.NoSession))
         assertEquals(good, keepLastGood(good, CarryState.Unreadable("x.json", CarryState.Unreadable.Why.DAMAGED)))
-        // ...but a label problem does not settle, and holding the old sheet
-        // would let a save write over the file the message is about.
-        for (why in listOf(CarryState.Unreadable.Why.NO_LABEL, CarryState.Unreadable.Why.UNKNOWN_LABEL, CarryState.Unreadable.Why.NEWER)) {
-            val next = CarryState.Unreadable("x.json", why)
-            assertEquals(next, keepLastGood(good, next))
-        }
+        // A label problem on refresh holds the sheet too: the newest file
+        // may not be the one on screen, and dropping the sheet would hide
+        // the owner's typing. The save checks the file on disk instead.
+        val unlabelled = CarryState.Unreadable("x.json", CarryState.Unreadable.Why.NO_LABEL)
+        assertEquals(good, keepLastGood(good, unlabelled))
         // ...but a folder that is genuinely gone must still be reported.
         assertEquals(
             CarryState.NeedsFolder(lostGrant = true),

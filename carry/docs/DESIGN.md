@@ -721,9 +721,10 @@ label on every file and its importer refuses a file without one.
 - **The save checks the file on disk**, just before writing: the form
   was filled against bytes read earlier, and a file replaced since by
   one whose label isn't ours is not written over.
-- **A label problem isn't held over.** A sheet on screen survives a
-  damaged refresh, because a sync settles; a missing, unknown or newer
-  label doesn't settle, so its message replaces the sheet.
+- **A sheet on screen is still held** over a refresh that finds a label
+  problem, as over any unreadable refresh: the newest file may not be the
+  one on screen, and dropping the sheet would hide the owner's typing.
+  The save's own check is what stops a write.
 - **The label is read at the top level.** The `gym-session/N` regex is
   only for a file cut off mid-sync, where there is no JSON to read.
 - **An unknown label is quoted back safely**: without control, format or

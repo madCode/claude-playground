@@ -216,9 +216,6 @@ fun growthOf(folder: Folder): Growth.Since {
 fun keepLastGood(previous: CarryState, next: CarryState): CarryState = when {
     next is CarryState.Ready -> next
     next is CarryState.NeedsFolder -> next          // the folder itself is gone; say so
-    // A label problem doesn't settle like a sync does, and holding the old
-    // sheet would let a save write over the file the message is about.
-    next is CarryState.Unreadable && next.why != CarryState.Unreadable.Why.DAMAGED -> next
     previous is CarryState.Ready -> previous
     else -> next
 }
