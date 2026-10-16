@@ -253,10 +253,6 @@ These are the open paths to one, hardest first.
   slow all 233 tests to fix nothing.
 
 ### Says more, or says it better
-- [ ] The bars on *Heaviest by what it trains* encode every weight in that family
-  with no scale and no time direction; the bar count varies by how many sets the
-  family has, which reads as meaning something it doesn't. Propose cutting them
-  and keeping the number *(you asked)*
 - [x] ~~**Notify when a new session file lands**~~ Built 2026-10-16, to the
   design as written — and the permission question it forced had a bigger
   answer than the design or I expected. The app went from zero permissions
@@ -413,6 +409,10 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **The bars on *Heaviest by what it trains* are gone; the number
+  stays.** They encoded every weight in the family with no scale and no
+  time direction, and their count varied with how many sets the family had,
+  which read as meaning something it didn't *(you asked)*
 - [x] **A `prescribed_duration_sec` outside 1..3600 lost the row's `done`
   chip,** the only record a hold can carry. Any positive duration now makes
   the row timed; only the "sec of" text keeps the range check *(audit)*

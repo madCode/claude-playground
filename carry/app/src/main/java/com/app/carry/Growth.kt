@@ -30,8 +30,8 @@ object Growth {
         val reps: Int?,
     )
 
-    /** The heaviest thing in a family, and the weights leading to it. */
-    data class Peak(val family: String, val best: Lift, val trail: List<Double>)
+    /** The heaviest thing in a family. */
+    data class Peak(val family: String, val best: Lift)
 
     /**
      * One row of a past session, as the owner left it.
@@ -384,12 +384,7 @@ object Growth {
         val peaks = lifts.filter { it.family != null }
             .groupBy { it.family!! }
             .map { (family, inFamily) ->
-                Peak(
-                    family = family,
-                    best = inFamily.maxBy { it.weight },
-                    // Oldest to newest, so the bar on the right is now.
-                    trail = inFamily.sortedBy { it.date }.map { it.weight }.takeLast(MAX_TRAIL),
-                )
+                Peak(family = family, best = inFamily.maxBy { it.weight })
             }
             .sortedByDescending { it.best.weight }
 
@@ -595,5 +590,4 @@ object Growth {
 
     /** Enough bars to show a direction; more is a chart, and six sessions
      *  do not support one. */
-    private const val MAX_TRAIL = 8
 }
