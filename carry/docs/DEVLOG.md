@@ -6,7 +6,9 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** a newer debug build named at the top of the Since tab
+- **Lately:** the bars beside each family's heaviest gone, the number kept
+  (#116); a timed hold keeping its done chip whatever its duration says
+  (#115); a newer debug build named at the top of the Since tab
   (#108) and installed from inside the app (#109); the sheet's notice timed
   to the class (#110); each debug build numbered (#106); an icon of its own
   (#105); the Since tab counting a file it couldn't read (#112) and taking
@@ -25,6 +27,16 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-16 — cycles 56 and 57: a chip kept, a chart cut
+
+- **#115:** a row whose `prescribed_duration_sec` the file couldn't mean
+  (outside 1 to 3600) lost its `done` chip as well as its "sec of" text.
+  For a hold with no weight, `done` is the only record it can carry. Any
+  positive duration now offers the chip; the text keeps its range check.
+- **#116:** the owner asked about the bars on *Heaviest, by what it
+  trains*. They had no scale, and their count followed how many sets the
+  family had, so they read as progress they didn't show. The number stays.
 
 ## 2026-10-16 — cycles 53 to 55: three small corrections
 
