@@ -125,4 +125,15 @@ class SessionTest {
         assertEquals("12.5", 12.5.asWeight())
         assertEquals("—", null.asWeight())
     }
+
+    @Test
+    fun `a timed row with a nonsense duration still offers done, without printing it`() {
+        val plank = SampleSession.today.sets.first().copy(prescribedReps = null, prescribedText = null)
+        val absurd = plank.copy(prescribedDurationSec = 7200)
+        assertTrue("the only record a hold can carry", absurd.timed)
+        assertNull("but no '2 hr of' on the sheet", absurd.prescription)
+        assertTrue(plank.copy(prescribedDurationSec = 45).timed)
+        assertFalse(plank.copy(prescribedDurationSec = 0).timed)
+        assertFalse(plank.copy(prescribedDurationSec = null).timed)
+    }
 }
