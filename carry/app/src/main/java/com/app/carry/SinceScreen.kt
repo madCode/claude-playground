@@ -44,8 +44,8 @@ import androidx.compose.ui.unit.sp
  * space on context they cannot.
  *
  * **It does not open with a chart.** Measured against the owner's real
- * history, 26 distinct movements across 32 sets and exactly one of them
- * done twice at the same variant: a weight-over-time line would be a row
+ * history, where almost every movement appears once and barely any repeat
+ * at the same variant: a weight-over-time line would be a row
  * of disconnected dots, and would read as "you are not progressing" when
  * the truth is that the studio almost never repeats a movement. So the
  * screen leads with what is nearly earned, then with the axis the data is

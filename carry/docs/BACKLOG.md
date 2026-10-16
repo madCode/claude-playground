@@ -42,102 +42,34 @@ not a thing anyone is blocked from building.
   puts a chip on rows where the number boxes are the normal answer, which
   is the reason it was timed-only to begin with *(you asked for the narrow
   version; this is what it left out)*
-- [ ] **Aggregate facts about the owner's training are in this public repo,
-  predating tonight.** `CLAUDE.md`'s Privacy section rules them out — "the
-  test is whether a stranger learns something about the owner's training
-  from the sentence" — and names the fix: say "most" or "a small minority".
-  Four that are already on `main`: `SinceScreen.kt` ("26 distinct movements
-  across 32 sets and exactly one of them done twice"), `DESIGN.md`
-  ("20 of 20 lifts"), `GrowthTest.kt` ("19 of 20 distinct"), and the
-  "a large share of this owner's logged sets" line repeated in `DESIGN.md`,
-  `LogScreen.kt`, `LogScreenTest.kt`, `PastSessionScreenTest.kt` and
-  — found by the #85 review, missed by every earlier pass over this
-  list — `SessionPatch.kt`. Three more in `TodayScreenTest.kt`, found
-  while working nearby: "78% of the real history was logged this way",
-  "a sheet repeats a movement on 42% of days", "the repeats use the same
-  implement 78% of the time". And one in `DEVLOG.md` (cycle 20): "37% of
-  your logged sets carry no weight at all". A regex sweep of `docs/` and
-  `app/src/` for this shape now returns only these, so the list is
-  complete as of 2026-10-16 — what it cannot find is a figure phrased
-  without a percent sign or an "of N", which is how the `SessionPatch.kt`
-  one hid. #79
-  removed the ones it had just added and left these, because they are
-  load-bearing reasoning in several places and converting them is a pass of
-  its own — **and it may be a deliberate exception you want kept**.
-  Three more the #80 review found that the list above would have missed:
-  "eleven rows of one lit pip" in this file, and the same figure in
-  `DEVLOG.md` twice, once in a section heading *(audit)*
+- [x] ~~**Aggregate facts about the owner's training are in this public
+  repo.**~~ **Converted 2026-10-16.** The owner was asked and said they
+  were "okay with leaving them if you absolutely need them to continue to
+  make good decisions". Checked honestly: not needed. Every one justified
+  a decision already made and shipped — why the bodyweight progression
+  path exists, why the variant key is shaped as it is, why the Since tab
+  opens without a chart — and the reasoning survives "a large share",
+  "almost all", "most". None was an input to a future decision, so the
+  condition was not met and `CLAUDE.md`'s own test settled it.
 
-- [x] ~~**Should a movement done once appear in the progress band at all?**~~
-  **ANSWERED 2026-10-16 by the owner: keep it — "Keep — show everything
-  part way".** Which is what #79 and #80 had already built, so there is no
-  work: the band keeps movements at one of three, capped at five rows with
-  the rest counted, under the heading *part way to a bump*. The "why the
-  coach is often quiet" band explains why they all sit at one.
+  Converted in `DESIGN.md`, `DEVLOG.md` (two places), `SinceScreen.kt`,
+  `Session.kt`, `LogScreen.kt`, `GrowthTest.kt`, `LogScreenTest.kt`,
+  `PastSessionScreenTest.kt` and `TodayScreenTest.kt`.
 
-  Recorded here because the item sat open for a day after being answered,
-  which is its own small cost: a cycle reading "the top unfinished item"
-  reads a settled question first *(you asked — answered)*
-- [x] ~~**The intel post still demands a number**, so a wholly bodyweight or
-  timed class offers no post at all.~~ The owner was asked and said yes, and
-  the TIMED half shipped 2026-10-16 (#92): `done` qualifies a movement. The
-  bodyweight half does not, because an untimed row has no `done` chip at
-  all — that remainder is the *Which marks say "I did this movement"?*
-  decision above, which is theirs rather than work *(audit)*
-- [x] ~~**A session logged entirely by hand is not listed at all.**~~ Shipped
-  2026-10-16 (#91), with two defects of its own found by the review and
-  fixed in #92's branch: the quiet band printed `movements` over `sets`
-  once those stopped being the same population, and a weighted row with no
-  name could displace the named lift that describes a day. The reasoning
-  below is kept because it is the record of the owner's decision.
+  **Deliberately NOT converted: the public-corpus figures.** "A sheet
+  repeats a movement on 42% of days", "the repeats use the same implement
+  78% of the time", "agree on whether a weight is needed 84% of the time"
+  — these are measured across r/orangetheory's own public posts, not the
+  owner's training. A stranger learns nothing about the owner from them,
+  and converting them would lose real information for no privacy gain.
+  The rule's test is specifically about the OWNER's training.
 
-  `Growth.of` decided what counted as a session from the SHEET's rows, so a
-  borrowed day whose sheet rows are blank and whose real content is in
-  `added` never reaches *Every session*.
+  One lesson for the next sweep: my first search used `%` and "a third of"
+  and found six of ten. The ones it missed were phrased "26 distinct
+  movements across 32 sets", "20 of 20 lifts", "19 of 20 distinct" — a
+  figure does not need a percent sign. This item's own text had already
+  warned about exactly that *(answered)*
 
-  **DECIDED 2026-10-16 by the owner: yes, it should count.** Their words,
-  and the two shapes they named: *"Yes if the 2G was incomplete/completely
-  off or I left a class early after only doing the row session, it should
-  still count."* So a day is a session when the owner recorded doing
-  something, whichever box they typed it into — a short day is still a
-  day.
-
-  Changing it moves the session count, the date span and the quiet-band
-  figures, so measure those before and after. Two things to fix with it,
-  found by the #77 review: `Day.lifts`/`Day.best` and the `movements`
-  count read `session.sets` only, so such a day would render "0 lifts"
-  over a list with a weight in it; and `Row.answered` ignores the typed
-  name, so a hand-logged row with a name and nothing else is written to
-  the file and still counted as never having happened.
-
-  Context from 2026-10-16: the owner has **never** used Carry's Add button
-  — zero `added` rows across all seven session files — but they add
-  exercises the sheet missed often, via Signal (both ybell sets on 09-20).
-  So the behaviour is routine and only the ROUTE is hypothetical *(you
-  asked)*
-
-### From the security pass, 2026-10-16
-
-The app has **no `INTERNET` permission** — confirmed in the merged
-manifest, not just the source — so it cannot open a socket. The share
-sheet is the only way anything leaves, which makes the preview above it
-the whole of the egress control.
-
-- [x] ~~The flagged lines in the post preview were marked by **colour
-  alone.**~~ Fixed. "Check the lines in red" is no use to a reader with a
-  colour vision deficiency, in glare, or on a greyscale display, and the
-  block had no content description at all, so TalkBack read it as one
-  undifferentiated string. The flagged lines now carry `⚠` in the text, the
-  caption names that mark instead of the colour, and the caption — a short
-  node, not the preview — is what reads out how many lines are marked and
-  which. The preview deliberately keeps **no** content description: a
-  review of the first attempt found that labelling it took away LINE and
-  PAGE navigation (Compose offers those only to a text node whose
-  description is empty), read every flagged line twice, and flattened the
-  blank line under the heading into a bare comma. The mark is on the
-  preview only:
-  `post.text` goes to the share sheet untouched, and a test asserts the
-  warning never reaches the subreddit.
 - [ ] **The Python side was not covered by this pass.** It holds the
   credentials, the outbound writes and the allowlist that decides what may
   leave the data directory — three things this app has none of — and a
@@ -415,6 +347,11 @@ These are the open paths to one, hardest first.
   this way *(audit)*
 
 ### Health and tidying
+- [ ] **A launcher icon of its own.** Carry has none, so it shows Android's
+  default and can't be told apart from the other apps on the phone. An
+  adaptive icon (vector foreground, plain background, a monochrome layer for
+  themed icons) drawn for Carry, as
+  [practices/android.md](../../practices/android.md) asks *(you asked)*
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on
   instructions.** The gate is real but it is counting the wrong thing for
   a codebase this full of fail-closed guards — a third of branches have

@@ -93,8 +93,8 @@ class TodayScreenTest {
 
     @Test
     fun `a borrowed floor block says so before any number`() {
-        // A substitute mistaken for the real thing is worse than no sheet:
-        // 78% of the real history was logged this way.
+        // A substitute mistaken for the real thing is worse than no
+        // sheet, and most of the owner's real history was logged this way.
         val borrowed = SampleSession.today.copy(classTag = "3G", borrowedFrom = "2G")
         compose.setContent { TodayScreen(borrowed) }
         compose.onNodeWithText(
