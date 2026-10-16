@@ -301,11 +301,6 @@ These are the open paths to one, hardest first.
   #89 review. The fix is to pick by one rule — most likely by passing the
   newest text in rather than letting `Growth.of` choose *(audit)*
 
-- [ ] **A file whose `read` comes back null is invisible to
-  `Since.short`.** `growthOf` drops it from `texts` before `Growth.of`
-  can count it as unparsed, so a session the folder could not hand over
-  at all is the one kind of loss the Since tab still does not mention.
-  Pre-existing; found by the #89 review *(audit)*
 - [ ] **Two classes at the newest date, the readable one with no bump
   rows and the damaged one holding the streaks: the band disappears with
   no "we cannot tell" marker.** The date-based gate says that day read
@@ -430,6 +425,9 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **A file whose `read` came back null was invisible to `Since.short`.**
+  `growthOf` now passes it on as empty text, so it's counted with the files
+  that didn't read, and the Since tab says a session is missing *(audit)*
 - [x] **`ExerciseSet.answered` had no production callers**, and was the one
   definition of "answered" that left out `done`. Deleted, with the test that
   only exercised it. `Growth.Row.answered`, which counts the markers too, is
