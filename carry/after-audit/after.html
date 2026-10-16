@@ -14,6 +14,8 @@ h1{font-size:24px;margin:0;font-weight:700}
 .line{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;padding:4px 0 0 9px}
 .box{width:50px;height:42px;box-sizing:border-box;border:1px solid var(--rs);border-radius:4px;background:var(--raised);display:flex;align-items:center;justify-content:center;font-family:Fig;font-weight:600;font-size:15px}
 .ph{color:#55575A;font-weight:400}
+.donebox{font-family:Fig;font-size:15px;font-weight:600;color:var(--faint)}
+.donebox.on{color:var(--chalk);border-color:var(--chalk);background:#2b2e31}
 .fld{display:flex;flex-direction:column;align-items:center;gap:2px}
 .lab{font-family:Fig;font-size:14px;color:var(--dim);line-height:1}
 .chip{min-width:44px;height:42px;display:flex;align-items:center;justify-content:center}
@@ -36,43 +38,37 @@ pre{font-family:Fig;font-size:14px;color:var(--dim);background:var(--raised);bor
 .r{position:relative}
 </style></head><body><div class="wrap">
 <h1>How did it go?</h1>
-<div class="sub">6 of 7 answered · 1 skipped · partial is fine</div>
+<div class="sub">5 of 7 noted · 1 added · anything untouched counts as not done</div>
 
-<div class="row r"><div class="name"><div class="edge" style="background:#5FA8E8"></div>10 x bench press<span class="grow"></span><div class="chip"><span>hurt</span></div></div>
-<div class="line"><div class="fld"><div class="lab">lb</div><div class="box">45</div></div><div class="fld"><div class="lab">reps</div><div class="box ph">10</div></div>
-<div class="chip on-amber"><span>easy</span></div></div>
-<div class="note">a weighted row: the weight is the answer · reps blank = all 10 · no mod once a weight is in</div></div>
+<div class="row"><div class="name"><div class="edge" style="background:#5FA8E8"></div>10 x bench press<span class="grow"></span><div class="chip"><span>hurt</span></div></div>
+<div class="line"><div class="fld"><div class="lab">lb</div><div class="box">45</div></div><div class="fld"><div class="lab">reps</div><div class="box ph">10</div></div><div class="chip on-amber"><span>easy</span></div></div>
+<div class="note">the weight says you did it · reps blank = all 10</div></div>
 
 <div class="row"><div class="name"><div class="edge" style="background:#8AD17F"></div>12 x goblet squat<span class="grow"></span><div class="chip"><span>hurt</span></div></div>
-<div class="line"><div class="fld"><div class="lab">lb</div><div class="box">30</div></div><div class="fld"><div class="lab">reps</div><div class="box">9</div></div>
-<div class="chip"><span>easy</span></div></div>
+<div class="line"><div class="fld"><div class="lab">lb</div><div class="box">30</div></div><div class="fld"><div class="lab">reps</div><div class="box">9</div></div><div class="chip"><span>easy</span></div></div>
 <div class="note">9 of 12: the coach sees the short set from the reps alone</div></div>
 
-<div class="row"><div class="name"><div class="edge" style="background:#5FA8E8"></div>8 each x lateral raise</div>
-<div class="line"><div class="fld"><div class="lab">lb</div><div class="box ph"></div></div><div class="fld"><div class="lab">reps</div><div class="box ph">8</div></div><div class="chip"><span>skip</span></div></div>
-<div class="note">not answered yet: type the weight, or skip</div></div>
+<div class="row"><div class="name"><div class="edge" style="background:#5FA8E8"></div>8 each x lateral raise<span class="grow"></span><div class="chip"><span>hurt</span></div></div>
+<div class="line"><div class="fld"><div class="lab">lb</div><div class="box ph"></div></div><div class="fld"><div class="lab">reps</div><div class="box ph">8</div></div></div>
+<div class="note">untouched: you didn’t do it, nothing else to tap</div></div>
 
 <div class="row"><div class="name"><div class="edge" style="background:#5FA8E8"></div>10 x push-up<span class="grow"></span><div class="chip"><span>hurt</span></div></div>
-<div class="line"><div class="chip did on-did"><span>✓</span></div><div class="fld"><div class="lab">lb</div><div class="box ph"></div></div><div class="fld"><div class="lab">reps</div><div class="box ph">10</div></div>
-<div class="chip"><span>easy</span></div><div class="chip on-dim"><span>mod</span></div></div>
-<div class="note">bodyweight: nothing to type, so ✓ says you did it</div></div>
+<div class="line"><div class="fld"><div class="lab">lb</div><div class="box ph"></div></div><div class="fld"><div class="lab">reps</div><div class="box">10</div></div><div class="chip"><span>easy</span></div><div class="chip on-dim"><span>mod</span></div></div>
+<div class="note">bodyweight: tap the faint 10 to fill it, or type what you did</div></div>
 
 <div class="row"><div class="name"><div class="edge" style="background:#8AD17F"></div>10 total x jump lunge<span class="grow"></span><div class="chip"><span>hurt</span></div></div>
-<div class="line"><div class="chip did on-did"><span>✓</span></div><div class="fld"><div class="lab">lb</div><div class="box ph"></div></div><div class="fld"><div class="lab">reps</div><div class="box ph">10</div></div>
-<div class="chip"><span>easy</span></div><div class="chip"><span>mod</span></div></div></div>
+<div class="line"><div class="fld"><div class="lab">lb</div><div class="box ph"></div></div><div class="fld"><div class="lab">reps</div><div class="box">10</div></div><div class="chip on-amber"><span>easy</span></div><div class="chip"><span>mod</span></div></div></div>
 
 <div class="row"><div class="name"><div class="edge" style="background:#4FC7C0"></div>45 sec of low plank<span class="grow"></span><div class="chip"><span>hurt</span></div></div>
-<div class="line"><div class="chip did on-did"><span>✓</span></div><div class="fld"><div class="lab">lb</div><div class="box ph"></div></div><div class="fld"><div class="lab">reps</div><div class="box ph">—</div></div>
-<div class="chip"><span>easy</span></div><div class="chip"><span>mod</span></div></div>
-<div class="note">timed: nothing to type, so ✓ is the answer</div></div>
+<div class="line"><div class="fld"><div class="lab">lb</div><div class="box ph"></div></div><div class="fld"><div class="lab">time</div><div class="box donebox on">done</div></div><div class="chip"><span>easy</span></div><div class="chip"><span>mod</span></div></div>
+<div class="note">timed: done takes the reps box’s place · lb stays for a plate</div></div>
 
 <div class="row skipped"><div class="name"><div class="edge" style="background:#C98BE0"></div>10 x single-arm row<span class="grow"></span><div class="chip on-brick"><span>hurt</span></div></div>
-<div class="line"><div class="chip on-dim"><span>skip</span></div></div>
-<div class="note">skipped, and why</div></div>
+<div class="line"><div class="fld"><div class="lab">lb</div><div class="box ph"></div></div><div class="fld"><div class="lab">reps</div><div class="box ph">10</div></div></div>
+<div class="note">untouched, with hurt marked: shows why it wasn’t done</div></div>
 
 <div class="row"><div class="name"><div class="edge" style="background:#80817B"></div>farmer carry<span class="grow"></span><div class="chip"><span>hurt</span></div></div>
-<div class="line"><div class="fld"><div class="lab">lb</div><div class="box">35</div></div><div class="fld"><div class="lab">reps</div><div class="box ph"></div></div>
-<div class="chip"><span>easy</span></div></div>
+<div class="line"><div class="fld"><div class="lab">lb</div><div class="box">35</div></div><div class="fld"><div class="lab">reps</div><div class="box ph"></div></div><div class="chip"><span>easy</span></div></div>
 <div class="note">an added row: its name says you did it</div></div>
 
 <div class="add">+ Add something the sheet missed</div>
