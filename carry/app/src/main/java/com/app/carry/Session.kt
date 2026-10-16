@@ -124,14 +124,15 @@ data class ExerciseSet(
     val note: String? = null,
 ) {
     /**
-     * The board asked for seconds, not reps.
+     * The board asked for seconds, not reps, so the row is offered `done`.
      *
-     * Same bound [prescription] applies, so the one row shape that shows
-     * "45 sec of" is the one row shape offered the `done` chip -- a
-     * nonsense duration must not quietly turn a normal row into a timed
-     * one.
+     * Any positive duration counts, even one outside the range
+     * [prescription] will print: the runner marked the row timed, and for a
+     * hold that takes no weight `done` is the only record it can carry.
+     * Withholding the chip over a nonsense number lost that record; showing
+     * an extra chip on a row that also has boxes costs nothing.
      */
-    val timed: Boolean get() = prescribedDurationSec?.let { it in 1..MAX_DURATION_SEC } == true
+    val timed: Boolean get() = prescribedDurationSec?.let { it > 0 } == true
 
     /** The amber case, and the only number you would get wrong from memory --
      *  by feel you repeat last session's weight. */

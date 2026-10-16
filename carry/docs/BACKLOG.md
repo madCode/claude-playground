@@ -222,10 +222,6 @@ These are the open paths to one, hardest first.
   alongside: `"schema": 2` unquoted says "wait for the sync" where "update
   the app" is the better guess, because `looksLikeNewerSchema`'s regex
   requires the quotes *(audit)*
-- [ ] `prescribed_duration_sec` outside 1..3600 renders no prescription and no
-  *done* chip, so a row written on another machine with an absurd duration silently
-  loses the only record it could carry. The guard is right; the consequence is not
-  *(audit)*
 - [x] ~~**`CarryViewModelTest`'s save wait fails about one run in six.**~~
   **#82 fixed it. The "one in six" was measured BEFORE #82's own fix and
   never re-taken**, so this item has been describing a state that stopped
@@ -417,6 +413,9 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **A `prescribed_duration_sec` outside 1..3600 lost the row's `done`
+  chip,** the only record a hold can carry. Any positive duration now makes
+  the row timed; only the "sec of" text keeps the range check *(audit)*
 - [x] **`Growth.of` picked the newest session by the date inside the file,
   while its gate read the filename.** `growthOf` now passes in the newest
   file by name that parses, so the band and the gate pick the same day
