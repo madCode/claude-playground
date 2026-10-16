@@ -66,14 +66,24 @@ object IntelPost {
 
         val did = session.sets.mapNotNull { set ->
             val entry = entries[set.ref] ?: return@mapNotNull null
-            // A number, deliberately NOT the history's wider test. This
-            // goes to the subreddit, where the only thing worth reading is
-            // what weight the block was done at — and tapping `hurt` while
-            // deciding is not a record that the movement was in the block
-            // at all. `done` on a timed row says it WAS, which is the one
-            // marker that would belong here; whether a weightless row is
-            // worth posting is the owner's call and has not been asked.
-            if (entry.skipped || (entry.weight == null && entry.reps == null)) return@mapNotNull null
+            // A number, or `done`. This goes to the subreddit, and the
+            // test is "was this movement in the block" — which a number
+            // answers, and which `done` ("I did it, and there is nothing
+            // to say about it") answers for a timed hold that takes no
+            // weight and prescribes no reps. Asked and answered by the
+            // owner, 2026-10-16: a wholly bodyweight or timed class used
+            // to offer no post at all, because every row was empty by
+            // definition.
+            //
+            // `hurt` deliberately does NOT qualify: tapping it while
+            // deciding is not a record that the movement was done. Nor do
+            // `easy`/`hard`/`easier`, which is a narrower reading than it
+            // may look — they do imply a set happened, but the owner named
+            // `done`, and widening their answer is on the backlog as a
+            // question rather than taken here.
+            if (entry.skipped || (entry.weight == null && entry.reps == null && !entry.done)) {
+                return@mapNotNull null
+            }
             val name = set.ownName() ?: return@mapNotNull null
             // `prescription`, never `prescribedReps`: that one is the
             // runner's math number, so publishing it would tell the

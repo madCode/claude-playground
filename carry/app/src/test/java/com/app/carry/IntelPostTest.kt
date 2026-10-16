@@ -65,9 +65,10 @@ class IntelPostTest {
     }
 
     @Test
-    fun `only the rows that were answered, and only with a number`() {
+    fun `only the rows that say the movement was in the block`() {
         val post = IntelPost.compose(
-            session(sets = listOf(set(0, "bench press"), set(1, "deadlift"), set(2, "squat"), set(3, "row"))),
+            session(sets = listOf(set(0, "bench press"), set(1, "deadlift"), set(2, "squat"),
+                                 set(3, "row"), set(4, "plank"))),
             mapOf(
                 0 to SessionPatch.Entry(weight = 45.0),        // did it
                 1 to SessionPatch.Entry(skipped = true),       // explicitly did not
@@ -76,13 +77,36 @@ class IntelPostTest {
                 // block -- the first version counted this, while claiming
                 // to use the same test the history uses.
                 3 to SessionPatch.Entry(hurt = true),
+                // "I did it, and there is nothing to say about it", which
+                // is the only thing a timed hold can say: it takes no
+                // weight and prescribes no reps, so the boxes are empty by
+                // definition. The owner's call, 2026-10-16.
+                4 to SessionPatch.Entry(done = true),
             ),
             emptyList(),
         )!!.text
         assertTrue(post, post.contains("bench press"))
+        assertTrue("done says it was in the block: $post", post.contains("plank"))
         listOf("deadlift", "squat", "row").forEach {
             assertFalse("$it is not evidence: $post", post.contains(it))
         }
+    }
+
+    @Test
+    fun `a class that was wholly bodyweight still has a post`() {
+        // Before the owner answered this, a timed or bodyweight class
+        // offered no post at all: every row was empty by definition, so
+        // `did` came back empty and compose returned null. That is a whole
+        // class the subreddit never heard about.
+        val post = IntelPost.compose(
+            session(sets = listOf(set(0, "plank", durationSec = 45, prescribed = null, prescribedText = null),
+                                 set(1, "side plank", durationSec = 30, prescribed = null, prescribedText = null))),
+            mapOf(0 to SessionPatch.Entry(done = true), 1 to SessionPatch.Entry(done = true)),
+            emptyList(),
+        )
+        assertTrue("a wholly bodyweight class should still post", post != null)
+        assertTrue(post!!.text, post.text.contains("plank"))
+        assertTrue(post.text, post.text.contains("side plank"))
     }
 
     @Test
