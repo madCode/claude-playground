@@ -163,11 +163,33 @@ its cycle log entry, as the run's baseline. Anything you can't put back is the f
 of the summary.
 
 **Emulators above all.** A cycle that starts an emulator shuts it down before it ends
-(`adb emu kill`, then check `adb devices` and that no `qemu` or `emulator` process is left),
-even when the next cycle will want one: starting it again costs a few minutes, and one left
-running has run for eight hours. At the start, an emulator already running is noted. If the
-cycle log says an earlier cycle started it, stop it; otherwise it may be madCode's, so leave it
-and put it first in the summary and on the morning page.
+(`adb emu kill`, then check `adb devices` and that no `qemu` or `emulator` process is left):
+one left running has run for eight hours.
+
+The one exception is a run whose cycles are at most 30 minutes apart, where restarting each time
+would cost more than the cycle. Unless this is the run's last cycle, the emulator may stay up
+for the next, but only behind a watchdog that shuts it down whatever happens to the run:
+
+    W=${TMPDIR:-/tmp}/claude-emulator-watchdog.pid
+    stop_watchdog() { [ -f "$W" ] && { p=$(cat "$W"); rm -f "$W"
+      ps -p "$p" -o args= | grep -q 'emu kill' || return 0
+      kids=$(pgrep -P "$p"); kill "$p"; [ -n "$kids" ] && kill $kids; }; return 0; }
+    stop_watchdog
+    nohup sh -c "sleep 2700; '$(command -v adb)' emu kill; rm -f '$W'" >/dev/null 2>&1 &
+    echo $! > "$W"
+
+That is 45 minutes from the end of this cycle. The next cycle runs the same lines to restart the
+clock; if no next cycle comes, the emulator stops anyway. Two details matter: the shell is
+stopped before its `sleep`, or it goes on to `adb emu kill`; and a process is killed only if it
+is still the watchdog, since a stale PID file can name a process that has nothing to do with it.
+
+The emulator and its watchdog are the only things allowed to outlive a cycle, and the cycle log
+entry says they were left running. The last cycle of a run, and any cycle in a run spaced
+further apart, shuts the emulator down and runs `stop_watchdog`.
+
+At the start, an emulator already running is noted. If the last cycle left it behind a watchdog,
+use it and renew the watchdog. If a cycle left it without one, stop it. Otherwise it may be
+madCode's, so leave it, and put it first in the summary and on the morning page.
 
 ## Finish
 
