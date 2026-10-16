@@ -52,23 +52,23 @@ class IconTest {
     }
 
     @Test
-    fun `the status-bar icon is a single colour`() {
-        // The status bar draws only a small icon's alpha, so a coloured one
-        // turns into a solid blob there.
-        val bmp = render(R.drawable.ic_notification, 96)
-        val colours = mutableSetOf<Int>()
-        for (x in 0 until 96) for (y in 0 until 96) {
-            val p = bmp.getPixel(x, y)
-            if (Color.alpha(p) > 0) colours += p or (0xFF shl 24)
+    fun `the status-bar icon is a shape on a clear ground`() {
+        // The status bar draws only a small icon's alpha, so any opaque
+        // background turns it into a solid square there.
+        val px = 96
+        val bmp = render(R.drawable.ic_notification, px)
+        for ((x, y) in listOf(0 to 0, px - 1 to 0, 0 to px - 1, px - 1 to px - 1)) {
+            assertTrue("corner $x,$y is not transparent", Color.alpha(bmp.getPixel(x, y)) == 0)
         }
-        assertTrue("status-bar icon uses ${colours.size} colours", colours.size == 1)
+        var ink = 0
+        for (x in 0 until px) for (y in 0 until px) if (Color.alpha(bmp.getPixel(x, y)) > 0) ink++
+        assertTrue("ink covers $ink of ${px * px} pixels", ink < px * px / 3)
         bmp.save("icon-status-bar")
     }
 
     @Test
     fun `the launcher icon on a dark and a light wallpaper, and themed`() {
-        // Pictures for review, at 48dp xxhdpi with a circle mask; the
-        // assertions above are the test.
+        // Pictures for review, at 48dp xxhdpi with a circle mask.
         val px = 144
         val icon = context.getDrawable(R.mipmap.ic_launcher) as AdaptiveIconDrawable
         for ((name, wallpaper) in listOf("dark" to 0xFF0E0F11.toInt(), "light" to 0xFFECECEC.toInt())) {
@@ -79,6 +79,14 @@ class IconTest {
             canvas.clipPath(Path().apply { addCircle(px / 2f, px / 2f, px / 2f, Path.Direction.CW) })
             icon.setBounds(0, 0, px, px)
             icon.draw(canvas)
+            // The wallpaper alone is not flat-checked away, so check the
+            // icon drew: some of the circle has to be the zones, not slate.
+            var zone = 0
+            for (x in px / 2 until px * 3 / 2) for (y in px / 2 until px * 3 / 2) {
+                val p = bmp.getPixel(x, y)
+                if (Color.red(p) - Color.blue(p) > 120 || Color.blue(p) - Color.red(p) > 120) zone++
+            }
+            check(zone > px) { "the $name launcher picture shows no icon" }
             bmp.save("icon-launcher-$name")
         }
         val themed = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
