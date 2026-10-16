@@ -70,12 +70,13 @@ not a thing anyone is blocked from building.
   figure does not need a percent sign. This item's own text had already
   warned about exactly that *(answered)*
 
-- [ ] **The Python side was not covered by this pass.** It holds the
-  credentials, the outbound writes and the allowlist that decides what may
-  leave the data directory — three things this app has none of — and a
-  later security cycle should start there rather than re-reading the app.
-  Named specifically in that repo's own notes, which is where a map of its
-  controls belongs; this one is public *(audit: security)*
+- [x] ~~**The Python side was not covered by this pass.**~~ **Done
+  2026-10-16:** a security audit of the companion script, and fixes, in
+  its own repository. That includes the importer that reads what Carry
+  saves: it now refuses a file whose numbers, types or date would corrupt
+  the record, and names the row to fix. The findings and what is still
+  open are kept there, not here, since this repository is public
+  *(audit: security)*
 
 - [ ] **The weight guard only sees decimal digits, and only on a typed
   name.** `Char.isDigit` is Unicode `Nd`, so a load written as a word or a
@@ -98,6 +99,17 @@ not a thing anyone is blocked from building.
   it *(audit: security)*
 
 ### Wrong numbers, or a road to one
+- [ ] **A weight over 1000 saves on the phone, and the importer then
+  refuses the whole day.** Since 2026-10-16 the companion importer refuses
+  a session file holding a weight or rep count outside 0 to 1000. That
+  stops a typo from corrupting the record, but the number boxes take up to
+  six characters, so a slip like `2500` saves on the phone and loses the
+  day's import, and Carry never says so. Dropping the keystroke would turn
+  `2500` into `250`, a wrong number. Blanking it while showing it breaks
+  "the box and the stored value never disagree". The two ways that keep
+  both rules: refuse the save, naming the row; or mark the box and say
+  "not saved" next to it. A question about what Save may refuse
+  *(found by the importer's security fix)*
 
 The app's stated worst outcome is a wrong number in a training history.
 These are the open paths to one, hardest first.
