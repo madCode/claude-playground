@@ -366,10 +366,10 @@ class IntelPostTest {
         // "plié" from the sheet is one code point for the é; a keyboard
         // can send e + a combining accent. Same text, so one bullet.
         val post = IntelPost.compose(
-            session(borrowed = "3G", sets = listOf(set(0, "plié squat"))),
-            did(0), listOf(AddedSet(id = "a", name = "plié squat")),
+            session(borrowed = "3G", sets = listOf(set(0, "pli\u00e9 squat"))),
+            did(0), listOf(AddedSet(id = "a", name = "plie\u0301 squat")),
         )!!
-        assertEquals(listOf("- plié squat"), bullets(post))
+        assertEquals(listOf("- pli\u00e9 squat"), bullets(post))
     }
 
     @Test
