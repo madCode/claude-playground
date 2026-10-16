@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app's slate, so launching from the icon doesn't change colour. -->
+    <color name="ic_launcher_background">#16181A</color>
+</resources>

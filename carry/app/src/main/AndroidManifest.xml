@@ -20,7 +20,9 @@
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
         android:label="Carry"
+        android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.Carry">
         <activity

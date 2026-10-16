@@ -158,7 +158,7 @@ class SessionWatchWorker(
             )
 
             val note = NotificationCompat.Builder(context, CHANNEL)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("Carry")
                 // `text` is the only thing that decides what reaches a
                 // lock screen. It carries the CLASS and nothing else —
