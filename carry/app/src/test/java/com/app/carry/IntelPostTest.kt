@@ -332,17 +332,51 @@ class IntelPostTest {
         }
     }
 
+    private fun bullets(post: IntelPost.Post) = post.text.lines().filter { it.startsWith("- ") }
+
     @Test
-    fun `a hand-typed row cannot shadow the sheet's own`() {
-        // Both render "10 total x squat", and typed rows are emitted first,
-        // so deduplicating on the rendered line dropped the REAL one and
-        // kept the typed one -- which is then flagged suspect, for a
-        // movement the sheet genuinely prescribed.
+    fun `a line typed by hand that the sheet already has is posted once, and not marked`() {
+        // The owner's answer, 2026-10-16: "show it once". Both render
+        // "10 total x squat". The sheet's copy is the one kept, so the
+        // digits -- the board's own prescription -- are not flagged as a
+        // weight the owner typed.
         val post = IntelPost.compose(
             session(sets = listOf(set(0, "squat", prescribedText = "10 total"))),
             did(0), listOf(AddedSet(id = "a", name = "10 total x squat")),
         )!!
-        assertEquals(2, post.text.lines().count { it.startsWith("- ") })
+        assertEquals(listOf("- 10 total x squat"), bullets(post))
+        assertEquals(emptySet<String>(), post.suspect)
+    }
+
+    @Test
+    fun `a repeat that differs only in capitals or spacing is still the same line`() {
+        // A phone keyboard capitalises the first letter of a typed name,
+        // and a thumb doubles a space; neither makes it another movement.
+        // On a borrowed day the sheet carries no rep counts, so the typed
+        // name meets the bare movement.
+        val post = IntelPost.compose(
+            session(borrowed = "3G", sets = listOf(set(0, "goblet squat"))),
+            did(0), listOf(AddedSet(id = "a", name = "Goblet  squat")),
+        )!!
+        assertEquals(listOf("- goblet squat"), bullets(post))
+    }
+
+    @Test
+    fun `two different movements are never merged into one bullet`() {
+        // The dedupe must only ever remove a line that says exactly what
+        // another one says. A different rep scheme, a different spelling
+        // of the movement, or the bare name beside a prescribed one are
+        // all things the owner wrote on purpose.
+        val post = IntelPost.compose(
+            session(sets = listOf(set(0, "squat", prescribedText = "10"), set(1, "push up"))),
+            did(0, 1),
+            listOf(AddedSet(id = "a", name = "12 x squat"), AddedSet(id = "b", name = "pushup"),
+                   AddedSet(id = "c", name = "squat")),
+        )!!
+        assertEquals(
+            listOf("- 12 x squat", "- pushup", "- squat", "- 10 x squat", "- 10 x push up"),
+            bullets(post),
+        )
     }
 
     // ------------------------------------------------- what the preview calls out

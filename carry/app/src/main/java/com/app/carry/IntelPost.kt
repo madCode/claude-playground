@@ -115,11 +115,25 @@ object IntelPost {
         val extra = added.mapNotNull {
             it.name.post()?.takeIf(String::isNotEmpty)?.let { n -> Named(n, null, typed = true) }
         }
-        // By (prescription, name), not by the rendered line: those two
-        // collapse "10 total x squat" typed by hand into the sheet's own
-        // "10 total x squat", and since typed rows come first the real
-        // one is the one dropped.
-        val lines = (extra + did).distinctBy { it.asked to it.name }.take(MAX_LINES)
+        // A line that reads the same is one bullet, whoever wrote it: the
+        // owner asked for a repeated line to be shown once (2026-10-16).
+        // "The same" is the rendered line with case folded, so a typed
+        // "10 total x Squat" (a phone keyboard capitalises) matches the
+        // sheet's "10 total x squat"; whitespace is already collapsed by
+        // `post()`. Nothing looser: "push up" and "pushup", or "10 x" and
+        // "12 x", stay two bullets, because only identical words are
+        // certainly one movement.
+        //
+        // Where a typed line meets the sheet's, the SHEET's wins, in the
+        // typed one's place: the cap below must never drop an added row's
+        // slot, and the typed copy would be flagged for a digit that is
+        // the board's own prescription. The save is untouched — both rows
+        // stay in the file.
+        val all = extra + did
+        val sheetByLine = did.distinctBy { it.key }.associateBy { it.key }
+        val lines = all.distinctBy { it.key }
+            .map { sheetByLine[it.key] ?: it }
+            .take(MAX_LINES)
         if (lines.isEmpty()) return null
 
         val text = buildString {
@@ -134,6 +148,9 @@ object IntelPost {
     /** A bullet, split so the digit test can see the name on its own. */
     private data class Named(val name: String, val asked: String?, val typed: Boolean) {
         val line: String get() = asked?.let { "$it $name" } ?: name
+
+        /** What two bullets must share to be one: the line, case folded. */
+        val key: String get() = line.lowercase()
 
         /**
          * Only a name the OWNER typed can be flagged, because a typed name
