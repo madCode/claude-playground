@@ -697,4 +697,32 @@ class CarryViewModelTest {
         assertTrue("row 1 must still be in the file", written!!.contains("\"weight\": 60"))
         assertEquals("the invisible row came back in the re-seed", setOf(0), model.edits.value.keys)
     }
+
+    @Test
+    fun `typing that is not saved yet holds back an update, and saving or discarding releases it`() = runTest(dispatcher) {
+        // Installing replaces the running app, so an update started over typed numbers loses them.
+        val model = viewModel()
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        assertFalse(model.unsaved)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        assertTrue(model.unsaved)
+        assertEquals(UpdateInstaller.Step.SaveFirst, UpdateInstaller.next(model.unsaved, canInstall = true))
+        model.discardEdits()
+        assertFalse(model.unsaved)
+        assertEquals(UpdateInstaller.Step.Install, UpdateInstaller.next(model.unsaved, canInstall = true))
+    }
+
+    @Test
+    fun `a failed download says why and lets the owner try again`() = runTest(dispatcher) {
+        val model = viewModel()
+        model.download = { _, _ -> throw java.io.IOException("the download answered 404") }
+        var said: String? = null
+        model.installUpdate(onFailed = { said = it })
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) { while (said == null) { dispatcher.scheduler.advanceUntilIdle(); delay(5) } }
+        }
+        assertEquals("Couldn't download the update: the download answered 404.", said)
+        assertFalse("the notice must be tappable again", model.installing.value)
+    }
 }

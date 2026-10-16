@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!--
-      Two permissions are this app's own:
+      Three permissions are this app's own:
 
       - POST_NOTIFICATIONS, added 2026-10-16 so a session file landing in
         the synced folder can say so. The notification text carries the
@@ -11,6 +11,10 @@
         out (DebugUpdates). Only a CI debug build asks, at most every three
         hours, and the request carries nothing of the owner's. The session
         files still never leave except through the share sheet.
+      - REQUEST_INSTALL_PACKAGES, with INTERNET, so a tap on "Build N is
+        out" can download that build and hand it to Android's installer
+        (UpdateInstaller). Android still asks the owner to allow it once,
+        and to confirm each install unless it lets the app update itself.
 
       THIS FILE IS NOT THE WHOLE ANSWER. androidx.work brings four more
       (WAKE_LOCK, RECEIVE_BOOT_COMPLETED, ACCESS_NETWORK_STATE and
@@ -19,6 +23,7 @@
       docs/DESIGN.md carries the table and the reasons.
     -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:allowBackup="false"
@@ -37,5 +42,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver
+            android:name=".UpdateInstaller$Result"
+            android:exported="false" />
     </application>
 </manifest>

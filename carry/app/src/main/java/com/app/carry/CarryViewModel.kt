@@ -98,6 +98,45 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         checking = viewModelScope.launch { updates.checkIfDue() }
     }
 
+    /** True while typing hasn't been saved: the draft is kept from the first keystroke until a
+     *  save or a discard clears it. */
+    val unsaved: Boolean get() = handle.contains(DRAFT) || _saving.value == SaveState.Saving
+
+    private val _installing = mutableStateOf(false)
+    /** True from the tap until the APK is with Android's installer, or the attempt fails. */
+    val installing: State<Boolean> = _installing
+
+    /** Downloads the newest build and hands it to the installer. [onFailed] gets a sentence for
+     *  the owner; the caller decides how to show it. */
+    internal var download: (String, java.io.File) -> Unit = { url, dest -> UpdateInstaller.download(url, dest) }
+
+    fun installUpdate(onFailed: (String) -> Unit) {
+        if (_installing.value) return
+        _installing.value = true
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            val failure = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val dir = java.io.File(app.cacheDir, "updates").apply { mkdirs() }
+                val apk = java.io.File(dir, "carry-debug.apk").apply { delete() }
+                try {
+                    download(DebugUpdates.DOWNLOAD, apk)
+                    if (!UpdateInstaller.isNewerSelf(app, apk, BuildConfig.VERSION_CODE.toLong())) {
+                        "The download isn't a newer Carry, so it wasn't installed."
+                    } else {
+                        UpdateInstaller.install(app, apk)
+                        null
+                    }
+                } catch (e: java.io.IOException) {
+                    "Couldn't download the update: ${e.message ?: "no connection"}."
+                } catch (e: SecurityException) {
+                    "Android wouldn't take the update: ${e.message ?: "not allowed"}."
+                }
+            }
+            _installing.value = false
+            failure?.let(onFailed)
+        }
+    }
+
     /** How the folder is read. Replaced in tests so the stall path and the
      *  keep-last-good path can be exercised without a real provider; there
      *  is no other way in, because the read is deliberately not injectable

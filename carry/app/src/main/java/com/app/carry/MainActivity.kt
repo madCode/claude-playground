@@ -91,6 +91,7 @@ class MainActivity : ComponentActivity() {
                         since = model.since.value,
                         onShare = ::share,
                         newerBuild = model.updates.newer.collectAsState().value,
+                        installing = model.installing.value,
                         onGetBuild = ::getBuild,
                     ),
                 )
@@ -123,15 +124,41 @@ class MainActivity : ComponentActivity() {
             }
     }
 
-    /** Opens the newest build's download; with no browser to take it, copies the link instead. */
+    /**
+     * Installs the newest build from inside the app. Never over unsaved typing: installing
+     * replaces the running app. Asks once for "install unknown apps" if it isn't allowed yet;
+     * with no way to install, falls back to the download link.
+     */
     private fun getBuild() {
+        when (UpdateInstaller.next(model.unsaved, UpdateInstaller.canInstall(this))) {
+            UpdateInstaller.Step.SaveFirst -> say("Save the After tab first. Updating restarts Carry.")
+            UpdateInstaller.Step.AllowInstalls -> {
+                val settings = android.content.Intent(
+                    android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:$packageName"),
+                )
+                if (runCatching { startActivity(settings) }.isSuccess) {
+                    say("Allow Carry to install updates, then tap the notice again.")
+                } else {
+                    openDownload()
+                }
+            }
+            UpdateInstaller.Step.Install -> model.installUpdate(onFailed = { why -> say(why); openDownload() })
+        }
+    }
+
+    /** The fallback: the newest build's download in a browser, or the link copied if there's none. */
+    private fun openDownload() {
         val view = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(DebugUpdates.DOWNLOAD))
         runCatching { startActivity(view) }.onFailure {
             getSystemService(android.content.ClipboardManager::class.java)
                 ?.setPrimaryClip(android.content.ClipData.newPlainText("Carry download", DebugUpdates.DOWNLOAD))
-            android.widget.Toast.makeText(this, "No browser here. The download link is copied.", android.widget.Toast.LENGTH_LONG).show()
+            say("No browser here. The download link is copied.")
         }
     }
+
+    private fun say(text: String) =
+        android.widget.Toast.makeText(this, text, android.widget.Toast.LENGTH_LONG).show()
 
     /** The normal case is a sync dropping the day's session in while the
      *  app is backgrounded, so the folder is re-read on every resume. */
