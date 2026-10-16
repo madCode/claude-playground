@@ -305,9 +305,11 @@ These are the open paths to one, hardest first.
   with no scale and no time direction; the bar count varies by how many sets the
   family has, which reads as meaning something it doesn't. Propose cutting them
   and keeping the number *(you asked)*
-- [ ] **Notify when a new session file lands** — the glance still depends on
-  remembering to open the app. Forces a decision: the app currently declares no
-  Android permissions at all *(design:
+- [x] ~~**Notify when a new session file lands**~~ Built 2026-10-16, to the
+  design as written. The app now declares exactly one Android permission,
+  `POST_NOTIFICATIONS`, which is recorded as a deliberate choice in
+  `DESIGN.md` and in the manifest rather than left as a quietly false
+  claim. Still no `INTERNET`, and the text carries the class only *(design:
   [new-session-notification](designs/new-session-notification.md))*
 - [ ] **Read the class from the phone's own calendar** — frees the coach from its
   own calendar config. Bigger than it looks: needs a protocol change agreed on the

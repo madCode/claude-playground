@@ -331,6 +331,45 @@ what the cap leaves out is counted, not dropped, and on a sheet where
 everything is on the same rung the order is the board's rather than a
 ranking.
 
+## Telling them a sheet arrived
+
+The glance in the lobby used to depend on remembering to open the app. A
+session file appears in the synced folder hours before the class and
+nothing said so, which made the Before tab's whole purpose conditional on
+the owner's memory.
+
+A `WorkManager` check runs hourly — not the fifteen-minute floor, because
+the file lands hours ahead and the extra precision would buy nothing but
+battery — lists the folder, and notifies when a name appears that is new
+AND dated today. Tapping it opens the app, which is enough: the Before tab
+is the default tab and the folder is re-read on every resume, so no deep
+link or second way of choosing a session was needed.
+
+**This is why the app now declares one Android permission.**
+`POST_NOTIFICATIONS` is required on API 33+, and until 2026-10-16 the app
+declared none at all — a property a reader could check by opening one
+manifest. That sentence is no longer true and is not worth pretending
+about. What remains true is the part that matters: there is still no
+`INTERNET` permission, nothing leaves the device, and the notification
+text carries the class and nothing else, because a lock screen is not
+somewhere the owner's weights belong.
+
+Three rules sit in the decision rather than in the plumbing, and each
+exists because its opposite is the failure the owner would feel:
+
+- A file already seen is never announced twice.
+- A file dated other than today is never announced, so backfilling an old
+  day stays silent.
+- When nothing has ever been recorded — a fresh install, or a reinstall
+  that lost the set — nothing is announced at all. Re-announcing nothing
+  beats announcing a backlog of sessions logged weeks ago.
+
+A folder nobody picked and a folder whose grant was revoked both list as
+empty, and empty is indistinguishable from an empty folder, so the watcher
+returns without touching its record in that case. Recording an empty list
+would erase what was seen and make every existing file look new when the
+grant came back — the "announce everything" failure by a side door.
+
 ## Handing the block over
 
 The preview is the whole of the egress control -- the app has no

@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      The only permission this app declares, added 2026-10-16 so a session
+      file landing in the synced folder can say so. Until then the Before
+      tab depended on the owner remembering to open the app.
+
+      Local: nothing leaves the device, and the notification text carries
+      the class and the date only (see NewSession.text). But docs/DESIGN.md
+      used to state "declares no Android permissions at all" as a property
+      that could be checked by reading this file, and that sentence is now
+      rewritten rather than quietly false.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/backup_rules"
