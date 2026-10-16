@@ -203,6 +203,8 @@ data class LogBinding(
     val onShare: (String) -> Unit = {},
     /** The newest debug build's number while it's newer than this one, else null. */
     val newerBuild: Int? = null,
+    /** True while the newer build downloads, between the tap and Android's installer. */
+    val installing: Boolean = false,
     val onGetBuild: () -> Unit = {},
 )
 
@@ -296,7 +298,7 @@ fun CarryApp(
                         onSave = log.onSave, saving = log.saving, fileMoved = log.fileMoved,
                         onDiscard = log.onDiscard, unreadable = state.unreadable,
                     )
-                    2 -> log.since?.let { SinceScreen(it, newerBuild = log.newerBuild, onGetBuild = log.onGetBuild) } ?: TodayScreen(state.session, unreadable = state.unreadable)
+                    2 -> log.since?.let { SinceScreen(it, newerBuild = log.newerBuild, installing = log.installing, onGetBuild = log.onGetBuild) } ?: TodayScreen(state.session, unreadable = state.unreadable)
                     else -> TodayScreen(state.session, unreadable = state.unreadable)
                 }
             }

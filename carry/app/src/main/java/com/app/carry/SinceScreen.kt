@@ -58,6 +58,7 @@ fun SinceScreen(
     since: Growth.Since,
     modifier: Modifier = Modifier,
     newerBuild: Int? = null,
+    installing: Boolean = false,
     onGetBuild: () -> Unit = {},
 ) {
     // There is no nav library here and this does not justify adding one:
@@ -110,7 +111,7 @@ fun SinceScreen(
 
         // At the top and above the empty check: a folder the app can't read is when a newer
         // build is most likely the fix, and the bottom of a long history is where nobody looks.
-        if (newerBuild != null) NewerBuild(newerBuild, onGetBuild)
+        if (newerBuild != null) NewerBuild(newerBuild, installing, onGetBuild)
 
         // ABOVE the empty check, deliberately: if every file in the folder
         // read short there are no days at all, and "Nothing logged yet" on
@@ -483,13 +484,13 @@ private fun Quiet(since: Growth.Since) {
 
 /** In chalk, not amber: amber is kept for the number the owner came for. */
 @Composable
-private fun NewerBuild(build: Int, onGet: () -> Unit) {
+private fun NewerBuild(build: Int, installing: Boolean, onGet: () -> Unit) {
     Text(
-        "Build $build is out \u2014 download it",
+        if (installing) "Downloading build $build\u2026" else "Build $build is out \u2014 install it",
         color = Look.Chalk, fontFamily = Look.Figure, fontSize = Look.SmallSize,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onGet)
+            .clickable(enabled = !installing, role = androidx.compose.ui.semantics.Role.Button, onClick = onGet)
             .padding(vertical = 14.dp),
     )
 }

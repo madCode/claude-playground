@@ -140,3 +140,44 @@ class FetchReleaseTest {
         assertNull(DebugUpdates.fetchRelease(url()))
     }
 }
+
+/** The APK download, against a local server standing in for GitHub and its file host. */
+@RunWith(AndroidJUnit4::class)
+class UpdateDownloadTest {
+    private val server = MockWebServer().apply { start() }
+    private val dir = java.nio.file.Files.createTempDirectory("carry-update").toFile()
+    private val dest = java.io.File(dir, "carry-debug.apk")
+
+    @After fun stop() { server.close(); dir.deleteRecursively() }
+
+    @Test
+    fun `the file is downloaded through GitHub's redirect`() {
+        server.enqueue(MockResponse.Builder().code(302).addHeader("Location", server.url("/file").toString()).build())
+        server.enqueue(MockResponse.Builder().body("apk bytes").build())
+        UpdateInstaller.download(server.url("/release").toString(), dest)
+        assertEquals("apk bytes", dest.readText())
+    }
+
+    @Test
+    fun `a refusal is an error, not a file`() {
+        server.enqueue(MockResponse.Builder().code(404).build())
+        org.junit.Assert.assertThrows(IOException::class.java) { UpdateInstaller.download(server.url("/x").toString(), dest) }
+        assertEquals(emptyList<String>(), dir.list()!!.toList())
+    }
+
+    @Test
+    fun `a file larger than any build is abandoned, part and all`() {
+        server.enqueue(MockResponse.Builder().body("x".repeat(200 * 1024)).build())
+        org.junit.Assert.assertThrows(IOException::class.java) {
+            UpdateInstaller.download(server.url("/x").toString(), dest, maxBytes = 100 * 1024)
+        }
+        assertEquals(emptyList<String>(), dir.list()!!.toList())
+    }
+
+    @Test
+    fun `typing comes first, then the permission, then the install`() {
+        assertEquals(UpdateInstaller.Step.SaveFirst, UpdateInstaller.next(unsaved = true, canInstall = false))
+        assertEquals(UpdateInstaller.Step.AllowInstalls, UpdateInstaller.next(unsaved = false, canInstall = false))
+        assertEquals(UpdateInstaller.Step.Install, UpdateInstaller.next(unsaved = false, canInstall = true))
+    }
+}

@@ -399,4 +399,14 @@ class SinceScreenTest {
         compose.setContent { SinceScreen(since) }
         compose.onNodeWithText("is out", substring = true).assertDoesNotExist()
     }
+
+    @Test
+    fun `while the build downloads the notice says so and can't be tapped again`() {
+        var asked = 0
+        compose.setContent { SinceScreen(since, newerBuild = 131, installing = true, onGetBuild = { asked++ }) }
+        compose.onNodeWithText("Downloading build 131", substring = true).assertIsDisplayed()
+        shoot("28-since-downloading")
+        compose.onNodeWithText("Downloading build 131", substring = true).performClick()
+        assertEquals(0, asked)
+    }
 }
