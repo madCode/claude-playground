@@ -362,6 +362,17 @@ class IntelPostTest {
     }
 
     @Test
+    fun `an accent typed as two characters is still the same line`() {
+        // "plié" from the sheet is one code point for the é; a keyboard
+        // can send e + a combining accent. Same text, so one bullet.
+        val post = IntelPost.compose(
+            session(borrowed = "3G", sets = listOf(set(0, "plié squat"))),
+            did(0), listOf(AddedSet(id = "a", name = "plié squat")),
+        )!!
+        assertEquals(listOf("- plié squat"), bullets(post))
+    }
+
+    @Test
     fun `two different movements are never merged into one bullet`() {
         // The dedupe must only ever remove a line that says exactly what
         // another one says. A different rep scheme, a different spelling

@@ -547,7 +547,7 @@ class LogScreenTest {
         val text = preview.fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("")
         assertEquals(text, 1, text.lines().count { it.endsWith("- 10 x bench press") })
         compose.onNodeWithText("⚠ marks the lines", substring = true).assertDoesNotExist()
-        shoot("22-post-repeated-line")
+        shoot("31-post-repeated-line")
     }
 
     @Test

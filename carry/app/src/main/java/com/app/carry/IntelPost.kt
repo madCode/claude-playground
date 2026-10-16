@@ -1,5 +1,7 @@
 package com.app.carry
 
+import java.text.Normalizer
+
 /**
  * The post that tells the subreddit what this class actually did.
  *
@@ -149,8 +151,12 @@ object IntelPost {
     private data class Named(val name: String, val asked: String?, val typed: Boolean) {
         val line: String get() = asked?.let { "$it $name" } ?: name
 
-        /** What two bullets must share to be one: the line, case folded. */
-        val key: String get() = line.lowercase()
+        /**
+         * What two bullets must share to be one: the line, case folded.
+         * NFC first, so an "é" typed as e + accent matches the sheet's
+         * single "é" — the same text in two encodings, not two words.
+         */
+        val key: String get() = Normalizer.normalize(line, Normalizer.Form.NFC).lowercase()
 
         /**
          * Only a name the OWNER typed can be flagged, because a typed name
