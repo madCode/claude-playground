@@ -7,6 +7,16 @@ that hold become rules in CLAUDE.md or the cycles skill.
 
 ## 2026-10-16 run (cloud session)
 
+### Cycle 66 — build: a save refuses a file that changed underneath
+
+- **Ask how long the thing lives before hardening it.** Three review
+  rounds on #136 each found a deeper edge in keeping typing across
+  sessions; madCode then chose the simple version because the session
+  file is temporary. Size the fix to the file's lifetime first.
+- **`settled()` waits; it doesn't drive the scheduler.** Advancing it
+  from a Default thread while `runTest` drained it ran two Main tasks at
+  once, an intermittent failure in the save tests.
+
 ### Cycle 65 — build: the bump band keeps an old *hard* row
 
 - **When a rule leaves the runner, check what else it changed in the same

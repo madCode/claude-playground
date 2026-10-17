@@ -57,6 +57,36 @@ data class Draft(
 
 data class UpdateProblem(val why: String, val offerLink: Boolean)
 
+/**
+ * What was typed, one plain line per row ("10 x deadlift: 95 lb, 8 reps"),
+ * so a refused save leaves the numbers readable whatever loads next.
+ */
+internal fun typedNumbers(
+    session: Session, edits: Map<Int, SessionPatch.Entry>, added: List<AddedSet>,
+): List<String> {
+    fun parts(weight: Double?, reps: Int?, fractional: Double?, vararg flags: String?) = listOfNotNull(
+        weight?.let { "${it.asWeight()} lb" },
+        (reps?.toString() ?: fractional?.asWeight())?.let { "$it reps" },
+        *flags,
+    ).joinToString(", ")
+    val rows = session.sets.mapNotNull { set ->
+        val e = edits[set.ref]?.takeUnless { it.blank } ?: return@mapNotNull null
+        val name = set.prescription?.let { "$it ${set.displayName}" } ?: set.displayName
+        "$name: " + parts(
+            e.weight, e.reps, e.fractionalReps,
+            "done".takeIf { e.done }, "easy".takeIf { e.easy }, "mod".takeIf { e.easier },
+            "hurt".takeIf { e.hurt }, e.note?.takeIf { it.isNotBlank() },
+        )
+    }
+    return rows + added.filterNot { it.blank }.map { a ->
+        "${a.name.ifBlank { "added row" }}: " + parts(
+            a.weight, a.reps, a.fractionalReps,
+            "easy".takeIf { a.easy }, "mod".takeIf { a.easier }, "hurt".takeIf { a.hurt },
+            a.note?.takeIf { it.isNotBlank() },
+        )
+    }
+}
+
 class CarryViewModel(app: Application, private val handle: SavedStateHandle) : AndroidViewModel(app) {
 
     val folder = SessionFolder(app)
@@ -331,6 +361,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
             _edits.value = ready.session.onScreen(SessionPatch.entriesIn(ready.raw))
             _added.value = named(SessionPatch.addedIn(ready.raw))
         }
+        // After a refused save the file on disk is newer than the one on
+        // screen; with the draft gone, this read is what loads it.
+        refresh()
     }
 
     /**
@@ -391,10 +424,22 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         }
     }
 
+    /** What a damaged write left on disk, against the page it came from. */
+    private class LeftOnDisk(val documentId: String, val pageRaw: String, val text: String?)
+    private var leftOnDisk: LeftOnDisk? = null
+
+    /** True from a damaged write until a good save repairs the file. */
+    private var damagePending = false
+
+    /** Any refusal while the file may be damaged says that too. */
+    private fun keepDamage(state: SaveState.Failed): SaveState.Failed =
+        if (damagePending && !state.damaged) state.copy(why = "$DAMAGED ${state.why}", damaged = true) else state
+
     private fun touched() {
         rememberTyping()
         // A refusal the owner is now acting on should not stay on screen.
-        if (_saving.value !is SaveState.Saving) _saving.value = SaveState.Idle
+        // The damage warning stays until a good save: the file is still broken.
+        if (_saving.value !is SaveState.Saving && !damagePending) _saving.value = SaveState.Idle
     }
 
     fun edit(ref: Int, entry: SessionPatch.Entry) {
@@ -421,17 +466,17 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         // By row name, every row at once: the importer refuses the whole
         // day over any one of these, and one refusal per tap hides the rest.
         LogCheck.summary(LogCheck.problems(ready.session, _edits.value, _added.value))?.let {
-            _saving.value = SaveState.Failed(it, damaged = false)
+            _saving.value = keepDamage(SaveState.Failed(it, damaged = false))
             return
         }
         val typedAgainst = savedDraft()?.takeIf { it.sheetId == ready.session.sheetId }
         if (typedAgainst != null && typedAgainst.fromFingerprint != ready.raw.hashCode() &&
             !SessionPatch.identityHolds(typedAgainst.fromIdentities, ready.raw, _edits.value.keys)
         ) {
-            _saving.value = SaveState.Failed(
+            _saving.value = keepDamage(SaveState.Failed(
                 "The session file changed while you were filling this in, and the exercises no longer line up. Nothing was written.",
                 damaged = false,
-            )
+            ))
             return
         }
         _saving.value = SaveState.Saving
@@ -447,7 +492,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
             }
             when (outcome) {
                 is SessionPatch.Outcome.Refused ->
-                    _saving.value = SaveState.Failed(outcome.why, damaged = false)
+                    _saving.value = keepDamage(SaveState.Failed(outcome.why, damaged = false))
                 is SessionPatch.Outcome.Patched -> {
                     val text = outcome.text
                     if (text == null) {
@@ -463,19 +508,50 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                         rereadHistory()
                         return@launch
                     }
-                    // The patch was built from the bytes last read. If the
-                    // file has since been replaced by one whose label isn't
-                    // ours, a write would put our session over it.
-                    val result = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        val label = readNow(ready.documentId)?.let(SessionFiles::labelGuess)
-                        if (label != null && label != SessionFiles.Label.OURS) null
-                        else write(ready.documentId, text)
+                    // The patch was built from the bytes last read, so any
+                    // other content on disk now -- a re-run, a sync, a file
+                    // gone or half written -- would be overwritten blind.
+                    // Compared by content, not timestamp, since sync
+                    // services touch mtimes. The baseline is what Carry
+                    // itself last left there: after a good save, what it
+                    // wrote; after a damaged one, whatever the failed write
+                    // left, so Try again can repair it.
+                    val left = leftOnDisk?.takeIf { it.documentId == ready.documentId && it.pageRaw == ready.raw }
+                    val (refusal, result) = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        val onDisk = readNow(ready.documentId)
+                        val label = onDisk?.let(SessionFiles::labelGuess)
+                        val unchanged = if (left != null) {
+                            onDisk == left.text ||
+                                (onDisk != null && left.text != null && SessionFiles.sameContent(onDisk, left.text))
+                        } else {
+                            !onDisk.isNullOrBlank() && SessionFiles.sameContent(onDisk, ready.raw)
+                        }
+                        when {
+                            label != null && label != SessionFiles.Label.OURS -> SaveState.Failed(
+                                "The session file was replaced by one whose \"schema\" label is missing or isn't one Carry knows. Nothing was written.",
+                                damaged = false,
+                            ) to null
+                            !unchanged -> SaveState.Failed(
+                                "This session file changed since you opened it, so nothing was saved.",
+                                damaged = false,
+                                typed = typedNumbers(ready.session, _edits.value, _added.value),
+                                // Only a file that reads is one to load;
+                                // dropping the typing for a missing or
+                                // broken one would leave nothing.
+                                newFile = onDisk != null && SessionFiles.parse(SessionFiles.normalised(onDisk)) != null,
+                            ) to null
+                            else -> null to write(ready.documentId, text)
+                        }
                     }
-                    _saving.value = when (result) {
-                        null -> SaveState.Failed(
-                            "The session file was replaced by one whose \"schema\" label is missing or isn't one Carry knows. Nothing was written.",
-                            damaged = false,
+                    if (result == Saved.NO_FILE_DAMAGED) {
+                        damagePending = true
+                        leftOnDisk = LeftOnDisk(
+                            ready.documentId, ready.raw,
+                            withContext(kotlinx.coroutines.Dispatchers.IO) { readNow(ready.documentId) },
                         )
+                    }
+                    if (result == Saved.YES) { damagePending = false; leftOnDisk = null }
+                    _saving.value = refusal?.let(::keepDamage) ?: when (result!!) {
                         Saved.YES -> {
                             // ALL of this is "only if nothing newer arrived
                             // while we wrote". It used to guard the one
@@ -512,14 +588,11 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                             // a separate question, answered above.
                             SaveState.Saved
                         }
-                        Saved.NO_FILE_INTACT -> SaveState.Failed(
+                        Saved.NO_FILE_INTACT -> keepDamage(SaveState.Failed(
                             "Couldn't save. Your session file is unchanged, so nothing was lost.",
                             damaged = false,
-                        )
-                        Saved.NO_FILE_DAMAGED -> SaveState.Failed(
-                            "Couldn't save, and the file on disk may be damaged. Don't let it sync before checking it.",
-                            damaged = true,
-                        )
+                        ))
+                        Saved.NO_FILE_DAMAGED -> SaveState.Failed(DAMAGED, damaged = true)
                     }
                     // AFTER the state above, never inside it. The folder is
                     // the history and it just changed, so the Since tab
@@ -559,6 +632,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
          */
         const val STALL_AFTER_MS = 15_000L
         const val DRAFT = "draft"
+        const val DAMAGED = "Couldn't save, and the file on disk may be damaged. Don't let it sync before checking it."
     }
 }
 
