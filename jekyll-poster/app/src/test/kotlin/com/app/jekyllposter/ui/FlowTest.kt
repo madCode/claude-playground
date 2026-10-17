@@ -6,6 +6,7 @@ import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -240,26 +241,56 @@ class FlowTest {
         compose.waitFor("GitHub didn't accept that token. Check it was copied whole and hasn't expired.")
     }
 
-    @Test fun switchingBlogListsTheSignInsRepositories() {
+    @Test fun aSecondAccountsBlogIsAddedAndSwitchedToFromTheTitle() {
+        github.addAccount(
+            "inkwell", "inkwell-token", "night-notes",
+            mapOf(
+                "_config.yml" to "title: Night Notes\n".toByteArray(),
+                "_posts/2025-02-02-after-dark.md" to "---\ntitle: After dark\n---\nWritten at night.\n".toByteArray(),
+            ),
+        )
         signIn()
         start()
-        compose.waitFor("A Sample Notebook")
+        compose.waitFor("A coastal walk")
+        // One blog: nothing to switch to.
+        compose.onNode(clickLabel("Switch blog")).assertDoesNotExist()
+
         compose.onNodeWithContentDescription("More").performClick()
         compose.onNodeWithText("Settings").performClick()
-        compose.waitFor("Switch blog")
-        compose.onNodeWithText("Switch blog").performClick()
-        compose.waitFor("Which blog?")
-        compose.waitFor("sample/sample-blog")
+        compose.waitFor("+ Add a sign-in")
+        compose.onNodeWithText("+ Add a sign-in").performClick()
+        compose.waitFor("For a blog under another GitHub account")
+        compose.onNodeWithText("Token").performTextInput("inkwell-token")
+        compose.onNodeWithText("Continue").performClick()
+        compose.waitFor("inkwell/night-notes")
+        compose.onNodeWithText("inkwell/night-notes").performClick()
+        compose.waitFor("After dark")
+        compose.waitFor("inkwell/night-notes · @inkwell")
+
+        compose.onNode(clickLabel("Switch blog")).performClick()
+        compose.waitFor("@sample · signed in with a token")
+        compose.onNodeWithText("@inkwell · signed in with a token").assertExists()
+        compose.onNodeWithText("A Sample Notebook").performClick()
+        compose.waitFor("A coastal walk")
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("After dark"), useUnmergedTree = true).fetchSemanticsNodes().isEmpty() }
+
+        // A new post goes to the open blog, and says so.
+        compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
+        compose.waitFor("To A Sample Notebook · @sample")
     }
 
-    @Test fun signingOutReturnsToConnect() {
+    @Test fun removingTheLastSignInReturnsToConnect() {
         signIn()
         start()
         compose.waitFor("A Sample Notebook")
         compose.onNodeWithContentDescription("More").performClick()
         compose.onNodeWithText("Settings").performClick()
-        compose.waitFor("sample/sample-blog")
-        compose.onNodeWithText("Sign out").performClick()
+        compose.waitFor("Your blogs")
+        compose.onNodeWithText("Your blogs").performClick()
+        compose.waitFor("@sample · signed in with a token")
+        compose.onNodeWithText("Remove").performClick()
+        compose.waitFor("Remove @sample?")
+        compose.onNode(hasText("Remove") and hasAnyAncestor(isDialog())).performClick()
         compose.waitFor("Connect with a token")
     }
 }
