@@ -14,11 +14,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.Shared
 import com.app.jekyllposter.ui.blogs.BlogsScreen
@@ -51,7 +53,8 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
     // open: back to signing in. Only a change counts; the first value chose the first screen.
     LaunchedEffect(nav) {
         container.accounts.blogs.map { it.isEmpty() }.distinctUntilChanged().drop(1).filter { it }
-            .collect { nav.navigate("connect") { popUpTo(0) { inclusive = true } } }
+            // On the main thread, where navigation must happen: Room's flow can hand it over elsewhere.
+            .collect { withContext(Dispatchers.Main) { nav.navigate("connect") { popUpTo(0) { inclusive = true } } } }
     }
     NavHost(nav, startDestination = if (signedIn == true) "home" else "connect") {
         composable("connect") {
