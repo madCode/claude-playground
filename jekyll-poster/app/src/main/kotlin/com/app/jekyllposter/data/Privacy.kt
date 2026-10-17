@@ -73,6 +73,13 @@ abstract class PrivacyDao {
     @Query("SELECT blogKey FROM blogs")
     abstract suspend fun blogKeys(): List<String>
 
+    /** Whether any blog posting with [key]'s sign-in asks for the VPN. */
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM blog_privacy p JOIN blogs b ON p.blogKey = b.blogKey " +
+            "WHERE p.onlyThroughVpn AND b.signInId = (SELECT signInId FROM blogs WHERE blogKey = :key))",
+    )
+    abstract suspend fun signInAsksForVpn(key: String): Boolean
+
     /** [privacy] given to every blog, for the switches kept before they were per blog. */
     @Transaction
     open suspend fun giveEveryBlog(privacy: BlogPrivacy) {
@@ -107,10 +114,19 @@ class Privacy(
         emitAll(dao.all())
     }
 
-    /** Whether any blog asks for the VPN: then signing in and adding a blog, for no blog yet, does too. */
+    /**
+     * Whether any blog asks for the VPN: then signing in and adding a blog, for no blog yet, does
+     * too. So does a VPN switch kept from before switches were per blog, until a blog takes it.
+     */
     suspend fun anyOnlyThroughVpn(): Boolean {
         imported()
-        return dao.list().any { it.onlyThroughVpn }
+        return dao.list().any { it.onlyThroughVpn } || old.data.first()[ONLY_THROUGH_VPN] == true
+    }
+
+    /** Whether any blog of blog [key]'s sign-in asks for the VPN: for renewing that sign-in's token. */
+    suspend fun signInAsksForVpn(key: String): Boolean {
+        imported()
+        return dao.signInAsksForVpn(key)
     }
 
     private val lock = Mutex()
@@ -144,8 +160,11 @@ class Privacy(
         return CommitAuthor(login, found.email)
     }
 
-    /** Blog [key] was added beside others: its Blog & privacy says to set the switches first. */
-    suspend fun markNew(key: String) = update(key) { it.copy(isNew = true) }
+    /**
+     * Blog [key] was added beside others, or again: its Blog & privacy says to set the switches
+     * first. Every switch starts off, but the VPN one when [onlyThroughVpn].
+     */
+    suspend fun markNew(key: String, onlyThroughVpn: Boolean = false) = update(key) { BlogPrivacy(key, onlyThroughVpn = onlyThroughVpn, isNew = true) }
 
     /** GitHub gave no account id to build [login]'s no-reply address from. */
     class NoAddress(login: String) : Exception("No no-reply address for $login")
@@ -166,6 +185,9 @@ class Privacy(
             val prefs = old.data.first()
             if (OLD_KEYS.any { it in prefs }) {
                 blogsReady()
+                // Signed out: kept until a blog is there to take them, or they'd be lost, the VPN
+                // switch with them, before the next sign-in goes out.
+                if (dao.blogKeys().isEmpty()) return
                 dao.giveEveryBlog(
                     BlogPrivacy(
                         blogKey = "",

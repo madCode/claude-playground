@@ -120,6 +120,19 @@ class AppContainer(
     val deviceFlow: DeviceFlow? = githubClientId.takeIf { it.isNotBlank() }?.let { DeviceFlow(signInCalls, it, githubWeb) }
 
     /**
+     * Renewing a sign-in's token goes the way its own blogs ask: through the VPN if one of them
+     * does, but not held up by another sign-in's, which would fail a blog that asks for none.
+     */
+    private val renewalCalls = ConcurrentHashMap<String, GatedCalls>()
+
+    private val renewal: (suspend (String, String) -> DeviceFlow.Tokens)? = deviceFlow?.let { _ ->
+        { key, refreshToken ->
+            val calls = renewalCalls.getOrPut(key) { GatedCalls(base, VpnGate(vpn) { runBlocking { privacy.signInAsksForVpn(key) } }) }
+            DeviceFlow(calls, githubClientId, githubWeb).refresh(refreshToken)
+        }
+    }
+
+    /**
      * For the preview's images: a client of its own, with no GitHub token on it, and a cache, so
      * switching back to the preview doesn't download them all again. The site is the open blog's.
      */
@@ -145,6 +158,12 @@ class AppContainer(
     private fun renewClients(key: String) {
         callsFor(key).renew()
         signInCalls.renew()
+        renewalCalls.values.forEach { it.renew() }
+        renewPreview()
+    }
+
+    /** The preview follows the open blog's switch: a connection made for the blog left mustn't serve the next. */
+    private fun renewPreview() {
         if (previewClient.isInitialized()) previewClient.value.renew()
     }
 
@@ -173,7 +192,7 @@ class AppContainer(
     suspend fun awaitVpn(key: String?, timeout: Duration): Boolean =
         withTimeoutOrNull(timeout) { waitingForVpn(key).first { !it } } != null
 
-    val accounts = AccountStore(accountData, database.accounts(), cipher, deviceFlow?.let { flow -> { refreshToken: String -> flow.refresh(refreshToken) } })
+    val accounts = AccountStore(accountData, database.accounts(), cipher, renewal)
     val drafts = database.drafts()
     val blogs = BlogRepository(accounts, database.posts()) { account: Account -> client(account) }
     val publisher = Publisher(drafts, accounts, blogs, privacy)
@@ -186,6 +205,7 @@ class AppContainer(
      */
     suspend fun open(key: String): Boolean {
         if (!accounts.open(key)) return false
+        renewPreview()
         // After the switch: a read of the blog left, finishing now, can't put its title back.
         blogs.clear()
         catching { blogs.refresh() }
@@ -202,6 +222,7 @@ class AppContainer(
         if (removal is Removal.Removed) {
             blogs.forget(removal.blogs)
             if (accounts.currentKey() != open) {
+                renewPreview()
                 blogs.clear()
                 catching { blogs.refresh() }
             }

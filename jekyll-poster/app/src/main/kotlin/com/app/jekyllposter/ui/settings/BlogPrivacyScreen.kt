@@ -6,6 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
@@ -243,9 +245,12 @@ private fun NewBlogBanner(name: String) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text("New here: every switch started off", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
         Text(
-            "Set these before your first post here. They apply to $name only; your other blogs keep their own.",
+            "New here: set these before your first post", style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.semantics { heading() },
+        )
+        Text(
+            "Every switch started off, but the VPN one if another of your blogs uses it. They apply to $name only; your other blogs keep their own.",
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
     }

@@ -86,4 +86,30 @@ class PrivacyTest {
         p.update("writer/other@main") { it.copy(onlyThroughVpn = true) }
         assertTrue(p.anyOnlyThroughVpn())
     }
+
+    @Test fun signedOutTheOldSwitchesWaitForTheNextBlogAndTheVpnOneStillHolds() = runBlocking {
+        oldSwitches()
+        val p = privacy()
+        // No blog to take them: kept, and signing in goes through the VPN meanwhile.
+        assertTrue(p.anyOnlyThroughVpn())
+        assertTrue(booleanPreferencesKey("only_through_vpn") in old.data.first())
+        twoBlogs()
+        assertTrue(p.get("writer/blog@main").onlyThroughVpn)
+        assertFalse(booleanPreferencesKey("only_through_vpn") in old.data.first())
+    }
+
+    @Test fun theOldAccountIsMovedInBeforeTheOldSwitchesAreGivenOut() = runBlocking {
+        val accounts = AccountStore(old, db.accounts(), com.app.jekyllposter.testutil.testCipher())
+        // An account and switches both as an older version kept them, in the same store.
+        old.edit {
+            it[stringPreferencesKey("login")] = "writer"
+            it[stringPreferencesKey("token")] = "sealed"
+            it[stringPreferencesKey("owner")] = "writer"
+            it[stringPreferencesKey("repo")] = "blog"
+            it[stringPreferencesKey("branch")] = "main"
+        }
+        oldSwitches()
+        val p = Privacy(db.privacy(), old) { accounts.blogs.first() }
+        assertTrue(p.get("writer/blog@main").datesByDayOnly)
+    }
 }

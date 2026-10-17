@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -87,12 +89,16 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
     private suspend fun key(): String? = container.accounts.currentKey()
 
     init {
+        // Read again for each blog opened: the address and visibility are the open blog's.
         viewModelScope.launch {
-            val blog = container.blogs.blog()
-            val user = blog?.let { b -> catching { b.user() }.getOrNull() }
-            local.update { it.copy(noReplyEmail = user?.noReplyAuthor?.email) }
-            val repo = blog?.let { b -> catching { b.repository() }.getOrNull() }
-            local.update { it.copy(visibility = repo?.let { r -> if (r.private) Visibility.Private else Visibility.Public } ?: Visibility.Unknown) }
+            container.accounts.currentKey.distinctUntilChanged().collectLatest {
+                local.update { s -> s.copy(noReplyEmail = null, visibility = Visibility.Loading) }
+                val blog = container.blogs.blog()
+                val user = blog?.let { b -> catching { b.user() }.getOrNull() }
+                local.update { it.copy(noReplyEmail = user?.noReplyAuthor?.email) }
+                val repo = blog?.let { b -> catching { b.repository() }.getOrNull() }
+                local.update { it.copy(visibility = repo?.let { r -> if (r.private) Visibility.Private else Visibility.Public } ?: Visibility.Unknown) }
+            }
         }
     }
 
@@ -102,17 +108,20 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
      */
     private var switching: Job? = null
 
-    fun setCommitAsNoReply(on: Boolean) {
+    fun setCommitAsNoReply(on: Boolean) = setCommitAsNoReply(on, null)
+
+    /** For blog [key], or the open one; see [setCommitAsNoReply]. */
+    private fun setCommitAsNoReply(on: Boolean, key: String?) {
         // The last tap wins: an "on" still looking up the address mustn't land after an "off".
         switching?.cancel()
         switching = viewModelScope.launch {
-            val account = container.accounts.current() ?: return@launch
+            val account = (key?.let { container.accounts.forBlog(it) } ?: container.accounts.current()) ?: return@launch
             if (!on) return@launch container.privacy.setCommitAsNoReply(account.blogKey, account.login, null)
-            val author = catching { container.blogs.blog()?.user()?.noReplyAuthor }.getOrNull()
+            val author = catching { container.blogs.blog(account).user().noReplyAuthor }.getOrNull()
             ensureActive()
             if (author == null) {
                 // The VPN switch on and no VPN: say so, or "try again" would fail the same way.
-                val why = if (container.waitingForVpn.first()) "Connect your VPN, then try again: nothing goes to GitHub without it."
+                val why = if (container.waitingForVpn(account.blogKey).first()) "Connect your VPN, then try again: nothing goes to GitHub without it."
                 else "Try again."
                 local.update { it.copy(message = "Couldn't find your GitHub no-reply address just now. $why") }
                 return@launch
@@ -144,11 +153,12 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
                 }
                 switching?.join()
                 // Read from the store, not the screen's state, which can lag a tap just made.
-                if (!container.privacy.get(key).commitAsNoReply) setCommitAsNoReply(true)
+                // The blog it started on throughout, even if another is opened meanwhile.
+                if (!container.privacy.get(key).commitAsNoReply) setCommitAsNoReply(true, key)
                 switching?.join()
                 // Only once the address is kept: a lookup can't go out once the VPN is required
                 // and there's none, and a retry would then fail the same way.
-                if (container.privacy.get(key).commitAsNoReply) setOnlyThroughVpn(true).join()
+                if (container.privacy.get(key).commitAsNoReply) container.appScope.launch { container.setOnlyThroughVpn(key, true) }.join()
             } finally {
                 local.update { it.copy(settingUpAnonymous = false) }
             }

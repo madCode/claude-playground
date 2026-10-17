@@ -141,10 +141,15 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
             val client = container.client(s.token.trim())
             val siteUrl = catching { client.pages(repo.owner.login, repo.name)?.htmlUrl }.getOrNull()
             val key = blogKey(repo.owner.login, repo.name, repo.defaultBranch)
-            // A blog beside others starts with its own switches, all off, and says so until its
-            // first post; one already added keeps its own.
-            val besideOthers = container.accounts.blogs.first().any { it.key != key }
-            val isNew = besideOthers && container.accounts.blogs.first().none { it.key == key }
+            // A blog beside others starts with its own switches, and says so until its first post;
+            // so does one added again that still has drafts here, whose switches went with its
+            // sign-in. One already added keeps its own.
+            val saved = container.accounts.blogs.first()
+            val isNew = saved.none { it.key == key } && (saved.isNotEmpty() || container.drafts.list().any { it.blog == key })
+            // Written before the blog is, so its first read already goes the way they say. The VPN
+            // switch starts on if another blog asks for it: nothing for the new blog may leave
+            // from the writer's own address before they've seen its page.
+            if (isNew) container.privacy.markNew(key, onlyThroughVpn = container.privacy.anyOnlyThroughVpn())
             // Adding keeps the sign-in as stored now (it may have been renewed while the list was
             // open), not the token the list was read with.
             val adding = addingTo
@@ -157,7 +162,6 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
                 // Expiry counts from when the token arrived, not from when a blog was picked.
                 container.accounts.save(deviceTokens?.let { fresh.withTokens(it, tokensAt) } ?: fresh)
             }
-            if (isNew) container.privacy.markNew(key)
             // After the switch: a read of the blog left, finishing now, can't put its title back.
             container.blogs.clear()
             // A first read fills the category picker; if it fails, Home tries again.

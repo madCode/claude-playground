@@ -93,12 +93,15 @@ class PrivacyPerBlogTest {
         runBlocking { c.setOnlyThroughVpn(night, true) }
         val quiet = queued(night, "Quiet")
         val loud = queued(SAMPLE_BLOG, "Loud")
+        // Queued after the other blog's post: once it's retried, a retry of every post would have
+        // reached the other blog's too.
+        val quieter = queued(night, "Quieter")
         app.container.startVpnRetry()
         vpn.up.value = false
-        // Long enough for the app to see the blog is waiting.
+        // Long enough for the app to see the blog is waiting, as VpnTest does.
         Thread.sleep(500)
         vpn.up.value = true
-        idleUntil { quiet in app.retried }
+        idleUntil { quiet in app.retried && quieter in app.retried }
         assertFalse(loud in app.retried)
     }
 
@@ -162,5 +165,68 @@ class PrivacyPerBlogTest {
         assertTrue(c.remove(c.database.accounts().blog(night)!!.signInId) is Removal.Removed)
         c.accounts.save(Account("inkwell", "inkwell-token", "inkwell", "night-notes", "main"))
         assertFalse(c.privacy.get(night).onlyThroughVpn)
+    }
+
+    @Test fun thePreviewDoesntReuseTheLastBlogsConnectionAfterASwitch() {
+        val photo = sample.apiBase.resolve("assets/images/2025/lighthouse.jpg").toString()
+        // A connection made for the open blog, which asks for no VPN, and kept for reuse.
+        c.previewFetcher.fetch(photo)
+        runBlocking {
+            c.setOnlyThroughVpn(night, true)
+            vpn.up.value = false
+            assertTrue(c.open(night))
+        }
+        sample.log.clear()
+        c.previewFetcher.fetch(photo)
+        assertEquals(emptyList<String>(), sample.log)
+    }
+
+    @Test fun aBlogAddedBesideAVpnOnlyBlogStartsWithTheVpnOn() {
+        sample.addRepository("other-blog", mapOf("_config.yml" to "title: Another Notebook\n".toByteArray()))
+        runBlocking { c.setOnlyThroughVpn(night, true) }
+        val vm = ConnectViewModel(c)
+        vm.addBlogTo(runBlocking { c.database.accounts().blog(SAMPLE_BLOG)!!.signInId })
+        idleUntil { vm.state.value.repos?.any { it.fullName == "sample/other-blog" } == true }
+        vpn.connections = 0
+        vm.choose(vm.state.value.repos!!.first { it.fullName == "sample/other-blog" })
+        idleUntil(10_000) { vm.state.value.done }
+        val fresh = runBlocking { c.privacy.get("sample/other-blog@main") }
+        assertTrue(fresh.isNew && fresh.onlyThroughVpn)
+        assertFalse(fresh.datesByDayOnly || fresh.sendAtRandomTime)
+        // Its first read went through the VPN.
+        assertTrue(vpn.connections > 0)
+    }
+
+    @Test fun aBlogAddedAgainOnItsOwnWithDraftsSaysItsSwitchesStartedOff() = runBlocking {
+        val inkwellSignIn = c.database.accounts().blog(night)!!.signInId
+        assertTrue(c.remove(c.database.accounts().blog(SAMPLE_BLOG)!!.signInId) is Removal.Removed)
+        c.drafts.insert(Draft(blog = night, title = "Didn't go", state = PostState.Failed))
+        assertTrue(c.remove(inkwellSignIn) is Removal.Removed)
+        val vm = ConnectViewModel(c)
+        vm.setToken("inkwell-token")
+        vm.checkToken()
+        idleUntil { vm.state.value.repos != null }
+        vm.choose(vm.state.value.repos!!.first { it.fullName == "inkwell/night-notes" })
+        idleUntil(10_000) { vm.state.value.done }
+        assertTrue(vm.state.value.openPrivacy)
+        assertTrue(c.privacy.get(night).isNew)
+    }
+
+    @Test fun aSignInsTokenIsRenewedTheWayItsOwnBlogsAsk() = runBlocking {
+        // The sample blog signed in with GitHub, its token about to expire; the other blog asks for a VPN.
+        c.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main", refreshToken = "refresh-1", expiresAt = System.currentTimeMillis() + 60_000))
+        c.setOnlyThroughVpn(night, true)
+        vpn.up.value = false
+        val renewed = c.accounts.current()!!
+        // Renewed, and not through the VPN the other sign-in's blog asks for.
+        assertTrue(renewed.expiresAt!! > System.currentTimeMillis() + 60 * 60_000)
+        assertEquals(0, vpn.connections)
+    }
+
+    @Test fun blogAndPrivacyReadsTheOpenBlogsAddressAgainAfterASwitch() {
+        val vm = BlogPrivacyViewModel(c)
+        idleUntil { vm.state.value.noReplyEmail?.contains("+sample@") == true }
+        runBlocking { c.open(night) }
+        idleUntil { vm.state.value.noReplyEmail?.contains("+inkwell@") == true }
     }
 }
