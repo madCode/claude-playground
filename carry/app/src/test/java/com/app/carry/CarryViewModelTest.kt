@@ -602,11 +602,11 @@ class CarryViewModelTest {
     }
 
     @Test
-    fun `a file that now holds another session keeps the typing through a refresh, until the owner drops it`() = runTest(dispatcher) {
-        // Every resume refreshes. Putting the other session on screen then
-        // cleared the refusal, showed its rows blank, and the first
-        // keystroke replaced the draft: "your numbers are still here",
-        // then gone.
+    fun `a file that now holds another session keeps the numbers as text, through refreshes, until dropped`() = runTest(dispatcher) {
+        // No save can reach the typed-against session once its file holds
+        // another, so keeping its sheet on screen with a Save that only
+        // refuses would be a false offer. Every resume refreshes, which is
+        // what lost the typing before.
         val handle = SavedStateHandle()
         val model = viewModel(handle)
         val disk = Disk(sheet)
@@ -619,65 +619,20 @@ class CarryViewModelTest {
         model.save(); settled(model)
         assertEquals(0, disk.writes)
         val state = model.saving.value as SaveState.Failed
-        assertTrue(state.why, "different session" in state.why)
-        assertTrue(state.newSheet)
+        assertTrue(state.why, "kept at the top" in state.why)
+        assertFalse(state.newSheet)
+        assertEquals(other, (model.state.value as CarryState.Ready).raw)
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.held.value.single().edits[0])
 
         model.refresh(); settled(model)
-        assertEquals("the typed-against sheet stays", sheet, (model.state.value as CarryState.Ready).raw)
-        assertTrue("and says why", model.anotherSession.value)
-        assertEquals(state, model.saving.value)
-        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
-
-        // Typing on keeps the same draft.
         model.edit(1, SessionPatch.Entry(weight = 40.0, reps = 10))
         model.refresh(); settled(model)
-        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+        assertEquals("typing on the new sheet leaves the held numbers alone",
+            SessionPatch.Entry(weight = 95.0, reps = 8), model.held.value.single().edits[0])
         assertEquals(SessionPatch.Entry(weight = 40.0, reps = 10), model.edits.value[1])
 
-        model.discardEdits(); settled(model)
-        assertEquals(other, (model.state.value as CarryState.Ready).raw)
-        assertFalse(model.anotherSession.value)
-        assertEquals(emptyMap<Int, SessionPatch.Entry>(), model.edits.value)
-    }
-
-    @Test
-    fun `after the process dies, typing for a session that is gone is held until the owner drops it`() = runTest(dispatcher) {
-        val handle = SavedStateHandle()
-        val disk = Disk(sheet)
-        val first = viewModel(handle)
-        first.on(disk)
-        first.refresh(); settled(first)
-        first.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
-        val other = sheet.replace("2026-10-17:2G", "2026-10-17:3G").replace("\"2G\"", "\"3G\"")
-        disk.text = other
-        first.save(); settled(first)
-
-        // Restored: nothing in memory, and the folder no longer holds 2G.
-        val reborn = viewModel(handle)
-        reborn.on(disk)
-        reborn.findSheet = { null }
-        reborn.refresh(); settled(reborn)
-        assertEquals(other, (reborn.state.value as CarryState.Ready).raw)
-        assertEquals(emptyMap<Int, SessionPatch.Entry>(), reborn.edits.value)
-        val held = reborn.held.value.single()
-        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), held.edits[0])
-        assertTrue(held.summary(), "10 x deadlift 95 lb 8 reps" in held.summary())
-        assertTrue("held typing still holds back an update", reborn.unsaved)
-
-        // Typing on the sheet now showing can't overwrite it, nor can
-        // another restore.
-        reborn.edit(1, SessionPatch.Entry(weight = 40.0, reps = 10))
-        val again = viewModel(handle)
-        again.on(disk)
-        again.findSheet = { null }
-        again.refresh(); settled(again)
-        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), again.held.value.single().edits[0])
-        assertEquals(SessionPatch.Entry(weight = 40.0, reps = 10), again.edits.value[1])
-
-        again.dropHeld()
-        assertEquals(emptyList<Draft>(), again.held.value)
-        again.refresh(); settled(again)
-        assertEquals(emptyList<Draft>(), again.held.value)
+        model.dropHeld()
+        assertEquals(emptyList<Draft>(), model.held.value)
     }
 
     @Test
@@ -702,24 +657,81 @@ class CarryViewModelTest {
     }
 
     @Test
-    fun `after the process dies, the sheet typing was for is found again in the folder`() = runTest(dispatcher) {
+    fun `after the process dies, the sheet typing was for is looked up in its own file`() = runTest(dispatcher) {
         // The day's other class arrived as a new file; the typed-against
-        // file is still there, so it is what goes back on screen.
+        // file is still its own, so it goes back on screen and can be saved.
         val handle = SavedStateHandle()
+        val disk = Disk(sheet)
         val first = viewModel(handle)
-        first.read = { ready() }
+        first.on(disk)
         first.refresh(); settled(first)
         first.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
 
         val other = sheet.replace("2026-10-17:2G", "2026-10-17:3G").replace("\"2G\"", "\"3G\"")
         val reborn = viewModel(handle)
+        reborn.on(disk)
         reborn.read = { ready(other, id = "doc3g") }
-        reborn.findSheet = { id -> ready().takeIf { id == "2026-10-17:2G" } }
         reborn.refresh(); settled(reborn)
         assertEquals(sheet, (reborn.state.value as CarryState.Ready).raw)
         assertTrue(reborn.anotherSession.value)
         assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), reborn.edits.value[0])
-        assertEquals(emptyList<Draft>(), reborn.held.value)
+        reborn.save(); settled(reborn)
+        assertEquals(1, disk.writes)
+    }
+
+    @Test
+    fun `a lookup that is slow or fails keeps the draft, and typing meanwhile can't replace it`() = runTest(dispatcher) {
+        // No answer is not "gone": a year of files on a slow provider, or a
+        // provider that throws, must not set the typing aside for good.
+        val other = sheet.replace("2026-10-17:2G", "2026-10-17:3G").replace("\"2G\"", "\"3G\"")
+        for (slow in listOf(true, false)) {
+            val handle = SavedStateHandle()
+            val disk = Disk(sheet)
+            val first = viewModel(handle)
+            first.on(disk)
+            first.refresh(); settled(first)
+            first.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+            val reborn = viewModel(handle)
+            reborn.on(disk)
+            reborn.read = { ready(other, id = "doc3g") }
+            reborn.lookUpTimeoutMs = 300
+            reborn.lookUp = {
+                if (slow) { Thread.sleep(2_000); CarryViewModel.Lookup.Gone } else error("provider fell over")
+            }
+            reborn.refresh(); settled(reborn)
+            assertEquals("no answer is not \"gone\"", emptyList<Draft>(), reborn.held.value)
+            assertTrue("nothing to type into", reborn.state.value !is CarryState.Ready)
+            reborn.edit(0, SessionPatch.Entry(weight = 10.0, reps = 1))
+
+            // Answers on the next try, with the draft as it was.
+            reborn.lookUp = { CarryViewModel.Lookup.Found(ready()) }
+            reborn.refresh(); settled(reborn)
+            assertEquals(sheet, (reborn.state.value as CarryState.Ready).raw)
+            assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), reborn.edits.value[0])
+        }
+    }
+
+    @Test
+    fun `held numbers go back to being a draft when their own file shows their sheet again`() = runTest(dispatcher) {
+        val handle = SavedStateHandle()
+        val disk = Disk(sheet)
+        val model = viewModel(handle)
+        model.on(disk)
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        disk.text = sheet.replace("2026-10-17:2G", "2026-10-17:3G").replace("\"2G\"", "\"3G\"")
+        model.save(); settled(model)
+        assertEquals(1, model.held.value.size)
+
+        // The other session was a mistake, and the file is put back.
+        disk.text = sheet
+        model.refresh(); settled(model)
+        assertEquals(emptyList<Draft>(), model.held.value)
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+        model.save(); settled(model)
+        assertEquals(SaveState.Saved, model.saving.value)
+        assertFalse("nothing held back an update now", model.unsaved)
     }
 
     @Test
@@ -832,11 +844,11 @@ class CarryViewModelTest {
     }
 
     @Test
-    fun `a newer sheet that arrived during the write is not overwritten`() = runTest(dispatcher) {
+    fun `a newer session that arrives during a save shows once the save is done`() = runTest(dispatcher) {
         // The folder is shared with a syncing machine, so the runner can
-        // replace the sheet while the owner is mid-save. Putting the text
-        // we wrote on screen regardless would put the older session back
-        // in front of them.
+        // drop a newer sheet in while the owner is mid-save. The typing
+        // keeps its own sheet until it is written; then the newer one shows,
+        // without the old numbers on its rows.
         val newer = sheet.replace("2026-10-17", "2026-10-18")
         val model = viewModel()
         model.read = { ready() }
@@ -870,6 +882,31 @@ class CarryViewModelTest {
             "the old sheet's numbers must not be sitting on the new sheet's rows",
             SessionPatch.entriesIn(newer), model.edits.value,
         )
+    }
+
+    @Test
+    fun `the same file rewritten during the write stays on screen, not what was written`() = runTest(dispatcher) {
+        // The guard after a write: the read that landed while it was in
+        // flight is newer than the bytes written, so neither the screen nor
+        // the form goes back to them.
+        val rewritten = sheet.replace("10 x bench press", "12 x bench press")
+        val model = viewModel()
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+        saved(model) {
+            model.read = { ready(rewritten) }
+            model.refresh()
+            // Hold the write until that read is on screen, so the guard is
+            // what decides.
+            val until = System.currentTimeMillis() + 10_000
+            while ((model.state.value as? CarryState.Ready)?.raw != rewritten && System.currentTimeMillis() < until) {
+                Thread.sleep(2)
+            }
+        }
+        assertEquals(rewritten, (model.state.value as CarryState.Ready).raw)
+        assertTrue("the rewrite is still said", model.fileMovedUnderEdits.value)
     }
 
     @Test

@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -54,6 +55,9 @@ data class Draft(
     val fromIdentities: Map<Int, String>,
     val edits: Map<Int, SessionPatch.Entry>,
     val added: List<AddedSet>,
+    /** The file the numbers were typed into, so it can be looked up
+     *  directly when another session is what the folder now shows. */
+    val documentId: String? = null,
 )
 
 data class UpdateProblem(val why: String, val offerLink: Boolean)
@@ -283,19 +287,21 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         reading = viewModelScope.launch {
             val next = withTimeoutOrNull(STALL_AFTER_MS) { read() }
             val previous = _state.value
-            _state.value = when {
+            val candidate = when {
                 // A provider can block forever -- openInputStream has no
                 // timeout and runCatching never fires. Without this the
                 // owner sits on "Reading" with no button and no way out but
                 // force-quitting.
                 next == null -> CarryState.Stalled
-                else -> keepLastGood(_state.value, next)
+                else -> keepLastGood(previous, next)
             }
             // Seed what the file already records, so a session finished in
             // two sittings opens showing the first sitting's numbers rather
             // than blank boxes the owner would fill in from memory. Only on
             // a NEW file: re-seeding would throw away edits in progress.
-            (_state.value as? CarryState.Ready)?.let { reconcile(it, previous) }
+            // A Ready read goes on screen through `reconcile`, which may keep
+            // another sheet there instead.
+            if (candidate is CarryState.Ready) reconcile(candidate, previous) else _state.value = candidate
         }
         // The folder is the history, so this is every file in it. Off the
         // main thread and beside the sheet rather than behind it: the lobby
@@ -318,33 +324,48 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         val pending = savedDraft()
         val forOther = pending?.takeIf { it.sheetId != ready.session.sheetId }
         if (forOther != null) {
-            // Typing for a session that is no longer the one this read
-            // found: the file now holds another, or the day's other class
-            // arrived. Showing the new one would hide the typing, and the
-            // next keystroke would replace the draft. So the sheet it was
-            // typed against stays on screen -- from memory, or found again
-            // in the folder after the process died -- until the owner saves
-            // it or drops it.
-            val typedAgainst = (previous as? CarryState.Ready)?.takeIf { it.session.sheetId == forOther.sheetId }
-                ?: withTimeoutOrNull(STALL_AFTER_MS) { findSheet(forOther.sheetId) }
-            if (typedAgainst != null) {
-                _state.value = typedAgainst
+            // Typing for a session that isn't the one this read found: the
+            // day's other class arrived, or its file now holds another. Its
+            // own file decides. Until it answers, nothing editable for the
+            // other session goes on screen, since typing there would start
+            // a draft over this one.
+            val found = lookUpInTime(forOther)
+            // Saved while the lookup ran: it is nobody's typing now.
+            if (savedDraft()?.sheetId != forOther.sheetId) return reconcile(ready)
+            val kept = (previous as? CarryState.Ready)?.takeIf { it.session.sheetId == forOther.sheetId }
+            val showing = (found as? Lookup.Found)?.ready ?: kept.takeIf { found == Lookup.Unknown }
+            if (showing != null) {
+                // Still its own file (or no answer, and it was on screen):
+                // it stays, and saving it is honest.
+                _state.value = showing
                 _anotherSession.value = true
                 _edits.value = forOther.edits
                 _added.value = forOther.added
-                _fileMovedUnderEdits.value = forOther.fromFingerprint != typedAgainst.raw.hashCode()
+                _fileMovedUnderEdits.value = forOther.fromFingerprint != showing.raw.hashCode()
                 return
             }
-            // Its file is gone from the folder. The numbers are kept aside,
-            // where typing on this sheet can't overwrite them, and listed
-            // until the owner drops them. Never a draft shown against
-            // another session, let alone written into it.
-            val held = savedHeld() + forOther
-            runCatching { handle[HELD] = Session.json.encodeToString(held) }
-            handle.remove<String>(DRAFT)
-            _held.value = held
+            if (found == Lookup.Unknown) {
+                // No answer, and nothing to keep on screen: say the folder
+                // isn't answering, and keep the draft for the next try.
+                _state.value = CarryState.Stalled
+                return
+            }
+            // Its file holds another session now: no save can reach it.
+            // The numbers are set aside as text, never overwritten.
+            if (savedDraft()?.sheetId == forOther.sheetId) hold(forOther)
         }
-        val draft = pending.takeIf { forOther == null }
+        _state.value = ready
+        // Held numbers whose own file shows their sheet again go back to
+        // being a draft, which can be saved.
+        if (savedDraft() == null) {
+            savedHeld().firstOrNull { it.sheetId == ready.session.sheetId && it.documentId == ready.documentId }
+                ?.let { back ->
+                    runCatching { handle[HELD] = Session.json.encodeToString(savedHeld() - back) }
+                    runCatching { handle[DRAFT] = Session.json.encodeToString(back) }
+                    _held.value = savedHeld()
+                }
+        }
+        val draft = savedDraft()
         _anotherSession.value = false
         when {
             // Nothing typed for this session.
@@ -464,18 +485,48 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         _held.value = emptyList()
     }
 
-    /** The sheet a draft was typed against, found again in the folder. */
-    internal var findSheet: suspend (String) -> CarryState.Ready? = { sheetId ->
+    /** Where the sheet a draft was typed against stands now, from its own file. */
+    internal sealed interface Lookup {
+        data class Found(val ready: CarryState.Ready) : Lookup
+        /** Its file holds another session, or is gone from the folder. */
+        data object Gone : Lookup
+        data object Unknown : Lookup
+    }
+
+    internal var lookUp: suspend (Draft) -> Lookup = { draft ->
         withContext(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching {
-                folder.list().filter { (_, name) -> SessionFiles.isSessionFile(name) }.firstNotNullOfOrNull { (id, _) ->
-                    val text = folder.read(id) ?: return@firstNotNullOfOrNull null
-                    val session = SessionFiles.parse(text)?.takeIf { it.sheetId == sheetId }
-                        ?: return@firstNotNullOfOrNull null
-                    CarryState.Ready(session, text, id, SessionFiles.unreadableRows(text, session))
-                }
-            }.getOrNull()
+            val id = draft.documentId ?: return@withContext Lookup.Gone
+            val text = readNow(id)
+                ?: return@withContext if (folder.list().let { it.isNotEmpty() && it.none { (doc, _) -> doc == id } }) Lookup.Gone else Lookup.Unknown
+            val session = SessionFiles.parse(text) ?: return@withContext Lookup.Unknown
+            if (session.sheetId == draft.sheetId) Lookup.Found(CarryState.Ready(session, text, id, SessionFiles.unreadableRows(text, session)))
+            else Lookup.Gone
         }
+    }
+
+    /** How long [lookUp] gets; a seam so a test of a slow one needn't wait. */
+    internal var lookUpTimeoutMs = STALL_AFTER_MS
+
+    /**
+     * [lookUp], given up on after [lookUpTimeoutMs] on the wall clock. A
+     * provider read blocks and can't be cancelled, so the wait is what
+     * stops; the read finishes on its own and is ignored. A throw or a
+     * timeout is [Lookup.Unknown], never [Lookup.Gone].
+     */
+    private suspend fun lookUpInTime(draft: Draft): Lookup {
+        val answer = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
+            .async { runCatching { lookUp(draft) }.getOrNull() }
+        return withContext(kotlinx.coroutines.Dispatchers.IO) {
+            withTimeoutOrNull(lookUpTimeoutMs) { answer.await() }
+        } ?: Lookup.Unknown
+    }
+
+    /** Sets [draft] aside as held numbers and clears it as the draft. */
+    private fun hold(draft: Draft) {
+        val held = savedHeld() + draft
+        runCatching { handle[HELD] = Session.json.encodeToString(held) }
+        if (savedDraft()?.sheetId == draft.sheetId) handle.remove<String>(DRAFT)
+        _held.value = held
     }
 
     /**
@@ -487,6 +538,8 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      */
     private fun rememberTyping() {
         val ready = _state.value as? CarryState.Ready ?: return
+        // Typing for another session is never overwritten: set aside first.
+        savedDraft()?.takeIf { it.sheetId != ready.session.sheetId }?.let(::hold)
         val existing = savedDraft()?.takeIf { it.sheetId == ready.session.sheetId }
         // This runs on the main thread on EVERY keystroke, so a throw
         // here costs the typing immediately -- the opposite of the
@@ -501,6 +554,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                     fromIdentities = existing?.fromIdentities ?: SessionPatch.identitiesOf(ready.raw),
                     edits = _edits.value,
                     added = _added.value,
+                    documentId = ready.documentId,
                 )
             )
         }
@@ -644,8 +698,8 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                             damaged = false,
                         )
                         Gate.OTHER_SESSION -> SaveState.Failed(
-                            "This file now holds a different session, so your numbers weren't written into it. They're still here.",
-                            damaged = false, newSheet = true,
+                            "This file now holds a different session, so your numbers weren't written into it. They're kept at the top, to enter again or drop.",
+                            damaged = false,
                         )
                         Gate.CHANGED -> SaveState.Failed(
                             "This session changed since you opened it, so nothing was written. Your numbers are still here.",
@@ -720,9 +774,15 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                     // another session would hide the typing under it.
                     // A different session stays off screen for the same
                     // reason, until the owner chooses to drop their numbers.
-                    if (gate == Gate.CHANGED) {
+                    if (gate == Gate.CHANGED || gate == Gate.OTHER_SESSION) {
                         val now = _state.value as? CarryState.Ready
                         if (now != null && now.documentId == ready.documentId && now.raw == ready.raw) {
+                            val refused = _saving.value
+                            // Another session: no save can reach the typed-
+                            // against one, so its numbers are set aside as
+                            // text rather than kept on a sheet whose Save
+                            // would only refuse again.
+                            if (gate == Gate.OTHER_SESSION) savedDraft()?.takeIf { it.sheetId == ready.session.sheetId }?.let(::hold)
                             val newRaw = check.newRaw!!
                             val newer = check.newer!!
                             val adopted = CarryState.Ready(
@@ -730,6 +790,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                             )
                             _state.value = adopted
                             reconcile(adopted)
+                            _saving.value = refused
                         }
                     }
                 }
