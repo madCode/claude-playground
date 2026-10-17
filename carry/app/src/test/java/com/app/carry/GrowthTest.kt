@@ -27,12 +27,12 @@ class GrowthTest {
         ref: Int, name: String, family: String? = null, weight: String = "null",
         reps: String = "null", skipped: Boolean = false, variant: String = "null",
         done: String = "null", needed: String = "null", suggested: String = "null",
-        key: String? = name, hard: Boolean = false,
+        key: String? = name, hard: Boolean = false, hurt: Boolean = false,
     ) = """{"ref":$ref,"line":"10 x $name","canonical":"$name",
             ${key?.let { "\"key\":\"$it\"," } ?: ""}
             "family":${family?.let { "\"$it\"" } ?: "null"},"variant":$variant,
             "streak_done":$done,"streak_needed":$needed,"suggested_weight":$suggested,
-            "weight":$weight,"reps":$reps,"skipped":$skipped,"hard":$hard}"""
+            "weight":$weight,"reps":$reps,"skipped":$skipped,"hard":$hard,"hurt":$hurt}"""
 
 
     /** A sheet printed for the other block, left blank, with the real
@@ -459,6 +459,26 @@ class GrowthTest {
         // which is the safe direction, and re-deriving it here is the one
         // thing this file must not do.
         assertEquals(listOf("found it hard", "did it as asked"), since.nearBump.map { it.name })
+    }
+
+    @Test
+    fun `a set that hurt leaves the band at any weight`() {
+        // The runner ends a streak at a set that hurt and holds the weight,
+        // as it does for a lighter one. A row with only `hurt` tapped never
+        // reaches history, so its count still stands.
+        val since = Growth.of(
+            listOf(
+                file("2026-10-11", sets = listOf(
+                    set(0, "hurt at the weight", "legs", done = "2", needed = "3",
+                        suggested = "40", weight = "40", reps = "8", hurt = true),
+                    set(1, "hurt, reps only", "legs", done = "2", needed = "3",
+                        suggested = "40", reps = "8", hurt = true),
+                    set(2, "hurt, nothing else", "legs", done = "2", needed = "3",
+                        suggested = "40", hurt = true),
+                ).joinToString(",")),
+            )
+        )
+        assertEquals(listOf("hurt, nothing else"), since.nearBump.map { it.name })
     }
 
     @Test
