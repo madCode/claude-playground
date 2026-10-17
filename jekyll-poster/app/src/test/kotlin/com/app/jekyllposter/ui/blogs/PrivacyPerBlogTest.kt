@@ -169,13 +169,11 @@ class PrivacyPerBlogTest {
 
     @Test fun thePreviewDoesntReuseTheLastBlogsConnectionAfterASwitch() {
         val photo = sample.apiBase.resolve("assets/images/2025/lighthouse.jpg").toString()
+        runBlocking { c.setOnlyThroughVpn(night, true) }
         // A connection made for the open blog, which asks for no VPN, and kept for reuse.
         c.previewFetcher.fetch(photo)
-        runBlocking {
-            c.setOnlyThroughVpn(night, true)
-            vpn.up.value = false
-            assertTrue(c.open(night))
-        }
+        vpn.up.value = false
+        runBlocking { assertTrue(c.open(night)) }
         sample.log.clear()
         c.previewFetcher.fetch(photo)
         assertEquals(emptyList<String>(), sample.log)
