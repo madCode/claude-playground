@@ -50,7 +50,9 @@
   - `BlogRepository`: refreshes a blog's cached posts, and holds the open blog's taxonomy, config,
     address and paths. `refresh(blog)` reads any blog, for a post going out to it, but changes
     those only when it's the open one.
-  - `Settings` (the writer's privacy switches and the Obsidian vault folder). `AndroidVpn` is
+  - `Privacy`: each blog's switches, a `BlogPrivacy` row per blog key (none means all off). On
+    first use it gives every blog the switches an older version kept for the whole app.
+    `Settings` keeps only the Obsidian vault folder. `AndroidVpn` is
     `Vpn` from the phone's default network.
   - `data/ObsidianVault`: lists the vault folder the writer picked, through the Storage Access
     Framework, for a note's `![[photo]]`. The editor imports what it finds like any photo.
@@ -77,7 +79,7 @@
     Home's effects run again each time it returns).
   - `MainActivity`: `postToStart` turns its intent (a share, a Markdown file opened, the
     launcher's New post shortcut) into the post to start; the shortcut is a dynamic one it adds.
-  - `AppContainer`: manual DI. Every web client goes through one `VpnGate`. A share's photos and
+  - `AppContainer`: manual DI. Every web client goes through a `VpnGate`: one per blog, gated by its switch, and one for signing in, gated if any blog asks. A share's photos and
     embeds wait in `pendingShares` for the editor. `PosterApp` starts the VPN-back retry once
     the container is built: nothing launches from a constructor, where it could run before the
     properties it uses are set. Tests (`TestApp`) swap the GitHub address, cipher, database,
