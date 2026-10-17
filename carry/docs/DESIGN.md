@@ -77,7 +77,16 @@ words TalkBack reads on each box; the chips sit level with the boxes.
 
 The faint count is `prescribed_reps`, the coach's number, not the board's
 words: "10 total" is 5 a side, and gym-coach's importer marks a set short
-when its reps fall below that number. The tally reads "N of M noted · K
+when its reps fall below that number.
+
+- **A tap fills it, not focus.** Focus also arrives by Tab or D-pad, which
+  would record sets nobody did. TalkBack hears "empty, prescribed 10" and
+  gets a "Fill in 10" action.
+- **Only where the runner suggests no weight.** On a weighted row blank
+  reps already mean "all of them", and a stray tap would record a set
+  with no weight. The faint count still shows there.
+- **Not on a range.** "6-12" has no single count; its floor would go into
+  history as the reps done, so the box stays plainly empty. The tally reads "N of M noted · K
 added · anything untouched counts as not done". *hurt* on its own is not
 "noted": it is the commonest reason to leave a row.
 

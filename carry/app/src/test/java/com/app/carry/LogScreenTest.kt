@@ -22,6 +22,8 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performCustomAccessibilityActionWithLabel
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -68,14 +70,17 @@ class LogScreenTest {
      *  composition, with the same scroll. */
     private val saving = mutableStateOf<SaveState>(SaveState.Idle)
 
-    private fun show(state: SaveState = SaveState.Idle, unreadable: Int = 0, fontScale: Float = 1f) {
+    private fun show(
+        state: SaveState = SaveState.Idle, unreadable: Int = 0, fontScale: Float = 1f,
+        session: Session = SampleSession.today,
+    ) {
         saving.value = state
         compose.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
             LogScreen(
                 unreadable = unreadable,
-                session = SampleSession.today,
+                session = session,
                 entries = edits.value,
                 added = added.value,
                 onEdit = { ref, e -> edits.value = edits.value + (ref to e) },
@@ -374,14 +379,48 @@ class LogScreenTest {
         shoot("38-post-bodyweight")
     }
 
+    private fun bodyweight(ref: Int, name: String, asked: String, reps: Int?, weight: Double? = null) = ExerciseSet(
+        ref = ref, line = "$asked x $name", canonical = name, prescribedReps = reps, prescribedText = asked,
+        suggestedWeight = weight,
+    )
+
+    private val mixed = Session(
+        sheetId = "2026-10-17:3G", date = "2026-10-17", classTag = "3G",
+        sets = listOf(
+            bodyweight(0, "jump lunge", "10 total", 5),
+            bodyweight(1, "push-up", "6-12", 6),
+            bodyweight(2, "bench press", "10", 10, weight = 45.0),
+        ),
+    )
+
     @Test
     fun `the faint fill is the coach's count, not the board's words`() {
-        // "10 total x deadlift" is 5 a side, and the importer compares reps
+        // "10 total x jump lunge" is 5 a side, and the importer compares reps
         // against 5. Filling 10 would put a wrong number in history.
-        show()
-        reach("deadlift")
-        compose.onNodeWithContentDescription("deadlift, reps").performClick()
-        assertEquals(5, edits.value[4]?.reps)
+        show(session = mixed)
+        compose.onNodeWithContentDescription("jump lunge, reps").performClick()
+        assertEquals(5, edits.value[0]?.reps)
+    }
+
+    @Test
+    @OptIn(androidx.compose.ui.test.ExperimentalTestApi::class)
+    fun `a range, a weighted row, and focus without a tap fill nothing`() {
+        show(session = mixed)
+        // A range's floor would go into history as the count done.
+        compose.onNodeWithContentDescription("push-up, reps").performClick()
+        assertEquals(null, edits.value[1])
+        // A weighted row: blank reps already mean all of them, and a stray
+        // tap would record a set with no weight.
+        compose.onNodeWithContentDescription("bench press, reps").performClick()
+        assertEquals(null, edits.value[2])
+        // Focus by keyboard or D-pad is not a tap.
+        compose.onNodeWithContentDescription("jump lunge, reps").requestFocus()
+        assertEquals(null, edits.value[0])
+        // TalkBack: the count is said, and the fill is an action.
+        compose.onNodeWithContentDescription("jump lunge, reps")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "empty, prescribed 5"))
+            .performCustomAccessibilityActionWithLabel("Fill in 5")
+        assertEquals(5, edits.value[0]?.reps)
     }
 
     @Test

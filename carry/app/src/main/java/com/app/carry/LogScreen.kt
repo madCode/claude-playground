@@ -48,7 +48,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -167,7 +173,10 @@ fun LogScreen(
                 LogRow(
                     name = set.displayName,
                     prescription = set.prescription,
-                    prescribedReps = set.prescribedReps,
+                    // A range has no single count to fill: its floor would
+                    // go into history as the reps done.
+                    prescribedReps = set.prescribedReps.takeIf { set.prescribedText?.isRange() != true },
+                    tapFills = set.suggestedWeight == null,
                     timed = set.timed,
                     family = set.family,
                     entry = entries[set.ref] ?: SessionPatch.Entry(),
@@ -252,10 +261,15 @@ private fun LogRow(
      *  of what the row is. Kept out of [name] so it stays out of the
      *  TalkBack labels on the number boxes, which name the movement. */
     prescription: String?,
-    /** The runner's rep count, shown faintly in an empty reps box and filled
-     *  in by a tap. The coach's number, not the board's words: "10 total"
-     *  is 5 a side, and the importer compares reps against this. */
+    /** The runner's rep count, shown faintly in an empty reps box. The
+     *  coach's number, not the board's words: "10 total" is 5 a side, and
+     *  the importer compares reps against this. Null for a range ("6-12"),
+     *  whose floor would go into history as the count done. */
     prescribedReps: Int?,
+    /** A tap on the empty reps box fills in [prescribedReps]. Only where the
+     *  runner suggests no weight: on a weighted row a stray tap would record
+     *  a set with no weight, and blank reps already mean "all of them". */
+    tapFills: Boolean,
     family: String?,
     entry: SessionPatch.Entry,
     key: String,
@@ -305,9 +319,10 @@ private fun LogRow(
             if (timed) {
                 DoneTag(entry.done, "$name, time") { change(entry.copy(done = !entry.done)) }
             } else {
+                val count = prescribedReps?.takeIf { it > 0 }?.toString()
                 NumberField(
                     repsField(entry.reps, entry.fractionalReps), "$key-r", "$name, reps", "reps", repsProblem,
-                    fill = prescribedReps?.takeIf { it > 0 }?.toString(),
+                    hint = count, fill = count.takeIf { tapFills },
                 ) { text ->
                     val (reps, fractional) = parseReps(text)
                     change(entry.copy(reps = reps, fractionalReps = fractional))
@@ -445,12 +460,21 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
 @Composable
 private fun NumberField(
     initial: String, key: Any, label: String, unit: String, problem: String?,
-    /** Shown faintly while the box is empty, and put in by focusing it
-     *  (a tap), selected so that typing replaces it. */
+    /** Shown faintly while the box is empty. */
+    hint: String? = null,
+    /** Put in by a tap on the empty box (or TalkBack's "Fill in" action),
+     *  selected so that typing replaces it. A tap, not focus: focus also
+     *  arrives by Tab or D-pad, which would record sets nobody did. */
     fill: String? = null,
     onChange: (String) -> Unit,
 ) {
     var value by rememberSaveable(key, stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(initial)) }
+    val fillNow = {
+        if (fill != null && value.text.isEmpty()) {
+            value = TextFieldValue(fill, TextRange(0, fill.length))
+            onChange(fill)
+        }
+    }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         FieldLabel(unit)
         BasicTextField(
@@ -475,9 +499,12 @@ private fun NumberField(
             cursorBrush = SolidColor(Look.Amber),
             decorationBox = { inner ->
                 Box(contentAlignment = Alignment.Center) {
-                    if (value.text.isEmpty() && fill != null) {
+                    if (value.text.isEmpty() && hint != null) {
+                        // Regular weight in the faint colour, against the
+                        // semi-bold chalk of a typed number: readable in
+                        // glare, and never taken for one already entered.
                         Text(
-                            fill, color = Look.Hint, fontFamily = Look.Figure, fontSize = 15.sp,
+                            hint, color = Look.ChalkFaint, fontFamily = Look.Figure, fontSize = 15.sp,
                             modifier = Modifier.semantics { hideFromAccessibility() },
                         )
                     }
@@ -489,19 +516,22 @@ private fun NumberField(
                 .clip(RoundedCornerShape(4.dp))
                 .background(Look.SlateRaised)
                 .border(if (problem != null) 2.dp else 1.dp, if (problem != null) Look.BrickInk else Look.RuleStrong, RoundedCornerShape(4.dp))
-                .onFocusChanged { focus ->
-                    // One tap says "all of them": a bodyweight row is done
-                    // when its reps are filled, and this is the one-tap way.
-                    if (focus.isFocused && fill != null && value.text.isEmpty()) {
-                        value = TextFieldValue(fill, TextRange(0, fill.length))
-                        onChange(fill)
+                .pointerInput(fill) {
+                    // Watched on the Initial pass and not consumed, so the
+                    // field still takes the tap and focuses as usual.
+                    awaitEachGesture {
+                        awaitFirstDown(pass = PointerEventPass.Initial)
+                        if (waitForUpOrCancellation(PointerEventPass.Initial) != null) fillNow()
                     }
                 }
                 .semantics {
                     contentDescription = label
-                    // The faint number is hidden from TalkBack, so say what
-                    // focusing the box will put in it.
-                    if (fill != null && value.text.isEmpty()) stateDescription = "empty, tap for $fill"
+                    // The faint number is hidden from TalkBack, so say it,
+                    // and offer the fill as an action.
+                    if (hint != null && value.text.isEmpty()) stateDescription = "empty, prescribed $hint"
+                    if (fill != null && value.text.isEmpty()) {
+                        customActions = listOf(CustomAccessibilityAction("Fill in $fill") { fillNow(); true })
+                    }
                     // Spoken on the box itself, so a listener who lands on it
                     // hears what is wrong without finding the line below.
                     if (problem != null) error(problem)
@@ -724,5 +754,8 @@ private fun SaveButton(state: SaveState, onSave: () -> Unit, added: List<AddedSe
         )
     }
 }
+
+/** "6-12", "8/10": a range of counts rather than one. */
+private fun String.isRange(): Boolean = any { it == '-' || it == '/' }
 
 private fun Double?.asWeightField(): String = this?.let { asWeight() } ?: ""
