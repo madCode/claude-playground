@@ -186,15 +186,6 @@ These are the open paths to one, hardest first.
   squat` written onto `low row`, outcome `Patched`, `unreadableRows` 0.
   It also fixed the other side — a lone quoted ref made its row
   unplaceable, refusing a save for a row visibly on screen.
-- [ ] **A file with no `schema` key at all is accepted as ours.** `schema`
-  defaults to `"gym-session/1"`, so another tool's JSON carrying `sheet_id`
-  and `date` reads as a session. Pre-existing and narrow — the folder
-  filter already requires the runner's filename — but making `schema`
-  required would reject any older file that omitted it, which is a
-  judgement about what counts as our file rather than a patch. Found
-  alongside: `"schema": 2` unquoted says "wait for the sync" where "update
-  the app" is the better guess, because `looksLikeNewerSchema`'s regex
-  requires the quotes *(audit)*
 - [x] ~~**`CarryViewModelTest`'s save wait fails about one run in six.**~~
   **#82 fixed it. The "one in six" was measured BEFORE #82's own fix and
   never re-taken**, so this item has been describing a state that stopped
@@ -419,6 +410,12 @@ means the After tab, which is a form built for afterwards. Unsketched.
   boxes, and the page's type is a step up. This also answers **which marks
   say "I did this movement"**: a bodyweight-only day now gets a post once
   its reps are filled *(you approved v4)*
+- [x] **A file with no `schema` is no longer accepted as ours.** You
+  approved requiring `"schema": "gym-session/1"` after the laptop's check
+  of the synced folder found every session file carrying exactly that. A
+  missing or unknown label is refused with the file named and the label
+  quoted, not as a sync glitch. A bare `"schema": 2` now reads as an
+  unknown label rather than as damage *(you approved)*
 - [x] **The "part way to a bump" band is a history.** It read only the
   newest sheet, so a sheet with no streak rows (or no rows) blanked it.
   It now covers every movement across the sheets, each from the newest

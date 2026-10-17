@@ -29,6 +29,12 @@ that hold become rules in CLAUDE.md or the cycles skill.
   hide a visible label from TalkBack and still assert on it, use
   `hideFromAccessibility()` and check `SemanticsProperties.HideFromAccessibility`.
 
+### Cycle 61 — build: require the schema label
+
+- **A field's default can hide a rule.** `schema` defaulted to our own
+  label, so a missing key passed the gate by construction. Check a gate
+  against the raw input, not the decoded model.
+
 ### Cycle 60 — build: the bump band reads every sheet
 
 - **Write a date in a fixture, check its weekday.** A screen test failed

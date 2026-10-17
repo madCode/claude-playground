@@ -673,7 +673,88 @@ class CarryStateTest {
             contents = mapOf("d" to """{"schema":"gym-session/2","sheet_id":"x","date":"y","sets":[]}"""),
         )
         val state = carryState(folder)
-        assertTrue(state is CarryState.Unreadable && state.wrongSchema)
+        assertTrue(state is CarryState.Unreadable && state.why == CarryState.Unreadable.Why.NEWER)
+    }
+
+    @Test
+    fun `a file with no format label, or one Carry doesn't know, is refused by name`() {
+        // The coach writes "gym-session/1" on every file and its importer
+        // refuses one without it. Reading such a file as ours opened a form
+        // whose save the importer would then drop. Each case is refused
+        // with its own reason, not as damage: the file read fine, and
+        // "wait for the sync" would be advice that cannot work.
+        val body = """"sheet_id":"x","date":"2026-10-17","sets":[{"ref":0,"line":"10 x squat"}]"""
+        fun stateFor(head: String) = carryState(FakeFolder(
+            files = listOf("d" to "session-2026-10-17-2G.json"),
+            contents = mapOf("d" to "{$head$body}"),
+        ))
+        assertEquals(CarryState.Unreadable("session-2026-10-17-2G.json", CarryState.Unreadable.Why.NO_LABEL), stateFor(""))
+        assertEquals(CarryState.Unreadable("session-2026-10-17-2G.json", CarryState.Unreadable.Why.NO_LABEL), stateFor(""""schema":null,"""))
+        assertEquals(
+            CarryState.Unreadable("session-2026-10-17-2G.json", CarryState.Unreadable.Why.UNKNOWN_LABEL, "\"workout-log/3\""),
+            stateFor(""""schema":"workout-log/3","""),
+        )
+        assertEquals(CarryState.Unreadable.Why.UNKNOWN_LABEL, (stateFor(""""schema":1,""") as CarryState.Unreadable).why)
+        assertEquals(CarryState.Unreadable.Why.UNKNOWN_LABEL, (stateFor(""""schema":"gym-session/0",""") as CarryState.Unreadable).why)
+        // The control: the same file, labelled, reads.
+        assertTrue(stateFor(""""schema":"gym-session/1",""") is CarryState.Ready)
+    }
+
+    @Test
+    fun `the label is read at the top level, and shown back safely`() {
+        // A nested "schema" that looks like a newer coach's must not decide
+        // the message: only a truncated file falls back to that regex.
+        val nested = """{"meta":{"schema":"gym-session/2"},"schema":"other","sheet_id":"x","date":"y","sets":[]}"""
+        assertEquals(CarryState.Unreadable.Why.UNKNOWN_LABEL, unreadable("f.json", nested).why)
+        // Cut by code point with a visible ellipsis, never half a character.
+        val emoji = "\uD83D\uDE00".repeat(60)
+        val shown = SessionFiles.labelText("""{"schema":"$emoji"}""")!!
+        assertTrue(shown, shown.endsWith("\u2026"))
+        assertTrue(shown, shown.codePoints().noneMatch { it in 0xD800..0xDFFF })
+        // Characters that reorder or break a line don't reach the screen.
+        val hostile = SessionFiles.labelText("""{"schema":"a\u202Eb\u061Cc\u2028d\u200De"}""")!!
+        assertEquals("\"abcde\"", hostile)
+    }
+
+    @Test
+    fun `a file cut off before its label is still damage, not an unlabelled file`() {
+        // Truncated mid-sync: no JSON object to look for a label in, so
+        // claiming the label is missing would send the owner to the wrong fix.
+        val state = carryState(FakeFolder(
+            files = listOf("d" to "session-2026-10-17-2G.json"),
+            contents = mapOf("d" to """{"sheet_id":"x","date":"2026-10"""),
+        ))
+        assertEquals(CarryState.Unreadable.Why.DAMAGED, (state as CarryState.Unreadable).why)
+    }
+
+    @Test
+    fun `the Since tab counts unlabelled files apart from damaged ones`() {
+        val good = """{"schema":"gym-session/1","sheet_id":"a","date":"2026-10-01","sets":[
+            {"ref":0,"line":"10 x squat","canonical":"squat","weight":45,"reps":10}]}"""
+        val unlabelled = """{"sheet_id":"b","date":"2026-10-02","sets":[
+            {"ref":0,"line":"10 x squat","canonical":"squat","weight":45,"reps":10}]}"""
+        val broken = """{"schema":"gym-session/1","sheet_id":"c","date":"2026-"""
+        val since = Growth.of(listOf(good, unlabelled, broken))
+        assertEquals("the unlabelled file is not a session", 1, since.sessions)
+        assertEquals(1, since.unlabelled)
+        assertEquals("only the truncated file is damage", 1, since.short)
+        assertEquals(
+            "1 file in the folder has a missing or unknown \"schema\" label, so it isn't counted as a session.",
+            unlabelledNote(since.unlabelled),
+        )
+    }
+
+    @Test
+    fun `a newest date of only unlabelled files withholds the band and says why`() {
+        val older = """{"schema":"gym-session/1","sheet_id":"a","date":"2026-10-01","sets":[
+            {"ref":0,"line":"10 x squat","canonical":"squat","key":"squat","family":"legs",
+             "suggested_weight":45,"streak_done":1,"streak_needed":3,"weight":45,"reps":10}]}"""
+        val since = growthOf(FakeFolder(
+            files = listOf("d1" to "session-2026-10-01-2G.json", "d2" to "session-2026-10-14-3G.json"),
+            contents = mapOf("d1" to older, "d2" to """{"sheet_id":"b","date":"2026-10-14","sets":[]}"""),
+        ))
+        assertEquals(Growth.NewestRead.NO_LABEL, since.newestRead)
+        assertTrue(since.nearBump.isEmpty())
     }
 
     @Test
@@ -682,7 +763,12 @@ class CarryStateTest {
         // that window used to discard a sheet that was fine a second ago.
         val good = readyFor()
         assertEquals(good, keepLastGood(good, CarryState.NoSession))
-        assertEquals(good, keepLastGood(good, CarryState.Unreadable("x.json", false)))
+        assertEquals(good, keepLastGood(good, CarryState.Unreadable("x.json", CarryState.Unreadable.Why.DAMAGED)))
+        // A label problem on refresh holds the sheet too: the newest file
+        // may not be the one on screen, and dropping the sheet would hide
+        // the owner's typing. The save checks the file on disk instead.
+        val unlabelled = CarryState.Unreadable("x.json", CarryState.Unreadable.Why.NO_LABEL)
+        assertEquals(good, keepLastGood(good, unlabelled))
         // ...but a folder that is genuinely gone must still be reported.
         assertEquals(
             CarryState.NeedsFolder(lostGrant = true),
@@ -714,6 +800,6 @@ class CarryStateTest {
             contents = mapOf("doc1" to "{ truncated"),
         )
         val state = carryState(folder)
-        assertTrue(state is CarryState.Unreadable && !state.wrongSchema)
+        assertTrue(state is CarryState.Unreadable && state.why == CarryState.Unreadable.Why.DAMAGED)
     }
 }

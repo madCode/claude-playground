@@ -42,6 +42,18 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 - Checked with gym-coach's own importer: every way a row says "done"
   becomes a complete set; an untouched or *hurt*-only row becomes nothing.
 
+## 2026-10-16 — cycle 61: a session file must say what it is
+
+- A file with no `"schema"` line used to be read as a session, because
+  the app filled in the label itself. Now only `gym-session/1` is read.
+- A missing or unknown label gets its own message naming the file
+  ("No format label", "Unknown format label"), not "didn't read
+  cleanly", since waiting for a sync won't fix it. The Since tab counts
+  such files in their own sentence.
+- The save refuses one too, so every file Carry writes keeps the label.
+- Checked first: the laptop's copy of the synced folder held only
+  session files, all labelled `gym-session/1`. The phone's side wasn't
+  checked.
 ## 2026-10-16 — cycle 60: "part way to a bump" is a history
 
 - The band on the Since tab read only the newest sheet, so a day whose

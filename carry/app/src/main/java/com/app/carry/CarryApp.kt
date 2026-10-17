@@ -51,10 +51,21 @@ sealed interface CarryState {
      *  so this exists to give the owner a way out. */
     data object Stalled : CarryState
 
-    /** A session file that is there but unreadable -- truncated mid-sync, or
-     *  written by a runner newer than this app. Different from absent, and
-     *  worth different words: one means wait, the other means update. */
-    data class Unreadable(val name: String, val wrongSchema: Boolean) : CarryState
+    /** A session file that is there but unreadable. Different from absent,
+     *  and each [Why] needs its own words: wait, update, or look at what
+     *  wrote the file. [label] is the unknown label as written, to show. */
+    data class Unreadable(val name: String, val why: Why, val label: String? = null) : CarryState {
+        enum class Why {
+            /** Truncated mid-sync, or not JSON: likely to settle. */
+            DAMAGED,
+            /** `gym-session/2` or later: this app is out of date. */
+            NEWER,
+            /** No `schema` at all: not a file the coach wrote. */
+            NO_LABEL,
+            /** A `schema` this app has never heard of. */
+            UNKNOWN_LABEL,
+        }
+    }
 
     /**
      * Note what is NOT here: how fresh the sheet is. That was a field once,
@@ -95,10 +106,26 @@ fun carryState(folder: Folder): CarryState {
     // picker for nothing.
     val newest = SessionFiles.newest(files.map { it.second }) ?: return CarryState.NoSession
     val id = files.first { it.second == newest }.first
-    val text = folder.read(id) ?: return CarryState.Unreadable(newest, wrongSchema = false)
-    val session = SessionFiles.parse(text)
-        ?: return CarryState.Unreadable(newest, wrongSchema = SessionFiles.looksLikeNewerSchema(text))
+    val text = folder.read(id) ?: return CarryState.Unreadable(newest, CarryState.Unreadable.Why.DAMAGED)
+    val session = SessionFiles.parse(text) ?: return unreadable(newest, text)
     return CarryState.Ready(session, text, id, SessionFiles.unreadableRows(text, session))
+}
+
+/**
+ * Why [text] did not parse, in the terms the owner can act on. A missing
+ * or unknown label is only claimed of a file that IS a JSON object:
+ * anything else is damage, and "a sync part way through" is then the
+ * honest guess.
+ */
+internal fun unreadable(name: String, text: String): CarryState.Unreadable {
+    val why = when (SessionFiles.labelGuess(text)) {
+        SessionFiles.Label.MISSING -> CarryState.Unreadable.Why.NO_LABEL
+        SessionFiles.Label.UNKNOWN -> CarryState.Unreadable.Why.UNKNOWN_LABEL
+        SessionFiles.Label.NEWER -> CarryState.Unreadable.Why.NEWER
+        SessionFiles.Label.OURS, null -> CarryState.Unreadable.Why.DAMAGED
+    }
+    val label = if (why == CarryState.Unreadable.Why.UNKNOWN_LABEL) SessionFiles.labelText(text) else null
+    return CarryState.Unreadable(name, why, label)
 }
 
 /**
@@ -168,8 +195,9 @@ fun growthOf(folder: Folder): Growth.Since {
             // Wording, not severity: the Before tab says "update Carry"
             // about this same file, and two screens describing one intact
             // file differently is worse than either alone.
-            atNewest.all { SessionFiles.looksLikeNewerSchema(it.text.orEmpty()) } ->
+            atNewest.all { SessionFiles.labelGuess(it.text.orEmpty()) == SessionFiles.Label.NEWER } ->
                 Growth.NewestRead.NEWER_SCHEMA
+            atNewest.all { Growth.unlabelledFile(it.text.orEmpty()) } -> Growth.NewestRead.NO_LABEL
             else -> Growth.NewestRead.DAMAGED
         },
     )
@@ -275,11 +303,24 @@ fun CarryApp(
             modifier = modifier,
         )
         is CarryState.Unreadable -> Message(
-            title = if (state.wrongSchema) "Carry is out of date" else "Can't read that session",
-            body = if (state.wrongSchema) {
-                "${state.name} was written by a newer coach than this app understands. Update Carry."
-            } else {
-                "${state.name} is there but didn't read cleanly. If a sync is running, it should settle in a moment."
+            title = when (state.why) {
+                CarryState.Unreadable.Why.NEWER -> "Carry is out of date"
+                CarryState.Unreadable.Why.NO_LABEL -> "No format label"
+                CarryState.Unreadable.Why.UNKNOWN_LABEL -> "Unknown format label"
+                CarryState.Unreadable.Why.DAMAGED -> "Can't read that session"
+            },
+            // The two label messages name the file and the `"schema"` line,
+            // and say nothing about a sync: the file read fine, it just
+            // isn't labelled as a session, and waiting won't change that.
+            body = when (state.why) {
+                CarryState.Unreadable.Why.NEWER ->
+                    "${state.name} was written by a newer coach than this app understands. Update Carry."
+                CarryState.Unreadable.Why.NO_LABEL ->
+                    "${state.name} has no \"schema\" line saying what format it is, so Carry won't read it as a session. The coach writes one on every session file."
+                CarryState.Unreadable.Why.UNKNOWN_LABEL ->
+                    "${state.name} says its format is ${state.label ?: "something else"}, which isn't one Carry knows, so it won't read it as a session."
+                CarryState.Unreadable.Why.DAMAGED ->
+                    "${state.name} is there but didn't read cleanly. If a sync is running, it should settle in a moment."
             },
             action = "Pick a different folder",
             onAction = onChooseFolder,

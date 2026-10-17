@@ -104,11 +104,40 @@ class CarryAppScreenTest {
                 .firstNotNullOf { it.config.getOrNull(SemanticsProperties.Text)?.firstOrNull()?.text }
             shot?.let { shoot(it) }
         }
-        titleFor(CarryState.Unreadable("session-2026-10-17-2G.json", wrongSchema = true), "08-wrong-schema")
-        titleFor(CarryState.Unreadable("session-2026-10-17-2G.json", wrongSchema = false))
+        titleFor(CarryState.Unreadable("session-2026-10-17-2G.json", CarryState.Unreadable.Why.NEWER), "08-wrong-schema")
+        titleFor(CarryState.Unreadable("session-2026-10-17-2G.json", CarryState.Unreadable.Why.DAMAGED))
         titleFor(CarryState.NoSession)
         titleFor(CarryState.Stalled, "09-stalled")
-        assertEquals("each state needs its own words", 4, titles.size)
+        titleFor(CarryState.Unreadable("session-2026-10-17-2G.json", CarryState.Unreadable.Why.NO_LABEL))
+        titleFor(CarryState.Unreadable("session-2026-10-17-2G.json", CarryState.Unreadable.Why.UNKNOWN_LABEL, "\"workout-log/3\""))
+        assertEquals("each state needs its own words", 6, titles.size)
+    }
+
+    @Test
+    fun `a file with no format label is named, and not blamed on a sync`() {
+        compose.setContent {
+            CarryApp(CarryState.Unreadable("session-2026-10-17-2G.json", CarryState.Unreadable.Why.NO_LABEL), onChooseFolder = {})
+        }
+        compose.onNodeWithText("No format label").assertIsDisplayed()
+        compose.onNodeWithText("session-2026-10-17-2G.json has no \"schema\" line", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("sync", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("didn't read cleanly", substring = true).assertDoesNotExist()
+        shoot("33-no-label")
+    }
+
+    @Test
+    fun `an unknown format label is quoted back`() {
+        compose.setContent {
+            CarryApp(
+                CarryState.Unreadable("session-2026-10-17-2G.json", CarryState.Unreadable.Why.UNKNOWN_LABEL, "\"workout-log/3\""),
+                onChooseFolder = {},
+            )
+        }
+        compose.onNodeWithText("Unknown format label").assertIsDisplayed()
+        compose.onNodeWithText("session-2026-10-17-2G.json says its format is \"workout-log/3\"", substring = true)
+            .assertIsDisplayed()
+        compose.onNodeWithText("sync", substring = true).assertDoesNotExist()
+        shoot("34-unknown-label")
     }
 
     @Test
