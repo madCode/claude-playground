@@ -46,6 +46,13 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   again. TalkBack reads it out.
 - The weight and reps boxes now say "lb" and "reps" under them, so "the
   weight box" is easy to find.
+## 2026-10-16 — cycle 63: the hard chip goes
+
+- The After tab no longer offers *hard*, and a past session no longer
+  shows it. The coach treats a finished set as finished however it felt.
+- Files that already say `hard` still read, and Carry leaves the field
+  alone.
+- Nothing drops out of the post: it never counted *hard* as "did it".
 
 ## 2026-10-16 — cycle 58: the After screen checks what the importer refuses
 

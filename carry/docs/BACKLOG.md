@@ -295,6 +295,10 @@ These are the open paths to one, hardest first.
   this way *(audit)*
 
 ### Health and tidying
+- [ ] **The "part way to a bump" band still drops a row marked `hard`.**
+  Only an older file can say so now. Drop the check once gym-coach stops
+  reading `hard`, after #130 merges (it moves this code) *(found removing
+  the hard chip)*
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on
   instructions.** The gate is real but it is counting the wrong thing for
   a codebase this full of fail-closed guards — a third of branches have
@@ -449,6 +453,10 @@ means the After tab, which is a form built for afterwards. Unsketched.
   asks whether the weight is in the weight box. The number boxes are
   labelled "lb" and "reps" *(you asked: "show the typed name back, no
   digit check")*
+- [x] **The *hard* chip is gone.** The coach treats a completed set as
+  completed however it felt, so *hard* told it nothing. Files that say
+  `hard` still read and keep it; it isn't shown *(you decided,
+  2026-10-16)*
 - [x] **The bars on *Heaviest by what it trains* are gone; the number
   stays.** They encoded every weight in the family with no scale and no
   time direction, and their count varied with how many sets the family had,
