@@ -403,6 +403,17 @@ class LogScreenTest {
     }
 
     @Test
+    fun `a tap-fill keeps what was already entered on the row`() {
+        // The tap watcher outlives recompositions; a stale copy of the row
+        // would write reps over it as it was before these edits.
+        show(session = mixed)
+        compose.onNodeWithContentDescription("jump lunge, lb").performTextReplacement("20")
+        compose.onAllNodesWithText("easy")[0].performClick()
+        compose.onNodeWithContentDescription("jump lunge, reps").performClick()
+        assertEquals(SessionPatch.Entry(weight = 20.0, reps = 5, easy = true), edits.value[0])
+    }
+
+    @Test
     @OptIn(androidx.compose.ui.test.ExperimentalTestApi::class)
     fun `a range, a weighted row, and focus without a tap fill nothing`() {
         show(session = mixed)

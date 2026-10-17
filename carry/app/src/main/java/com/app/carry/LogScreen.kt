@@ -55,6 +55,8 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -475,6 +477,10 @@ private fun NumberField(
             onChange(fill)
         }
     }
+    // The gesture loop outlives recompositions (it restarts only when `fill`
+    // changes), so it calls the latest fill: an old one would carry an old
+    // `onChange`, writing reps over the row as it was before later edits.
+    val latestFill by rememberUpdatedState(fillNow)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         FieldLabel(unit)
         BasicTextField(
@@ -518,10 +524,15 @@ private fun NumberField(
                 .border(if (problem != null) 2.dp else 1.dp, if (problem != null) Look.BrickInk else Look.RuleStrong, RoundedCornerShape(4.dp))
                 .pointerInput(fill) {
                     // Watched on the Initial pass and not consumed, so the
-                    // field still takes the tap and focuses as usual.
+                    // field still takes the tap and focuses as usual. A drag
+                    // (the list scrolling) cancels; a long-press, which asks
+                    // for Paste, does not fill.
                     awaitEachGesture {
                         awaitFirstDown(pass = PointerEventPass.Initial)
-                        if (waitForUpOrCancellation(PointerEventPass.Initial) != null) fillNow()
+                        val up = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                            waitForUpOrCancellation(PointerEventPass.Initial)
+                        }
+                        if (up != null) latestFill()
                     }
                 }
                 .semantics {
