@@ -127,8 +127,8 @@ class PrivacyPerBlogTest {
         assertFalse(runBlocking { c.privacy.get(night) }.sendAtRandomTime)
 
         runBlocking { c.open(night) }
-        idleUntil { vm.state.value.title == "Night Notes" }
-        assertTrue(vm.state.value.datesByDayOnly)
+        // Its title and its switches arrive separately: wait for both.
+        idleUntil { vm.state.value.title == "Night Notes" && vm.state.value.datesByDayOnly }
         assertFalse(vm.state.value.sendAtRandomTime)
     }
 
