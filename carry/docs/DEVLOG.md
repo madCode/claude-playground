@@ -40,6 +40,15 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   refused too. After the app is killed, the file read on restore is the
   baseline; a change made while it was dead shows the usual warning.
 
+## 2026-10-17 — cycle 65: the bump band keeps an old *hard* row
+
+- A row an older file marked *hard* used to leave "Part way to a bump".
+  gym-coach no longer reads `hard`, so that row now shows like any other.
+- Your answers recorded: old counts stay in the band with no cutoff, to
+  revisit as data builds; the faint "5" on a "10 total" row stays.
+- Found: a row marked *hurt* still stays in the band, though gym-coach
+  now ends a streak there. In the backlog.
+
 ## 2026-10-17 — cycle 64: the minimum After page (#127, mockup v4)
 
 - Each row says it happened with its own fields: a weight; reps, which

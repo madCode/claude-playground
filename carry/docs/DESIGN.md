@@ -400,7 +400,7 @@ had nothing part way, a plank-only day for instance.
   taken from the newest sheet, since nothing could tell whether a later
   sheet listed it.
 - **The newest listing decides.** If it is out of the band (skipped,
-  *hard*, lighter, a streak finished or none written), the movement is
+  lighter, a streak finished or none written), the movement is
   out. An older sheet's count never stands in for it, because that count
   is from before the newer set. A row on the newer sheet that didn't
   decode still counts as a listing, by the `key` in its raw JSON. On one
@@ -418,8 +418,8 @@ had nothing part way, a plank-only day for instance.
   row with that key in the folder, such as a row typed by hand or a day
   with no sheet, is one Carry cannot see. So the row says how old its
   count is rather than claiming to be current. The runner's streak has no
-  time limit, so neither does the band; whether it should is the owner's
-  call.
+  time limit, so neither does the band: the owner chose to keep old
+  counts for now and revisit as data builds.
 - **Order and cap are unchanged.** Fewest sets away leads; ties keep the
   sheets' order, newest sheet first and each in board order; five rows.
 
@@ -432,11 +432,10 @@ claims no relation between them; the spoken label says *"2 of 3 clean
 sets, next at 25 pounds"* rather than joining them into a sentence that
 would.
 
-A row leaves it the moment the owner's own answer contradicts it: marked
-*hard* (only an older file can say so now; dropping this check is due
-once the runner stops reading `hard`), or logged **below** the weight the
-count is about. Those are the
-runner's own signals that the next bump is blocked. Logged at that weight
+A row leaves it the moment the owner's own answer contradicts it: logged
+**below** the weight the count is about. That is the runner's own signal
+that the next bump is blocked. An older file's *hard* is not: the runner
+counts a completed set however it felt, so such a row stays. Logged at that weight
 stays — the count is then stale by one and understates, which is the safe
 direction — and logged heavier stays, because going up unprompted is the
 thing this app exists to notice. The streak itself is never re-derived

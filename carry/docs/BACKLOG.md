@@ -18,16 +18,20 @@ should start at the first line of *Wrong numbers*.
 
 ### Your call — nothing moves until you decide
 
-Five decisions. Each is a question about what you want the app to claim,
+None open. Each is a question about what you want the app to claim,
 not a thing anyone is blocked from building.
-- [ ] **Should an old count leave the "part way to a bump" band?** The
+- [x] **Should an old count leave the "part way to a bump" band?** The
   band now reaches back across every sheet, and a row from an older sheet
   shows its date. The runner's streak has no time limit, so the band has
   none either: a count from two months ago still shows, dated. A cutoff
   (say 28 days, the window the runner uses for its related lines) would
   hide counts the owner may have moved on from without logging. Leaving
-  it out shows everything and lets the date speak. Built without one
-  *(you asked for the history; this is what it left open)*
+  it out shows everything and lets the date speak. **Answered
+  2026-10-17: keep the counts, no cutoff, and revisit as data builds**
+  *(you decided)*
+- [x] **A "10 total" row shows a faint "5"**, the coach's per-side count,
+  since the importer marks a set short below that. **Answered
+  2026-10-17: clear enough, keep it** *(you decided)*
 - [x] ~~**Aggregate facts about the owner's training are in this public
   repo.**~~ **Converted 2026-10-16.** The owner was asked and said they
   were "okay with leaving them if you absolutely need them to continue to
@@ -254,10 +258,11 @@ These are the open paths to one, hardest first.
 
 
 ### Health and tidying
-- [ ] **The "part way to a bump" band still drops a row marked `hard`.**
-  Only an older file can say so now. Drop the check once gym-coach stops
-  reading `hard`, after #130 merges (it moves this code) *(found removing
-  the hard chip)*
+- [ ] **A row marked *hurt* stays in the "part way to a bump" band.**
+  gym-coach (its #49) now ends a streak at a set that hurt and holds the
+  weight, so a hurt row's count is about to break, the same as a lighter
+  one. Check against the runner first, then treat it like the lighter
+  case *(found dropping the hard check)*
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on
   instructions.** The gate is real but it is counting the wrong thing for
   a codebase this full of fail-closed guards — a third of branches have
@@ -406,6 +411,10 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **The "part way to a bump" band keeps a row an old file marked
+  *hard*.** gym-coach stopped reading `hard` (its #50), so a completed set
+  counts however it felt and the row's count is as good as any other's
+  *(found removing the hard chip)*
 - [x] **The minimum After page, mockup v4
   ([#127](https://github.com/madCode/claude-playground/issues/127)).**
   Each row says "I did it" with its own fields: a weight, reps (one tap

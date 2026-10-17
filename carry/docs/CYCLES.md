@@ -17,6 +17,15 @@ that hold become rules in CLAUDE.md or the cycles skill.
   under every break of the new lines; it went red only when the
   alternative baseline (the draft's fingerprint) was swapped in.
 
+### Cycle 65 — build: the bump band keeps an old *hard* row
+
+- **When a rule leaves the runner, check what else it changed in the same
+  release.** The `hard` removal (gym-coach #50) sat on top of #49, which
+  made `hurt` end a streak, and the band had no hurt check. Read the
+  runner's neighbouring commits, not only the one the item names.
+- **A "before" shot for a test the old code fails:** copy the test into a
+  detached `origin/main` worktree with its assertions cut, so it shoots.
+
 ### Cycle 64 — build: the minimum After page (#127 v4)
 
 - **A text field reports its inner bounds.** `BasicTextField`'s semantics

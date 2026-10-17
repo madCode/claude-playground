@@ -420,6 +420,25 @@ class SinceScreenTest {
     }
 
     @Test
+    fun `an older sheet's row marked hard shows in the band`() {
+        // Through the real `Growth.of`: only an older file can say `hard`,
+        // and the runner no longer reads it, so its count stands.
+        fun sheet(date: String, sets: String) =
+            """{"schema":"gym-session/1","sheet_id":"$date:3G","date":"$date","class":"3G","sets":[$sets]}"""
+        val history = Growth.of(listOf(
+            sheet("2026-10-04", """{"ref":0,"line":"10 x goblet squat","canonical":"goblet squat",
+                "key":"goblet squat","family":"legs","suggested_weight":25,"streak_done":2,
+                "streak_needed":3,"weight":25,"reps":10,"hard":true}"""),
+            sheet("2026-10-11", """{"ref":0,"line":"45 sec plank","canonical":"plank","key":"plank","family":"core"}"""),
+        ))
+        compose.setContent { SinceScreen(since.copy(nearBump = history.nearBump)) }
+        compose.onNodeWithContentDescription(
+            "goblet squat, 2 of 3 clean sets, next at 25 pounds, as of Sun 4 Oct"
+        ).assertIsDisplayed()
+        shoot("39-since-band-old-hard")
+    }
+
+    @Test
     fun `a band cut short by a sheet that didn't read says so`() {
         compose.setContent { SinceScreen(since.copy(nearBump = emptyList(), bandCut = true)) }
         compose.onNodeWithText("Part way to a bump".uppercase()).assertIsDisplayed()
