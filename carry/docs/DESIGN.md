@@ -544,12 +544,15 @@ Three rules, and a review of the first version found it breaking all three.
   catch that and failed both ways: it missed "deadlift twenty six" and
   "½ rack", and flagged real movements like "bicep curl 21s" and "90/90
   hip stretch". madCode's call, 2026-10-16: "show the typed name back, no
-  digit check". So after a save, a line under the Saved button reads
+  digit check". So after a save, a line just above the Saved button reads
   *You typed: "deadlift twenty six". Is the weight in the weight box?*,
   naming every typed name. It is a line, not a dialog: a dialog on every
-  save with an added row is one the owner learns to dismiss unread, and
-  the line stays until the next edit. It is announced politely, so
-  TalkBack reads it without moving focus. Carry matches nothing and the
+  save with an added row is one the owner learns to dismiss unread. It
+  sits in the button's own list item, where the owner just tapped, and it
+  shows with "Saved" and goes with it (the next edit, or a re-read on
+  returning to the app). It is announced politely, so TalkBack reads it
+  without moving focus. Each name is shown on one line, as a directional
+  isolate, and cut with an ellipsis only past 200 characters. Carry matches nothing and the
   file is unchanged. The caption over the post says what is true: "The
   movements only. A name you typed goes out as you typed it."
 - **It is built from fields this app owns.** `canonical` and `components`

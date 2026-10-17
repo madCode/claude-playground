@@ -319,6 +319,10 @@ These are the open paths to one, hardest first.
 ### Owed on a device
 
 Only a real phone can answer these.
+- [ ] **TalkBack reads "You typed: …" when it appears after Save.** The
+  test proves the line is a polite live region, not that TalkBack speaks
+  it. With TalkBack on: add a row, type a name, save, and listen *(due
+  with the typed-name change)*
 - [ ] A persisted tree permission surviving `adb install -r`, which can revoke it
   and look exactly like a first run. Partly done 2026-10-12 **on an emulator**: the
   grant was taken through the real picker and held across a force-stop and
