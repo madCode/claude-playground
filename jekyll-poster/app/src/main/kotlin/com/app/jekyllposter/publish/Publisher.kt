@@ -72,13 +72,12 @@ class Publisher(
         // Sent at a random time and woken early: not yet. Nothing is read or sent before then.
         if ((draft.sendAfter ?: 0) > now().toInstant().toEpochMilli()) return Outcome.Retry
         val verb = if (draft.destination == Destination.Delete) "delete" else "publish"
-        val account = accounts.current() ?: return fail(draft, "Sign in to $verb.")
-        if (draft.blog != null && draft.blog != account.blogKey) {
-            return fail(draft, "This post was written for ${draft.blog.substringBefore('@')}. Sign in to that blog to $verb it.")
-        }
+        // To the blog it was written for, open or not, with that blog's own sign-in.
+        val account = (draft.blog ?: accounts.currentKey())?.let { accounts.forBlog(it) }
+            ?: return fail(draft, draft.blog?.let { "This post was written for ${it.substringBefore('@')}. Sign in to that blog to $verb it." } ?: "Sign in to $verb.")
         val blog = blogs.blog(account)
         return try {
-            val index = blogs.refresh() ?: return Outcome.Retry
+            val index = blogs.refresh(blog)
             val editing = draft.editingPath
             val moving = editing != null && PostPath(editing).isDraft && draft.destination == Destination.Posts
             val plan = when {
@@ -98,8 +97,8 @@ class Publisher(
             // The title stays in the history after the post is deleted; a plain message names nothing.
             val message = if (settings.plainCommitMessages()) "Update blog" else plan.message
             val sha = blog.commit(message, plan.changes, plan.expect, author)
-            if (draft.destination == Destination.Delete) return deleted(draft, plan.path)
-            published(drafts.get(id) ?: draft, plan.path, sha, plan.date?.let { postUrl(index, plan.path, it, plan.draft) })
+            if (draft.destination == Destination.Delete) return deleted(draft, plan.path, blog)
+            published(drafts.get(id) ?: draft, plan.path, sha, plan.date?.let { postUrl(index, plan.path, it, plan.draft) }, blog)
         } catch (e: GitHubException) {
             when {
                 e.kind == GitHubException.Kind.Changed -> null
@@ -132,7 +131,7 @@ class Publisher(
         // Checked before the conflict rule: after a crash, the post on GitHub may be this very
         // edit, which no longer has the sha the writer opened.
         if (current.text == PostWriter.edit(FrontMatterDocument.parse(current.text), draft.content()).render()) {
-            return Plan.Finished(published(draft, path, null, null))
+            return Plan.Finished(published(draft, path, null, null, blog))
         }
         if (current.sha != draft.baseSha) return Plan.Finished(fail(draft, CHANGED))
         // The same clock as a new post's date, so a photo lands in the year folder its post would.
@@ -161,7 +160,7 @@ class Publisher(
     private suspend fun planDelete(draft: Draft, path: String, blog: Blog): Plan {
         val current = blog.file(path)
         if (current == null) {
-            if (draft.targetPath == path) return Plan.Finished(deleted(draft, path))
+            if (draft.targetPath == path) return Plan.Finished(deleted(draft, path, blog))
             return Plan.Finished(fail(draft, "This post isn't at $path any more: it was moved or deleted elsewhere. Discard this, then look for it on the blog."))
         }
         if (current.sha != draft.baseSha) {
@@ -178,11 +177,11 @@ class Publisher(
      * The post is off the blog; so is the phone's record of it, any photo it was waiting to send,
      * and earlier published updates of it, whose build watch would otherwise call it live.
      */
-    private suspend fun deleted(draft: Draft, path: String): Outcome {
+    private suspend fun deleted(draft: Draft, path: String, blog: Blog): Outcome {
         (drafts.get(draft.id) ?: draft).images.forEach { File(it.file).delete() }
         drafts.delete(draft.id)
         draft.blog?.let { drafts.deletePublishedEditsOf(path, it) }
-        runCatching { blogs.refresh() }
+        runCatching { blogs.refresh(blog) }
         return Outcome.Done
     }
 
@@ -194,7 +193,7 @@ class Publisher(
             // attempt landed; otherwise it was published or deleted elsewhere, and the phone's
             // changes (and photos) are kept for the writer rather than marked done.
             val target = draft.targetPath?.takeIf { it in index.paths }?.let { blog.file(it) }
-            if (target != null && target.sha in draft.sentShas) return Plan.Finished(published(draft, draft.targetPath!!, null, null))
+            if (target != null && target.sha in draft.sentShas) return Plan.Finished(published(draft, draft.targetPath!!, null, null, blog))
             return Plan.Finished(fail(draft, "This draft isn't in _drafts any more: it was published or removed elsewhere. Copy your text to keep it."))
         }
         if (current.sha != draft.baseSha) return Plan.Finished(fail(draft, CHANGED))
@@ -223,7 +222,7 @@ class Publisher(
         var fixed = fixTarget(draft, index)
         var date = fixedDate(fixed, index)
         val there = fixed.targetPath!!.takeIf { it in index.paths }?.let { blog.file(it) }
-        if (there?.text == render(fixed, date)) return Plan.Finished(published(fixed, fixed.targetPath!!, null, postUrl(index, fixed.targetPath!!, date, fixed)))
+        if (there?.text == render(fixed, date)) return Plan.Finished(published(fixed, fixed.targetPath!!, null, postUrl(index, fixed.targetPath!!, date, fixed), blog))
         // The file is there but different. If it's what this post last sent, an earlier attempt
         // landed unheard and the writer has edited since: update it. Otherwise the name was taken
         // by something else meanwhile: pick another.
@@ -291,7 +290,7 @@ class Publisher(
     }
 
     /** Marks the post published; [sha] is null when an earlier attempt's commit had already landed. */
-    private suspend fun published(draft: Draft, path: String, sha: String?, url: String?): Outcome {
+    private suspend fun published(draft: Draft, path: String, sha: String?, url: String?, blog: Blog): Outcome {
         val latest = drafts.get(draft.id) ?: draft
         drafts.update(
             latest.copy(
@@ -308,7 +307,7 @@ class Publisher(
         )
         // The photos are on the blog now; the preview loads them from there.
         latest.images.forEach { File(it.file).delete() }
-        runCatching { blogs.refresh() }
+        runCatching { blogs.refresh(blog) }
         return Outcome.Done
     }
 

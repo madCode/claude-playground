@@ -31,26 +31,37 @@
   - `images/` and `io/`: `Gif` (a GIF without its metadata blocks), `readAtMost`.
   - `blog/`: `Blog` ties one repository and branch together: `index()` reads the posts,
     taxonomy, config and image folder, reusing summaries for unchanged blobs.
-  - Test fixtures: `FakeGitHub`, a MockWebServer that serves one repository with real commits,
-    and `FakeVpn`, a VPN tests turn on and off.
+  - Test fixtures: `FakeGitHub`, a MockWebServer that serves a repository with real commits
+    (`addRepository` serves another beside it), and `FakeVpn`, a VPN tests turn on and off.
 
 - **`:app`** (Android):
-  - `data/`: `AccountStore` (DataStore, token sealed by `SecretCipher`), `Settings` (the
-    writer's privacy switches and the Obsidian vault folder), Room (`Draft` for posts written on the phone, `CachedPost` for
-    the blog's posts as last read; `PosterDatabase.create` with its migrations),
-    `BlogRepository` (refreshing that cache, the taxonomy, the site's config and address, which
-    posts a `[[link]]` can reach). `AndroidVpn` is `Vpn` from the phone's default network.
+  - `data/`: Room, created by `PosterDatabase.create` with its migrations:
+    - `Draft`: posts written on the phone, each with its blog's key (`owner/repo@branch`).
+    - `SignIn`: a token or a GitHub App sign-in, its tokens sealed by `SecretCipher`.
+    - `SavedBlog`: a blog, keyed `owner/repo@branch`, and the sign-in that posts to it.
+    - `CachedPost`: each blog's posts as last read, keyed by blog and path.
+  - `AccountStore`: reads a blog with its sign-in as an `Account`. Which blog is open is a
+    DataStore value; `current()` is that blog's, `forBlog(key)` any blog's. Either renews its
+    sign-in's token on use, under one lock with saving and signing out. Switch blog adds a blog
+    under the open one's sign-in; the blog left stays. On first use it moves the account an older
+    version kept in DataStore into the tables, once, and gives drafts with no blog its key.
+  - `BlogRepository`: refreshes a blog's cached posts, and holds the open blog's taxonomy, config,
+    address and paths. `refresh(blog)` reads any blog, for a post going out to it, but changes
+    those only when it's the open one.
+  - `Settings` (the writer's privacy switches and the Obsidian vault folder). `AndroidVpn` is
+    `Vpn` from the phone's default network.
   - `data/ObsidianVault`: lists the vault folder the writer picked, through the Storage Access
     Framework, for a note's `![[photo]]`. The editor imports what it finds like any photo.
   - `data/ImageImporter`: a picked, shared or camera photo → upright, scaled, re-encoded file in
     app storage. Camera photos arrive in `cache/camera/` through a FileProvider and are deleted
     once imported.
-  - `publish/`: `Publisher` (the rules for sending a queued post, one at a time: it plans a new
-    post, an edit, a move out of `_drafts` or a delete, then commits the plan),
+  - `publish/`: `Publisher` (the rules for sending a queued post, one at a time, to the post's
+    own blog with its sign-in: it plans a new post, an edit, a move out of `_drafts` or a
+    delete, then commits the plan),
     `PublishQueue` (where queued posts are handed over; `WorkManagerQueue` in the app),
     `PublishWorker` (WorkManager: needs a network, waits for a post's random time and the VPN,
-    exponential backoff), `BuildWatcher` and `BuildWatchWorker` (polls the Pages run for the
-    post's commit), `Notifier`.
+    exponential backoff), `BuildWatcher` and `BuildWatchWorker` (polls the post's blog's Pages
+    run for its commit), `Notifier`.
   - `ui/`: Compose screens with a ViewModel each: `connect`, `home`, `editor` (the screen, its
     fields, toolbar, preview with `PreviewFetcher`, and term picker in their own files),
     `settings` (with `BlogPrivacy`). `catching` is `runCatching` that lets cancellation through.

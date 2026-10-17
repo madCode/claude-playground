@@ -26,7 +26,8 @@ class BuildWatcher(
         val draft = drafts.get(id) ?: return true
         val sha = draft.commitSha ?: return true
         if (draft.buildState != BuildState.Building) return true
-        val account = accounts.current() ?: return true
+        // Asked of the blog the post went to, open or not; signed out of it, there's no asking.
+        val account = (draft.blog ?: accounts.currentKey())?.let { accounts.forBlog(it) } ?: return true
         val state = try {
             // Only the Pages deployment says whether the post is live: a failing test or lint
             // workflow on the same commit doesn't. GitHub's own is "pages build and deployment";

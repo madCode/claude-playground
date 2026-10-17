@@ -2,6 +2,7 @@ package com.app.jekyllposter.ui.editor
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
 import com.app.jekyllposter.ui.home.HomeViewModel
@@ -30,7 +31,7 @@ class EditLeftUnchangedTest {
     @After fun close() = app.github.close()
 
     private fun openReadingList(): EditorViewModel {
-        val post = runBlocking { c.database.posts().snapshot() }.first { it.path == "_posts/2025-04-20-reading-list.md" }
+        val post = runBlocking { c.database.posts().snapshot(SAMPLE_BLOG) }.first { it.path == "_posts/2025-04-20-reading-list.md" }
         var id: Long? = null
         HomeViewModel(c).edit(post) { id = it }
         idleUntil(10_000) { id != null }

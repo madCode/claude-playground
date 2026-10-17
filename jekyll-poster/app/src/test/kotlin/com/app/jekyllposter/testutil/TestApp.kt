@@ -19,6 +19,9 @@ import java.util.concurrent.CopyOnWriteArrayList
 import javax.crypto.spec.SecretKeySpec
 import kotlinx.coroutines.runBlocking
 
+/** The sample blog's key ([com.app.jekyllposter.data.Account.blogKey]), as [TestApp.signIn] opens it. */
+const val SAMPLE_BLOG = "sample/sample-blog@main"
+
 fun testCipher() = AesGcmCipher { SecretKeySpec(ByteArray(32) { it.toByte() }, "AES") }
 
 /**

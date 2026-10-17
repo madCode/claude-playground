@@ -4,13 +4,16 @@ import android.content.Context
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Relation
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.Transaction
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import androidx.room.Update
@@ -144,11 +147,13 @@ data class DraftImage(
     val file: String,
 )
 
-/** A post already on the blog, as last read, keyed by blob sha so unchanged posts aren't fetched again. */
-@Entity(tableName = "posts")
+/** A post already on a blog, as last read, keyed by blob sha so unchanged posts aren't fetched again. */
+// By path, not sha: two posts with identical bytes share a blob sha.
+@Entity(tableName = "posts", primaryKeys = ["blog", "path"])
 data class CachedPost(
-    // By path: two posts with identical bytes share a blob sha.
-    @PrimaryKey val path: String,
+    /** The blog it's on ([Account.blogKey]). */
+    val blog: String,
+    val path: String,
     val sha: String,
     val title: String,
     val categories: List<String>,
@@ -218,41 +223,153 @@ interface DraftDao {
 
 @Dao
 interface PostDao {
-    @Query("SELECT * FROM posts ORDER BY date DESC, path DESC")
-    fun all(): Flow<List<CachedPost>>
+    @Query("SELECT * FROM posts WHERE blog = :blog ORDER BY date DESC, path DESC")
+    fun all(blog: String): Flow<List<CachedPost>>
 
-    @Query("SELECT * FROM posts")
-    suspend fun snapshot(): List<CachedPost>
+    @Query("SELECT * FROM posts WHERE blog = :blog")
+    suspend fun snapshot(blog: String): List<CachedPost>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(posts: List<CachedPost>)
 
-    @Query("DELETE FROM posts WHERE path IN (:paths)")
-    suspend fun deletePaths(paths: List<String>)
+    @Query("DELETE FROM posts WHERE blog = :blog AND path IN (:paths)")
+    suspend fun deletePaths(blog: String, paths: List<String>)
 
-    @Query("DELETE FROM posts")
-    suspend fun clear()
+    @Query("DELETE FROM posts WHERE blog IN (:blogs)")
+    suspend fun clear(blogs: List<String>)
+}
+
+/** How a [SignIn] was made: a pasted token, or "Sign in with GitHub" (the GitHub App). */
+enum class SignInKind { Token, GitHubApp }
+
+/** A GitHub sign-in. Its tokens are sealed by [SecretCipher] and Base64-encoded. */
+@Entity(tableName = "sign_ins")
+data class SignIn(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val login: String,
+    val kind: SignInKind,
+    val sealedToken: String,
+    val sealedRefreshToken: String? = null,
+    /** When the token expires (epoch ms); null for one that doesn't. */
+    val expiresAt: Long? = null,
+)
+
+/** A blog the app can post to, and the [SignIn] it posts with. */
+@Entity(tableName = "blogs")
+data class SavedBlog(
+    /** [Account.blogKey]: `owner/repo@branch`. */
+    @PrimaryKey val blogKey: String,
+    val owner: String,
+    val repo: String,
+    val branch: String,
+    val siteUrl: String? = null,
+    val signInId: Long,
+)
+
+/** A blog with its sign-in. */
+data class BlogWithSignIn(
+    @Embedded val blog: SavedBlog,
+    @Relation(parentColumn = "signInId", entityColumn = "id") val signIn: SignIn?,
+)
+
+/** The sign-ins and blogs behind [AccountStore]. */
+@Dao
+abstract class AccountDao {
+    @Transaction
+    @Query("SELECT * FROM blogs WHERE blogKey = :key")
+    abstract suspend fun get(key: String): BlogWithSignIn?
+
+    @Transaction
+    @Query("SELECT * FROM blogs WHERE blogKey = :key")
+    abstract fun watch(key: String): Flow<BlogWithSignIn?>
+
+    @Query("SELECT * FROM blogs WHERE blogKey = :key")
+    abstract suspend fun blog(key: String): SavedBlog?
+
+    @Query("SELECT * FROM sign_ins WHERE id = :id")
+    abstract suspend fun signIn(id: Long): SignIn?
+
+    @Insert
+    abstract suspend fun insert(signIn: SignIn): Long
+
+    /** The number of rows changed: none when the sign-in was removed meanwhile. */
+    @Update
+    abstract suspend fun update(signIn: SignIn): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun upsert(blog: SavedBlog)
+
+    @Query("SELECT blogKey FROM blogs WHERE signInId = :signInId")
+    abstract suspend fun blogsOf(signInId: Long): List<String>
+
+    @Query("DELETE FROM blogs WHERE signInId = :signInId")
+    abstract suspend fun deleteBlogsOf(signInId: Long)
+
+    @Query("DELETE FROM sign_ins WHERE id = :id")
+    abstract suspend fun deleteSignIn(id: Long)
+
+    /** Sign-ins no blog uses any more, e.g. one replaced by signing in to its blog afresh. */
+    @Query("DELETE FROM sign_ins WHERE id NOT IN (SELECT signInId FROM blogs)")
+    abstract suspend fun deleteUnused()
+
+    /** Drafts saved before they had a blog, given [key]'s. */
+    @Query("UPDATE drafts SET blog = :key WHERE blog IS NULL")
+    abstract suspend fun adoptDrafts(key: String)
+
+    /** [signIn] posting to [blog], replacing any sign-in [blog] had; the sign-in's id. */
+    @Transaction
+    open suspend fun signInTo(signIn: SignIn, blog: SavedBlog): Long {
+        val id = insert(signIn)
+        upsert(blog.copy(signInId = id))
+        deleteUnused()
+        return id
+    }
+
+    /**
+     * The account from before sign-ins had a table: its sign-in and blog, written once however
+     * often this runs (it's run again if the app was stopped before the old record was cleared),
+     * and the drafts with no blog given it.
+     */
+    @Transaction
+    open suspend fun importAccount(signIn: SignIn, blog: SavedBlog) {
+        val existing = blog(blog.blogKey)?.signInId?.takeIf { signIn(it) != null }
+        val id = if (existing != null) existing.also { update(signIn.copy(id = it)) } else insert(signIn)
+        upsert(blog.copy(signInId = id))
+        adoptDrafts(blog.blogKey)
+    }
+
+    /** Removes [signInId] and its blogs; the keys of the blogs removed. */
+    @Transaction
+    open suspend fun remove(signInId: Long): List<String> {
+        val keys = blogsOf(signInId)
+        deleteBlogsOf(signInId)
+        deleteSignIn(signInId)
+        return keys
+    }
 }
 
 class Converters {
     @TypeConverter fun fromDestination(d: Destination): String = d.name
     @TypeConverter fun toDestination(s: String): Destination = Destination.valueOf(s)
+    @TypeConverter fun fromKind(k: SignInKind): String = k.name
+    @TypeConverter fun toKind(s: String): SignInKind = SignInKind.valueOf(s)
     @TypeConverter fun fromList(list: List<String>): String = Json.encodeToString(list)
     @TypeConverter fun toList(json: String): List<String> = Json.decodeFromString(json)
     @TypeConverter fun fromImages(list: List<DraftImage>): String = Json.encodeToString(list)
     @TypeConverter fun toImages(json: String): List<DraftImage> = Json.decodeFromString(json)
 }
 
-@Database(entities = [Draft::class, CachedPost::class], version = 5)
+@Database(entities = [Draft::class, CachedPost::class, SignIn::class, SavedBlog::class], version = 6)
 @TypeConverters(Converters::class)
 abstract class PosterDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
     abstract fun posts(): PostDao
+    abstract fun accounts(): AccountDao
 
     companion object {
         /** The app's database, brought up to date from any version a debug build has shipped. */
         fun create(context: Context): PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
     }
 }
 
@@ -294,5 +411,28 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
 val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE drafts ADD COLUMN sendAfter INTEGER")
+    }
+}
+
+/**
+ * Sign-ins and blogs get tables of their own (the account still in DataStore is moved into them
+ * on first use, by [AccountStore]), and the post cache a blog column. The cache is rebuilt: the
+ * next read of the blog fills it again.
+ */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `sign_ins` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `login` TEXT NOT NULL, " +
+                "`kind` TEXT NOT NULL, `sealedToken` TEXT NOT NULL, `sealedRefreshToken` TEXT, `expiresAt` INTEGER)",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `blogs` (`blogKey` TEXT NOT NULL, `owner` TEXT NOT NULL, `repo` TEXT NOT NULL, " +
+                "`branch` TEXT NOT NULL, `siteUrl` TEXT, `signInId` INTEGER NOT NULL, PRIMARY KEY(`blogKey`))",
+        )
+        db.execSQL("DROP TABLE posts")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `posts` (`blog` TEXT NOT NULL, `path` TEXT NOT NULL, `sha` TEXT NOT NULL, `title` TEXT NOT NULL, " +
+                "`categories` TEXT NOT NULL, `tags` TEXT NOT NULL, `published` INTEGER NOT NULL, `date` TEXT, PRIMARY KEY(`blog`, `path`))",
+        )
     }
 }

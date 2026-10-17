@@ -9,27 +9,36 @@ import com.app.jekyllposter.core.jekyll.SiteConfig
 import com.app.jekyllposter.core.jekyll.Taxonomy
 import java.time.LocalDate
 import java.time.ZoneOffset
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 
-/** The signed-in blog: its posts as last read, and fresh reads from GitHub. */
+/**
+ * The writer's blogs: each one's posts as last read, and fresh reads from GitHub. What it holds in
+ * memory (the site's config, address, image folder and paths) is the open blog's; reading another
+ * blog, for a post going out to it, leaves that alone.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
 class BlogRepository(
     private val accounts: AccountStore,
     private val posts: PostDao,
     private val clientFor: (Account) -> GitHubClient,
 ) {
-    val cachedPosts: Flow<List<CachedPost>> = posts.all()
+    /** The open blog's posts as last read. */
+    val cachedPosts: Flow<List<CachedPost>> = accounts.currentKey.flatMapLatest { key -> key?.let { posts.all(it) } ?: flowOf(emptyList()) }
 
     /** Categories and tags from the posts as last read, for the editor's pickers. */
-    val taxonomy: Flow<Taxonomy> = posts.all().map { list -> Taxonomy.of(list.map { it.toSummary() }) }
+    val taxonomy: Flow<Taxonomy> = cachedPosts.map { list -> Taxonomy.of(list.map { it.toSummary() }) }
 
+    /** The open blog. */
     suspend fun blog(): Blog? = accounts.current()?.let { blog(it) }
 
     fun blog(account: Account) = Blog(clientFor(account), account.owner, account.repo, account.branch)
 
-    /** Reads the blog again, fetching only posts that changed, and keeps the result. */
     private val _config = MutableStateFlow(SiteConfig())
 
     /** The blog's `_config.yml` as last read; defaults until the first read. */
@@ -53,31 +62,47 @@ class BlogRepository(
     @Volatile var paths: Set<String> = emptySet()
         private set
 
-    suspend fun refresh(): SiteIndex? {
-        val blog = blog() ?: return null
-        val known = posts.snapshot().associate { it.path to it.toSummary() }
+    /** Reads the open blog again; see [refresh]. */
+    suspend fun refresh(): SiteIndex? = blog()?.let { refresh(it) }
+
+    /**
+     * Reads [blog] again, fetching only posts that changed, and keeps the result: its posts for
+     * it, and the rest only if it's the open blog.
+     */
+    suspend fun refresh(blog: Blog): SiteIndex {
+        val key = blog.key
+        val known = posts.snapshot(key).associate { it.path to it.toSummary() }
         val index = blog.index(known)
-        val cached = index.posts.map { it.toCached() }
+        // Signed out of it while reading: what's kept of a blog goes with its sign-in.
+        if (!accounts.has(key)) return index
+        val cached = index.posts.map { it.toCached(key) }
         posts.insertAll(cached)
-        val gone = posts.snapshot().map { it.path } - cached.map { it.path }.toSet()
+        val gone = posts.snapshot(key).map { it.path } - cached.map { it.path }.toSet()
         // In chunks: older Android's SQLite takes at most 999 values in one statement.
-        gone.chunked(500).forEach { posts.deletePaths(it) }
-        _config.value = index.config
-        _imageFolder.value = index.imageFolder
-        _siteUrl.value = index.siteUrl
-        paths = index.paths
-        postUrlHasBaseurl = index.postUrlHasBaseurl
+        gone.chunked(500).forEach { posts.deletePaths(key, it) }
+        if (accounts.currentKey() == key) {
+            _config.value = index.config
+            _imageFolder.value = index.imageFolder
+            _siteUrl.value = index.siteUrl
+            paths = index.paths
+            postUrlHasBaseurl = index.postUrlHasBaseurl
+        }
         return index
     }
 
-    /** Forgets the blog: a new one starts with no posts, title, address or image folder from the last. */
-    suspend fun clear() {
-        posts.clear()
+    /** Forgets the open blog's title, address and image folder, for another blog to start without them. */
+    fun clear() {
         _config.value = SiteConfig()
         _siteUrl.value = null
         _imageFolder.value = "assets/images"
         paths = emptySet()
         postUrlHasBaseurl = false
+    }
+
+    /** Forgets [keys]' posts, and the open blog's details: they were signed out of. */
+    suspend fun forget(keys: List<String>) {
+        posts.clear(keys)
+        clear()
     }
 
     /**
@@ -90,7 +115,10 @@ class BlogRepository(
             .sortedByDescending { PostPath(it.path).date }
     }
 
-    private fun PostSummary.toCached() = CachedPost(path.path, sha, title, categories, tags, published, path.date?.toString())
+    private fun PostSummary.toCached(blog: String) = CachedPost(blog, path.path, sha, title, categories, tags, published, path.date?.toString())
 }
 
 fun CachedPost.toSummary() = PostSummary(PostPath(path), sha, title, categories, tags, published)
+
+/** Which blog this is, as [Account.blogKey] names it. */
+val Blog.key: String get() = "$owner/$name@$branch"

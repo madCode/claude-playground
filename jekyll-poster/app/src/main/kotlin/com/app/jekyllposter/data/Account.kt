@@ -11,11 +11,17 @@ import com.app.jekyllposter.core.github.DeviceFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
-/** Who is signed in and which blog they post to. */
+/** A blog and the sign-in that posts to it. */
 data class Account(
     val login: String,
     val token: String,
@@ -34,80 +40,175 @@ data class Account(
     val blogKey: String get() = "$owner/$repo@$branch"
 }
 
+/** Holds which blog is open, and, until it's moved into the database, the account from before. */
 val Context.accountDataStore: DataStore<Preferences> by preferencesDataStore(name = "account")
 
 /**
- * The account, with its token sealed by [cipher]. A token that can't be unsealed (the Keystore
- * key went away, e.g. after a restore onto a new phone) reads as signed out, not as a crash.
+ * The writer's sign-ins and blogs, from the database, and which blog is open, from [store]. Each
+ * is read as an [Account]: a blog with its sign-in. A token that can't be unsealed by [cipher]
+ * (the Keystore key went away, e.g. after a move to a new phone) reads as signed out, not as a crash.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class AccountStore(
     private val store: DataStore<Preferences>,
+    private val dao: AccountDao,
     private val cipher: SecretCipher,
     /** Renews a "Sign in with GitHub" token; absent when the app has no GitHub App configured. */
     private val refresh: (suspend (String) -> DeviceFlow.Tokens)? = null,
     private val now: () -> Long = System::currentTimeMillis,
 ) {
-    val account: Flow<Account?> = store.data.map { read(it) }
+    /** The open blog's key ([Account.blogKey]), or null when signed out. */
+    val currentKey: Flow<String?> = flow {
+        imported()
+        emitAll(store.data.map { it[CURRENT] }.distinctUntilChanged())
+    }
+
+    /** The open blog and its sign-in. */
+    val account: Flow<Account?> = currentKey.flatMapLatest { key ->
+        if (key == null) flowOf(null) else dao.watch(key).map { it?.let(::read) }
+    }
+
     /**
      * Held while renewing, saving and signing out, so a renewal that finishes after the writer
-     * signed out or picked another blog can't write the old account back.
+     * signed out can't write the old sign-in back.
      */
     private val lock = Mutex()
 
+    suspend fun currentKey(): String? = currentKey.first()
+
     /**
-     * The account, its token renewed first if it expires within five minutes. If renewing fails
-     * the old token is returned, and GitHub's answer to it says to sign in again.
+     * The open blog's account, its token renewed first if it expires within five minutes. If
+     * renewing fails the old token is returned, and GitHub's answer to it says to sign in again.
      */
-    suspend fun current(): Account? = lock.withLock {
-        val account = account.first() ?: return null
+    suspend fun current(): Account? = lock.withLock { currentKey()?.let { renewed(it) } }
+
+    /**
+     * Blog [key]'s account, open or not, renewed as [current]'s is; null when it has no sign-in
+     * any more (signed out).
+     */
+    suspend fun forBlog(key: String): Account? = lock.withLock {
+        imported()
+        renewed(key)
+    }
+
+    private suspend fun renewed(key: String): Account? {
+        val row = dao.get(key) ?: return null
+        val account = read(row) ?: return null
         val expiresAt = account.expiresAt ?: return account
         val refreshToken = account.refreshToken ?: return account
         if (expiresAt - now() > 5 * 60_000) return account
         val tokens = runCatching { refresh?.invoke(refreshToken) }.getOrNull() ?: return account
         val renewed = account.withTokens(tokens, now())
-        write(renewed)
-        renewed
+        dao.update(sealed(renewed).copy(id = row.blog.signInId))
+        return renewed
     }
 
-    suspend fun save(account: Account) = lock.withLock { write(account) }
-
-    private suspend fun write(account: Account) {
-        val sealed = Base64.encodeToString(cipher.encrypt(account.token.toByteArray()), Base64.NO_WRAP)
-        val sealedRefresh = account.refreshToken?.let { Base64.encodeToString(cipher.encrypt(it.toByteArray()), Base64.NO_WRAP) }
-        store.edit {
-            it[LOGIN] = account.login
-            it[TOKEN] = sealed
-            if (sealedRefresh != null) it[REFRESH] = sealedRefresh else it.remove(REFRESH)
-            if (account.expiresAt != null) it[EXPIRES] = account.expiresAt else it.remove(EXPIRES)
-            it[OWNER] = account.owner
-            it[REPO] = account.repo
-            it[BRANCH] = account.branch
-            if (account.siteUrl != null) it[SITE_URL] = account.siteUrl else it.remove(SITE_URL)
-        }
-    }
-
-    suspend fun signOut() = lock.withLock {
-        store.edit { it.clear() }
+    /** A fresh sign-in to [account]'s blog, which becomes the open one. */
+    suspend fun save(account: Account) = lock.withLock {
+        imported()
+        dao.signInTo(sealed(account), account.savedBlog())
+        store.edit { it[CURRENT] = account.blogKey }
         Unit
     }
 
-    private fun read(prefs: Preferences): Account? {
-        val token = prefs[TOKEN]?.let { sealed ->
-            runCatching { String(cipher.decrypt(Base64.decode(sealed, Base64.NO_WRAP))) }.getOrNull()
-        } ?: return null
+    /**
+     * Opens another blog with the open blog's sign-in. The blog left keeps its sign-in, so posts
+     * still waiting for it go out to it. False when signed out meanwhile.
+     */
+    suspend fun switchTo(owner: String, repo: String, branch: String, siteUrl: String?): Boolean = lock.withLock {
+        val signInId = currentKey()?.let { dao.blog(it) }?.signInId ?: return@withLock false
+        val blog = SavedBlog("$owner/$repo@$branch", owner, repo, branch, siteUrl, signInId)
+        dao.upsert(blog)
+        store.edit { it[CURRENT] = blog.blogKey }
+        true
+    }
+
+    /**
+     * Signs out of the open blog's sign-in: it goes, with every blog it posts to, whose keys are
+     * returned. Drafts stay.
+     */
+    suspend fun signOut(): List<String> = lock.withLock {
+        val signInId = currentKey()?.let { dao.blog(it) }?.signInId
+        val removed = signInId?.let { dao.remove(it) }.orEmpty()
+        store.edit { it.remove(CURRENT) }
+        removed
+    }
+
+    /** Whether blog [key] still has a sign-in. */
+    suspend fun has(key: String): Boolean = dao.blog(key) != null
+
+    private fun sealed(account: Account) = SignIn(
+        login = account.login,
+        // Only "Sign in with GitHub" gives a refresh token.
+        kind = if (account.refreshToken != null) SignInKind.GitHubApp else SignInKind.Token,
+        sealedToken = seal(account.token),
+        sealedRefreshToken = account.refreshToken?.let(::seal),
+        expiresAt = account.expiresAt,
+    )
+
+    private fun Account.savedBlog() = SavedBlog(blogKey, owner, repo, branch, siteUrl, signInId = 0)
+
+    private fun read(row: BlogWithSignIn): Account? {
+        val signIn = row.signIn ?: return null
+        val blog = row.blog
         return Account(
-            login = prefs[LOGIN] ?: return null,
-            token = token,
-            owner = prefs[OWNER] ?: return null,
-            repo = prefs[REPO] ?: return null,
-            branch = prefs[BRANCH] ?: return null,
-            siteUrl = prefs[SITE_URL],
-            refreshToken = prefs[REFRESH]?.let { runCatching { String(cipher.decrypt(Base64.decode(it, Base64.NO_WRAP))) }.getOrNull() },
-            expiresAt = prefs[EXPIRES],
+            login = signIn.login,
+            token = unseal(signIn.sealedToken) ?: return null,
+            owner = blog.owner,
+            repo = blog.repo,
+            branch = blog.branch,
+            siteUrl = blog.siteUrl,
+            refreshToken = signIn.sealedRefreshToken?.let(::unseal),
+            expiresAt = signIn.expiresAt,
         )
     }
 
+    private fun seal(secret: String) = Base64.encodeToString(cipher.encrypt(secret.toByteArray()), Base64.NO_WRAP)
+
+    private fun unseal(sealed: String) = runCatching { String(cipher.decrypt(Base64.decode(sealed, Base64.NO_WRAP))) }.getOrNull()
+
+    private val importLock = Mutex()
+
+    @Volatile private var importDone = false
+
+    /**
+     * Moves the account kept in [store] before sign-ins had a table into the database, once, before
+     * anything reads the account. Its sealed tokens are copied as they are. The database is written
+     * first and the old record cleared after: stopped in between, the next start writes the same
+     * rows again ([AccountDao.importAccount] doesn't duplicate them) and then clears it.
+     */
+    private suspend fun imported() {
+        if (importDone) return
+        importLock.withLock {
+            if (importDone) return
+            val prefs = store.data.first()
+            val token = prefs[TOKEN]
+            val login = prefs[LOGIN]
+            val owner = prefs[OWNER]
+            val repo = prefs[REPO]
+            val branch = prefs[BRANCH]
+            if (token != null && login != null && owner != null && repo != null && branch != null) {
+                val refreshToken = prefs[REFRESH]
+                val signIn = SignIn(
+                    login = login,
+                    kind = if (refreshToken != null) SignInKind.GitHubApp else SignInKind.Token,
+                    sealedToken = token, sealedRefreshToken = refreshToken, expiresAt = prefs[EXPIRES],
+                )
+                val blog = SavedBlog("$owner/$repo@$branch", owner, repo, branch, prefs[SITE_URL], signInId = 0)
+                dao.importAccount(signIn, blog)
+                store.edit { p ->
+                    p[CURRENT] = blog.blogKey
+                    OLD_KEYS.forEach { p.remove(it) }
+                }
+            }
+            importDone = true
+        }
+    }
+
     private companion object {
+        val CURRENT = stringPreferencesKey("current_blog")
+
+        // The account as kept before sign-ins had a table; read only to move it there.
         val LOGIN = stringPreferencesKey("login")
         val TOKEN = stringPreferencesKey("token")
         val OWNER = stringPreferencesKey("owner")
@@ -116,6 +217,7 @@ class AccountStore(
         val SITE_URL = stringPreferencesKey("site_url")
         val REFRESH = stringPreferencesKey("refresh_token")
         val EXPIRES = longPreferencesKey("expires_at")
+        val OLD_KEYS = listOf(LOGIN, TOKEN, OWNER, REPO, BRANCH, SITE_URL, REFRESH, EXPIRES)
     }
 }
 

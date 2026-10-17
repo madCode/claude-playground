@@ -9,6 +9,7 @@ import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
+import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
 import com.app.jekyllposter.ui.editor.EditorViewModel.TermKind
@@ -43,7 +44,7 @@ class EditorViewModelTest {
     @Test fun editingAPostFromTheListAndUpdatingIt() {
         val home = HomeViewModel(c)
         var id: Long? = null
-        val post = runBlocking { c.database.posts().snapshot() }.first { it.path == "_posts/2025-04-20-reading-list.md" }
+        val post = runBlocking { c.database.posts().snapshot(SAMPLE_BLOG) }.first { it.path == "_posts/2025-04-20-reading-list.md" }
         home.edit(post) { id = it }
         idleUntil { id != null }
         val editor = EditorViewModel(c, id!!)
@@ -62,7 +63,7 @@ class EditorViewModelTest {
         val path = "_posts/2025-01-12-welcome.md"
         app.github.push("Laptop", mapOf(path to "---\ntitle: Welcome back\ncategories: [meta]\n---\n\nFrom the laptop.\n"))
         val home = HomeViewModel(c)
-        val stale = runBlocking { c.database.posts().snapshot() }.first { it.path == path }
+        val stale = runBlocking { c.database.posts().snapshot(SAMPLE_BLOG) }.first { it.path == path }
         var id: Long? = null
         home.edit(stale) { id = it }
         idleUntil { id != null }
@@ -77,7 +78,7 @@ class EditorViewModelTest {
     @Test fun deletingAPostFromTheBlog() {
         val home = HomeViewModel(c)
         var id: Long? = null
-        val post = runBlocking { c.database.posts().snapshot() }.first { it.path == "_posts/2025-04-20-reading-list.md" }
+        val post = runBlocking { c.database.posts().snapshot(SAMPLE_BLOG) }.first { it.path == "_posts/2025-04-20-reading-list.md" }
         home.edit(post) { id = it }
         idleUntil { id != null }
         val editor = EditorViewModel(c, id!!)
@@ -167,7 +168,7 @@ class EditorViewModelTest {
     @Test fun anEditShowsThePostsOtherKeysAndBadYamlStopsPublishing() {
         val home = HomeViewModel(c)
         var id: Long? = null
-        val post = runBlocking { c.database.posts().snapshot() }.first { it.path == "_posts/2025-04-20-reading-list.md" }
+        val post = runBlocking { c.database.posts().snapshot(SAMPLE_BLOG) }.first { it.path == "_posts/2025-04-20-reading-list.md" }
         home.edit(post) { id = it }
         idleUntil { id != null }
         val editor = EditorViewModel(c, id!!)
