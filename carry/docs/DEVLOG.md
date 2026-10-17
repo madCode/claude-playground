@@ -34,11 +34,16 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   again just before writing and refuses if its content differs from what
   the page read, any change at all.
 - The refusal says "This session changed since you opened it", is read
-  out by TalkBack, keeps your numbers, and offers *Use the new sheet
-  instead* beside the button you just tapped.
+  out by TalkBack, keeps your numbers, and offers to drop them for the new sheet
+  beside the button you just tapped.
 - Carry's own earlier save doesn't trip it. A file deleted underneath is
   refused too. After the app is killed, the file read on restore is the
   baseline; a change made while it was dead shows the usual warning.
+- After review: a file that only gained a BOM or CRLF line endings isn't
+  a change. A file that now holds another session leaves your sheet and
+  numbers on screen. A file that stays unreadable is written over on the
+  second tap rather than refused for ever. The drop button is full size,
+  apart from *Try again*, and says it drops your numbers.
 
 ## 2026-10-17 — cycle 65: the bump band keeps an old *hard* row
 

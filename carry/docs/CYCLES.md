@@ -13,6 +13,10 @@ that hold become rules in CLAUDE.md or the cycles skill.
   its default.** `readNow` defaulted to a folder with no grant, which
   reads null; once null meant "refuse", tests that set only `write`
   stopped writing. The `saved()` helper now sets both.
+- **Every refusal needs a way past it that keeps the typing.** The
+  review found a "try again in a moment" that a BOM made permanent, and
+  a re-read that swapped sessions and hid the draft. For each new gate,
+  ask what happens on the tenth tap, and what a re-read puts on screen.
 - **Falsify a choice, not only a check.** The restore test stayed green
   under every break of the new lines; it went red only when the
   alternative baseline (the draft's fingerprint) was swapped in.

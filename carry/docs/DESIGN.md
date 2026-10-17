@@ -222,20 +222,29 @@ numbers someone just entered cannot, so they get the protection:
 - **Never written over a file that changed since it was read** (madCode,
   2026-10-17: "refuse and offer the new sheet"). Just before writing, the
   save reads the file again and compares its content with the bytes on
-  screen, not its timestamp, since sync services touch those. Any
-  difference refuses the save with "This session changed since you opened
-  it", announced to TalkBack, and keeps the typing. The changed file is
-  then read in, which raises the rewritten-session warning, and a *Use the
-  new sheet instead* button sits under the refusal as well as in the
-  warning. A second tap of Save, after the warning, writes onto the new
-  sheet if the rows still line up.
+  screen, not its timestamp, since sync services touch those. A leading
+  BOM, CRLF line endings and JSON formatting don't count as a change.
+  Anything else refuses the save, says so (announced to TalkBack) and
+  keeps the typing:
+  - **The same session, changed**: "This session changed since you opened
+    it". The changed file goes on screen with the rewritten-session
+    warning. A second tap of Save writes onto it if the rows still line
+    up.
+  - **Another session now in that file**: said in those words. The sheet
+    the numbers were typed against stays on screen, so the typing isn't
+    hidden under a different session.
+  - Both offer *Drop my numbers, use the new sheet*, under the refusal and
+    in the warning: a full-size button, well clear of *Try again*, whose
+    label says what it costs.
+  - **A changed file that won't read** (a sync part way through): "wait a
+    moment and tap Try again". If the next tap finds the same unreadable
+    bytes, the file isn't still landing, and the save writes over it: no
+    readable session is lost, and refusing again would leave no way out
+    that keeps the typing.
+  - **A file that can't be read at all** (deleted, moved): refused, typing
+    kept.
   - Carry's own save makes what it wrote the new baseline, so it never
     trips this itself.
-  - A file that can't be read just before the save (deleted, moved) is
-    refused too, with the typing kept.
-  - A changed file that doesn't parse yet (a sync part way through) is
-    refused with "try again in a moment" and no offer, since there is no
-    new sheet to take.
   - After the process dies, the baseline is the file read on restore. A
     change made while the app was dead is caught then, by the draft's
     fingerprint, and shown as the rewritten-session warning.
