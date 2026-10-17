@@ -25,6 +25,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.Shared
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
+import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.ui.theme.PosterTheme
 import kotlinx.coroutines.runBlocking
@@ -299,6 +300,15 @@ class FlowTest {
         compose.onNodeWithText("@sample · signed in with a token").assertExists()
         compose.onNodeWithContentDescription("Open now").assertExists()
         compose.onNodeWithText("Connect with a token").assertDoesNotExist()
+    }
+
+    @Test fun theLastSignInRemovedWhileHomeIsOpenReturnsToConnect() {
+        signIn()
+        start()
+        compose.waitFor("A coastal walk")
+        // As when Back left Your blogs before the removal finished: no screen of its own is left to go.
+        runBlocking { app.container.remove(app.container.database.accounts().blog(SAMPLE_BLOG)!!.signInId) }
+        compose.waitFor("Connect with a token")
     }
 
     @Test fun removingTheLastSignInReturnsToConnect() {
