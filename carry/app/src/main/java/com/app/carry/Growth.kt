@@ -586,6 +586,11 @@ object Growth {
         // and understates, which is the safe direction -- and re-deriving
         // it here is the one thing this file must not do.
         if (set.weight != null && set.weight < weight) return null
+        // A set that hurt ends the runner's streak at any weight, and its
+        // next sheet says hold. Only a set WITH a weight: the streak rules
+        // read nothing else, so a hurt row carrying only reps, a note or
+        // `done` reaches history and leaves the count as it was.
+        if (set.hurt && set.weight != null) return null
         if (done <= 0 || done >= needed) return null
         return Bump(set.displayName, set.family, weight, done, needed, asOf)
     }

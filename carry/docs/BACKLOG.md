@@ -275,11 +275,6 @@ These are the open paths to one, hardest first.
   `Row.answered` ignores `hard` (Growth.kt), so the Since tab leaves that
   session out. One side should change to match the other *(review of
   #136)*
-- [ ] **A row marked *hurt* stays in the "part way to a bump" band.**
-  gym-coach (its #49) now ends a streak at a set that hurt and holds the
-  weight, so a hurt row's count is about to break, the same as a lighter
-  one. Check against the runner first, then treat it like the lighter
-  case *(found dropping the hard check)*
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on
   instructions.** The gate is real but it is counting the wrong thing for
   a codebase this full of fail-closed guards — a third of branches have
@@ -428,6 +423,15 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **A set marked *hurt* leaves the "part way to a bump" band.** The
+  runner ends a streak at a hurt set with a weight and says hold, so the
+  row goes, like a lighter one. A hurt row with no weight stays: its
+  streak rules only read weighted sets, checked through gym-coach's own
+  importer and `suggest`. Left as is: one movement listed twice on a sheet,
+  the first clean and the second hurt, still shows the clean copy's count
+  where the runner breaks it. Which copy the runner reads depends on board
+  order, and a movement twice on one sheet with only one of them hurt is
+  too rare to re-derive that here *(found dropping the hard check)*
 - [x] **The "part way to a bump" band keeps a row an old file marked
   *hard*.** gym-coach stopped reading `hard` (its #50), so a completed set
   counts however it felt and the row's count is as good as any other's
