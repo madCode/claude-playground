@@ -20,7 +20,8 @@ import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.DraftDao
 import com.app.jekyllposter.data.PostState
-import com.app.jekyllposter.data.Settings
+import com.app.jekyllposter.data.Privacy
+import com.app.jekyllposter.data.key
 import java.io.File
 import java.io.IOException
 import java.time.LocalDate
@@ -42,7 +43,7 @@ class Publisher(
     private val drafts: DraftDao,
     private val accounts: AccountStore,
     private val blogs: BlogRepository,
-    private val settings: Settings,
+    private val privacy: Privacy,
     private val now: () -> ZonedDateTime = { ZonedDateTime.now() },
 ) {
     sealed interface Outcome {
@@ -92,12 +93,12 @@ class Publisher(
             plan as Plan.Commit
             // GitHub's errors and storage's fall to the handlers below, as for any other call.
             val author = try {
-                settings.commitAuthor(account.login) { blog.user().noReplyAuthor }
-            } catch (e: Settings.NoAddress) {
+                privacy.commitAuthor(account.blogKey, account.login) { blog.user().noReplyAuthor }
+            } catch (e: Privacy.NoAddress) {
                 return fail(draft, "GitHub didn't give your account's no-reply address. Turn it off in Blog & privacy to publish.")
             }
             // The title stays in the history after the post is deleted; a plain message names nothing.
-            val message = if (settings.plainCommitMessages()) "Update blog" else plan.message
+            val message = if (privacy.get(account.blogKey).plainCommitMessages) "Update blog" else plan.message
             val sha = blog.commit(message, plan.changes, plan.expect, author)
             if (draft.destination == Destination.Delete) return deleted(draft, plan.path, blog)
             published(drafts.get(id) ?: draft, plan.path, sha, plan.date?.let { postUrl(index, plan.path, it, plan.draft) }, blog)
@@ -293,6 +294,8 @@ class Publisher(
 
     /** Marks the post published; [sha] is null when an earlier attempt's commit had already landed. */
     private suspend fun published(draft: Draft, path: String, sha: String?, url: String?, blog: Blog): Outcome {
+        // Its first post: the blog's Blog & privacy stops saying to set the switches first.
+        if (privacy.get(blog.key).isNew) privacy.update(blog.key) { it.copy(isNew = false) }
         val latest = drafts.get(draft.id) ?: draft
         drafts.update(
             latest.copy(
@@ -330,7 +333,7 @@ class Publisher(
         // site's zone is known: a bare day is midnight there, as Jekyll reads it.
         // By the day alone, the day is taken where Jekyll builds (UTC without a site zone), for a
         // note's own date too: a day ahead of it there is in the future, and Jekyll hides the post.
-        val dayOnly = !toDrafts && settings.datesByDayOnly()
+        val dayOnly = !toDrafts && privacy.get(draft.blog).datesByDayOnly
         val where = zone ?: ZoneOffset.UTC.takeIf { dayOnly }
         val noted = draft.noteDate?.let { parseJekyllDate(it, zone ?: ZoneOffset.UTC) }?.let { d -> where?.let { d.withZoneSameInstant(it) } ?: d }
         val date = noted ?: where?.let { now().withZoneSameInstant(it) } ?: now()
@@ -360,7 +363,7 @@ private const val PHOTO_GONE = "A photo in this post is no longer on the phone. 
 private const val CHANGED = "This post changed on GitHub since you opened it. Discard your changes to start again from the new version (copy your text first)."
 
 
-/** Whether [draft]'s date was fixed as a day alone (see [Settings.datesByDayOnly]). */
+/** Whether [draft]'s date was fixed as a day alone (see [BlogPrivacy.datesByDayOnly]). */
 private fun dayOnly(draft: Draft) = draft.publishDate?.length == 10
 
 /** [draft]'s fixed date: a moment, or a day alone, which is midnight in the site's zone (UTC without one), as Jekyll reads it. */

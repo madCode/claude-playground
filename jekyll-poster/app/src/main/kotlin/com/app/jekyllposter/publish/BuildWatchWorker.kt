@@ -18,8 +18,10 @@ class BuildWatchWorker(context: Context, params: WorkerParameters) : CoroutineWo
     override suspend fun doWork(): Result {
         val container = (applicationContext as PosterApp).container
         // No giving up while the writer's VPN is off: the answer is only waiting for it.
-        val giveUp = runAttemptCount >= MAX_ATTEMPTS && !container.waitingForVpn.first()
-        val done = container.buildWatcher.check(inputData.getLong(KEY_ID, -1), giveUp = giveUp)
+        val id = inputData.getLong(KEY_ID, -1)
+        val blog = container.drafts.get(id)?.blog ?: container.accounts.currentKey()
+        val giveUp = runAttemptCount >= MAX_ATTEMPTS && !container.waitingForVpn(blog).first()
+        val done = container.buildWatcher.check(id, giveUp = giveUp)
         return if (done) Result.success() else Result.retry()
     }
 

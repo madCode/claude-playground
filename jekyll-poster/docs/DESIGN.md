@@ -49,8 +49,14 @@ doesn't want to open a laptop and make a commit for every post.
   post goes above its title: `To Night Notes · @inkwell`.
 - A post goes out under its own blog's sign-in, whichever blog is open. A sign-in whose blog
   isn't open makes no requests except for its own post going out and that post's build.
-- The privacy switches are still app-wide; per blog is the next step
-  ([#137](https://github.com/madCode/claude-playground/issues/137)).
+- **Privacy is per blog.** Each blog has its own switches (Blog & privacy, below), and the
+  switcher's rows show the ones that are on, so a pseudonymous blog looks different before it's
+  picked. A blog added beside others starts with every switch off, not copied from the open
+  one, and its Blog & privacy opens straight away, saying so until its first post. The one
+  exception is the VPN switch: it starts on if another blog uses it, so nothing for the new
+  blog leaves from the writer's own address before they've seen its page.
+- Removing a sign-in removes its blogs' switches too. A blog added again starts afresh, and
+  when it still has drafts on the phone its Blog & privacy opens and says so.
 
 ## Reading the blog
 
@@ -262,6 +268,8 @@ doesn't want to open a laptop and make a commit for every post.
 ## Blog & privacy
 
 Every default is what GitHub and Jekyll do on their own; each switch is one step more private.
+The switches are the open blog's own, and the page names it: a post goes out under its own
+blog's switches, whichever blog is open when it goes.
 
 - **Set up for writing anonymously** turns on, after one confirm, every switch below that keeps
   the writer's name, place and habits off the blog: the VPN, the no-reply address, plain
@@ -272,8 +280,14 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
     offers to finish.
 
 - **Only connect through a VPN**, off. On, everything the app sends to GitHub and to the blog's
-  site (sign-in, reading, publishing, the build watch, the preview's photos) goes through the
-  phone's VPN, so they see its address, not the writer's.
+  site for this blog (reading, publishing, the build watch, the preview's photos) goes through
+  the phone's VPN, so they see its address, not the writer's, even while another blog is open.
+  - Signing in and listing a sign-in's repositories aren't for one blog: they go through the VPN
+    if any blog asks for it. Renewing a sign-in's token goes through it if any of that sign-in's
+    blogs asks.
+  - Switching blogs moves the preview to new connections, as turning the switch does.
+  - Switches kept for the whole app by an older version go to every blog on first use; signed
+    out, they wait for the next blog, and the VPN one still covers signing in meanwhile.
   - Each connection is bound to the VPN, and names are looked up through it: if the VPN drops
     mid-request, the request fails rather than going out over Wi-Fi. No SOCKS proxy is used
     (OkHttp would open it around the VPN); an HTTP proxy is reached through the VPN.
@@ -316,7 +330,8 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
   edits and deletes stay in its history, each linking to GitHub.
 - **Beyond the app**, what no switch can do: an account of its own, made with an email and name
   that aren't the writer's; signing in in a private tab; free sites being public repositories;
-  a domain's seller knowing who paid; a theme's analytics seeing the writer on their own posts.
+  a domain's seller knowing who paid; a theme's analytics seeing the writer on their own posts;
+  with two accounts on one phone and no VPN on either, GitHub seeing both from one address.
 
 ## Settings
 - **This blog:** its title, repository, branch and sign-in, and the site's address.

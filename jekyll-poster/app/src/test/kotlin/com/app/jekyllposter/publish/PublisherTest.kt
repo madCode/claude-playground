@@ -34,7 +34,7 @@ class PublisherTest {
     private val c = app.container
     private val github = app.github
     private val evening = ZonedDateTime.of(2026, 10, 4, 22, 15, 0, 0, ZoneId.of("America/Los_Angeles"))
-    private val publisher = Publisher(c.drafts, c.accounts, c.blogs, c.settings) { evening }
+    private val publisher = Publisher(c.drafts, c.accounts, c.blogs, c.privacy) { evening }
 
     @Before fun signIn() = runBlocking {
         app.signIn()
@@ -80,7 +80,7 @@ class PublisherTest {
     @Test fun aPostWrittenAbroadIsDatedInTheSitesTimeZoneNotThePhones() = runBlocking {
         // Tokyo, Monday morning: Sunday evening at the site, in Los Angeles.
         val tokyo = evening.withZoneSameInstant(ZoneId.of("Asia/Tokyo"))
-        val abroad = Publisher(c.drafts, c.accounts, c.blogs, c.settings) { tokyo }
+        val abroad = Publisher(c.drafts, c.accounts, c.blogs, c.privacy) { tokyo }
         val id = queue(Draft(title = "From abroad", body = "Hello."))
         assertEquals(Publisher.Outcome.Done, abroad.publish(id))
         val text = github.text("_posts/2026-10-04-from-abroad.md")!!
@@ -91,7 +91,7 @@ class PublisherTest {
         // GitHub's default: the account, with whatever email its settings give.
         publisher.publish(queue(Draft(title = "Default", body = "x")))
         assertNull(github.commits.getValue(github.head).authorEmail)
-        c.settings.setCommitAsNoReply("sample", CommitAuthor("Sample Writer", "1001+sample@users.noreply.github.com"))
+        c.privacy.setCommitAsNoReply(SAMPLE_BLOG, "sample", CommitAuthor("Sample Writer", "1001+sample@users.noreply.github.com"))
         publisher.publish(queue(Draft(title = "Private", body = "x")))
         assertEquals("1001+sample@users.noreply.github.com", github.commits.getValue(github.head).authorEmail)
         // Signed with the login, never the profile's name, even one kept from before.
@@ -99,7 +99,7 @@ class PublisherTest {
     }
 
     @Test fun plainCommitMessagesNameNoPost() = runBlocking {
-        c.settings.setPlainCommitMessages(true)
+        c.privacy.update(SAMPLE_BLOG) { it.copy(plainCommitMessages = true) }
         publisher.publish(queue(Draft(title = "Something personal", body = "x")))
         assertEquals("Update blog", github.commits.getValue(github.head).message)
     }
@@ -112,13 +112,13 @@ class PublisherTest {
         assertEquals(before, github.head)
         // Not even read: the time GitHub sees anything from the phone is the time it goes out.
         assertEquals(emptyList<String>(), github.log)
-        val later = Publisher(c.drafts, c.accounts, c.blogs, c.settings) { evening.plusMinutes(41) }
+        val later = Publisher(c.drafts, c.accounts, c.blogs, c.privacy) { evening.plusMinutes(41) }
         assertEquals(Publisher.Outcome.Done, later.publish(id))
         assertTrue(github.text("_posts/2026-10-04-later.md")!!.contains("date: 2026-10-04 22:56:00 -0700"))
     }
 
     @Test fun byTheDayOnlyAPostSaysNeitherTimeNorZone() = runBlocking {
-        c.settings.setDatesByDayOnly(true)
+        c.privacy.update(SAMPLE_BLOG) { it.copy(datesByDayOnly = true) }
         val id = queue(Draft(title = "Quiet day", body = "x"))
         assertEquals(Publisher.Outcome.Done, publisher.publish(id))
         // The site's day (Los Angeles), with no time and no offset.
@@ -128,7 +128,7 @@ class PublisherTest {
     @Test fun byTheDayOnlyWithoutASiteZoneItIsTheDayInUtc() = runBlocking {
         github.push("No zone", mapOf("_config.yml" to github.text("_config.yml")!!.lines().filterNot { it.startsWith("timezone:") }.joinToString("\n")))
         c.blogs.refresh()
-        c.settings.setDatesByDayOnly(true)
+        c.privacy.update(SAMPLE_BLOG) { it.copy(datesByDayOnly = true) }
         // 22:15 in Los Angeles is already the 5th in UTC, where GitHub builds: dated the 5th,
         // so the post is never in the future there and hidden.
         assertEquals(Publisher.Outcome.Done, publisher.publish(queue(Draft(title = "Late", body = "x"))))
@@ -138,7 +138,7 @@ class PublisherTest {
     @Test fun byTheDayOnlyANotesOwnDateIsItsDayWhereJekyllBuilds() = runBlocking {
         github.push("No zone", mapOf("_config.yml" to github.text("_config.yml")!!.lines().filterNot { it.startsWith("timezone:") }.joinToString("\n")))
         c.blogs.refresh()
-        c.settings.setDatesByDayOnly(true)
+        c.privacy.update(SAMPLE_BLOG) { it.copy(datesByDayOnly = true) }
         // Morning of the 5th in Tokyo is still the 4th in UTC: the 5th would be a future day there.
         publisher.publish(queue(Draft(title = "Tokyo morning", body = "x", noteDate = "2026-10-05T08:00:00+09:00")))
         assertTrue(github.text("_posts/2026-10-04-tokyo-morning.md")!!.contains("date: 2026-10-04\n"))
@@ -146,7 +146,7 @@ class PublisherTest {
 
     @Test fun byTheDayOnlyAJekyllDraftIsPublishedWithItsDay() = runBlocking {
         c.blogs.refresh()
-        c.settings.setDatesByDayOnly(true)
+        c.privacy.update(SAMPLE_BLOG) { it.copy(datesByDayOnly = true) }
         val path = "_drafts/garden-plans.md"
         val sha = c.database.posts().snapshot(SAMPLE_BLOG).first { it.path == path }.sha
         publisher.publish(queue(Draft(title = "Garden plans", body = "Beans.", editingPath = path, baseSha = sha, destination = Destination.Posts)))
@@ -154,7 +154,7 @@ class PublisherTest {
     }
 
     @Test fun byTheDayOnlyAPostThatLandedUnheardIsNotSentAgain() = runBlocking {
-        c.settings.setDatesByDayOnly(true)
+        c.privacy.update(SAMPLE_BLOG) { it.copy(datesByDayOnly = true) }
         val id = queue(Draft(title = "Once", body = "x"))
         github.loseNextRefAnswer = true
         assertEquals(Publisher.Outcome.Retry, publisher.publish(id))
@@ -164,11 +164,11 @@ class PublisherTest {
     }
 
     @Test fun aDayFixedOnTheFirstTryIsKeptWhateverTheSwitchSaysLater() = runBlocking {
-        c.settings.setDatesByDayOnly(true)
+        c.privacy.update(SAMPLE_BLOG) { it.copy(datesByDayOnly = true) }
         github.failures["repos/sample/sample-blog/git/refs/heads/main"] = 503
         val id = queue(Draft(title = "Retry", body = "x"))
         assertEquals(Publisher.Outcome.Retry, publisher.publish(id))
-        c.settings.setDatesByDayOnly(false)
+        c.privacy.update(SAMPLE_BLOG) { it.copy(datesByDayOnly = false) }
         github.failures.clear()
         assertEquals(Publisher.Outcome.Done, publisher.publish(id))
         assertTrue(github.text("_posts/2026-10-04-retry.md")!!.contains("date: 2026-10-04\n"))
@@ -176,13 +176,13 @@ class PublisherTest {
 
     @Test fun signedInAsSomeoneElseTheirOwnNoReplyAddressIsLookedUp() = runBlocking {
         // Kept from another account; this one's is found once and kept instead.
-        c.settings.setCommitAsNoReply("someone-else", CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
+        c.privacy.setCommitAsNoReply(SAMPLE_BLOG, "someone-else", CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
         publisher.publish(queue(Draft(title = "Mine", body = "x")))
         assertEquals("1001+sample@users.noreply.github.com", github.commits.getValue(github.head).authorEmail)
     }
 
     @Test fun aRejectedSignInDuringTheLookUpSaysToSignInAgain() = runBlocking {
-        c.settings.setCommitAsNoReply("someone-else", CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
+        c.privacy.setCommitAsNoReply(SAMPLE_BLOG, "someone-else", CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
         github.failures["user"] = 401
         val id = queue(Draft(title = "Expired", body = "x"))
         assertTrue(publisher.publish(id) is Publisher.Outcome.Failed)
@@ -190,13 +190,13 @@ class PublisherTest {
     }
 
     @Test fun aLookUpNeverTurnsTheSwitchBackOn() = runBlocking {
-        c.settings.setCommitAsNoReply("someone-else", CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
+        c.privacy.setCommitAsNoReply(SAMPLE_BLOG, "someone-else", CommitAuthor("Them", "7+someone-else@users.noreply.github.com"))
         // The writer turns it off while the address is being looked up.
-        c.settings.commitAuthor("sample") {
-            c.settings.setCommitAsNoReply("sample", null)
+        c.privacy.commitAuthor(SAMPLE_BLOG, "sample") {
+            c.privacy.setCommitAsNoReply(SAMPLE_BLOG, "sample", null)
             CommitAuthor("Sample", "1001+sample@users.noreply.github.com")
         }
-        assertEquals(false, c.settings.commitAsNoReply())
+        assertEquals(false, c.privacy.get(SAMPLE_BLOG).commitAsNoReply)
     }
 
     @Test fun photosTheTextStillUsesGoInThePostsCommit() = runBlocking {

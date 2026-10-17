@@ -258,7 +258,7 @@ class ScreenshotTest {
 
     @Test fun waitingForTheVpn() {
         signIn()
-        runBlocking { c.setOnlyThroughVpn(true) }
+        runBlocking { c.setOnlyThroughVpn(SAMPLE_BLOG, true) }
         app.vpn.up.value = false
         val privacy = BlogPrivacyViewModel(c) { ZoneId.of("Europe/Lisbon") }
         shoot("18-blog-privacy-no-vpn", ready = { privacy.state.value.waitingForVpn && privacy.state.value.visibility != Visibility.Loading }) {
@@ -269,7 +269,7 @@ class ScreenshotTest {
     @Test fun homeWaitingForTheVpn() {
         signIn()
         runBlocking {
-            c.setOnlyThroughVpn(true)
+            c.setOnlyThroughVpn(SAMPLE_BLOG, true)
             c.drafts.insert(Draft(title = "Sourdough, round five", state = PostState.Queued))
         }
         app.vpn.up.value = false
@@ -327,6 +327,10 @@ class ScreenshotTest {
             c.accounts.save(Account("inkwell", "inkwell-token", "inkwell", "night-notes", "main"))
             c.blogs.refresh()
             c.drafts.insert(Draft(blog = "inkwell/night-notes@main", title = "At midnight", state = PostState.Queued, sendAfter = System.currentTimeMillis() + 3_600_000))
+            // A pseudonymous blog beside a personal one: its switches show on its row.
+            c.privacy.update("inkwell/night-notes@main") {
+                it.copy(onlyThroughVpn = true, commitAsNoReply = true, noReplyLogin = "inkwell", noReplyEmail = "2+inkwell@users.noreply.github.com", sendAtRandomTime = true, datesByDayOnly = true)
+            }
             app.signIn()
             c.blogs.refresh()
             c.drafts.insert(Draft(blog = SAMPLE_BLOG, title = "Notes on the new bike lane", body = "Half written."))
@@ -385,5 +389,17 @@ class ScreenshotTest {
         signIn()
         val vm = ConnectViewModel(c)
         shoot("27-add-a-sign-in") { ConnectScreen(vm, onCancel = {}) {} }
+    }
+
+    @Test fun blogPrivacyForANewBlog() {
+        twoBlogs()
+        runBlocking {
+            c.open("inkwell/night-notes@main")
+            c.privacy.markNew("inkwell/night-notes@main")
+        }
+        val vm = BlogPrivacyViewModel(c) { ZoneId.of("Europe/Lisbon") }
+        shoot("28-blog-privacy-new-blog", ready = { vm.state.value.isNew && vm.state.value.title == "Night Notes" && vm.state.value.visibility != Visibility.Loading }) {
+            BlogPrivacyScreen(vm) {}
+        }
     }
 }

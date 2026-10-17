@@ -211,7 +211,7 @@ class FlowTest {
 
     @Test fun aWriterWhoRemovesTrackingCodesSeesTheCleanLinkInTheEditor() {
         signIn()
-        runBlocking { app.container.settings.setRemoveTrackingCodes(true) }
+        runBlocking { app.container.privacy.update(SAMPLE_BLOG) { it.copy(removeTrackingCodes = true) } }
         val link = "[A good read](https://example.com/read?id=7&utm_source=share&fbclid=abc)\n"
         compose.setContent { PosterTheme { PosterNavHost(app.container, Shared(link, emptyList())) } }
         compose.waitForTag("body")
@@ -265,6 +265,10 @@ class FlowTest {
         compose.onNodeWithText("Continue").performClick()
         compose.waitFor("inkwell/night-notes")
         compose.onNodeWithText("inkwell/night-notes").performClick()
+        // Added beside another blog: its own switches, all off, to set before its first post.
+        compose.waitFor("New here: set these before your first post")
+        compose.waitFor("Night Notes · inkwell/night-notes · @inkwell")
+        compose.onNodeWithContentDescription("Back").performClick()
         compose.waitFor("After dark")
         compose.waitFor("inkwell/night-notes · @inkwell")
 

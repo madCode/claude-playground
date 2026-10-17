@@ -17,13 +17,30 @@ Times are when each cycle landed, Pacific.
   ([madCode/sample-blog](https://github.com/madCode/sample-blog), live on Pages). The live check
   workflow publishes and deletes one there through the app's own GitHub client.
 - **Used for real:** madCode has published to their own blog from the phone.
-- **Several blogs:** cycles 1 and 2 of 3 are built (cycle 2 in
-  [#141](https://github.com/madCode/claude-playground/pull/141)): blogs under several accounts,
-  a switcher from the title, Remove. Cycle 3 makes the privacy switches per blog.
+- **Several blogs:** all three cycles are built: blogs under several accounts, a switcher from
+  the title, Remove, and privacy per blog (cycle 3 in its PR). Next, the audits: a log of a real
+  run's requests per account, and a UX pass on the switcher.
 - **Waiting on you:** the Android SDK in the environment's setup script. The GitHub App is
   registered.
 
 ## Sat 17 Oct
+
+### Cycle 29: privacy per blog (several blogs, 3 of 3)
+- **Asked for:** build cycle 3 of [#137](https://github.com/madCode/claude-playground/issues/137).
+- **Changed:** each blog has its own privacy switches. A post goes out under its own blog's
+  switches and VPN, whichever blog is open: a pseudonymous blog's post waits for the VPN while a
+  personal blog's goes without it. Blog & privacy names its blog; the switcher shows each blog's
+  switches. A blog added beside others starts with them off and opens Blog & privacy, which says
+  so until its first post. The switches kept for the whole app move to every blog on update
+  (database version 8).
+- **Changed from the design, confirmed by madCode:** a new blog's VPN switch starts on if another
+  blog uses it. The design said every switch off; with it off, the new blog was read from your own
+  address before you could see its page.
+- **The review caught:** the preview reusing the last blog's connection after a switch; a new
+  blog read without the VPN; the VPN switch lost by updating while signed out; a personal blog's
+  token renewal held up by another blog's VPN; a re-added blog with no warning. The second look
+  caught a renewal cancelled midway losing the new token, and a leftover row holding sign-in
+  behind the VPN. All fixed, with tests.
 
 ### Cycle 28: several sign-ins and the blog switcher (several blogs, 2 of 3)
 - **Asked for:** build cycle 2 of [#137](https://github.com/madCode/claude-playground/issues/137),

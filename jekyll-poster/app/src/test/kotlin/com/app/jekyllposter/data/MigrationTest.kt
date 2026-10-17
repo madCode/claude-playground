@@ -122,6 +122,17 @@ class MigrationTest {
         }
     }
 
+    @Test fun version7BlogsGainATableOfSwitches() {
+        helper.createDatabase(DB, 7).use { db ->
+            db.execSQL("INSERT INTO blogs (blogKey, owner, repo, branch, signInId, title) VALUES ('writer/blog@main', 'writer', 'blog', 'main', 3, 'A Notebook')")
+        }
+        helper.runMigrationsAndValidate(DB, 8, true, MIGRATION_7_8).use { db ->
+            db.query("SELECT title FROM blogs WHERE blogKey = 'writer/blog@main'").use { c -> assertTrue(c.moveToFirst()); assertEquals("A Notebook", c.getString(0)) }
+            // Empty: the switches kept for the whole app are moved in on first use.
+            db.query("SELECT COUNT(*) FROM blog_privacy").use { c -> c.moveToFirst(); assertEquals(0, c.getInt(0)) }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
     }

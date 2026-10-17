@@ -6,6 +6,7 @@ import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.data.RANDOM_WINDOW
+import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
 import com.app.jekyllposter.ui.home.status
@@ -30,14 +31,14 @@ class SendLaterTest {
     private fun editor(draft: Draft): Pair<Long, EditorViewModel> {
         val id = runBlocking {
             app.signIn()
-            c.settings.setSendAtRandomTime(true)
+            c.privacy.update(SAMPLE_BLOG) { it.copy(sendAtRandomTime = true) }
             c.drafts.insert(draft)
         }
         return id to EditorViewModel(c, id).also { e -> idleUntil { e.text != null && e.state.value.draft != null } }
     }
 
     @Test fun publishWaitsForARandomMomentInTheNextHours() {
-        val (id, editor) = editor(Draft(title = "Quiet", body = "Hello."))
+        val (id, editor) = editor(Draft(blog = SAMPLE_BLOG, title = "Quiet", body = "Hello."))
         val tapped = System.currentTimeMillis()
         val head = app.github.head
         editor.publish()
@@ -57,7 +58,7 @@ class SendLaterTest {
 
     @Test fun aSecondTapKeepsTheTimeAlreadyChosen() {
         app.publishNow = false
-        val (id, editor) = editor(Draft(title = "Quiet", body = "Hello."))
+        val (id, editor) = editor(Draft(blog = SAMPLE_BLOG, title = "Quiet", body = "Hello."))
         editor.publish()
         editor.publish()
         idleUntil(10_000) { editor.state.value.closed }
@@ -80,8 +81,8 @@ class SendLaterTest {
     @Test fun theVpnComingBackKeepsThePostsRandomTime() {
         val at = System.currentTimeMillis() + 3_600_000
         val id = runBlocking {
-            c.settings.setOnlyThroughVpn(true)
-            c.drafts.insert(Draft(title = "Quiet", body = "x", state = PostState.Queued, sendAfter = at))
+            c.setOnlyThroughVpn(SAMPLE_BLOG, true)
+            c.drafts.insert(Draft(blog = SAMPLE_BLOG, title = "Quiet", body = "x", state = PostState.Queued, sendAfter = at))
         }
         app.vpn.up.value = false
         Thread.sleep(500)

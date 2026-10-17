@@ -19,6 +19,7 @@ import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.ImageImporter
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.data.PosterDatabase
+import com.app.jekyllposter.data.Privacy
 import com.app.jekyllposter.data.Removal
 import com.app.jekyllposter.data.SecretCipher
 import com.app.jekyllposter.data.Settings
@@ -38,11 +39,13 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -71,7 +74,7 @@ class AppContainer(
     /** The files in an Obsidian vault folder; tests list a plain folder instead. */
     val vaultFiles: suspend (tree: String) -> VaultImages = { listVault(context, it) },
     /** The phone's VPN; tests pretend one is up or down. */
-    vpn: Vpn = AndroidVpn(context),
+    private val vpn: Vpn = AndroidVpn(context),
 ) {
     /** What a share brought, waiting for the editor of the post it started. */
     val pendingShares = ConcurrentHashMap<Long, PendingShare>()
@@ -81,47 +84,92 @@ class AppContainer(
 
     val settings = Settings(settingsData)
 
-    /** Every client the app reaches the web with goes through this, so the VPN switch covers them all. */
-    private val vpnGate = VpnGate(vpn) { runBlocking { settings.onlyThroughVpn() } }
+    /** Each blog's privacy switches; the ones kept for the whole app before move over on first use. */
+    val privacy = Privacy(database.privacy(), settingsData) { accounts.blogs.first() }
 
-    /** Whether nothing can go out now: the writer asked for a VPN and there isn't one. */
-    val waitingForVpn: Flow<Boolean> =
-        combine(settings.onlyThroughVpn, vpn.up) { only, up -> only && !up }
+    private val base = OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
 
-    private val http = GatedCalls(
-        OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build(),
-        vpnGate,
-    )
+    /**
+     * Each blog's requests go through a gate of its own, so its VPN switch covers them whichever
+     * blog is open: a queued pseudonymous post goes through the VPN while a personal blog is open.
+     */
+    private val blogCalls = ConcurrentHashMap<String, GatedCalls>()
 
-    fun client(token: String) = GitHubClient(http, token, apiBase)
+    private fun callsFor(key: String) = blogCalls.getOrPut(key) { GatedCalls(base, VpnGate(vpn) { runBlocking { privacy.get(key).onlyThroughVpn } }) }
+
+    /**
+     * Signing in, listing a sign-in's repositories and renewing its token aren't for one blog: they
+     * go through the VPN if any blog asks for it, since the app can't know which blog they're for.
+     */
+    private val signInCalls = GatedCalls(base, VpnGate(vpn) { runBlocking { privacy.anyOnlyThroughVpn() } })
+
+    /** For a sign-in that isn't one blog's yet: see [signInCalls]. */
+    fun client(token: String) = GitHubClient(signInCalls, token, apiBase)
+
+    /** For [account]'s blog, behind that blog's VPN switch. */
+    fun client(account: Account) = GitHubClient(callsFor(account.blogKey), account.token, apiBase)
+
+    /** Whether nothing can go out for blog [key] now: it asks for a VPN and there isn't one. */
+    fun waitingForVpn(key: String?): Flow<Boolean> = combine(privacy.of(key), vpn.up) { p, up -> p.onlyThroughVpn && !up }
+
+    /** [waitingForVpn] for the open blog. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val waitingForVpn: Flow<Boolean> get() = accounts.currentKey.flatMapLatest { waitingForVpn(it) }
 
     /** "Sign in with GitHub", when the build names a GitHub App. */
-    val deviceFlow: DeviceFlow? = githubClientId.takeIf { it.isNotBlank() }?.let { DeviceFlow(http, it, githubWeb) }
+    val deviceFlow: DeviceFlow? = githubClientId.takeIf { it.isNotBlank() }?.let { DeviceFlow(signInCalls, it, githubWeb) }
+
+    /**
+     * Renewing a sign-in's token goes the way its own blogs ask: through the VPN if one of them
+     * does, but not held up by another sign-in's, which would fail a blog that asks for none.
+     */
+    private val renewalCalls = ConcurrentHashMap<String, GatedCalls>()
+
+    private val renewal: (suspend (String, String) -> DeviceFlow.Tokens)? = deviceFlow?.let { _ ->
+        { key, refreshToken ->
+            val calls = renewalCalls.getOrPut(key) { GatedCalls(base, VpnGate(vpn) { runBlocking { privacy.signInAsksForVpn(key) } }) }
+            DeviceFlow(calls, githubClientId, githubWeb).refresh(refreshToken)
+        }
+    }
 
     /**
      * For the preview's images: a client of its own, with no GitHub token on it, and a cache, so
-     * switching back to the preview doesn't download them all again.
+     * switching back to the preview doesn't download them all again. The site is the open blog's.
      */
     private val previewClient = lazy {
         val cache = Cache(File(context.cacheDir, "preview"), 20L * 1024 * 1024)
-        GatedCalls(OkHttpClient.Builder().cache(cache).build(), vpnGate)
+        GatedCalls(OkHttpClient.Builder().cache(cache).build(), VpnGate(vpn) { runBlocking { privacy.get(accounts.currentKey()).onlyThroughVpn } })
     }
     val previewFetcher by lazy { PreviewFetcher(previewClient.value) }
 
     /**
-     * Turns the VPN switch on or off. Requests from then on go on new connections: those made
-     * before were maybe not through a VPN. Requests already under way finish as they started.
+     * Turns blog [key]'s VPN switch on or off. Its requests from then on go on new connections:
+     * those made before were maybe not through a VPN. Requests already under way finish as they
+     * started. Signing in and the preview follow it too.
      */
-    suspend fun setOnlyThroughVpn(only: Boolean) {
+    suspend fun setOnlyThroughVpn(key: String, only: Boolean) {
         // Before and after: a connection made while the setting is being written goes on a
         // client the second renew retires.
-        renewClients()
-        settings.setOnlyThroughVpn(only)
-        renewClients()
+        renewClients(key)
+        privacy.update(key) { it.copy(onlyThroughVpn = only) }
+        renewClients(key)
     }
 
-    private fun renewClients() {
-        http.renew()
+    /**
+     * Blog [key] was just added, or opened by adding it: its requests, its sign-in's renewals and
+     * the preview start on new connections, made under the switches it has now.
+     */
+    fun added(key: String) = renewClients(key)
+
+    private fun renewClients(key: String) {
+        callsFor(key).renew()
+        signInCalls.renew()
+        renewalCalls.values.forEach { it.renew() }
+        renewPreview()
+    }
+
+    /** The preview follows the open blog's switch: a connection made for the blog left mustn't serve the next. */
+    private fun renewPreview() {
         if (previewClient.isInitialized()) previewClient.value.renew()
     }
 
@@ -147,15 +195,15 @@ class AppContainer(
      * Waits up to [timeout] for the VPN, when one is asked for: true once requests can go out.
      * A queued post waits here rather than in WorkManager's backoff, which can grow to hours.
      */
-    suspend fun awaitVpn(timeout: Duration): Boolean =
-        withTimeoutOrNull(timeout) { waitingForVpn.first { !it } } != null
+    suspend fun awaitVpn(key: String?, timeout: Duration): Boolean =
+        withTimeoutOrNull(timeout) { waitingForVpn(key).first { !it } } != null
 
-    val accounts = AccountStore(accountData, database.accounts(), cipher, deviceFlow?.let { flow -> { refreshToken: String -> flow.refresh(refreshToken) } })
+    val accounts = AccountStore(accountData, database.accounts(), cipher, renewal)
     val drafts = database.drafts()
-    val blogs = BlogRepository(accounts, database.posts()) { account: Account -> client(account.token) }
-    val publisher = Publisher(drafts, accounts, blogs, settings)
+    val blogs = BlogRepository(accounts, database.posts()) { account: Account -> client(account) }
+    val publisher = Publisher(drafts, accounts, blogs, privacy)
     val images = ImageImporter(context.contentResolver, File(context.filesDir, "images"))
-    val buildWatcher = BuildWatcher(drafts, accounts, { client(it.token) }, onBuildFinished)
+    val buildWatcher = BuildWatcher(drafts, accounts, { client(it) }, onBuildFinished)
 
     /**
      * Opens blog [key], an added one, and reads it. Nothing is published or changed on any blog.
@@ -163,6 +211,7 @@ class AppContainer(
      */
     suspend fun open(key: String): Boolean {
         if (!accounts.open(key)) return false
+        renewPreview()
         // After the switch: a read of the blog left, finishing now, can't put its title back.
         blogs.clear()
         catching { blogs.refresh() }
@@ -179,6 +228,7 @@ class AppContainer(
         if (removal is Removal.Removed) {
             blogs.forget(removal.blogs)
             if (accounts.currentKey() != open) {
+                renewPreview()
                 blogs.clear()
                 catching { blogs.refresh() }
             }
@@ -198,11 +248,15 @@ class AppContainer(
         if (vpnRetryStarted) return
         vpnRetryStarted = true
         appScope.launch {
-            var waiting = false
-            waitingForVpn.collect { now ->
-                if (waiting && !now) drafts.list().filter { it.state == PostState.Queued }.forEach { publishQueue.retryNow(it.id, it.sendAfter) }
-                waiting = now
-            }
+            // The blogs whose posts wait for the VPN; when one leaves (the VPN is back, or its
+            // switch went off), its queued posts go.
+            var waiting = emptySet<String>()
+            combine(privacy.all, vpn.up) { all, up -> if (up) emptySet() else all.filter { it.onlyThroughVpn }.map { it.blogKey }.toSet() }
+                .collect { now ->
+                    val freed = waiting - now
+                    if (freed.isNotEmpty()) drafts.list().filter { it.state == PostState.Queued && it.blog in freed }.forEach { publishQueue.retryNow(it.id, it.sendAfter) }
+                    waiting = now
+                }
         }
     }
 }

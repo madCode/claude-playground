@@ -22,7 +22,9 @@ class PublishWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         // Asked to go only through a VPN and there's none: wait a little for it here, then leave
         // it to WorkManager's backoff, and to the app, which starts the post again when the VPN
         // comes back while it runs. Waiting longer would spend the app's background time.
-        if (!container.awaitVpn(2.minutes)) return Result.retry()
+        // The post's own blog's switch, whichever blog is open.
+        val blog = container.drafts.get(id)?.blog ?: container.accounts.currentKey()
+        if (!container.awaitVpn(blog, 2.minutes)) return Result.retry()
         return when (container.publisher.publish(id)) {
             Publisher.Outcome.Done -> {
                 BuildWatchWorker.enqueue(applicationContext, id)

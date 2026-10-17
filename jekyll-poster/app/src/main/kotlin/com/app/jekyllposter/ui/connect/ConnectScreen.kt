@@ -48,9 +48,9 @@ import com.app.jekyllposter.core.github.DeviceFlow
 import com.app.jekyllposter.core.github.GitHubRepo
 
 @Composable
-fun ConnectScreen(viewModel: ConnectViewModel, onCancel: (() -> Unit)? = null, onConnected: () -> Unit) {
+fun ConnectScreen(viewModel: ConnectViewModel, onCancel: (() -> Unit)? = null, onConnected: (openPrivacy: Boolean) -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    LaunchedEffect(state.done) { if (state.done) onConnected() }
+    LaunchedEffect(state.done) { if (state.done) onConnected(state.openPrivacy) }
     Scaffold { padding ->
         val repos = state.repos
         val code = state.deviceCode

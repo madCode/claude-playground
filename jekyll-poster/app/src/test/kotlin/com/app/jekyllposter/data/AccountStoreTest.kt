@@ -47,7 +47,7 @@ class AccountStoreTest {
 
     private fun store(
         cipher: SecretCipher = testCipher(),
-        refresh: (suspend (String) -> DeviceFlow.Tokens)? = null,
+        refresh: (suspend (String, String) -> DeviceFlow.Tokens)? = null,
         now: () -> Long = System::currentTimeMillis,
     ) = AccountStore(data, db.accounts(), cipher, refresh, now)
 
@@ -68,7 +68,7 @@ class AccountStoreTest {
     @Test fun anExpiringTokenIsRenewedBeforeUse() = runBlocking {
         var now = 1_000_000L
         val renewals = mutableListOf<String>()
-        val store = store(refresh = { refresh ->
+        val store = store(refresh = { _, refresh ->
             renewals += refresh
             DeviceFlow.Tokens("ghu_new", 28_800, "ghr_new")
         }) { now }
@@ -87,7 +87,7 @@ class AccountStoreTest {
 
     @Test fun aBlogThatIsntOpenRenewsItsOwnSignInWhenUsed() = runBlocking {
         var now = 1_000_000L
-        val store = store(refresh = { _ -> DeviceFlow.Tokens("ghu_new", 28_800, "ghr_new") }) { now }
+        val store = store(refresh = { _, _ -> DeviceFlow.Tokens("ghu_new", 28_800, "ghr_new") }) { now }
         store.save(account.copy(token = "ghu_old", refreshToken = "ghr_old", expiresAt = now + 60 * 60_000))
         assertTrue(store.addBlog(signInOf(account.blogKey), "writer", "other", "main", null))
         now += 58 * 60_000
@@ -189,7 +189,7 @@ class AccountStoreTest {
     @Test fun aRenewalFinishingAfterRemovalDoesntAddTheSignInBack() = runBlocking {
         val started = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
-        val store = store(refresh = { _ ->
+        val store = store(refresh = { _, _ ->
             started.complete(Unit); release.await()
             DeviceFlow.Tokens("ghu_new", 28_800, "ghr_new")
         }) { 0L }
@@ -202,6 +202,25 @@ class AccountStoreTest {
         renewing.await(); signingOut.await()
         assertNull(store.current())
         assertNull(store.forBlog(account.blogKey))
+    }
+
+    @Test fun aRenewalCancelledMidwayStillKeepsTheNewTokens() = runBlocking {
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val store = store(refresh = { _, _ ->
+            started.complete(Unit); release.await()
+            DeviceFlow.Tokens("ghu_new", 28_800, "ghr_new")
+        }) { 0L }
+        store.save(account.copy(refreshToken = "ghr_old", expiresAt = 60_000))
+        // A screen that asked for the account, closed while GitHub was answering.
+        val asking = async(Dispatchers.IO) { store.current() }
+        started.await()
+        asking.cancel()
+        release.complete(Unit)
+        runCatching { asking.await() }
+        // GitHub replaced the refresh token as it answered: the new one is kept. Read as stored,
+        // without renewing again, which would hide a dropped answer.
+        assertEquals("ghr_new", store.account.first()!!.refreshToken)
     }
 
     @Test fun aTokenThatCannotBeUnsealedReadsAsSignedOut() = runBlocking {

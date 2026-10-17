@@ -327,6 +327,9 @@ abstract class AccountDao {
     @Query("DELETE FROM blogs WHERE signInId = :signInId")
     abstract suspend fun deleteBlogsOf(signInId: Long)
 
+    @Query("DELETE FROM blog_privacy WHERE blogKey IN (:keys)")
+    abstract suspend fun deletePrivacy(keys: List<String>)
+
     @Query("DELETE FROM sign_ins WHERE id = :id")
     abstract suspend fun deleteSignIn(id: Long)
 
@@ -371,6 +374,8 @@ abstract class AccountDao {
         val keys = blogsOf(signInId)
         deleteBlogsOf(signInId)
         deleteSignIn(signInId)
+        // Added again later, a blog starts afresh, every switch off.
+        keys.chunked(500).forEach { deletePrivacy(it) }
         return keys
     }
 }
@@ -386,17 +391,18 @@ class Converters {
     @TypeConverter fun toImages(json: String): List<DraftImage> = Json.decodeFromString(json)
 }
 
-@Database(entities = [Draft::class, CachedPost::class, SignIn::class, SavedBlog::class], version = 7)
+@Database(entities = [Draft::class, CachedPost::class, SignIn::class, SavedBlog::class, BlogPrivacy::class], version = 8)
 @TypeConverters(Converters::class)
 abstract class PosterDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
     abstract fun posts(): PostDao
     abstract fun accounts(): AccountDao
+    abstract fun privacy(): PrivacyDao
 
     companion object {
         /** The app's database, brought up to date from any version a debug build has shipped. */
         fun create(context: Context): PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build()
     }
 }
 
@@ -468,5 +474,20 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
 val MIGRATION_6_7 = object : Migration(6, 7) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE blogs ADD COLUMN title TEXT")
+    }
+}
+
+/**
+ * The privacy switches move from one set for the app to one per blog. The rows are written on
+ * first use, from the set kept before, by [Privacy].
+ */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `blog_privacy` (`blogKey` TEXT NOT NULL, `onlyThroughVpn` INTEGER NOT NULL, " +
+                "`commitAsNoReply` INTEGER NOT NULL, `noReplyLogin` TEXT, `noReplyEmail` TEXT, `sendAtRandomTime` INTEGER NOT NULL, " +
+                "`plainCommitMessages` INTEGER NOT NULL, `datesByDayOnly` INTEGER NOT NULL, `removeTrackingCodes` INTEGER NOT NULL, " +
+                "`isNew` INTEGER NOT NULL, PRIMARY KEY(`blogKey`))",
+        )
     }
 }

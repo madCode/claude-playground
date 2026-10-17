@@ -8,6 +8,7 @@ import android.net.RouteInfo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.publish.Publisher
+import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.ui.forWriter
 import com.app.jekyllposter.ui.home.status
@@ -52,13 +53,13 @@ class VpnTest {
     }
 
     @Test fun onRequestsGoThroughTheVpn() {
-        runBlocking { c.setOnlyThroughVpn(true) }
+        runBlocking { c.setOnlyThroughVpn(SAMPLE_BLOG, true) }
         assertNull(refresh())
         assertTrue(vpn.connections > 0)
     }
 
     @Test fun onWithoutAVpnNothingIsSent() {
-        runBlocking { c.setOnlyThroughVpn(true) }
+        runBlocking { c.setOnlyThroughVpn(SAMPLE_BLOG, true) }
         vpn.up.value = false
         app.github.log.clear()
         val error = refresh()
@@ -70,7 +71,7 @@ class VpnTest {
         // A connection made with the switch off, kept open for the next request...
         assertNull(refresh())
         vpn.up.value = false
-        runBlocking { c.setOnlyThroughVpn(true) }
+        runBlocking { c.setOnlyThroughVpn(SAMPLE_BLOG, true) }
         app.github.log.clear()
         // ...isn't used once it's on.
         assertNotNull(refresh())
@@ -78,21 +79,21 @@ class VpnTest {
     }
 
     @Test fun aQueuedPostWaitsForTheVpnAndSaysSo() = runBlocking {
-        c.setOnlyThroughVpn(true)
+        c.setOnlyThroughVpn(SAMPLE_BLOG, true)
         vpn.up.value = false
-        val id = c.drafts.insert(Draft(title = "Quiet", body = "Hello.", state = PostState.Queued))
+        val id = c.drafts.insert(Draft(blog = SAMPLE_BLOG, title = "Quiet", body = "Hello.", state = PostState.Queued))
         assertEquals(Publisher.Outcome.Retry, c.publisher.publish(id))
         assertTrue(app.github.commits.values.none { it.message.contains("Quiet") })
-        assertFalse(c.awaitVpn(50.milliseconds))
+        assertFalse(c.awaitVpn(SAMPLE_BLOG, 50.milliseconds))
         assertEquals("Waiting for your VPN…", c.drafts.get(id)!!.status(waitingForVpn = true).first)
 
         vpn.up.value = true
-        assertTrue(c.awaitVpn(5.seconds))
+        assertTrue(c.awaitVpn(SAMPLE_BLOG, 5.seconds))
         assertEquals(Publisher.Outcome.Done, c.publisher.publish(id))
     }
 
     @Test fun thePreviewsPhotosGoThroughTheVpnToo() {
-        runBlocking { c.setOnlyThroughVpn(true) }
+        runBlocking { c.setOnlyThroughVpn(SAMPLE_BLOG, true) }
         vpn.up.value = false
         app.github.log.clear()
         c.previewFetcher.fetch(app.github.apiBase.resolve("assets/images/2025/lighthouse.jpg").toString())
@@ -101,8 +102,8 @@ class VpnTest {
 
     @Test fun queuedPostsStartAgainWhenTheVpnIsBack() {
         val id = runBlocking {
-            c.setOnlyThroughVpn(true)
-            c.drafts.insert(Draft(title = "Quiet", body = "Hello.", state = PostState.Queued))
+            c.setOnlyThroughVpn(SAMPLE_BLOG, true)
+            c.drafts.insert(Draft(blog = SAMPLE_BLOG, title = "Quiet", body = "Hello.", state = PostState.Queued))
         }
         vpn.up.value = false
         // Long enough for the app to see it's waiting.

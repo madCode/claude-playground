@@ -1,6 +1,8 @@
 package com.app.jekyllposter.ui.blogs
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -44,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.data.BlogEntry
+import com.app.jekyllposter.data.BlogPrivacy
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.data.Removal
@@ -56,20 +60,36 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** A blog as the switcher lists it: open or not, and what of the writer's waits for it. */
-data class BlogRow(val entry: BlogEntry, val open: Boolean, val status: String)
+/**
+ * A blog as the switcher lists it: open or not, what of the writer's waits for it, and the names of
+ * its privacy switches that are on, so a pseudonymous blog looks different before it's picked.
+ */
+data class BlogRow(val entry: BlogEntry, val open: Boolean, val status: String, val switches: List<String> = emptyList())
 
 /** A sign-in and the blogs it posts with. */
 data class SignInGroup(val signInId: Long, val login: String, val withGitHub: Boolean, val blogs: List<BlogRow>) {
     val how: String get() = if (withGitHub) "with GitHub" else "signed in with a token"
 }
 
-/** [entries] grouped by sign-in, each with what of [drafts] is for it. */
-fun groups(entries: List<BlogEntry>, openKey: String?, drafts: List<Draft>): List<SignInGroup> =
+/** [entries] grouped by sign-in, each with what of [drafts] is for it and its switches from [privacy]. */
+fun groups(entries: List<BlogEntry>, openKey: String?, drafts: List<Draft>, privacy: List<BlogPrivacy> = emptyList()): List<SignInGroup> =
     entries.groupBy { it.signInId }.map { (id, blogs) ->
         val first = blogs.first()
-        SignInGroup(id, first.login, first.withGitHub, blogs.map { BlogRow(it, it.key == openKey, status(it, drafts.filter { d -> d.blog == it.key })) })
+        SignInGroup(
+            id, first.login, first.withGitHub,
+            blogs.map { BlogRow(it, it.key == openKey, status(it, drafts.filter { d -> d.blog == it.key }), switchesOn(privacy.firstOrNull { p -> p.blogKey == it.key })) },
+        )
     }
+
+/** The switches [p] has on, by short names; none for a blog with no row. */
+private fun switchesOn(p: BlogPrivacy?): List<String> = if (p == null) emptyList() else listOfNotNull(
+    "VPN only".takeIf { p.onlyThroughVpn },
+    "no-reply".takeIf { p.commitAsNoReply },
+    "plain commits".takeIf { p.plainCommitMessages },
+    "random time".takeIf { p.sendAtRandomTime },
+    "day only".takeIf { p.datesByDayOnly },
+    "no tracking".takeIf { p.removeTrackingCodes },
+)
 
 /**
  * The repository, then the blog's posts on the phone. A post that didn't go is named here, since
@@ -100,8 +120,8 @@ class BlogsViewModel(private val container: AppContainer) : ViewModel() {
     private val removing = MutableStateFlow<Removing?>(null)
 
     val state: StateFlow<State> =
-        combine(container.accounts.blogs, container.accounts.currentKey, container.drafts.all(), removing) { blogs, open, drafts, r ->
-            State(groups(blogs, open, drafts), r)
+        combine(container.accounts.blogs, container.accounts.currentKey, container.drafts.all(), container.privacy.all, removing) { blogs, open, drafts, privacy, r ->
+            State(groups(blogs, open, drafts, privacy), r)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), State())
 
     /**
@@ -165,11 +185,36 @@ fun BlogList(groups: List<SignInGroup>, onOpen: (BlogRow) -> Unit, onRemove: ((S
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(row.entry.title ?: row.entry.repo, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text(row.status, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Switches(row.switches)
                     }
                     if (row.open) Icon(Icons.Default.Check, "Open now", tint = MaterialTheme.colorScheme.primary)
                 }
                 RowDivider()
             }
+        }
+    }
+}
+
+/** A blog's switches that are on, as small pills; read out as one line by TalkBack. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Switches(on: List<String>) {
+    val text = if (on.isEmpty()) "no switches on" else on.joinToString(", ")
+    FlowRow(
+        Modifier.padding(top = 4.dp).semantics(mergeDescendants = true) { contentDescription = "Privacy: $text" },
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        (on.ifEmpty { listOf("no switches on") }).forEach { name ->
+            Text(
+                name,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (on.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier
+                    .let { if (on.isEmpty()) it else it.background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(50)) }
+                    .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(50))
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+            )
         }
     }
 }

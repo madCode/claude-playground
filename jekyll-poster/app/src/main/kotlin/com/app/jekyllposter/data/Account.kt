@@ -82,8 +82,11 @@ class AccountStore(
     private val store: DataStore<Preferences>,
     private val dao: AccountDao,
     private val cipher: SecretCipher,
-    /** Renews a "Sign in with GitHub" token; absent when the app has no GitHub App configured. */
-    private val refresh: (suspend (String) -> DeviceFlow.Tokens)? = null,
+    /**
+     * Renews a "Sign in with GitHub" token, for blog [String]'s sign-in, so the request goes the
+     * way that sign-in's blogs ask; absent when the app has no GitHub App configured.
+     */
+    private val refresh: (suspend (key: String, refreshToken: String) -> DeviceFlow.Tokens)? = null,
     private val now: () -> Long = System::currentTimeMillis,
 ) {
     /** The open blog's key ([Account.blogKey]), or null when signed out. */
@@ -139,10 +142,14 @@ class AccountStore(
         val expiresAt = account.expiresAt ?: return account
         val refreshToken = account.refreshToken ?: return account
         if (expiresAt - now() > 5 * 60_000) return account
-        val tokens = runCatching { refresh?.invoke(refreshToken) }.getOrNull() ?: return account
-        val renewed = account.withTokens(tokens, now())
-        dao.update(sealed(renewed).copy(id = row.blog.signInId))
-        return renewed
+        // Not cancellable: GitHub replaces the refresh token as it answers, so an answer dropped
+        // midway, or not kept, would leave a dead one and the writer signing in again.
+        return withContext(NonCancellable) {
+            val tokens = runCatching { refresh?.invoke(key, refreshToken) }.getOrNull() ?: return@withContext account
+            val renewed = account.withTokens(tokens, now())
+            dao.update(sealed(renewed).copy(id = row.blog.signInId))
+            renewed
+        }
     }
 
     /** A fresh sign-in to [account]'s blog, which becomes the open one. */

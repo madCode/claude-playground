@@ -6,6 +6,7 @@ import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.core.github.DeviceFlow
 import com.app.jekyllposter.core.github.GitHubRepo
 import com.app.jekyllposter.data.Account
+import com.app.jekyllposter.data.blogKey
 import com.app.jekyllposter.data.withTokens
 import com.app.jekyllposter.ui.catching
 import com.app.jekyllposter.ui.forWriter
@@ -13,6 +14,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -25,6 +27,8 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
         val busy: Boolean = false,
         val error: String? = null,
         val done: Boolean = false,
+        /** The blog chosen was added beside others, with every switch off: its Blog & privacy opens next. */
+        val openPrivacy: Boolean = false,
         /** While signing in with GitHub: the code to enter on github.com. */
         val deviceCode: DeviceFlow.Code? = null,
     )
@@ -136,6 +140,16 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             val client = container.client(s.token.trim())
             val siteUrl = catching { client.pages(repo.owner.login, repo.name)?.htmlUrl }.getOrNull()
+            val key = blogKey(repo.owner.login, repo.name, repo.defaultBranch)
+            // A blog beside others starts with its own switches, and says so until its first post;
+            // so does one added again that still has drafts here, whose switches went with its
+            // sign-in. One already added keeps its own.
+            val saved = container.accounts.blogs.first()
+            val isNew = saved.none { it.key == key } && (saved.isNotEmpty() || container.drafts.list().any { it.blog == key })
+            // Written before the blog is, so its first read already goes the way they say. The VPN
+            // switch starts on if another blog asks for it: nothing for the new blog may leave
+            // from the writer's own address before they've seen its page.
+            if (isNew) container.privacy.markNew(key, onlyThroughVpn = container.privacy.anyOnlyThroughVpn())
             // Adding keeps the sign-in as stored now (it may have been renewed while the list was
             // open), not the token the list was read with.
             val adding = addingTo
@@ -148,11 +162,12 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
                 // Expiry counts from when the token arrived, not from when a blog was picked.
                 container.accounts.save(deviceTokens?.let { fresh.withTokens(it, tokensAt) } ?: fresh)
             }
+            container.added(key)
             // After the switch: a read of the blog left, finishing now, can't put its title back.
             container.blogs.clear()
             // A first read fills the category picker; if it fails, Home tries again.
             catching { container.blogs.refresh() }
-            _state.update { it.copy(busy = false, done = true) }
+            _state.update { it.copy(busy = false, done = true, openPrivacy = isNew) }
         }
     }
 
