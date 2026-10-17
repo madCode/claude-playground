@@ -170,6 +170,26 @@ object SessionFiles {
     }
 
     /**
+     * [text] without what a sync or an editor may add without changing
+     * anything: a leading byte-order mark, and CRLF line endings.
+     */
+    fun normalised(text: String): String = text.removePrefix("\uFEFF").replace("\r\n", "\n")
+
+    /**
+     * Whether two copies of a session file say the same thing. Compared
+     * as JSON where both read as JSON, so a re-encoding or a reformat
+     * isn't taken for a rewrite; otherwise as [normalised] text.
+     */
+    fun sameContent(a: String, b: String): Boolean {
+        if (a == b) return true
+        val na = normalised(a)
+        val nb = normalised(b)
+        if (na == nb) return true
+        val ja = runCatching { Session.json.parseToJsonElement(na) }.getOrNull() ?: return false
+        return ja == runCatching { Session.json.parseToJsonElement(nb) }.getOrNull()
+    }
+
+    /**
      * The rows that decode, or null when the file is damaged in a way that
      * is not about one row.
      *

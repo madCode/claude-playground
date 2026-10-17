@@ -5,6 +5,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertCountEquals
@@ -267,6 +268,37 @@ class LogScreenTest {
         compose.onNodeWithText(why).assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, androidx.compose.ui.semantics.LiveRegionMode.Polite))
         shoot("30-save-refused")
+    }
+
+    @Test
+    fun `a save refused over a changed file lists the typing and offers the new file`() {
+        var discarded = 0
+        val why = "This session file changed since you opened it, so nothing was saved."
+        compose.setContent {
+            LogScreen(
+                session = SampleSession.today,
+                entries = mapOf(0 to SessionPatch.Entry(weight = 45.0, reps = 10)), added = emptyList(),
+                onEdit = { _, _ -> }, onAdd = {}, onEditAdded = { _, _ -> },
+                onSave = {},
+                saving = SaveState.Failed(why, damaged = false, typed = listOf("10 x bench press: 45 lb, 10 reps"), newFile = true),
+                onDiscard = { discarded++ },
+            )
+        }
+        reach("Try again")
+        compose.onNodeWithText(why).assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+        compose.onNodeWithText("10 x bench press: 45 lb, 10 reps").assertIsDisplayed()
+        shoot("40-save-file-changed")
+        val drop = compose.onNodeWithText("Drop my numbers, load the new file")
+        drop.assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+        val box = drop.fetchSemanticsNode().boundsInRoot
+        val tryAgain = compose.onNodeWithText("Try again").fetchSemanticsNode().boundsInRoot
+        with(compose.density) {
+            assertTrue("a 48dp target, got ${box.height.toDp()}", box.height.toDp() >= 48.dp)
+            assertTrue("kept clear of Try again", (tryAgain.top - box.bottom).toDp() >= 24.dp)
+        }
+        drop.performClick()
+        assertEquals(1, discarded)
     }
 
     @Test

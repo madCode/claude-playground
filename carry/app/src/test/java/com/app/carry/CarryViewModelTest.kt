@@ -320,17 +320,11 @@ class CarryViewModelTest {
         val done = runCatching {
             withContext(Dispatchers.Default) {
                 withTimeout(20_000) {
-                    while (scope.children.any { it.isActive }) {
-                        // NOT the only driver: `runTest` keeps a workRunner
-                        // pumping the scheduler for the whole test body, so
-                        // these tasks mostly run on ITS thread rather than
-                        // this one. The scheduler's own lock makes that
-                        // safe; what it means is that this drives the queue
-                        // forward rather than owning it, which is why the
-                        // loop waits on the jobs and not on a task count.
-                        dispatcher.scheduler.advanceUntilIdle()
-                        delay(5)
-                    }
+                    // Waits only. `runTest` drains the scheduler while the
+                    // body is suspended here; advancing it from this thread
+                    // as well ran two "Main" tasks at once, which made a
+                    // save test fail now and then.
+                    while (scope.children.any { it.isActive }) delay(5)
                 }
             }
         }.isSuccess
@@ -345,6 +339,9 @@ class CarryViewModelTest {
         onWrite: (String) -> Unit = {},
     ): String? {
         var written: String? = null
+        // The disk holds what the page read, as it does unless something
+        // else wrote it; the tests of that case set their own.
+        model.readNow = { (model.state.value as? CarryState.Ready)?.raw }
         model.write = { _, text -> written = text; onWrite(text); outcome }
         model.save()
         // Settled, not "no longer Saving": a refresh landing during the
@@ -486,10 +483,105 @@ class CarryViewModelTest {
         assertTrue("expected a refusal, got $state", state is SaveState.Failed)
         assertTrue((state as SaveState.Failed).why, "\"schema\" label" in state.why)
 
-        // The control: the same save over a labelled file goes through.
-        model.readNow = { """{"schema":"gym-session/1","sheet_id":"x","date":"2026-10-17","sets":[]}""" }
+        // The control: the same save over the file it was typed against goes through.
+        model.readNow = { (model.state.value as CarryState.Ready).raw }
         model.save(); settled(model)
         assertEquals(1, wrote)
+    }
+
+    /** A folder of one file: what the page reads, what a save checks and what it writes. */
+    private class Disk(var text: String?) { var writes = 0 }
+
+    private fun CarryViewModel.on(disk: Disk) {
+        read = { ready(disk.text!!) }
+        readNow = { disk.text }
+        write = { _, text -> disk.writes++; disk.text = text; Saved.YES }
+    }
+
+    @Test
+    fun `a save over a file that changed, emptied or went is refused, with the typing kept and listed`() = runTest(dispatcher) {
+        // madCode, 2026-10-17: refuse, keep the typing, offer the new file.
+        for (onDisk in listOf(sheet.replace("10 x bench press", "12 x bench press"), "", null)) {
+            val handle = SavedStateHandle()
+            val model = viewModel(handle)
+            val disk = Disk(sheet)
+            model.on(disk)
+            model.refresh(); settled(model)
+            model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+            disk.text = onDisk
+            model.save(); settled(model)
+
+            assertEquals("nothing may reach the folder for $onDisk", 0, disk.writes)
+            val state = model.saving.value as SaveState.Failed
+            assertEquals("This session file changed since you opened it, so nothing was saved.", state.why)
+            assertEquals(listOf("deadlift: 95 lb, 8 reps"), state.typed)
+            assertTrue(state.newFile)
+            assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+            assertTrue("the typing is still recoverable", handle.keys().isNotEmpty())
+        }
+    }
+
+    @Test
+    fun `Carry's own save is the file the next save checks against`() = runTest(dispatcher) {
+        val model = viewModel()
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        model.save(); settled(model)
+        assertEquals(SaveState.Saved, model.saving.value)
+
+        model.edit(1, SessionPatch.Entry(weight = 45.0, reps = 10))
+        model.save(); settled(model)
+        assertEquals("the second save must not see the first as a change", SaveState.Saved, model.saving.value)
+        assertEquals(2, disk.writes)
+    }
+
+    @Test
+    fun `a file that only gained a BOM or CRLF line endings saves`() = runTest(dispatcher) {
+        // Through the real SessionFolder.read, so what is compared is what
+        // the provider's bytes decode to.
+        val tree = android.net.Uri.parse("content://com.android.externalstorage.documents/tree/primary%3Agym")
+        val doc = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, "doc")
+        for (onDisk in listOf("\uFEFF" + sheet, sheet.replace("\n", "\r\n"))) {
+            val model = viewModel()
+            model.folder.remember(tree)
+            org.robolectric.Shadows.shadowOf(app.contentResolver).registerInputStreamSupplier(doc) {
+                java.io.ByteArrayInputStream(onDisk.toByteArray(Charsets.UTF_8))
+            }
+            assertEquals("the harness must reach the real read", onDisk, model.folder.read("doc"))
+            model.read = { ready() }
+            model.refresh(); settled(model)
+            model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+            var wrote = 0
+            model.write = { _, _ -> wrote++; Saved.YES }
+            model.save(); settled(model)
+            assertEquals("${model.saving.value}", SaveState.Saved, model.saving.value)
+            assertEquals(1, wrote)
+        }
+    }
+
+    @Test
+    fun `dropping the numbers after a refusal loads the new file`() = runTest(dispatcher) {
+        val handle = SavedStateHandle()
+        val model = viewModel(handle)
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        val rewritten = sheet.replace("10 x bench press", "12 x bench press")
+        disk.text = rewritten
+        model.save(); settled(model)
+
+        model.discardEdits(); settled(model)
+        assertEquals(rewritten, (model.state.value as CarryState.Ready).raw)
+        assertEquals(emptyMap<Int, SessionPatch.Entry>(), model.edits.value)
+        assertEquals(SaveState.Idle, model.saving.value)
+        assertTrue(handle.keys().isEmpty())
+        assertEquals(0, disk.writes)
     }
 
     @Test
@@ -503,6 +595,7 @@ class CarryViewModelTest {
         model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
 
         var wrote = 0
+        model.readNow = { (model.state.value as CarryState.Ready).raw }
         model.write = { _, _ -> wrote++; model.save(); Saved.YES }
         model.save()
         settled(model)
@@ -792,7 +885,7 @@ class CarryViewModelTest {
 
     private suspend fun kotlinx.coroutines.test.TestScope.until(what: () -> Boolean) =
         withContext(Dispatchers.Default) {
-            withTimeout(5_000) { while (!what()) { dispatcher.scheduler.advanceUntilIdle(); delay(5) } }
+            withTimeout(5_000) { while (!what()) delay(5) }
         }
 
     @Test

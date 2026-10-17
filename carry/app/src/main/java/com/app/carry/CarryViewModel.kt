@@ -57,6 +57,36 @@ data class Draft(
 
 data class UpdateProblem(val why: String, val offerLink: Boolean)
 
+/**
+ * What was typed, one plain line per row ("10 x deadlift: 95 lb, 8 reps"),
+ * so a refused save leaves the numbers readable whatever loads next.
+ */
+internal fun typedNumbers(
+    session: Session, edits: Map<Int, SessionPatch.Entry>, added: List<AddedSet>,
+): List<String> {
+    fun parts(weight: Double?, reps: Int?, fractional: Double?, vararg flags: String?) = listOfNotNull(
+        weight?.let { "${it.asWeight()} lb" },
+        (reps?.toString() ?: fractional?.asWeight())?.let { "$it reps" },
+        *flags,
+    ).joinToString(", ")
+    val rows = session.sets.mapNotNull { set ->
+        val e = edits[set.ref]?.takeUnless { it.blank } ?: return@mapNotNull null
+        val name = set.prescription?.let { "$it ${set.displayName}" } ?: set.displayName
+        "$name: " + parts(
+            e.weight, e.reps, e.fractionalReps,
+            "done".takeIf { e.done }, "easy".takeIf { e.easy }, "mod".takeIf { e.easier },
+            "hurt".takeIf { e.hurt }, e.note?.takeIf { it.isNotBlank() },
+        )
+    }
+    return rows + added.filterNot { it.blank }.map { a ->
+        "${a.name.ifBlank { "added row" }}: " + parts(
+            a.weight, a.reps, a.fractionalReps,
+            "easy".takeIf { a.easy }, "mod".takeIf { a.easier }, "hurt".takeIf { a.hurt },
+            a.note?.takeIf { it.isNotBlank() },
+        )
+    }
+}
+
 class CarryViewModel(app: Application, private val handle: SavedStateHandle) : AndroidViewModel(app) {
 
     val folder = SessionFolder(app)
@@ -331,6 +361,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
             _edits.value = ready.session.onScreen(SessionPatch.entriesIn(ready.raw))
             _added.value = named(SessionPatch.addedIn(ready.raw))
         }
+        // After a refused save the file on disk is newer than the one on
+        // screen; with the draft gone, this read is what loads it.
+        refresh()
     }
 
     /**
@@ -463,19 +496,31 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                         rereadHistory()
                         return@launch
                     }
-                    // The patch was built from the bytes last read. If the
-                    // file has since been replaced by one whose label isn't
-                    // ours, a write would put our session over it.
-                    val result = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        val label = readNow(ready.documentId)?.let(SessionFiles::labelGuess)
-                        if (label != null && label != SessionFiles.Label.OURS) null
-                        else write(ready.documentId, text)
+                    // The patch was built from the bytes last read, so any
+                    // other content on disk now -- a re-run, a sync, a file
+                    // gone or half written -- would be overwritten blind.
+                    // Compared by content, not timestamp, since sync
+                    // services touch mtimes. After a save of our own,
+                    // `ready.raw` is what we wrote, so Carry never trips
+                    // this on itself.
+                    val (refusal, result) = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        val onDisk = readNow(ready.documentId)
+                        val label = onDisk?.let(SessionFiles::labelGuess)
+                        when {
+                            label != null && label != SessionFiles.Label.OURS -> SaveState.Failed(
+                                "The session file was replaced by one whose \"schema\" label is missing or isn't one Carry knows. Nothing was written.",
+                                damaged = false,
+                            ) to null
+                            onDisk.isNullOrBlank() || !SessionFiles.sameContent(onDisk, ready.raw) -> SaveState.Failed(
+                                "This session file changed since you opened it, so nothing was saved.",
+                                damaged = false,
+                                typed = typedNumbers(ready.session, _edits.value, _added.value),
+                                newFile = true,
+                            ) to null
+                            else -> null to write(ready.documentId, text)
+                        }
                     }
-                    _saving.value = when (result) {
-                        null -> SaveState.Failed(
-                            "The session file was replaced by one whose \"schema\" label is missing or isn't one Carry knows. Nothing was written.",
-                            damaged = false,
-                        )
+                    _saving.value = refusal ?: when (result!!) {
                         Saved.YES -> {
                             // ALL of this is "only if nothing newer arrived
                             // while we wrote". It used to guard the one

@@ -193,7 +193,7 @@ fun LogScreen(
                 itemsIndexed(added, sessionKey, onEditAdded)
                 item { AddRow(onAdd, loud = false) }
             }
-            item { SaveButton(saving, onSave, added) }
+            item { SaveButton(saving, onSave, added, onDiscard) }
             // Only once it is written down. Before that the post would be
             // offering to publish numbers that are not yet anywhere, and
             // the moment to hand intel over is when the logging is done.
@@ -721,17 +721,44 @@ internal fun typedBack(names: List<String>): String {
  *  name, so a weight typed at the end of a long one still shows. */
 private const val MAX_TYPED_NAME = 200
 
+/** Drops the typing and loads the file as it now stands. Its label says
+ *  what is lost, since it is one tap and the numbers can't be re-derived. */
+@Composable
+private fun NewFileButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .heightIn(min = 48.dp)
+            .border(1.dp, Look.RuleStrong, RoundedCornerShape(4.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            "Drop my numbers, load the new file",
+            color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.After.Note,
+        )
+    }
+}
+
 sealed interface SaveState {
     data object Idle : SaveState
     data object Saving : SaveState
     data object Saved : SaveState
     /** Not saved. [damaged] means the file itself needs rescuing, which is
      *  a different thing to tell someone than "try again". */
-    data class Failed(val why: String, val damaged: Boolean) : SaveState
+    data class Failed(
+        val why: String,
+        val damaged: Boolean,
+        /** What was typed, one line per row, shown under [why] so the
+         *  numbers survive whatever the owner does next. */
+        val typed: List<String> = emptyList(),
+        /** The file on disk is newer than the one on screen: offer it. */
+        val newFile: Boolean = false,
+    ) : SaveState
 }
 
 @Composable
-private fun SaveButton(state: SaveState, onSave: () -> Unit, added: List<AddedSet>) {
+private fun SaveButton(state: SaveState, onSave: () -> Unit, added: List<AddedSet>, onDiscard: () -> Unit) {
     val label = when (state) {
         SaveState.Idle -> "Save"
         SaveState.Saving -> "Saving…"
@@ -748,6 +775,15 @@ private fun SaveButton(state: SaveState, onSave: () -> Unit, added: List<AddedSe
                 // listener no other sign that nothing was saved.
                 modifier = Modifier.padding(bottom = 8.dp).semantics { liveRegion = LiveRegionMode.Polite },
             )
+            state.typed.forEach {
+                Text(
+                    it, color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.After.Note,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+            }
+            // Well clear of Try again, which is what the thumb is about to
+            // tap again, since this one throws the typing away.
+            if (state.newFile) NewFileButton(onDiscard, Modifier.padding(top = 8.dp, bottom = 28.dp))
         }
         // In the button's own item and above it, where the owner just
         // tapped: a separate item below could land off the bottom of the
