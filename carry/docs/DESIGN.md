@@ -403,8 +403,10 @@ had nothing part way, a plank-only day for instance.
   taken from the newest sheet, since nothing could tell whether a later
   sheet listed it.
 - **The newest listing decides.** If it is out of the band (skipped,
-  lighter, a streak finished or none written), the movement is
-  out. An older sheet's count never stands in for it, because that count
+  lighter, marked *hurt* with a weight, a streak finished or none
+  written), the movement is out. *Hurt* ends the runner's streak at any
+  weight; a hurt row with no weight isn't read by its streak rules, so
+  that count stays. An older sheet's count never stands in for it, because that count
   is from before the newer set. A row on the newer sheet that didn't
   decode still counts as a listing, by the `key` in its raw JSON. On one
   sheet listing a movement twice, a skipped copy doesn't hide the other.

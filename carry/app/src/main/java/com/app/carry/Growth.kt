@@ -587,20 +587,13 @@ object Growth {
         // it here is the one thing this file must not do.
         if (set.weight != null && set.weight < weight) return null
         // A set that hurt ends the runner's streak at any weight, and its
-        // next sheet says hold. Only once the row records a set, though:
-        // `hurt` alone can be tapped while deciding not to do a movement,
-        // and the importer leaves such a row out of history, count intact.
-        if (set.hurt && recordsASet(set)) return null
+        // next sheet says hold. Only a set WITH a weight: the streak rules
+        // read nothing else, so a hurt row carrying only reps, a note or
+        // `done` reaches history and leaves the count as it was.
+        if (set.hurt && set.weight != null) return null
         if (done <= 0 || done >= needed) return null
         return Bump(set.displayName, set.family, weight, done, needed, asOf)
     }
-
-    /** The importer's test for a row that reaches history (gym-coach's
-     *  `session_file._answered`), less `skipped`, which [bumpOf] has
-     *  already excluded. */
-    private fun recordsASet(set: ExerciseSet): Boolean =
-        set.weight != null || set.reps != null || set.done ||
-            set.easy || set.hard || set.easier || !set.note.isNullOrBlank()
 
     /**
      * One session's weighted sets, from the ROWS rather than from

@@ -464,8 +464,8 @@ class GrowthTest {
     @Test
     fun `a set that hurt leaves the band at any weight`() {
         // The runner ends a streak at a set that hurt and holds the weight,
-        // as it does for a lighter one. A row with only `hurt` tapped never
-        // reaches history, so its count still stands.
+        // as it does for a lighter one. Its streak rules read only sets with
+        // a weight, so a hurt row without one leaves the count standing.
         val since = Growth.of(
             listOf(
                 file("2026-10-11", sets = listOf(
@@ -478,7 +478,7 @@ class GrowthTest {
                 ).joinToString(",")),
             )
         )
-        assertEquals(listOf("hurt, nothing else"), since.nearBump.map { it.name })
+        assertEquals(listOf("hurt, reps only", "hurt, nothing else"), since.nearBump.map { it.name })
     }
 
     @Test
