@@ -3,7 +3,8 @@
      Nothing the writer wrote goes to the cloud backup: drafts, photos and the privacy settings
      would sit in their Google account, beside the blog's account and repository, which ties the
      two together. Moving to a new phone (device transfer) brings them, as it's from hand to hand.
-     The GitHub token never moves: it's sealed by a Keystore key that never leaves this phone. -->
+     GitHub tokens move only sealed, in the database, by a Keystore key that never leaves this
+     phone: on the new one they can't be opened, and the app starts signed out. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="file" path="datastore/account.preferences_pb" />

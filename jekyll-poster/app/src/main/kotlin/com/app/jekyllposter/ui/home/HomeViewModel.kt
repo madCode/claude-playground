@@ -63,7 +63,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     private val withTitle = combine(status, container.blogs.config, container.waitingForVpn) { s, config, vpn -> s.copy(siteTitle = config.title, waitingForVpn = vpn) }
 
     val state: StateFlow<State> = combine(container.accounts.account, container.drafts.all(), container.blogs.cachedPosts, withTitle) { account, drafts, posts, s ->
-        // Drafts for another blog wait, hidden, until that blog is signed in again.
+        // Drafts for another blog wait, hidden, until that blog is open again.
         val mine = drafts.filter { it.blog == null || it.blog == account?.blogKey }
         val categories = Taxonomy.of(posts.map { it.toSummary() }).categories.map { it.name }
         // A category gone since it was chosen (renamed, another blog) filters nothing: show all.

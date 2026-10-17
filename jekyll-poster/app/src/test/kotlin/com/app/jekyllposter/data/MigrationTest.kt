@@ -79,6 +79,33 @@ class MigrationTest {
         }
     }
 
+    @Test fun version5DraftsStayAndThePostCacheIsRebuiltPerBlog() {
+        helper.createDatabase(DB, 5).use { db ->
+            db.execSQL(
+                "INSERT INTO drafts (id, blog, title, body, categories, tags, state, sentShas, sendAfter, createdAt, updatedAt) " +
+                    "VALUES (7, 'writer/blog@main', 'Waiting', 'b', '[]', '[]', 'Queued', '[]', 99, 0, 0)",
+            )
+            db.execSQL("INSERT INTO drafts (id, title, body, categories, tags, state, error, createdAt, updatedAt) VALUES (8, 'Failed', 'b', '[]', '[]', 'Failed', 'No', 0, 0)")
+            db.execSQL("INSERT INTO posts (path, sha, title, categories, tags, published) VALUES ('_posts/2025-01-01-a.md', 'abc', 'A', '[]', '[]', 1)")
+        }
+        helper.runMigrationsAndValidate(DB, 6, true, MIGRATION_5_6).use { db ->
+            db.query("SELECT blog, state, sendAfter FROM drafts WHERE id = 7").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("writer/blog@main", c.getString(0))
+                assertEquals("Queued", c.getString(1))
+                assertEquals(99, c.getLong(2))
+            }
+            db.query("SELECT state, error FROM drafts WHERE id = 8").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("Failed", c.getString(0))
+                assertEquals("No", c.getString(1))
+            }
+            // A cache with no blog to say whose: the next read fills it again.
+            db.query("SELECT COUNT(*) FROM posts").use { c -> c.moveToFirst(); assertEquals(0, c.getInt(0)) }
+            db.query("SELECT COUNT(*) FROM sign_ins").use { c -> c.moveToFirst(); assertEquals(0, c.getInt(0)) }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
     }

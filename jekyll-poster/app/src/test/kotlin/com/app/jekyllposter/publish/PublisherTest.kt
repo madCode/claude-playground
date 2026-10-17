@@ -9,6 +9,7 @@ import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.DraftImage
 import com.app.jekyllposter.data.PostState
+import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
 import java.io.File
 import java.time.ZoneId
@@ -56,7 +57,7 @@ class PublisherTest {
         assertEquals(BuildState.Building, draft.buildState)
         assertEquals("Add post: Late night: notes", github.commits.getValue(github.head).message)
         // The blog is read again, so the post shows under "On your blog".
-        assertTrue(c.database.posts().snapshot().any { it.path == "_posts/2026-10-04-late-night-notes.md" })
+        assertTrue(c.database.posts().snapshot(SAMPLE_BLOG).any { it.path == "_posts/2026-10-04-late-night-notes.md" })
     }
 
     @Test fun aNoteKeepsItsOwnDateInItsFileNameAndFrontMatter() = runBlocking {
@@ -147,7 +148,7 @@ class PublisherTest {
         c.blogs.refresh()
         c.settings.setDatesByDayOnly(true)
         val path = "_drafts/garden-plans.md"
-        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        val sha = c.database.posts().snapshot(SAMPLE_BLOG).first { it.path == path }.sha
         publisher.publish(queue(Draft(title = "Garden plans", body = "Beans.", editingPath = path, baseSha = sha, destination = Destination.Posts)))
         assertTrue(github.text("_posts/2026-10-04-garden-plans.md")!!.contains("date: 2026-10-04\n"))
     }
@@ -226,7 +227,7 @@ class PublisherTest {
     @Test fun aRetriedEditThatHadLandedIsDoneNotAConflict() = runBlocking {
         c.blogs.refresh()
         val path = "_posts/2025-01-12-welcome.md"
-        val sha = github.files().let { c.database.posts().snapshot().first { it.path == path }.sha }
+        val sha = github.files().let { c.database.posts().snapshot(SAMPLE_BLOG).first { it.path == path }.sha }
         val id = queue(Draft(title = "Welcome", body = "New words.", editingPath = path, baseSha = sha))
         publisher.publish(id)
         val head = github.head
@@ -274,7 +275,7 @@ class PublisherTest {
     @Test fun publishingAJekyllDraftMovesItToPostsInOneCommit() = runBlocking {
         c.blogs.refresh()
         val path = "_drafts/garden-plans.md"
-        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        val sha = c.database.posts().snapshot(SAMPLE_BLOG).first { it.path == path }.sha
         val id = queue(
             Draft(
                 title = "Garden plans", body = "Tomatoes along the fence, beans by the shed.", categories = listOf("garden"),
@@ -298,7 +299,7 @@ class PublisherTest {
 
     private fun queueDelete(path: String): Long = runBlocking {
         c.blogs.refresh()
-        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        val sha = c.database.posts().snapshot(SAMPLE_BLOG).first { it.path == path }.sha
         queue(Draft(title = "To go", body = "Edited, then deleted.", editingPath = path, baseSha = sha, destination = Destination.Delete))
     }
 
@@ -315,7 +316,7 @@ class PublisherTest {
         // Nothing is left to show on the phone: the row, the photo it never sent, the cached post.
         assertNull(c.drafts.get(id))
         assertTrue(!photo.exists())
-        assertTrue(c.database.posts().snapshot().none { it.path == path })
+        assertTrue(c.database.posts().snapshot(SAMPLE_BLOG).none { it.path == path })
     }
 
     @Test fun aDeleteThatLandedUnheardIsDone() = runBlocking {
@@ -368,7 +369,7 @@ class PublisherTest {
     @Test fun updatingAJekyllDraftKeepsItADraft() = runBlocking {
         c.blogs.refresh()
         val path = "_drafts/garden-plans.md"
-        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        val sha = c.database.posts().snapshot(SAMPLE_BLOG).first { it.path == path }.sha
         val id = queue(Draft(title = "Garden plans", body = "More.", categories = listOf("garden"), editingPath = path, baseSha = sha, destination = Destination.Drafts))
         publisher.publish(id)
         assertEquals("---\ntitle: Garden plans\ncategories: [garden]\n---\n\nMore.\n", github.text(path))
@@ -427,7 +428,7 @@ class PublisherTest {
     @Test fun aDraftPublishedElsewhereIsNotMistakenForThisPhonesMove() = runBlocking {
         c.blogs.refresh()
         val path = "_drafts/garden-plans.md"
-        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        val sha = c.database.posts().snapshot(SAMPLE_BLOG).first { it.path == path }.sha
         val id = queue(Draft(title = "Garden plans", body = "Phone words", editingPath = path, baseSha = sha, destination = Destination.Posts, targetPath = "_posts/2026-10-04-garden-plans.md", publishDate = "2026-10-04T22:15-07:00"))
         // Published from a laptop that day, under the same name.
         github.push("Laptop publish", mapOf(path to null, "_posts/2026-10-04-garden-plans.md" to "---\ntitle: Garden plans\n---\nLaptop words\n"))
@@ -499,7 +500,7 @@ class PublisherTest {
     @Test fun anEditKeepsTheKeysTheAppDoesNotTouch() = runBlocking {
         c.blogs.refresh()
         val path = "_posts/2025-04-20-reading-list.md"
-        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        val sha = c.database.posts().snapshot(SAMPLE_BLOG).first { it.path == path }.sha
         val id = queue(Draft(title = "What I read in April", body = "Updated list.", categories = listOf("Writing"), tags = listOf("books", "essays"), editingPath = path, baseSha = sha))
         assertEquals(Publisher.Outcome.Done, publisher.publish(id))
         assertEquals(
@@ -512,7 +513,7 @@ class PublisherTest {
     @Test fun anEditOfAPostChangedElsewhereIsRefused() = runBlocking {
         c.blogs.refresh()
         val path = "_posts/2025-01-12-welcome.md"
-        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        val sha = c.database.posts().snapshot(SAMPLE_BLOG).first { it.path == path }.sha
         github.push("Laptop edit", mapOf(path to "---\ntitle: Changed on the laptop\n---\n"))
         val id = queue(Draft(title = "Mine", body = "Mine", editingPath = path, baseSha = sha))
         assertTrue(publisher.publish(id) is Publisher.Outcome.Failed)

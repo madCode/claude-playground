@@ -3,6 +3,15 @@
 For the next cycle: what to do differently, newest first. What each cycle built is in
 [DEVLOG.md](DEVLOG.md). Keep the last ten or so.
 
+### Cycle 27 — build: a queued post goes to its own blog
+
+- Commit before every falsification: a `git checkout` of a file to restore a break also
+  reverted uncommitted review fixes in it, and they had to be re-applied by hand.
+- `FakeGitHub.addRepository` serves a second blog; `TwoBlogsTest` shows how to drive two blogs
+  through the real switch path. Cycle 2 builds on both.
+- The review ran through the `code-review` skill (the build agent had no subagent tool); it found
+  three real races and gaps. Keep pointing it at switch and sign-out during background work.
+
 ### Cycle 26 — design: several sign-ins and blogs
 
 - The design waits on madCode in [#137](https://github.com/madCode/claude-playground/issues/137).

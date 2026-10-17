@@ -6,6 +6,7 @@ import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.publish.Publisher
+import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
 import kotlinx.coroutines.Dispatchers
@@ -98,7 +99,7 @@ class TakeBackTest {
         app.signIn()
         c.blogs.refresh()
         val path = "_drafts/garden-plans.md"
-        val sha = c.database.posts().snapshot().first { it.path == path }.sha
+        val sha = c.database.posts().snapshot(SAMPLE_BLOG).first { it.path == path }.sha
         val id = c.drafts.insert(Draft(title = "Garden plans", body = "Beans.", editingPath = path, baseSha = sha, state = PostState.Queued, destination = Destination.Drafts))
         app.github.loseNextRefAnswer = true
         assertEquals(Publisher.Outcome.Retry, c.publisher.publish(id))

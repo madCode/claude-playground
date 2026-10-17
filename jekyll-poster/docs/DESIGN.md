@@ -85,7 +85,7 @@ doesn't want to open a laptop and make a commit for every post.
 - A share starts one post: going back from it returns to the list.
 - A new post with nothing in it is dropped when you leave it. One left when the app closed under
   it isn't listed, and is dropped a day later (it may still be open in another window).
-- A draft belongs to the blog it was written for. Signed in to another blog, it waits, hidden.
+- A draft belongs to the blog it was written for. With another blog open, it waits, hidden.
 
 ## Photos
 
@@ -174,6 +174,9 @@ doesn't want to open a laptop and make a commit for every post.
   hours and the post waits for it, saying "Going out at 18:40, a random time"; nothing about
   this post is read from or sent to GitHub before then (opening the app still reads the blog). **Send now** in the editor sends it at once. The moment
   is kept with the post, so a restart doesn't pick again. Deleting is never delayed.
+- A queued post goes to the blog it was written for, with that blog's sign-in, even if another
+  blog is open by the time it goes; so does the check that it's live. Signed out of its blog,
+  it fails and says to sign in to that blog.
 - A post that hasn't gone out yet (waiting for its time, a connection or the VPN) opens
   read-only with **Stop and edit**, which takes it back to a draft: change it, then Publish
   again (with a new random time, if that's on).
@@ -294,8 +297,11 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
 ## Settings
 - The blog (repository and branch) and the site's address.
 - **Blog & privacy**, above.
-- **Switch blog** lists the repositories the current sign-in can write to.
-- **Sign out** keeps drafts on the phone for when that blog is signed in again.
+- **Switch blog** lists the repositories the current sign-in can write to. The blog left keeps
+  its sign-in: posts still waiting to go out to it go there, and its drafts are listed again
+  when it's switched back to.
+- **Sign out** forgets the sign-in and every blog it was used for, and keeps drafts on the phone
+  for when that blog is signed in again.
 - **Obsidian:** the vault folder photos in shared notes come from; choose another or forget it.
 - Nothing written goes to the phone's cloud backup: drafts, photos and the privacy settings
   would sit in the writer's Google account, beside the blog's. From Android 12, moving to a new

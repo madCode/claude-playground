@@ -148,17 +148,16 @@ class AppContainer(
     suspend fun awaitVpn(timeout: Duration): Boolean =
         withTimeoutOrNull(timeout) { waitingForVpn.first { !it } } != null
 
-    val accounts = AccountStore(accountData, cipher, deviceFlow?.let { flow -> { refreshToken: String -> flow.refresh(refreshToken) } })
+    val accounts = AccountStore(accountData, database.accounts(), cipher, deviceFlow?.let { flow -> { refreshToken: String -> flow.refresh(refreshToken) } })
     val drafts = database.drafts()
     val blogs = BlogRepository(accounts, database.posts()) { account: Account -> client(account.token) }
     val publisher = Publisher(drafts, accounts, blogs, settings)
     val images = ImageImporter(context.contentResolver, File(context.filesDir, "images"))
     val buildWatcher = BuildWatcher(drafts, accounts, { client(it.token) }, onBuildFinished)
 
-    /** Signs out: the account and the blog it read go; drafts stay for when it's signed in again. */
+    /** Signs out: the sign-in and the blogs it posts to go; drafts stay for when it's signed in again. */
     suspend fun signOut() {
-        accounts.signOut()
-        blogs.clear()
+        blogs.forget(accounts.signOut())
     }
 
     /**

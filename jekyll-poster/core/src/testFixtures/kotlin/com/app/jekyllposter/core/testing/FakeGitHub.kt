@@ -24,6 +24,7 @@ import mockwebserver3.RecordedRequest
 /**
  * An in-memory GitHub serving one repository, for tests: the REST and GraphQL calls the app makes,
  * backed by real commits, so a test can publish and then read back what landed on the branch.
+ * [addRepository] serves another beside it, at the same address.
  */
 class FakeGitHub(
     files: Map<String, ByteArray> = emptyMap(),
@@ -65,6 +66,16 @@ class FakeGitHub(
     private val server = MockWebServer()
     private val json = Json
 
+    /** Repositories served beside this one, by `owner/repo`. */
+    private val others = mutableMapOf<String, FakeGitHub>()
+
+    /**
+     * Another repository on the same GitHub, for the same token: its own files, commits and [log],
+     * reached through this one's [apiBase] and listed with this one's repositories.
+     */
+    fun addRepository(repo: String, files: Map<String, ByteArray>, owner: String = this.owner): FakeGitHub =
+        FakeGitHub(files, owner, repo, branch, token).also { others["$owner/$repo"] = it }
+
     init {
         val tree = files.mapValues { (_, bytes) -> putBlob(bytes) }
         val treeSha = putTree(tree)
@@ -95,7 +106,10 @@ class FakeGitHub(
         refs[branch] = commit
     }
 
-    override fun close() = server.close()
+    override fun close() {
+        others.values.forEach { it.close() }
+        server.close()
+    }
 
     private fun handle(request: RecordedRequest): MockResponse {
         val url = request.url
@@ -120,11 +134,20 @@ class FakeGitHub(
         }
         if (request.headers["Authorization"] != "Bearer $token") return error(401, "Bad credentials")
         val body = request.body?.utf8()
+        val other = if (path == "graphql") {
+            json.parseToJsonElement(body!!).jsonObject["variables"]?.jsonObject?.let { v ->
+                others["${v["owner"]?.jsonPrimitive?.content}/${v["name"]?.jsonPrimitive?.content}"]
+            }
+        } else {
+            path.split('/').takeIf { it.size >= 3 && it[0] == "repos" }?.let { others["${it[1]}/${it[2]}"] }
+        }
+        if (other != null) return other.handle(request)
         val base = "repos/$owner/$repo"
         return when {
             path == "user" -> ok(buildJsonObject { put("login", owner); put("name", "Sample Writer"); put("id", 1001) })
             path == "user/repos" -> ok(buildJsonArray {
                 add(repoJson())
+                others.values.forEach { add(it.repoJson()) }
                 add(buildJsonObject {
                     put("full_name", "$owner/read-only"); put("name", "read-only"); put("default_branch", "main")
                     put("owner", buildJsonObject { put("login", owner) })
