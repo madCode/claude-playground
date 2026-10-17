@@ -22,6 +22,8 @@ tells you when GitHub Pages has rebuilt the site.
   connecting through a VPN, a no-reply commit email, plain commit messages, dates by the day,
   sending at a random time and tracking codes off shared links. One button turns them all on.
   It also sets the site's time zone, and says what no switch can do.
+- **Several blogs, several accounts.** Keep blogs under more than one GitHub account or
+  organisation, and switch from the blog's title. A post waiting to go out goes to its own blog.
 - **From Obsidian.** Share a note and it becomes a post: comments and private keys left out,
   `[[links]]` to other posts, embedded photos from the vault. Type `[[` to link a post.
 - **A bit of fun.** It looks like a risograph zine: cream paper, fluoro inks, a stamp of a

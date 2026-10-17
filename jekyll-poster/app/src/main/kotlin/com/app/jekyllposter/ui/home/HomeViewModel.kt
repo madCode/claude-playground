@@ -251,9 +251,6 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     private fun recent(draft: Draft) = System.currentTimeMillis() - draft.updatedAt < DAY_MS
 }
 
-/** A new post nothing was written in yet: not shown on the list. */
-private val Draft.untouched: Boolean get() = (isEmpty && state == PostState.Draft && editingPath == null) || unchangedEdit
-
 /** A post matches a search by its title, or by one of its categories or tags. */
 private fun CachedPost.matches(query: String): Boolean =
     title.contains(query, ignoreCase = true) || (categories + tags).any { it.contains(query, ignoreCase = true) }

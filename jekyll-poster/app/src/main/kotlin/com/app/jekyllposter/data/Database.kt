@@ -122,6 +122,9 @@ data class Draft(
      */
     val unchangedEdit: Boolean get() = editingPath != null && state == PostState.Draft && updatedAt == createdAt
 
+    /** A new post nothing was written in yet, or an edit never changed: not listed anywhere. */
+    val untouched: Boolean get() = (isEmpty && state == PostState.Draft && editingPath == null) || unchangedEdit
+
     /** The writer can change it: published posts and ones on their way are read-only. */
     val editable: Boolean get() = state == PostState.Draft || state == PostState.Failed
 
@@ -264,6 +267,8 @@ data class SavedBlog(
     val branch: String,
     val siteUrl: String? = null,
     val signInId: Long,
+    /** The site's own title, from `_config.yml` as last read; null until the blog is first read. */
+    val title: String? = null,
 )
 
 /** A blog with its sign-in. */
@@ -285,6 +290,23 @@ abstract class AccountDao {
 
     @Query("SELECT * FROM blogs WHERE blogKey = :key")
     abstract suspend fun blog(key: String): SavedBlog?
+
+    /** Every blog with its sign-in, grouped by sign-in in the order they were made. */
+    @Transaction
+    @Query("SELECT * FROM blogs ORDER BY signInId, blogKey")
+    abstract fun all(): Flow<List<BlogWithSignIn>>
+
+    /** The blog to open once [signInId]'s blogs are gone; null when it has every blog. */
+    @Query("SELECT blogKey FROM blogs WHERE signInId != :signInId ORDER BY signInId, blogKey LIMIT 1")
+    abstract suspend fun firstBlogNotOf(signInId: Long): String?
+
+    /** Only when it changed: an unchanged title mustn't wake every screen watching the blogs. */
+    @Query("UPDATE blogs SET title = :title WHERE blogKey = :key AND title IS NOT :title")
+    abstract suspend fun setTitle(key: String, title: String?)
+
+    /** Posts still to go out to one of [signInId]'s blogs. */
+    @Query("SELECT * FROM drafts WHERE state = 'Queued' AND blog IN (SELECT blogKey FROM blogs WHERE signInId = :signInId)")
+    abstract suspend fun waitingFor(signInId: Long): List<Draft>
 
     @Query("SELECT * FROM sign_ins WHERE id = :id")
     abstract suspend fun signIn(id: Long): SignIn?
@@ -320,7 +342,7 @@ abstract class AccountDao {
     @Transaction
     open suspend fun signInTo(signIn: SignIn, blog: SavedBlog): Long {
         val id = insert(signIn)
-        upsert(blog.copy(signInId = id))
+        upsert(blog.copy(signInId = id, title = blog(blog.blogKey)?.title))
         deleteUnused()
         return id
     }
@@ -338,9 +360,14 @@ abstract class AccountDao {
         adoptDrafts(blog.blogKey)
     }
 
-    /** Removes [signInId] and its blogs; the keys of the blogs removed. */
+    /**
+     * Removes [signInId] and its blogs, unless a post is still to go out to one of them: the keys
+     * of the blogs removed, or null when one is waiting. One transaction, so a post queued in
+     * between can't be left without its sign-in.
+     */
     @Transaction
-    open suspend fun remove(signInId: Long): List<String> {
+    open suspend fun removeUnlessWaiting(signInId: Long): List<String>? {
+        if (waitingFor(signInId).isNotEmpty()) return null
         val keys = blogsOf(signInId)
         deleteBlogsOf(signInId)
         deleteSignIn(signInId)
@@ -359,7 +386,7 @@ class Converters {
     @TypeConverter fun toImages(json: String): List<DraftImage> = Json.decodeFromString(json)
 }
 
-@Database(entities = [Draft::class, CachedPost::class, SignIn::class, SavedBlog::class], version = 6)
+@Database(entities = [Draft::class, CachedPost::class, SignIn::class, SavedBlog::class], version = 7)
 @TypeConverters(Converters::class)
 abstract class PosterDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
@@ -369,7 +396,7 @@ abstract class PosterDatabase : RoomDatabase() {
     companion object {
         /** The app's database, brought up to date from any version a debug build has shipped. */
         fun create(context: Context): PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
     }
 }
 
@@ -434,5 +461,12 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
             "CREATE TABLE IF NOT EXISTS `posts` (`blog` TEXT NOT NULL, `path` TEXT NOT NULL, `sha` TEXT NOT NULL, `title` TEXT NOT NULL, " +
                 "`categories` TEXT NOT NULL, `tags` TEXT NOT NULL, `published` INTEGER NOT NULL, `date` TEXT, PRIMARY KEY(`blog`, `path`))",
         )
+    }
+}
+
+/** Blogs keep their site's title, so the blog switcher can name the ones that aren't open. */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE blogs ADD COLUMN title TEXT")
     }
 }

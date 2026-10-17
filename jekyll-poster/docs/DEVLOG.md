@@ -17,10 +17,32 @@ Times are when each cycle landed, Pacific.
   ([madCode/sample-blog](https://github.com/madCode/sample-blog), live on Pages). The live check
   workflow publishes and deletes one there through the app's own GitHub client.
 - **Used for real:** madCode has published to their own blog from the phone.
-- **Waiting on you:** the GitHub App for Sign in with GitHub ([how](GITHUB_APP.md)); the
-  Android SDK in the environment's setup script.
+- **Several blogs:** cycles 1 and 2 of 3 are built (cycle 2 in
+  [#141](https://github.com/madCode/claude-playground/pull/141)): blogs under several accounts,
+  a switcher from the title, Remove. Cycle 3 makes the privacy switches per blog.
+- **Waiting on you:** the Android SDK in the environment's setup script. The GitHub App is
+  registered.
 
 ## Sat 17 Oct
+
+### Cycle 28: several sign-ins and the blog switcher (several blogs, 2 of 3)
+- **Asked for:** build cycle 2 of [#137](https://github.com/madCode/claude-playground/issues/137),
+  approved as proposed.
+- **Changed:** the app keeps blogs under more than one GitHub account. With more than one blog,
+  Home's title gets a ▾ that opens every blog under its sign-in, with its drafts, waiting posts
+  and ones that didn't go. Add a blog (from any sign-in) and Add a sign-in. Settings has This
+  blog, and Blogs and sign-ins, whose Your blogs page has Remove on each sign-in. Remove
+  replaces Sign out, and is refused while a post is still to go out with that sign-in, naming
+  it, with Send them now. The editor says which blog a post goes to. Blogs keep their site's
+  title (database version 7).
+- **The review caught:** removing the open blog's sign-in could briefly read as signed out,
+  jumping to the sign-in screen, or, cut short, leave the app pointing at the removed blog; Add
+  a blog for a sign-in removed meanwhile threw away the new token typed in; a post being watched
+  stayed "the site is rebuilding" for good once its sign-in was removed. A second look caught
+  that Back during the last removal left Home empty instead of returning to signing in. All
+  fixed, with tests.
+- **Left:** adding the same account twice gives two identical sign-ins in the list (no harm,
+  just two rows). The privacy switches are still app-wide: cycle 3.
 
 ### Cycle 27: a queued post goes to its own blog (several blogs, 1 of 3)
 - **Asked for:** build cycle 1 of [#137](https://github.com/madCode/claude-playground/issues/137),

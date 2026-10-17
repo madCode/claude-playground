@@ -8,12 +8,12 @@ and moves it to Done.
 - [ ] Several sign-ins and blogs, in three build cycles with audits between
   ([#137](https://github.com/madCode/claude-playground/issues/137), approved):
   1. ~~Data and sending~~ (cycle 27).
-  2. Several sign-ins: Add a sign-in, Add a blog, the switcher sheet, Remove; the editor's "To" line.
-     Also: a post for a blog that isn't open that fails is hidden, with nothing to say so
-     (`HomeViewModel.kt`'s filter); the switcher should show it on its blog's row. And Remove
-     refuses while a blog of that sign-in has posts still to go: today Sign out lets them fail.
-  3. Privacy per blog: the switches and the VPN gate.
-- [ ] Register the GitHub App and set the repository variables *(you: [how](GITHUB_APP.md))*
+  2. ~~Several sign-ins~~ (cycle 28).
+  3. Privacy per blog: the switches and the VPN gate; the switcher's rows show each blog's
+     switches (the mockup's pills), and a new blog opens Blog & privacy.
+     Then an audit: a log of a real run's requests per account, and a UX pass on the switcher.
+- [ ] Adding the same GitHub account twice makes two identical sign-ins in Your blogs; reuse the
+  existing one (by login and kind) instead
 - [ ] Find the Compose-test Room hang (DEVLOG, cycles 1 and 11: likely Compose's main
   dispatcher bound to the first test's looper)
 
@@ -30,6 +30,8 @@ and moves it to Done.
 
 ## Done
 
+- [x] The GitHub App registered, for Sign in with GitHub (madCode)
+- [x] Cycle 28: several sign-ins, the blog switcher, Remove
 - [x] Cycle 27: a queued post goes to its own blog after switching; sign-ins and blogs in the database
 - [x] Cycle 26: design for several sign-ins and blogs (#137)
 - [x] Tried on madCode's own blog

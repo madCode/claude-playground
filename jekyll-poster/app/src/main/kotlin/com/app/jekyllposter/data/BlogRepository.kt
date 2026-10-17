@@ -82,6 +82,7 @@ class BlogRepository(
         val gone = posts.snapshot(key).map { it.path } - cached.map { it.path }.toSet()
         // In chunks: older Android's SQLite takes at most 999 values in one statement.
         gone.chunked(500).forEach { posts.deletePaths(key, it) }
+        accounts.setTitle(key, index.config.title)
         view.withLock {
             if (accounts.currentKey() == key) {
                 _config.value = index.config
@@ -101,8 +102,8 @@ class BlogRepository(
     private val view = Mutex()
 
     /**
-     * Forgets the open blog's title, address and image folder. Called after switching or signing
-     * out, so another blog starts without them.
+     * Forgets the open blog's title, address and image folder. Called after switching or removing
+     * the open blog's sign-in, so another blog starts without them.
      */
     suspend fun clear() = view.withLock {
         _config.value = SiteConfig()
@@ -112,11 +113,8 @@ class BlogRepository(
         postUrlHasBaseurl = false
     }
 
-    /** Forgets [keys]' posts, and the open blog's details: they were signed out of. */
-    suspend fun forget(keys: List<String>) {
-        posts.clear(keys)
-        clear()
-    }
+    /** Forgets [keys]' posts: their sign-in was removed. */
+    suspend fun forget(keys: List<String>) = posts.clear(keys)
 
     /**
      * Of [posts], those a `[[link]]` can go to, newest first: ones the site builds. GitHub Pages

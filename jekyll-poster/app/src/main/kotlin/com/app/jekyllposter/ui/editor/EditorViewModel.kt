@@ -23,6 +23,7 @@ import com.app.jekyllposter.core.jekyll.Term
 import com.app.jekyllposter.core.obsidian.ObsidianNote
 import com.app.jekyllposter.data.CachedPost
 import com.app.jekyllposter.data.Destination
+import com.app.jekyllposter.data.BlogEntry
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.DraftImage
 import com.app.jekyllposter.data.PostState
@@ -68,6 +69,8 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         val closed: Boolean = false,
         /** Edit was tapped on a queued post; it waits for any publish under way. */
         val takingBack: Boolean = false,
+        /** The blog the post goes to, when the writer has more than one; null with one. */
+        val to: BlogEntry? = null,
     ) {
         /**
          * Published posts and ones on their way are read-only; edit the blog's copy instead. Still
@@ -97,14 +100,15 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     private val flags = MutableStateFlow(State())
     private var saveJob: Job? = null
 
-    val state: StateFlow<State> = combine(local, container.drafts.watch(id), container.blogs.taxonomy, flags) { mine, stored, taxonomy, f ->
+    val state: StateFlow<State> = combine(local, container.drafts.watch(id), container.blogs.taxonomy, flags, container.accounts.blogs) { mine, stored, taxonomy, f, blogs ->
         // The stored row wins for publishing state, which the worker changes; the text is the writer's.
         val draft = when {
             stored == null -> null
             mine == null -> stored
             else -> stored.withTextOf(mine)
         }
-        f.copy(draft = draft, taxonomy = taxonomy)
+        val to = blogs.takeIf { it.size > 1 }?.firstOrNull { it.key == draft?.blog }
+        f.copy(draft = draft, taxonomy = taxonomy, to = to)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, State())
 
     /** The draft read from the database; a camera photo arriving first waits for it. */

@@ -3,6 +3,20 @@
 For the next cycle: what to do differently, newest first. What each cycle built is in
 [DEVLOG.md](DEVLOG.md). Keep the last ten or so.
 
+### Cycle 28 — build: several sign-ins and the blog switcher
+
+- `koverVerify` doesn't rewrite `build/reports/kover/report.xml`: a report left from an
+  earlier cycle in the same container gave the old figure. Run `koverXmlReport` before quoting
+  coverage, and check the file's time.
+- Run a new test green before falsifying it. Two flow tests went "red" under a break while
+  they were already failing on the fix (navigation called off the main thread), so the break
+  proved nothing; the failure message is the check: it should be the assertion, not a crash.
+- A race the review finds (two steps with a window between) needs a delay added in the
+  falsification break to widen the window; say so in the PR. `removingTheOpenBlogsSignIn…`
+  went red only with a 300 ms delay between the delete and the key move.
+- Cycle 3 builds on `FakeGitHub.addAccount` (a second account, its own token and log) and
+  `SeveralSignInsTest`; the switcher's rows are `BlogList` in `ui/blogs/Blogs.kt`.
+
 ### Cycle 27 — build: a queued post goes to its own blog
 
 - Commit before every falsification: a `git checkout` of a file to restore a break also

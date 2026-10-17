@@ -14,8 +14,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.Shared
+import com.app.jekyllposter.ui.blogs.BlogsScreen
+import com.app.jekyllposter.ui.blogs.BlogsViewModel
 import com.app.jekyllposter.ui.connect.ConnectScreen
 import com.app.jekyllposter.ui.connect.ConnectViewModel
 import com.app.jekyllposter.ui.editor.EditorScreen
@@ -25,7 +34,6 @@ import com.app.jekyllposter.ui.home.HomeViewModel
 import com.app.jekyllposter.ui.settings.BlogPrivacyScreen
 import com.app.jekyllposter.ui.settings.BlogPrivacyViewModel
 import com.app.jekyllposter.ui.settings.SettingsScreen
-import kotlinx.coroutines.launch
 
 private object Loading
 
@@ -33,36 +41,55 @@ private object Loading
 fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
     // Wait for the stored account before choosing the first screen, so a signed-in writer never
     // sees the connect screen flash by.
-    val signedIn by produceState<Any?>(Loading) { container.accounts.account.collect { value = it != null } }
+    // Read once: the screens navigate on their own after that, and a passing null (a sign-in being
+    // removed) mustn't rebuild the graph and empty the back stack.
+    val signedIn by produceState<Any?>(Loading) { value = container.accounts.account.first() != null }
     if (signedIn === Loading) return
     val nav = rememberNavController()
     // Home leaves the composition while the editor is open and its effects run again on the way
     // back, so a share is taken once, here, or every Back would start another post from it.
     var pending by rememberSaveable { mutableStateOf(shared != null) }
+    // The last sign-in removed, from whichever screen, and whether or not that screen is still
+    // open: back to signing in. Only a change counts; the first value chose the first screen.
+    LaunchedEffect(nav) {
+        container.accounts.blogs.map { it.isEmpty() }.distinctUntilChanged().drop(1).filter { it }
+            // On the main thread, where navigation must happen: Room's flow can hand it over elsewhere.
+            .collect { withContext(Dispatchers.Main) { nav.navigate("connect") { popUpTo(0) { inclusive = true } } } }
+    }
     NavHost(nav, startDestination = if (signedIn == true) "home" else "connect") {
         composable("connect") {
             ConnectScreen(viewModel { ConnectViewModel(container) }) {
                 nav.navigate("home") { popUpTo(0) { inclusive = true } }
             }
         }
-        composable("switch") {
-            // Straight to the blog list, with the sign-in already in hand.
-            ConnectScreen(viewModel { ConnectViewModel(container).also { it.switchBlog() } }, onCancel = { nav.popBackStack() }) {
+        composable("add-sign-in") {
+            ConnectScreen(viewModel { ConnectViewModel(container) }, onCancel = { nav.popBackStack() }) {
                 nav.navigate("home") { popUpTo(0) { inclusive = true } }
             }
+        }
+        composable("add-blog/{signIn}", arguments = listOf(navArgument("signIn") { type = NavType.LongType })) { entry ->
+            val signIn = entry.arguments!!.getLong("signIn")
+            // Straight to the sign-in's repositories, with its token already in hand.
+            ConnectScreen(viewModel { ConnectViewModel(container).also { it.addBlogTo(signIn) } }, onCancel = { nav.popBackStack() }) {
+                nav.navigate("home") { popUpTo(0) { inclusive = true } }
+            }
+        }
+        composable("blogs") {
+            BlogsScreen(
+                viewModel { BlogsViewModel(container) },
+                onBack = { nav.popBackStack() },
+                onOpened = { nav.navigate("home") { popUpTo(0) { inclusive = true } } },
+                onAddBlog = { nav.navigate("add-blog/$it") },
+                onAddSignIn = { nav.navigate("add-sign-in") },
+            )
         }
         composable("settings") {
             SettingsScreen(
                 container,
                 onBack = { nav.popBackStack() },
-                onSwitchBlog = { nav.navigate("switch") },
+                onBlogs = { nav.navigate("blogs") },
+                onAddSignIn = { nav.navigate("add-sign-in") },
                 onBlogPrivacy = { nav.navigate("privacy") },
-                onSignOut = {
-                    // Navigation first, here on the main thread; the sign-out finishes behind it, in
-                    // a scope that outlives this screen.
-                    nav.navigate("connect") { popUpTo(0) { inclusive = true } }
-                    container.appScope.launch { container.signOut() }
-                },
             )
         }
         composable("privacy") {
@@ -87,6 +114,9 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
                 vm,
                 onOpenDraft = { nav.navigate("editor/$it") },
                 onSettings = { nav.navigate("settings") },
+                blogs = viewModel { BlogsViewModel(container) },
+                onAddBlog = { nav.navigate("add-blog/$it") },
+                onAddSignIn = { nav.navigate("add-sign-in") },
             )
         }
         composable("editor/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->

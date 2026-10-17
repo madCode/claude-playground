@@ -106,6 +106,22 @@ class MigrationTest {
         }
     }
 
+    @Test fun version6BlogsKeepTheirSignInAndGainATitle() {
+        helper.createDatabase(DB, 6).use { db ->
+            db.execSQL("INSERT INTO sign_ins (id, login, kind, sealedToken) VALUES (3, 'writer', 'Token', 'sealed')")
+            db.execSQL("INSERT INTO blogs (blogKey, owner, repo, branch, siteUrl, signInId) VALUES ('writer/blog@main', 'writer', 'blog', 'main', 'https://writer.github.io/blog/', 3)")
+        }
+        helper.runMigrationsAndValidate(DB, 7, true, MIGRATION_6_7).use { db ->
+            db.query("SELECT signInId, siteUrl, title FROM blogs WHERE blogKey = 'writer/blog@main'").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(3, c.getLong(0))
+                assertEquals("https://writer.github.io/blog/", c.getString(1))
+                // Unknown until the blog is next read.
+                assertTrue(c.isNull(2))
+            }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
     }

@@ -28,6 +28,30 @@ doesn't want to open a laptop and make a commit for every post.
 - Tokens are sealed with an Android Keystore key and never backed up. Expiring tokens are
   renewed five minutes before they expire.
 
+## Several blogs
+
+- The app keeps any number of sign-ins, each with the blogs it posts to. One blog is open at a
+  time: one list, one search, one set of categories.
+- **The switcher.** With more than one blog, Home's title gets a ▾ and the line under it names
+  the sign-in. Tapping it opens every blog under its sign-in (`@login`, with a token or with
+  GitHub), the open one ticked. Each row counts that blog's posts on the phone: drafts, ones
+  waiting to go, and ones that didn't go (hidden from Home while another blog is open).
+  Switching publishes and changes nothing.
+- **Add a blog** lists a sign-in's repositories (with several sign-ins, the writer picks which
+  first). **Add a sign-in** is the sign-in screen again, for another account or an organisation
+  a token can't cover. Either opens the blog added.
+- **Settings → Your blogs** is the same list, with **Remove** on each sign-in. Removing forgets
+  it and its blogs and keeps their drafts; if the open blog went, another opens, and with none
+  left the app returns to the sign-in screen. Remove is refused while a post is still waiting
+  to go out with that sign-in, naming the posts: **Send them now**, or open their blog and
+  **Stop and edit** them first.
+- **Shares and New post** go to the open blog. With more than one blog, the editor says where a
+  post goes above its title: `To Night Notes · @inkwell`.
+- A post goes out under its own blog's sign-in, whichever blog is open. A sign-in whose blog
+  isn't open makes no requests except for its own post going out and that post's build.
+- The privacy switches are still app-wide; per blog is the next step
+  ([#137](https://github.com/madCode/claude-playground/issues/137)).
+
 ## Reading the blog
 
 - Posts are files Jekyll would render: in any `_posts` folder (nested ones too, like
@@ -295,13 +319,10 @@ Every default is what GitHub and Jekyll do on their own; each switch is one step
   a domain's seller knowing who paid; a theme's analytics seeing the writer on their own posts.
 
 ## Settings
-- The blog (repository and branch) and the site's address.
+- **This blog:** its title, repository, branch and sign-in, and the site's address.
 - **Blog & privacy**, above.
-- **Switch blog** lists the repositories the current sign-in can write to. The blog left keeps
-  its sign-in: posts still waiting to go out to it go there, and its drafts are listed again
-  when it's switched back to.
-- **Sign out** forgets the sign-in and every blog it was used for, and keeps drafts on the phone
-  for when that blog is signed in again.
+- **Blogs and sign-ins:** Your blogs (switch, add, remove; see Several blogs), each sign-in with
+  its blogs, and Add a sign-in.
 - **Obsidian:** the vault folder photos in shared notes come from; choose another or forget it.
 - Nothing written goes to the phone's cloud backup: drafts, photos and the privacy settings
   would sit in the writer's Google account, beside the blog's. From Android 12, moving to a new

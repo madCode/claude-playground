@@ -21,11 +21,15 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.PendingShare
 import com.app.jekyllposter.core.obsidian.ObsidianNote
+import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
+import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
+import com.app.jekyllposter.ui.blogs.BlogsScreen
+import com.app.jekyllposter.ui.blogs.BlogsViewModel
 import com.app.jekyllposter.ui.connect.ConnectScreen
 import com.app.jekyllposter.ui.connect.ConnectViewModel
 import com.app.jekyllposter.ui.editor.EditorScreen
@@ -311,5 +315,75 @@ class ScreenshotTest {
             val body = "Out past the harbour wall, as in [[wh"
             vm.setBody(TextFieldValue(body, TextRange(body.length)))
         }) { EditorScreen(vm) {} }
+    }
+
+    /** The sample blog and a second account's, Night Notes, with the sample blog open. */
+    private fun twoBlogs() {
+        app.github.addAccount(
+            "inkwell", "inkwell-token", "night-notes",
+            mapOf("_config.yml" to "title: Night Notes\n".toByteArray(), "_posts/2025-02-02-after-dark.md" to "---\ntitle: After dark\n---\nx\n".toByteArray()),
+        )
+        runBlocking {
+            c.accounts.save(Account("inkwell", "inkwell-token", "inkwell", "night-notes", "main"))
+            c.blogs.refresh()
+            c.drafts.insert(Draft(blog = "inkwell/night-notes@main", title = "At midnight", state = PostState.Queued, sendAfter = System.currentTimeMillis() + 3_600_000))
+            app.signIn()
+            c.blogs.refresh()
+            c.drafts.insert(Draft(blog = SAMPLE_BLOG, title = "Notes on the new bike lane", body = "Half written."))
+        }
+    }
+
+    @Test fun homeWithSeveralBlogs() {
+        twoBlogs()
+        val vm = HomeViewModel(c)
+        val blogs = BlogsViewModel(c)
+        shoot("21-home-several-blogs", ready = { vm.state.value.onBlog.isNotEmpty() && !vm.state.value.refreshing && blogs.state.value.blogCount == 2 }) {
+            HomeScreen(vm, onOpenDraft = {}, onSettings = {}, blogs = blogs)
+        }
+    }
+
+    @Test fun blogSwitcher() {
+        twoBlogs()
+        val vm = HomeViewModel(c)
+        val blogs = BlogsViewModel(c)
+        shoot(
+            "22-blog-switcher",
+            ready = { vm.state.value.onBlog.isNotEmpty() && !vm.state.value.refreshing && blogs.state.value.blogCount == 2 },
+            act = { compose.onNode(clickLabel("Switch blog")).performClick() },
+        ) { HomeScreen(vm, onOpenDraft = {}, onSettings = {}, blogs = blogs) }
+    }
+
+    @Test fun yourBlogs() {
+        twoBlogs()
+        val blogs = BlogsViewModel(c)
+        shoot("23-your-blogs", ready = { blogs.state.value.blogCount == 2 }) { BlogsScreen(blogs, {}, {}, {}, {}) }
+    }
+
+    @Test fun removeRefused() {
+        twoBlogs()
+        val blogs = BlogsViewModel(c)
+        shoot("24-remove-refused", ready = { blogs.state.value.blogCount == 2 }, act = {
+            blogs.askRemove(blogs.state.value.groups.single { it.login == "inkwell" })
+            blogs.remove()
+            idleUntil { blogs.state.value.removing?.waiting != null }
+        }) { BlogsScreen(blogs, {}, {}, {}, {}) }
+    }
+
+    @Test fun editorSaysWhereThePostGoes() {
+        twoBlogs()
+        val id = runBlocking { c.drafts.insert(Draft(blog = SAMPLE_BLOG, title = "A shared link", body = "Worth reading: https://example.com/essay")) }
+        val vm = EditorViewModel(c, id)
+        shoot("25-editor-to", ready = { vm.text != null && vm.state.value.to != null }) { EditorScreen(vm) {} }
+    }
+
+    @Test fun settingsWithSeveralBlogs() {
+        twoBlogs()
+        shoot("26-settings-several-blogs", ready = { c.blogs.config.value.title != null }) { SettingsScreen(c, {}, {}, {}, {}) }
+    }
+
+    @Test fun addASignIn() {
+        signIn()
+        val vm = ConnectViewModel(c)
+        shoot("27-add-a-sign-in") { ConnectScreen(vm, onCancel = {}) {} }
     }
 }

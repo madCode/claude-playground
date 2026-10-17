@@ -18,6 +18,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -50,6 +51,8 @@ class AccountStoreTest {
         now: () -> Long = System::currentTimeMillis,
     ) = AccountStore(data, db.accounts(), cipher, refresh, now)
 
+    private suspend fun signInOf(key: String) = db.accounts().blog(key)!!.signInId
+
     private fun dbBytes() = ApplicationProvider.getApplicationContext<android.content.Context>().getDatabasePath(dbName).readBytes()
 
     @Test fun theTokenIsSealedOnDiskAndReadBack() = runBlocking {
@@ -58,7 +61,7 @@ class AccountStoreTest {
         assertEquals(account, store.current())
         db.query("PRAGMA wal_checkpoint(FULL)", null).use { it.moveToFirst() }
         assertFalse(String(dbBytes(), Charsets.ISO_8859_1).contains("github_pat_secret"))
-        store.signOut()
+        store.remove(signInOf(account.blogKey))
         assertNull(store.current())
     }
 
@@ -86,7 +89,7 @@ class AccountStoreTest {
         var now = 1_000_000L
         val store = store(refresh = { _ -> DeviceFlow.Tokens("ghu_new", 28_800, "ghr_new") }) { now }
         store.save(account.copy(token = "ghu_old", refreshToken = "ghr_old", expiresAt = now + 60 * 60_000))
-        assertTrue(store.switchTo("writer", "other", "main", null))
+        assertTrue(store.addBlog(signInOf(account.blogKey), "writer", "other", "main", null))
         now += 58 * 60_000
         val left = store.forBlog("writer/blog@main")!!
         assertEquals("ghu_new", left.token)
@@ -96,16 +99,81 @@ class AccountStoreTest {
         assertEquals("ghu_new", store.current()!!.token)
     }
 
-    @Test fun switchingKeepsTheBlogLeftAndSigningOutRemovesBoth() = runBlocking {
+    @Test fun addingABlogKeepsTheOneLeftAndRemovingTheSignInRemovesBoth() = runBlocking {
         val store = store()
         store.save(account)
-        assertTrue(store.switchTo("writer", "other", "main", "https://writer.github.io/other/"))
+        val signIn = signInOf(account.blogKey)
+        assertTrue(store.addBlog(signIn, "writer", "other", "main", "https://writer.github.io/other/"))
         assertEquals(account, store.forBlog(account.blogKey))
         assertEquals("https://writer.github.io/other/", store.account.first()!!.siteUrl)
-        assertEquals(setOf("writer/blog@main", "writer/other@main"), store.signOut().toSet())
+        val removal = store.remove(signIn) as Removal.Removed
+        assertEquals(setOf("writer/blog@main", "writer/other@main"), removal.blogs.toSet())
         assertNull(store.current())
         assertNull(store.forBlog(account.blogKey))
-        assertFalse(store.switchTo("writer", "blog", "main", null))
+        assertFalse(store.addBlog(signIn, "writer", "blog", "main", null))
+    }
+
+    @Test fun aSignInIsntRemovedWhileAPostIsStillToGoOutWithIt() = runBlocking {
+        val store = store()
+        store.save(account)
+        val signIn = signInOf(account.blogKey)
+        val id = db.drafts().insert(Draft(blog = account.blogKey, title = "At its random time", state = PostState.Queued))
+        // A failed post and a draft don't hold it: they stay on the phone, as drafts do.
+        db.drafts().insert(Draft(blog = account.blogKey, title = "Didn't go", state = PostState.Failed))
+        db.drafts().insert(Draft(blog = account.blogKey, title = "Still writing"))
+        val refused = store.remove(signIn) as Removal.Refused
+        assertEquals(listOf(id), refused.waiting.map { it.id })
+        assertEquals(account, store.current())
+        db.drafts().update(db.drafts().get(id)!!.copy(state = PostState.Published))
+        assertTrue(store.remove(signIn) is Removal.Removed)
+        assertNull(store.current())
+        assertEquals(3, db.drafts().list().size)
+    }
+
+    @Test fun removingTheOpenBlogsSignInOpensAnotherBlog() = runBlocking {
+        val store = store()
+        store.save(account)
+        val inkwell = account.copy(login = "inkwell", token = "github_pat_inkwell", owner = "inkwell", repo = "night-notes", siteUrl = null)
+        store.save(inkwell)
+        assertEquals(inkwell.blogKey, store.currentKey())
+        assertEquals(
+            listOf("writer" to "writer/blog@main", "inkwell" to "inkwell/night-notes@main"),
+            store.blogs.first().map { it.login to it.key },
+        )
+        store.remove(signInOf(inkwell.blogKey))
+        assertEquals(account, store.current())
+        assertEquals(listOf("writer/blog@main"), store.blogs.first().map { it.key })
+    }
+
+    @Test fun removingTheOpenBlogsSignInNeverReadsAsSignedOut() = runBlocking {
+        val store = store()
+        store.save(account)
+        val inkwell = account.copy(login = "inkwell", token = "github_pat_inkwell", owner = "inkwell", repo = "night-notes")
+        store.save(inkwell)
+        val seen = java.util.concurrent.CopyOnWriteArrayList<Account?>()
+        val watching = launch(Dispatchers.IO) { store.account.collect { seen += it } }
+        idleUntilTrue { seen.lastOrNull()?.blogKey == inkwell.blogKey }
+        store.remove(signInOf(inkwell.blogKey))
+        idleUntilTrue { seen.lastOrNull()?.blogKey == account.blogKey }
+        watching.cancel()
+        // The screens read a null as signed out, and would leave for the sign-in screen.
+        assertTrue(seen.toString(), seen.none { it == null })
+    }
+
+    private fun idleUntilTrue(condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + 5_000
+        while (!condition()) {
+            check(System.currentTimeMillis() < deadline) { "Condition not met" }
+            Thread.sleep(10)
+        }
+    }
+
+    @Test fun aBlogKeepsItsTitleWhenItsSignInIsReplaced() = runBlocking {
+        val store = store()
+        store.save(account)
+        store.setTitle(account.blogKey, "A Sample Notebook")
+        store.save(account.copy(token = "github_pat_new"))
+        assertEquals("A Sample Notebook", store.blogs.first().single().title)
     }
 
     @Test fun aSignInNoBlogUsesAnyMoreIsRemoved() = runBlocking {
@@ -113,12 +181,12 @@ class AccountStoreTest {
         store.save(account)
         // A blog with a sign-in of its own, as one moved from another phone has.
         store.save(account.copy(repo = "other", token = "github_pat_other"))
-        assertTrue(store.switchTo("writer", "blog", "main", null))
+        assertTrue(store.addBlog(signInOf("writer/other@main"), "writer", "blog", "main", null))
         db.query("SELECT COUNT(*) FROM sign_ins", null).use { c -> c.moveToFirst(); assertEquals(1, c.getInt(0)) }
         assertEquals("github_pat_other", store.forBlog(account.blogKey)!!.token)
     }
 
-    @Test fun aRenewalFinishingAfterSignOutDoesntSignBackIn() = runBlocking {
+    @Test fun aRenewalFinishingAfterRemovalDoesntAddTheSignInBack() = runBlocking {
         val started = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
         val store = store(refresh = { _ ->
@@ -126,9 +194,10 @@ class AccountStoreTest {
             DeviceFlow.Tokens("ghu_new", 28_800, "ghr_new")
         }) { 0L }
         store.save(account.copy(refreshToken = "ghr_old", expiresAt = 60_000))
+        val signIn = signInOf(account.blogKey)
         val renewing = async(Dispatchers.IO) { store.current() }
         started.await()
-        val signingOut = async(Dispatchers.IO) { store.signOut() }
+        val signingOut = async(Dispatchers.IO) { store.remove(signIn) }
         release.complete(Unit)
         renewing.await(); signingOut.await()
         assertNull(store.current())

@@ -68,7 +68,7 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
 
     /** github.com's page for installing the app on a repository, when the build names the app. */
     val installUrl: String?
-        get() = if (deviceTokens == null) null else container.githubAppSlug.takeIf { it.isNotBlank() }?.let { "https://github.com/apps/$it/installations/new" }
+        get() = if (deviceTokens == null && !addingToGitHubSignIn) null else container.githubAppSlug.takeIf { it.isNotBlank() }?.let { "https://github.com/apps/$it/installations/new" }
 
     fun setToken(token: String) = _state.update { it.copy(token = token, error = null) }
 
@@ -96,22 +96,28 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
         _state.update { it.copy(login = user.login, repos = repos, busy = false, token = token) }
     }
 
-    /** Switching blogs: Back leaves to where it came from, not to a sign-in screen. */
-    var switching = false
+    /**
+     * The sign-in a blog is being added to, from the blogs the app has; null when signing in. Its
+     * list's Back leaves to where it came from, not to a sign-in screen.
+     */
+    var addingTo: Long? = null
         private set
+
+    private var addingToGitHubSignIn = false
 
     fun back() = _state.update { it.copy(repos = null, error = null) }
 
-    /** Lists the blogs the current sign-in can write to, to switch to another. */
-    fun switchBlog() {
-        switching = true
+    /** Lists the repositories sign-in [signInId] can write to, to add one as a blog. */
+    fun addBlogTo(signInId: Long) {
+        addingTo = signInId
         _state.update { it.copy(busy = true, error = null, repos = emptyList()) }
         viewModelScope.launch {
-            val account = container.accounts.current() ?: return@launch _state.update { it.copy(busy = false, repos = null) }
-            if (account.refreshToken != null) {
-                deviceTokens = DeviceFlow.Tokens(account.token, account.expiresAt?.let { (it - System.currentTimeMillis()) / 1000 }, account.refreshToken)
-                tokensAt = System.currentTimeMillis()
+            val account = container.accounts.forSignIn(signInId) ?: run {
+                // Gone, or unreadable: the token step that shows instead is a fresh sign-in.
+                addingTo = null
+                return@launch _state.update { it.copy(busy = false, repos = null) }
             }
+            addingToGitHubSignIn = account.refreshToken != null
             try {
                 listRepos(account.token)
             } catch (e: CancellationException) {
@@ -130,10 +136,14 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             val client = container.client(s.token.trim())
             val siteUrl = catching { client.pages(repo.owner.login, repo.name)?.htmlUrl }.getOrNull()
-            // Switching keeps the sign-in as stored now (it may have been renewed while the list
-            // was open), and the blog left keeps it too.
-            val switched = switching && container.accounts.switchTo(repo.owner.login, repo.name, repo.defaultBranch, siteUrl)
-            if (!switched) {
+            // Adding keeps the sign-in as stored now (it may have been renewed while the list was
+            // open), not the token the list was read with.
+            val adding = addingTo
+            if (adding != null) {
+                if (!container.accounts.addBlog(adding, repo.owner.login, repo.name, repo.defaultBranch, siteUrl)) {
+                    return@launch _state.update { it.copy(busy = false, error = "That sign-in was removed meanwhile.") }
+                }
+            } else {
                 val fresh = Account(login, s.token.trim(), repo.owner.login, repo.name, repo.defaultBranch, siteUrl)
                 // Expiry counts from when the token arrived, not from when a blog was picked.
                 container.accounts.save(deviceTokens?.let { fresh.withTokens(it, tokensAt) } ?: fresh)
