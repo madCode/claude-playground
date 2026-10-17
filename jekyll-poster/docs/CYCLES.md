@@ -13,6 +13,9 @@ For the next cycle: what to do differently, newest first. What each cycle built 
   result. Check the log for `e:` lines after every break.
 - A design decision that leaks under review (a new blog's VPN off) was changed and flagged for
   madCode in DEVLOG and the PR, not silently kept or silently changed.
+- madCode answered that question on the morning page with "I don't know what that means". Write
+  a decision as the situation they'd be in ("you add a blog to an account whose other blog uses
+  the VPN…") and what each answer does to them, not in the design's terms.
 
 ### Cycle 28 — build: several sign-ins and the blog switcher
 
