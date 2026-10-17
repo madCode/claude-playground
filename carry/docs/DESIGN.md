@@ -232,15 +232,20 @@ numbers someone just entered cannot, so they get the protection:
     up.
   - **Another session now in that file**: said in those words. The sheet
     the numbers were typed against stays on screen, so the typing isn't
-    hidden under a different session.
+    hidden under a different session (see below).
   - Both offer *Drop my numbers, use the new sheet*, under the refusal and
     in the warning: a full-size button, well clear of *Try again*, whose
     label says what it costs.
-  - **A changed file that won't read** (a sync part way through): "wait a
-    moment and tap Try again". If the next tap finds the same unreadable
-    bytes, the file isn't still landing, and the save writes over it: no
-    readable session is lost, and refusing again would leave no way out
-    that keeps the typing.
+  - **An empty file** (what a sync writing in place leaves first): refused,
+    never written over.
+  - **JSON this build can't decode**: refused, never written over, since
+    the coach's importer may still read it. The message says so.
+  - **Bytes that aren't JSON at all** (a sync part way through, or a
+    damaged copy): refused with "if it is still unreadable in two minutes,
+    Try again writes your session over it". The same bytes in the same
+    file for two minutes are not a sync landing, and no reader can use
+    them, so writing over them loses no readable session. Without this,
+    the only way out would delete the typing.
   - **A file that can't be read at all** (deleted, moved): refused, typing
     kept.
   - Carry's own save makes what it wrote the new baseline, so it never
@@ -248,6 +253,16 @@ numbers someone just entered cannot, so they get the protection:
   - After the process dies, the baseline is the file read on restore. A
     change made while the app was dead is caught then, by the draft's
     fingerprint, and shown as the rewritten-session warning.
+- **Never hidden under another session.** While there is unsaved typing
+  for one session and the folder's newest read is another (that file
+  rewritten as a different class, or the day's other class arriving),
+  the typed-against sheet stays on screen with "A different session is
+  now in the folder". Saving it, or dropping the numbers, lets the new
+  session show. After the process dies, that sheet is found again in the
+  folder if it is still there. If it is gone, the numbers are held apart
+  and listed by row ("10 x deadlift 95 lb 8 reps") above the sheet now
+  showing, where typing can't overwrite them, until the owner taps *Drop
+  these numbers*.
 
 ### Numbers the importer would refuse
 

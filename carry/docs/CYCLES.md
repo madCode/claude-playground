@@ -17,6 +17,12 @@ that hold become rules in CLAUDE.md or the cycles skill.
   review found a "try again in a moment" that a BOM made permanent, and
   a re-read that swapped sessions and hid the draft. For each new gate,
   ask what happens on the tenth tap, and what a re-read puts on screen.
+- **A refusal test must refresh afterwards.** Carry refreshes on every
+  resume, so a state that only holds until the next refresh doesn't
+  hold. The second review's probe was one `refresh()` call.
+- **`settled()` waits; it doesn't drive the scheduler.** Advancing it
+  from a Default thread while `runTest` drained it ran two Main tasks at
+  once, which was this class's intermittent failure.
 - **Falsify a choice, not only a check.** The restore test stayed green
   under every break of the new lines; it went red only when the
   alternative baseline (the draft's fingerprint) was swapped in.

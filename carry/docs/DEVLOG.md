@@ -44,6 +44,11 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   numbers on screen. A file that stays unreadable is written over on the
   second tap rather than refused for ever. The drop button is full size,
   apart from *Try again*, and says it drops your numbers.
+- After a second look: typing for a session the folder no longer shows
+  stays on screen through every resume, or is listed and held after the
+  app is killed, until you drop it. An unreadable file is written over
+  only when it isn't JSON at all and has sat unchanged for two minutes;
+  an empty file never.
 
 ## 2026-10-17 — cycle 65: the bump band keeps an old *hard* row
 
