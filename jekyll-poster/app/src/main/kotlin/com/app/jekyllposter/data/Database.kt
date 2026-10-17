@@ -296,8 +296,9 @@ abstract class AccountDao {
     @Query("SELECT * FROM blogs ORDER BY signInId, blogKey")
     abstract fun all(): Flow<List<BlogWithSignIn>>
 
-    @Query("SELECT blogKey FROM blogs ORDER BY signInId, blogKey LIMIT 1")
-    abstract suspend fun firstBlog(): String?
+    /** The blog to open once [signInId]'s blogs are gone; null when it has every blog. */
+    @Query("SELECT blogKey FROM blogs WHERE signInId != :signInId ORDER BY signInId, blogKey LIMIT 1")
+    abstract suspend fun firstBlogNotOf(signInId: Long): String?
 
     /** Only when it changed: an unchanged title mustn't wake every screen watching the blogs. */
     @Query("UPDATE blogs SET title = :title WHERE blogKey = :key AND title IS NOT :title")

@@ -112,7 +112,11 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
         addingTo = signInId
         _state.update { it.copy(busy = true, error = null, repos = emptyList()) }
         viewModelScope.launch {
-            val account = container.accounts.forSignIn(signInId) ?: return@launch _state.update { it.copy(busy = false, repos = null) }
+            val account = container.accounts.forSignIn(signInId) ?: run {
+                // Gone, or unreadable: the token step that shows instead is a fresh sign-in.
+                addingTo = null
+                return@launch _state.update { it.copy(busy = false, repos = null) }
+            }
             addingToGitHubSignIn = account.refreshToken != null
             try {
                 listRepos(account.token)

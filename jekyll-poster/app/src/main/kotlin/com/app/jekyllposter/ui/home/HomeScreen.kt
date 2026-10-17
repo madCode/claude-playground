@@ -130,6 +130,7 @@ fun HomeScreen(
                             Text(
                                 if (several) "${a.repoName} · @${a.login}" else a.repoName,
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
@@ -165,7 +166,7 @@ fun HomeScreen(
                         "Your blogs", style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.padding(horizontal = 16.dp).semantics { heading() },
                     )
-                    BlogList(blogState.groups, onOpen = { switching = false; if (it.key != state.account?.blogKey) blogs.open(it.key) })
+                    BlogList(blogState.groups, onOpen = { switching = false; if (!it.open) blogs.open(it.entry.key) })
                     AddButtons(blogState.groups, onAddBlog = { switching = false; onAddBlog(it) }, onAddSignIn = { switching = false; onAddSignIn() })
                 }
             }

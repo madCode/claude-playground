@@ -12,6 +12,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
@@ -185,13 +187,26 @@ class AccountStore(
      * Removes sign-in [signInId] with every blog it posts to, unless a post is still to go out to
      * one of them. Drafts stay. If the open blog went, another opens, or none is left.
      */
-    suspend fun remove(signInId: Long): Removal = lock.withLock {
-        val removed = dao.removeUnlessWaiting(signInId) ?: return@withLock Removal.Refused(dao.waitingFor(signInId))
-        if (currentKey() in removed) {
-            val next = dao.firstBlog()
-            store.edit { if (next == null) it.remove(CURRENT) else it[CURRENT] = next }
+    suspend fun remove(signInId: Long): Removal = withContext(NonCancellable) {
+        // Not cancellable: stopped between its steps, the open blog could be left as one removed.
+        lock.withLock {
+            dao.waitingFor(signInId).takeIf { it.isNotEmpty() }?.let { return@withLock Removal.Refused(it) }
+            val open = currentKey()
+            val leaving = open != null && open in dao.blogsOf(signInId)
+            // The open blog moves first: with its row gone and the key not yet moved, the app
+            // would read as signed out.
+            if (leaving) {
+                val next = dao.firstBlogNotOf(signInId)
+                store.edit { if (next == null) it.remove(CURRENT) else it[CURRENT] = next }
+            }
+            val removed = dao.removeUnlessWaiting(signInId)
+            if (removed == null) {
+                // A post was queued since the check above: the sign-in stays, and so does its blog.
+                if (leaving) store.edit { it[CURRENT] = open!! }
+                return@withLock Removal.Refused(dao.waitingFor(signInId))
+            }
+            Removal.Removed(removed)
         }
-        Removal.Removed(removed)
     }
 
     /** Keeps blog [key]'s title, as its `_config.yml` gave it. */

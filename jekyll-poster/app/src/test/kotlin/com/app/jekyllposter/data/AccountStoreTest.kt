@@ -18,6 +18,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -142,6 +143,29 @@ class AccountStoreTest {
         store.remove(signInOf(inkwell.blogKey))
         assertEquals(account, store.current())
         assertEquals(listOf("writer/blog@main"), store.blogs.first().map { it.key })
+    }
+
+    @Test fun removingTheOpenBlogsSignInNeverReadsAsSignedOut() = runBlocking {
+        val store = store()
+        store.save(account)
+        val inkwell = account.copy(login = "inkwell", token = "github_pat_inkwell", owner = "inkwell", repo = "night-notes")
+        store.save(inkwell)
+        val seen = java.util.concurrent.CopyOnWriteArrayList<Account?>()
+        val watching = launch(Dispatchers.IO) { store.account.collect { seen += it } }
+        idleUntilTrue { seen.lastOrNull()?.blogKey == inkwell.blogKey }
+        store.remove(signInOf(inkwell.blogKey))
+        idleUntilTrue { seen.lastOrNull()?.blogKey == account.blogKey }
+        watching.cancel()
+        // The screens read a null as signed out, and would leave for the sign-in screen.
+        assertTrue(seen.toString(), seen.none { it == null })
+    }
+
+    private fun idleUntilTrue(condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + 5_000
+        while (!condition()) {
+            check(System.currentTimeMillis() < deadline) { "Condition not met" }
+            Thread.sleep(10)
+        }
     }
 
     @Test fun aBlogKeepsItsTitleWhenItsSignInIsReplaced() = runBlocking {

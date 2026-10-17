@@ -66,6 +66,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -368,6 +369,8 @@ private fun ToLine(blog: BlogEntry) {
     Text(
         "To ${blog.title ?: blog.repoName} · @${blog.login}",
         style = MaterialTheme.typography.labelLarge,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             .border(BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(50))
             .padding(horizontal = 12.dp, vertical = 6.dp),

@@ -34,9 +34,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -120,7 +122,8 @@ class BlogsViewModel(private val container: AppContainer) : ViewModel() {
 
     fun remove() {
         val asked = removing.value ?: return
-        viewModelScope.launch {
+        // The app's scope: Back right after Remove mustn't cancel it.
+        container.appScope.launch {
             when (val result = container.remove(asked.group.signInId)) {
                 is Removal.Refused -> removing.value = asked.copy(waiting = result.waiting)
                 is Removal.Removed -> {
@@ -141,7 +144,7 @@ class BlogsViewModel(private val container: AppContainer) : ViewModel() {
 
 /** Every blog under its sign-in, the open one ticked. [onRemove] adds Remove to each sign-in. */
 @Composable
-fun BlogList(groups: List<SignInGroup>, onOpen: (BlogEntry) -> Unit, onRemove: ((SignInGroup) -> Unit)? = null) {
+fun BlogList(groups: List<SignInGroup>, onOpen: (BlogRow) -> Unit, onRemove: ((SignInGroup) -> Unit)? = null) {
     Column {
         groups.forEach { group ->
             Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -152,19 +155,21 @@ fun BlogList(groups: List<SignInGroup>, onOpen: (BlogEntry) -> Unit, onRemove: (
                     modifier = Modifier.weight(1f).semantics { heading() },
                 )
                 onRemove?.let { remove ->
-                    TextButton(onClick = { remove(group) }) { Text("Remove", color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { remove(group) }, modifier = Modifier.semantics { contentDescription = "Remove @${group.login}" }) {
+                        Text("Remove", color = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
             group.blogs.forEach { row ->
                 Row(
                     Modifier.fillMaxWidth()
                         .semantics { selected = row.open }
-                        .clickable(role = Role.Button, onClickLabel = if (row.open) null else "Switch to this blog") { onOpen(row.entry) }
+                        .clickable(role = Role.Button, onClickLabel = if (row.open) null else "Switch to this blog") { onOpen(row) }
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(row.entry.title ?: row.entry.repo, style = MaterialTheme.typography.titleMedium)
+                        Text(row.entry.title ?: row.entry.repo, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text(row.status, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if (row.open) Icon(Icons.Default.Check, "Open now", tint = MaterialTheme.colorScheme.primary)
@@ -260,7 +265,7 @@ fun BlogsScreen(viewModel: BlogsViewModel, onBack: () -> Unit, onOpened: () -> U
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
-            BlogList(state.groups, onOpen = { viewModel.open(it.key); onOpened() }, onRemove = viewModel::askRemove)
+            BlogList(state.groups, onOpen = { if (!it.open) viewModel.open(it.entry.key); onOpened() }, onRemove = viewModel::askRemove)
             AddButtons(state.groups, onAddBlog, onAddSignIn)
             Text(
                 "Removing a sign-in keeps its drafts on this phone.",

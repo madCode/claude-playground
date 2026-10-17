@@ -279,6 +279,28 @@ class FlowTest {
         compose.waitFor("To A Sample Notebook · @sample")
     }
 
+    @Test fun removingTheOpenBlogsSignInStaysOnYourBlogsWithTheOther() {
+        github.addAccount("inkwell", "inkwell-token", "night-notes", mapOf("_config.yml" to "title: Night Notes\n".toByteArray()))
+        runBlocking {
+            app.signIn()
+            app.container.accounts.save(com.app.jekyllposter.data.Account("inkwell", "inkwell-token", "inkwell", "night-notes", "main"))
+        }
+        start()
+        compose.waitFor("inkwell/night-notes")
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Settings").performClick()
+        compose.waitFor("2 blogs, 2 sign-ins")
+        compose.onNodeWithText("Your blogs").performClick()
+        compose.waitFor("@inkwell · signed in with a token")
+        compose.onNodeWithContentDescription("Remove @inkwell").performClick()
+        compose.onNode(hasText("Remove") and hasAnyAncestor(isDialog())).performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("@inkwell", substring = true), useUnmergedTree = true).fetchSemanticsNodes().isEmpty() }
+        // Still here, with the other sign-in's blog now open.
+        compose.onNodeWithText("@sample · signed in with a token").assertExists()
+        compose.onNodeWithContentDescription("Open now").assertExists()
+        compose.onNodeWithText("Connect with a token").assertDoesNotExist()
+    }
+
     @Test fun removingTheLastSignInReturnsToConnect() {
         signIn()
         start()

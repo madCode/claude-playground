@@ -3,8 +3,10 @@ package com.app.jekyllposter.ui.blogs
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.core.testing.FakeGitHub
+import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
+import com.app.jekyllposter.data.Removal
 import com.app.jekyllposter.publish.Publisher
 import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
@@ -134,6 +136,31 @@ class SeveralSignInsTest {
         vm.remove()
         idleUntil { blogs.value.signedOut }
         assertNull(runBlocking { c.accounts.current() })
+    }
+
+    @Test fun addingABlogToASignInRemovedMeanwhileSignsInAfresh() {
+        addInkwell()
+        val gone = runBlocking { c.database.accounts().blog(inkwellBlog)!!.signInId }
+        runBlocking { c.remove(gone) }
+        // As after the app was restored on Add a blog for a sign-in removed since.
+        val vm = ConnectViewModel(c)
+        vm.addBlogTo(gone)
+        idleUntil { !vm.state.value.busy }
+        assertNull(vm.addingTo)
+        vm.setToken("inkwell-token")
+        vm.checkToken()
+        idleUntil { vm.state.value.repos != null }
+        vm.choose(vm.state.value.repos!!.first { it.fullName == "inkwell/night-notes" })
+        idleUntil(10_000) { vm.state.value.done }
+        assertEquals("inkwell", runBlocking { c.accounts.current() }!!.login)
+    }
+
+    @Test fun aBuildNoLongerWatchedOnceItsSignInIsRemovedSaysSo() = runBlocking {
+        addInkwell()
+        val id = c.drafts.insert(Draft(blog = inkwellBlog, title = "Just out", state = PostState.Published, commitSha = "abc", buildState = BuildState.Building))
+        assertTrue(c.remove(c.database.accounts().blog(inkwellBlog)!!.signInId) is Removal.Removed)
+        assertTrue(c.buildWatcher.check(id, giveUp = false))
+        assertEquals(BuildState.Unknown, c.drafts.get(id)!!.buildState)
     }
 
     @Test fun aPostThatDidntGoIsNamedOnItsBlogsRow() {

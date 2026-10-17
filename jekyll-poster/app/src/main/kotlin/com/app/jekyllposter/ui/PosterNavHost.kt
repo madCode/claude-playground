@@ -14,6 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.coroutines.flow.first
 import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.Shared
 import com.app.jekyllposter.ui.blogs.BlogsScreen
@@ -34,7 +35,9 @@ private object Loading
 fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
     // Wait for the stored account before choosing the first screen, so a signed-in writer never
     // sees the connect screen flash by.
-    val signedIn by produceState<Any?>(Loading) { container.accounts.account.collect { value = it != null } }
+    // Read once: the screens navigate on their own after that, and a passing null (a sign-in being
+    // removed) mustn't rebuild the graph and empty the back stack.
+    val signedIn by produceState<Any?>(Loading) { value = container.accounts.account.first() != null }
     if (signedIn === Loading) return
     val nav = rememberNavController()
     // Home leaves the composition while the editor is open and its effects run again on the way
