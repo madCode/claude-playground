@@ -681,6 +681,27 @@ class CarryViewModelTest {
     }
 
     @Test
+    fun `the day's other class waits behind unsaved typing, and shows once it is saved`() = runTest(dispatcher) {
+        val model = viewModel()
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+        // A new file for 3G; the 2G file is untouched.
+        val other = sheet.replace("2026-10-17:2G", "2026-10-17:3G").replace("\"2G\"", "\"3G\"")
+        model.read = { ready(other, id = "doc3g") }
+        model.refresh(); settled(model)
+        assertEquals(sheet, (model.state.value as CarryState.Ready).raw)
+        assertTrue(model.anotherSession.value)
+
+        model.save(); settled(model)
+        assertEquals(1, disk.writes)
+        assertEquals("saved, the newer session shows", other, (model.state.value as CarryState.Ready).raw)
+        assertFalse(model.anotherSession.value)
+    }
+
+    @Test
     fun `after the process dies, the sheet typing was for is found again in the folder`() = runTest(dispatcher) {
         // The day's other class arrived as a new file; the typed-against
         // file is still there, so it is what goes back on screen.
