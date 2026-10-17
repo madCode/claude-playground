@@ -90,4 +90,19 @@ object Look {
 
     /** Screen titles. */
     val TitleSize = 21.sp
+
+    /**
+     * The After page, a step up from the rest (madCode's approval of #127,
+     * mockup v4): it is filled in from memory with cold hands, so every
+     * word on it but the box contents is larger.
+     */
+    object After {
+        val Name = 20.sp
+        val Chip = 15.sp
+        val Note = 15.sp
+        val Tally = 17.sp
+        val Label = 14.sp
+        val Button = 17.sp
+        val Preview = 14.sp
+    }
 }

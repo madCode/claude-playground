@@ -45,6 +45,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -87,23 +90,13 @@ fun LogScreen(
      *  with it rather than keeping the last workout's keystrokes. */
     sessionKey: String = session.sheetId,
 ) {
-    // An added row counts once it holds anything, the same test the sets
-    // use. Counting only named ones meant typing a weight into a row you
-    // had not named yet left the tally reading "0 of 11 filled".
-    val skipped = entries.count { it.value.skipped }
-    // A skipped row is answered, not filled. Counting it as filled would
-    // say the form is further along than it is; counting it as neither
-    // would leave the tally stuck below the total with nothing to do.
-    // `hard` is left out: only an older file can say it, and a row it
-    // alone fills looks blank, so counting it would say "1 filled" over a
-    // screen with nothing on it.
-    val filled = entries.count { !it.value.copy(hard = false).blank && !it.value.skipped } +
-        added.count { !it.copy(hard = false).blank }
-    // Blank added rows are left out of the file, so they are left out of
-    // the count too: tapping "+ Add" used to make the tally read worse
-    // ("1 of 12"), then quietly improve again after a save that wrote
-    // nothing new.
-    val total = session.sets.size + added.count { !it.blank }
+    // "Noted" is what says a set happened ([noted]); anything else on the
+    // sheet counts as not done, and the line says so, because there is no
+    // control for "didn't do it" any more. Added rows count once they hold
+    // anything: their name is the claim.
+    val noted = entries.values.count { it.noted() }
+    val addedCount = added.count { !it.blank }
+    val total = session.sets.size
 
     Column(modifier.fillMaxSize().background(Look.Slate).padding(horizontal = 14.dp)) {
         Text(
@@ -112,24 +105,24 @@ fun LogScreen(
         )
         Text(
             listOfNotNull(
-                "$filled of $total filled",
-                if (skipped > 0) "$skipped skipped" else null,
-                "partial is fine",
+                "$noted of $total noted",
+                if (addedCount > 0) "$addedCount added" else null,
+                "anything untouched counts as not done",
             ).joinToString(" · "),
-            color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
+            color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.After.Tally,
             modifier = Modifier.padding(top = 3.dp, bottom = 10.dp),
         )
         SessionFiles.unreadableNote(unreadable)?.let {
             Text(
                 "\u26a0 $it",
-                color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.After.Note,
                 modifier = Modifier.padding(bottom = 6.dp),
             )
         }
         if (fileMoved) {
             Text(
                 "\u26a0 The coach rewrote this session while you were filling it in. Your numbers are still here; check they line up before saving.",
-                color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.After.Note,
                 modifier = Modifier.padding(bottom = 6.dp),
             )
             // Without this the owner is stuck: if the rows no longer line
@@ -138,7 +131,7 @@ fun LogScreen(
             // away -- which also destroys the numbers.
             Text(
                 "Use the new sheet instead",
-                color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.After.Note,
                 modifier = Modifier
                     .border(1.dp, Look.RuleStrong, RoundedCornerShape(4.dp))
                     .clickable(onClick = onDiscard)
@@ -158,7 +151,7 @@ fun LogScreen(
                     Text(
                         "\u26a0 No ${session.classTag ?: "intel"} intel \u2014 these are the " +
                             "$borrowed rows. Add what you actually did.",
-                        color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                        color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.After.Note,
                         modifier = Modifier.padding(bottom = 8.dp),
                     )
                 }
@@ -173,6 +166,7 @@ fun LogScreen(
                 LogRow(
                     name = set.displayName,
                     prescription = set.prescription,
+                    prescribedReps = set.prescribedReps,
                     timed = set.timed,
                     family = set.family,
                     entry = entries[set.ref] ?: SessionPatch.Entry(),
@@ -206,7 +200,7 @@ private fun AddRow(onAdd: () -> Unit, loud: Boolean) {
         if (loud) "+ Add what you did" else "+ Add something the sheet missed",
         color = if (loud) Look.Slate else Look.ChalkDim,
         fontFamily = Look.Name, fontWeight = if (loud) FontWeight.Bold else FontWeight.Medium,
-        fontSize = Look.SmallSize, textAlign = TextAlign.Center,
+        fontSize = Look.After.Button, textAlign = TextAlign.Center,
         modifier = Modifier
             .fillMaxWidth().padding(top = if (loud) 0.dp else 12.dp, bottom = if (loud) 10.dp else 0.dp)
             .clip(RoundedCornerShape(4.dp))
@@ -233,6 +227,22 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexed(
     }
 }
 
+/**
+ * Whether the owner said this set happened (#127, mockup v4). There is no
+ * separate "did it" control: each row says it with its own fields.
+ *
+ * - A weight, or reps (tapping the faint prescription fills them).
+ * - `done` in a timed row's time slot.
+ * - *easy* or *mod*, which can't be said of a set that didn't happen.
+ *
+ * Not *hurt*: tapping it while deciding not to do a movement is the
+ * commonest reason to tap it. Not an old file's `hard` or `skipped`
+ * either; neither is shown any more. gym-coach's importer counts each of
+ * these rows as a completed set, and an untouched row as nothing.
+ */
+internal fun SessionPatch.Entry.noted(): Boolean =
+    weight != null || reps != null || fractionalReps != null || done || easy || easier
+
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun LogRow(
@@ -241,22 +251,27 @@ private fun LogRow(
      *  of what the row is. Kept out of [name] so it stays out of the
      *  TalkBack labels on the number boxes, which name the movement. */
     prescription: String?,
+    /** The runner's rep count, shown faintly in an empty reps box and filled
+     *  in by a tap. The coach's number, not the board's words: "10 total"
+     *  is 5 a side, and the importer compares reps against this. */
+    prescribedReps: Int?,
     family: String?,
     entry: SessionPatch.Entry,
     key: String,
-    /** The board asked for seconds, not reps, so there is no number to give
-     *  and the row needs its own way to say it happened. */
+    /** The board asked for seconds, not reps: the reps slot holds a `done`
+     *  tag instead, since there is no count to give. */
     timed: Boolean,
     onChange: (SessionPatch.Entry) -> Unit,
 ) {
     val weightProblem = LogCheck.row(entry.weight, null, null).firstOrNull()
     val repsProblem = LogCheck.row(null, entry.reps, entry.fractionalReps).firstOrNull()
-    // Two lines, not one. On one line the name shared ~400dp with two
-    // number boxes and three 44dp chips, and the owner's own sheet
-    // truncated: "bicep curl + lateral lu...". Everything here is read at
+    // Any change clears an older file's `skipped`: there is no skip control
+    // any more, an untouched row already means "not done", and a skipped
+    // row with a weight on it would be two answers at once.
+    val change = { e: SessionPatch.Entry -> onChange(e.copy(skipped = false)) }
+    // Two lines: the name and *hurt*, then the fields. Everything is read at
     // arm's length or tapped with cold hands, so neither the name nor the
-    // targets can give up room to the other — the row gets taller instead,
-    // which costs only scrolling on the screen where scrolling is fine.
+    // targets give up room; the row gets taller instead.
     Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -265,78 +280,47 @@ private fun LogRow(
             }
             Text(
                 // One Text, so a long name wraps around the prescription
-                // instead of squeezing it off the row.
+                // instead of squeezing it off the row. Faint when the row
+                // says it wasn't done: an old skip, or hurt with nothing else.
                 prescription?.let { "$it $name" } ?: name,
-                color = if (entry.skipped) Look.ChalkFaint else Look.Chalk,
-                fontFamily = Look.Name, fontSize = Look.NameSize,
+                color = if (!entry.noted() && (entry.hurt || entry.skipped)) Look.ChalkFaint else Look.Chalk,
+                fontFamily = Look.Name, fontSize = Look.After.Name,
                 maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
             )
+            // At the end of the name line, beside the movement it's about.
+            // On an untouched row it says why the row was left.
+            Chip("hurt", entry.hurt, Look.Brick) { change(entry.copy(hurt = !entry.hurt)) }
         }
-        // Wraps, because a timed row carries a sixth chip and six did not
-        // fit on one 411dp line: the overflow was `skip` sliding off the
-        // right edge, which is the one chip on the row that says a set did
-        // not happen. A second line costs scrolling on the screen where
-        // scrolling is fine; a chip the owner cannot reach costs a fact.
         FlowRow(
             Modifier.fillMaxWidth().padding(start = 9.dp, top = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
+            // Chips sit level with the boxes, not with the labels above them.
+            itemVerticalAlignment = Alignment.Bottom,
         ) {
-            // A skipped row offers no boxes and no feel chips. There is no
-            // number to put in them, and no set to have found easy.
-            if (!entry.skipped) {
-                NumberField(entry.weight.asWeightField(), "$key-w", "$name weight in pounds", "lb", weightProblem) { text ->
-                    onChange(entry.copy(weight = text.toDoubleOrNull()))
-                }
-                NumberField(repsField(entry.reps, entry.fractionalReps), "$key-r", "$name reps", "reps", repsProblem) { text ->
-                    val (reps, fractional) = parseReps(text)
-                    onChange(entry.copy(reps = reps, fractionalReps = fractional))
-                }
-                // No `hard` chip: the coach treats a completed set as
-                // completed however it felt (madCode, 2026-10-16). A file
-                // that already says `hard` keeps it, but tapping `easy`
-                // clears it: the owner's fresh answer wins, and until the
-                // runner stops reading `hard` the pair would block a bump.
-                Chip("easy", entry.easy, Look.Amber) {
-                    onChange(entry.copy(easy = !entry.easy, hard = false))
-                }
-                // "I did the easier version" -- knees, a box under the
-                // step-up. For much of this owner's training there is no
-                // weight to progress, so this is the only axis they have.
-                Chip("mod", entry.easier, Look.ChalkDim) {
-                    onChange(entry.copy(easier = !entry.easier))
-                }
-                // Only where there is nothing else to say. A timed hold
-                // prescribes no reps and takes no weight, so the boxes are
-                // empty by definition and every other chip claims something
-                // the owner may not mean -- a finished plank reached history
-                // as nothing at all until this.
-                //
-                // Chalk, the loudest the palette goes, because on these
-                // rows it is not a side note but the thing to tap. The
-                // number boxes stay: the board prescribes no weight, but a
-                // plank with a plate on your back is a real set, and
-                // taking the boxes away would make that unsayable.
-                if (timed) {
-                    Chip("done", entry.done, Look.Chalk) {
-                        onChange(entry.copy(done = !entry.done))
-                    }
-                }
-                Chip("hurt", entry.hurt, Look.Brick) { onChange(entry.copy(hurt = !entry.hurt)) }
+            NumberField(entry.weight.asWeightField(), "$key-w", "$name, lb", "lb", weightProblem) { text ->
+                change(entry.copy(weight = text.toDoubleOrNull()))
             }
-            // Saying "I didn't do this" and leaving it blank are different
-            // facts, and only one of them was sayable. `skipped` has been
-            // in the schema, in the patch and in the importer -- which logs
-            // those so the coach stops re-asking -- since before this
-            // screen existed, with no way to set it.
-            //
-            // Clearing it clears the row with it: a weight against a set
-            // you did not do is the wrong number this app exists to avoid.
-            Chip("skip", entry.skipped, Look.ChalkDim) {
-                onChange(
-                    if (entry.skipped) entry.copy(skipped = false)
-                    else SessionPatch.Entry(skipped = true)
-                )
+            if (timed) {
+                DoneTag(entry.done, "$name, time") { change(entry.copy(done = !entry.done)) }
+            } else {
+                NumberField(
+                    repsField(entry.reps, entry.fractionalReps), "$key-r", "$name, reps", "reps", repsProblem,
+                    fill = prescribedReps?.takeIf { it > 0 }?.toString(),
+                ) { text ->
+                    val (reps, fractional) = parseReps(text)
+                    change(entry.copy(reps = reps, fractionalReps = fractional))
+                }
+            }
+            // No `hard` (madCode, 2026-10-16), but tapping `easy` clears an
+            // older file's: the owner's fresh answer wins.
+            Chip("easy", entry.easy, Look.Amber) { change(entry.copy(easy = !entry.easy, hard = false)) }
+            // "I did the easier version" -- knees, a box under the step-up.
+            // Only where there is no weight, since that is the only axis a
+            // bodyweight movement has; kept while it is on, so it can't be
+            // left set where nobody can see it.
+            if (entry.weight == null || entry.easier) {
+                Chip("mod", entry.easier, Look.ChalkDim) { change(entry.copy(easier = !entry.easier)) }
             }
         }
         RowProblem(listOfNotNull(weightProblem, repsProblem))
@@ -344,7 +328,45 @@ private fun LogRow(
     Box(Modifier.fillMaxWidth().height(1.dp).background(Look.Rule))
 }
 
+/**
+ * A timed row's way to say it happened, in the reps box's slot under a
+ * "time" label: a hold prescribes no count, so there is nothing to type.
+ * Writes the existing `done` field.
+ */
 @Composable
+private fun DoneTag(on: Boolean, label: String, onToggle: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        FieldLabel("time")
+        Box(
+            Modifier
+                .width(50.dp).heightIn(min = 44.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(if (on) Look.SlateRaised else Look.Slate)
+                .border(1.dp, if (on) Look.Chalk else Look.RuleStrong, RoundedCornerShape(4.dp))
+                .toggleable(value = on, role = Role.Checkbox, onValueChange = { onToggle() })
+                .semantics { contentDescription = label },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                "done", color = if (on) Look.Chalk else Look.ChalkFaint,
+                fontFamily = Look.Figure, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
+            )
+        }
+    }
+}
+
+/** The visible name of a box, above it, and staying put once something is
+ *  typed. Hidden from TalkBack because the box's own label says the same. */
+@Composable
+private fun FieldLabel(text: String) {
+    Text(
+        text, color = Look.ChalkDim, fontFamily = Look.Figure, fontSize = Look.After.Label,
+        modifier = Modifier.padding(bottom = 2.dp).semantics { hideFromAccessibility() },
+    )
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
     val weightProblem = LogCheck.row(row.weight, null, null).firstOrNull()
     val repsProblem = LogCheck.row(null, row.reps, row.fractionalReps).firstOrNull()
@@ -360,7 +382,7 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
                 value = row.name,
                 onValueChange = { onChange(row.copy(name = it)) },
                 singleLine = true,
-                textStyle = TextStyle(color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.NameSize),
+                textStyle = TextStyle(color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.After.Name),
                 cursorBrush = SolidColor(Look.Amber),
                 decorationBox = { inner ->
                     if (row.name.isBlank()) {
@@ -372,31 +394,34 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
                         Text(
                             if (asking) "name this" else "what was it?",
                             color = if (asking) Look.BrickInk else Look.ChalkFaint,
-                            fontFamily = Look.Name, fontSize = Look.NameSize,
+                            fontFamily = Look.Name, fontSize = Look.After.Name,
                         )
                     }
                     inner()
                 },
                 modifier = Modifier.weight(1f).semantics { contentDescription = "added exercise name" },
             )
+            Chip("hurt", row.hurt, Look.Brick) { onChange(row.copy(hurt = !row.hurt)) }
         }
-        Row(
+        FlowRow(
             Modifier.fillMaxWidth().padding(start = 9.dp, top = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            itemVerticalAlignment = Alignment.Bottom,
         ) {
-            NumberField(row.weight.asWeightField(), "$key-w", "added exercise weight in pounds", "lb", weightProblem) {
+            NumberField(row.weight.asWeightField(), "$key-w", "added exercise, lb", "lb", weightProblem) {
                 onChange(row.copy(weight = it.toDoubleOrNull()))
             }
-            NumberField(repsField(row.reps, row.fractionalReps), "$key-r", "added exercise reps", "reps", repsProblem) {
+            NumberField(repsField(row.reps, row.fractionalReps), "$key-r", "added exercise, reps", "reps", repsProblem) {
                 val (reps, fractional) = parseReps(it)
                 onChange(row.copy(reps = reps, fractionalReps = fractional))
             }
             Chip("easy", row.easy, Look.Amber) { onChange(row.copy(easy = !row.easy, hard = false)) }
-            Chip("mod", row.easier, Look.ChalkDim) { onChange(row.copy(easier = !row.easier)) }
-            Chip("hurt", row.hurt, Look.Brick) { onChange(row.copy(hurt = !row.hurt)) }
-            // No skip: a row you added is one you did. Skipping it is
-            // clearing it, which the owner does by emptying the name.
+            if (row.weight == null || row.easier) {
+                Chip("mod", row.easier, Look.ChalkDim) { onChange(row.copy(easier = !row.easier)) }
+            }
+            // No skip: a row you added is one you did. Clearing it is
+            // emptying the name.
         }
         RowProblem(listOfNotNull(weightProblem, repsProblem))
     }
@@ -417,23 +442,26 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
  */
 @Composable
 private fun NumberField(
-    initial: String, key: Any, label: String, unit: String, problem: String?, onChange: (String) -> Unit,
+    initial: String, key: Any, label: String, unit: String, problem: String?,
+    /** Shown faintly while the box is empty, and put in by focusing it
+     *  (a tap), selected so that typing replaces it. */
+    fill: String? = null,
+    onChange: (String) -> Unit,
 ) {
-    var text by rememberSaveable(key) { mutableStateOf(initial) }
-    // The unit under the box, visible, not a placeholder that vanishes
-    // once typed in: "the weight box" has to be findable at a glance.
-    // Hidden from TalkBack, whose label on the box already says it.
+    var value by rememberSaveable(key, stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(initial)) }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        FieldLabel(unit)
         BasicTextField(
-            value = text,
+            value = value,
             onValueChange = { typed ->
                 // '0'..'9' rather than isDigit(): a Hindi or Arabic keyboard
                 // offers digits that pass isDigit() and then fail to parse, so
                 // the box would blank on every keystroke with no explanation.
-                val cleaned = typed.filter { it in '0'..'9' || it == '.' }
+                val cleaned = typed.text.filter { it in '0'..'9' || it == '.' }
                 if (cleaned.count { it == '.' } <= 1 && cleaned.length <= 6) {
-                    text = cleaned
-                    onChange(cleaned)
+                    val changed = cleaned != value.text
+                    value = typed.copy(text = cleaned)
+                    if (changed) onChange(cleaned)
                 }
             },
             singleLine = true,
@@ -443,11 +471,30 @@ private fun NumberField(
                 textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold,
             ),
             cursorBrush = SolidColor(Look.Amber),
+            decorationBox = { inner ->
+                Box(contentAlignment = Alignment.Center) {
+                    if (value.text.isEmpty() && fill != null) {
+                        Text(
+                            fill, color = Look.ChalkFaint, fontFamily = Look.Figure, fontSize = 15.sp,
+                            modifier = Modifier.semantics { hideFromAccessibility() },
+                        )
+                    }
+                    inner()
+                }
+            },
             modifier = Modifier
                 .width(50.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .background(Look.SlateRaised)
                 .border(if (problem != null) 2.dp else 1.dp, if (problem != null) Look.BrickInk else Look.RuleStrong, RoundedCornerShape(4.dp))
+                .onFocusChanged { focus ->
+                    // One tap says "all of them": a bodyweight row is done
+                    // when its reps are filled, and this is the one-tap way.
+                    if (focus.isFocused && fill != null && value.text.isEmpty()) {
+                        value = TextFieldValue(fill, TextRange(0, fill.length))
+                        onChange(fill)
+                    }
+                }
                 .padding(vertical = 11.dp)
                 .semantics {
                     contentDescription = label
@@ -455,10 +502,6 @@ private fun NumberField(
                     // hears what is wrong without finding the line below.
                     if (problem != null) error(problem)
                 },
-        )
-        Text(
-            unit, color = Look.ChalkDim, fontFamily = Look.Figure, fontSize = 11.sp,
-            modifier = Modifier.semantics { hideFromAccessibility() },
         )
     }
 }
@@ -473,7 +516,7 @@ private fun RowProblem(problems: List<String>) {
     val message = LogCheck.rowMessage(problems) ?: return
     Text(
         message,
-        color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.SmallSize,
+        color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.After.Note,
         modifier = Modifier.padding(start = 9.dp, top = 4.dp),
     )
 }
@@ -509,7 +552,7 @@ private fun Chip(text: String, on: Boolean, accent: androidx.compose.ui.graphics
             text,
             maxLines = 1,
             color = if (on) accent else Look.ChalkFaint,
-            fontFamily = Look.Figure, fontSize = 11.sp,
+            fontFamily = Look.Figure, fontSize = Look.After.Chip,
             modifier = Modifier
                 .clip(RoundedCornerShape(3.dp))
                 .border(1.dp, if (on) accent else Look.RuleStrong, RoundedCornerShape(3.dp))
@@ -536,7 +579,7 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
     Column(Modifier.padding(top = 14.dp, bottom = 24.dp)) {
         Text(
             if (open) "Hide" else "Post what ${classTag ?: "this class"} did",
-            color = Look.Chalk, fontFamily = Look.Name, fontSize = 13.sp,
+            color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.After.Button,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
@@ -549,7 +592,7 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
         // name back and asked (see [TypedBack]).
         Text(
             "The movements only. A name you typed goes out as you typed it.",
-            color = Look.ChalkFaint, fontFamily = Look.Name, fontSize = Look.SmallSize,
+            color = Look.ChalkFaint, fontFamily = Look.Name, fontSize = Look.After.Note,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
         )
@@ -559,7 +602,7 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
             // so a listener can step through the post a bullet at a time.
             Text(
                 post.text,
-                color = Look.ChalkDim, fontFamily = Look.Figure, fontSize = 11.sp,
+                color = Look.ChalkDim, fontFamily = Look.Figure, fontSize = Look.After.Preview,
                 modifier = Modifier
                     .fillMaxWidth().padding(top = 10.dp)
                     .clip(RoundedCornerShape(4.dp)).background(Look.SlateRaised)
@@ -568,7 +611,7 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
             Text(
                 "Send it",
                 color = Look.Slate, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
-                fontSize = 13.sp, textAlign = TextAlign.Center,
+                fontSize = Look.After.Button, textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth().padding(top = 10.dp)
                     .clip(RoundedCornerShape(4.dp)).background(Look.Amber)
@@ -601,7 +644,7 @@ private fun TypedBack(added: List<AddedSet>) {
     if (names.isEmpty()) return
     Text(
         typedBack(names),
-        color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.SmallSize,
+        color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.After.Note,
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 6.dp)
@@ -654,7 +697,7 @@ private fun SaveButton(state: SaveState, onSave: () -> Unit, added: List<AddedSe
             Text(
                 (if (state.damaged) "⚠ " else "") + state.why,
                 color = Look.BrickInk,
-                fontFamily = Look.Name, fontSize = Look.SmallSize,
+                fontFamily = Look.Name, fontSize = Look.After.Note,
                 // Announced when it appears: the tap that caused it gives a
                 // listener no other sign that nothing was saved.
                 modifier = Modifier.padding(bottom = 8.dp).semantics { liveRegion = LiveRegionMode.Polite },
@@ -666,7 +709,7 @@ private fun SaveButton(state: SaveState, onSave: () -> Unit, added: List<AddedSe
         if (state is SaveState.Saved) TypedBack(added)
         Text(
             label, color = Look.Slate, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
-            fontSize = 14.sp, textAlign = TextAlign.Center,
+            fontSize = Look.After.Button, textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(5.dp))
