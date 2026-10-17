@@ -219,6 +219,24 @@ numbers someone just entered cannot, so they get the protection:
   against a lateral raise. The draft keeps the bytes the numbers were typed
   against, and a save compares each edited row's identity between then and
   now, refusing if they differ.
+- **Never written over a file that changed since it was read** (madCode,
+  2026-10-17, the simple version). Just before writing, the save reads
+  the file again and compares its content with what the page read, not
+  its timestamp, since sync services touch those. A leading BOM, CRLF
+  line endings and JSON formatting don't count as a change.
+  - A changed, empty or unreadable file refuses the save: "This session
+    file changed since you opened it, so nothing was saved." Nothing is
+    written, the typing stays on screen, and under the message each typed
+    row is listed as text ("10 x deadlift: 95 lb, 8 reps"), so the numbers
+    can be entered again whatever loads next.
+  - One button, *Drop my numbers, load the new file*: full size, well
+    clear of *Try again*, labelled with what it costs.
+  - Carry's own save makes what it wrote the new baseline, so it never
+    trips this itself.
+  - **Not handled:** the refresh on every resume can still put a different
+    session on screen while typing is pending, as before. The session
+    file is temporary, so that is left for when the brain moves to the
+    phone.
 
 ### Numbers the importer would refuse
 
@@ -794,7 +812,8 @@ label on every file and its importer refuses a file without one.
 
 - **The save checks the file on disk**, just before writing: the form
   was filled against bytes read earlier, and a file replaced since by
-  one whose label isn't ours is not written over.
+  one whose label isn't ours is refused with its own message. Any other
+  change is refused as above.
 - **A sheet on screen is still held** over a refresh that finds a label
   problem, as over any unreadable refresh: the newest file may not be the
   one on screen, and dropping the sheet would hide the owner's typing.

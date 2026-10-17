@@ -28,6 +28,19 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-17 — cycle 66: a save refuses a file that changed underneath
+
+- You chose the simple version. Save reads the file again just before
+  writing; if it changed, is empty or can't be read, nothing is saved.
+- Your numbers stay on screen and are listed as text under the message,
+  one row per line, so you can enter them again whatever happens next.
+- *Drop my numbers, load the new file* is the one way on.
+- A BOM or Windows line endings don't count as a change, and Carry's own
+  earlier save doesn't trip it.
+- Not handled: a resume can still bring a different session on screen
+  over unsaved typing, as before. In the backlog for the move to the phone.
+- The fuller version (#136) is closed, its branch kept.
+
 ## 2026-10-17 — cycle 65: the bump band keeps an old *hard* row
 
 - A row an older file marked *hard* used to leave "Part way to a bump".

@@ -67,6 +67,10 @@ not a thing anyone is blocked from building.
   the record, and names the row to fix. The findings and what is still
   open are kept there, not here, since this repository is public
   *(audit: security)*
+- [x] **Should a save refuse whenever the file changed underneath?**
+  **Answered 2026-10-17: refuse and offer the new file, the simple
+  version.** Built: a changed, empty or unreadable file refuses the save,
+  keeps the typing, lists it, and offers to drop it *(you decided)*
 
 ### Wrong numbers, or a road to one
 - [x] ~~**A weight over 1000 saves on the phone, and the importer then
@@ -254,6 +258,17 @@ These are the open paths to one, hardest first.
 
 
 ### Health and tidying
+- [ ] **A resume can put another session on screen over pending
+  typing.** The refresh on every resume shows the newest session; the
+  draft for the old one is then hidden, and the next keystroke replaces
+  it. Left for the brain-on-the-phone move, since the session file goes
+  then *(the simple save refusal, #136 closed)*
+- [ ] **Carry and gym-coach disagree about an old *hard*-only row.** An
+  old session whose only record is `hard` on bodyweight rows reaches
+  gym-coach's history, which still counts `hard` as an answer. Carry's
+  `Row.answered` ignores `hard` (Growth.kt), so the Since tab leaves that
+  session out. One side should change to match the other *(review of
+  #136)*
 - [ ] **A row marked *hurt* stays in the "part way to a bump" band.**
   gym-coach (its #49) now ends a streak at a set that hurt and holds the
   weight, so a hurt row's count is about to break, the same as a lighter
