@@ -266,7 +266,7 @@ class FlowTest {
         compose.waitFor("inkwell/night-notes")
         compose.onNodeWithText("inkwell/night-notes").performClick()
         // Added beside another blog: its own switches, all off, to set before its first post.
-        compose.waitFor("New here: every switch started off")
+        compose.waitFor("New here: set these before your first post")
         compose.waitFor("Night Notes · inkwell/night-notes · @inkwell")
         compose.onNodeWithContentDescription("Back").performClick()
         compose.waitFor("After dark")

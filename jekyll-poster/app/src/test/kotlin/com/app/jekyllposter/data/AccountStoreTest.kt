@@ -204,6 +204,24 @@ class AccountStoreTest {
         assertNull(store.forBlog(account.blogKey))
     }
 
+    @Test fun aRenewalCancelledMidwayStillKeepsTheNewTokens() = runBlocking {
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val store = store(refresh = { _, _ ->
+            started.complete(Unit); release.await()
+            DeviceFlow.Tokens("ghu_new", 28_800, "ghr_new")
+        }) { 0L }
+        store.save(account.copy(refreshToken = "ghr_old", expiresAt = 60_000))
+        // A screen that asked for the account, closed while GitHub was answering.
+        val asking = async(Dispatchers.IO) { store.current() }
+        started.await()
+        asking.cancel()
+        release.complete(Unit)
+        runCatching { asking.await() }
+        // GitHub replaced the refresh token as it answered: the new one is kept.
+        assertEquals("ghr_new", store.forBlog(account.blogKey)!!.refreshToken)
+    }
+
     @Test fun aTokenThatCannotBeUnsealedReadsAsSignedOut() = runBlocking {
         store().save(account)
         val otherKey = AesGcmCipher { SecretKeySpec(ByteArray(32) { 7 }, "AES") }

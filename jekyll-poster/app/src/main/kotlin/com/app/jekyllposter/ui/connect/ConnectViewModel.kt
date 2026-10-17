@@ -162,6 +162,7 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
                 // Expiry counts from when the token arrived, not from when a blog was picked.
                 container.accounts.save(deviceTokens?.let { fresh.withTokens(it, tokensAt) } ?: fresh)
             }
+            container.added(key)
             // After the switch: a read of the blog left, finishing now, can't put its title back.
             container.blogs.clear()
             // A first read fills the category picker; if it fails, Home tries again.

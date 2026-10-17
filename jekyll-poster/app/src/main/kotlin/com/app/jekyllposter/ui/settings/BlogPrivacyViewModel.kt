@@ -127,7 +127,8 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
                 return@launch
             }
             container.privacy.setCommitAsNoReply(account.blogKey, account.login, author)
-            local.update { it.copy(noReplyEmail = author.email) }
+            // Shown only on its own blog's page: another may have been opened meanwhile.
+            if (key() == account.blogKey) local.update { it.copy(noReplyEmail = author.email) }
         }
     }
 

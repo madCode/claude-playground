@@ -112,4 +112,12 @@ class PrivacyTest {
         val p = Privacy(db.privacy(), old) { accounts.blogs.first() }
         assertTrue(p.get("writer/blog@main").datesByDayOnly)
     }
+
+    @Test fun aRowForABlogThatWasNeverSavedDoesntHoldSigningInBehindTheVpn() = runBlocking {
+        twoBlogs()
+        val p = privacy()
+        // Left when adding the blog failed after its switches were written.
+        p.markNew("writer/never-added@main", onlyThroughVpn = true)
+        assertFalse(p.anyOnlyThroughVpn())
+    }
 }

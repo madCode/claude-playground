@@ -73,6 +73,10 @@ abstract class PrivacyDao {
     @Query("SELECT blogKey FROM blogs")
     abstract suspend fun blogKeys(): List<String>
 
+    /** Whether any saved blog asks for the VPN; a row for a blog whose adding failed doesn't count. */
+    @Query("SELECT EXISTS(SELECT 1 FROM blog_privacy p JOIN blogs b ON p.blogKey = b.blogKey WHERE p.onlyThroughVpn)")
+    abstract suspend fun anyBlogAsksForVpn(): Boolean
+
     /** Whether any blog posting with [key]'s sign-in asks for the VPN. */
     @Query(
         "SELECT EXISTS(SELECT 1 FROM blog_privacy p JOIN blogs b ON p.blogKey = b.blogKey " +
@@ -120,7 +124,7 @@ class Privacy(
      */
     suspend fun anyOnlyThroughVpn(): Boolean {
         imported()
-        return dao.list().any { it.onlyThroughVpn } || old.data.first()[ONLY_THROUGH_VPN] == true
+        return dao.anyBlogAsksForVpn() || old.data.first()[ONLY_THROUGH_VPN] == true
     }
 
     /** Whether any blog of blog [key]'s sign-in asks for the VPN: for renewing that sign-in's token. */

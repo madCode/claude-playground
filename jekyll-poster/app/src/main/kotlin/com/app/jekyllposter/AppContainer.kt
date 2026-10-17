@@ -155,6 +155,12 @@ class AppContainer(
         renewClients(key)
     }
 
+    /**
+     * Blog [key] was just added, or opened by adding it: its requests, its sign-in's renewals and
+     * the preview start on new connections, made under the switches it has now.
+     */
+    fun added(key: String) = renewClients(key)
+
     private fun renewClients(key: String) {
         callsFor(key).renew()
         signInCalls.renew()
