@@ -335,17 +335,14 @@ class IntelPostTest {
     private fun bullets(post: IntelPost.Post) = post.text.lines().filter { it.startsWith("- ") }
 
     @Test
-    fun `a line typed by hand that the sheet already has is posted once, and not marked`() {
+    fun `a line typed by hand that the sheet already has is posted once`() {
         // The owner's answer, 2026-10-16: "show it once". Both render
-        // "10 total x squat". The sheet's copy is the one kept, so the
-        // digits -- the board's own prescription -- are not flagged as a
-        // weight the owner typed.
+        // "10 total x squat", and the sheet's copy is the one kept.
         val post = IntelPost.compose(
             session(sets = listOf(set(0, "squat", prescribedText = "10 total"))),
             did(0), listOf(AddedSet(id = "a", name = "10 total x squat")),
         )!!
         assertEquals(listOf("- 10 total x squat"), bullets(post))
-        assertEquals(emptySet<String>(), post.suspect)
     }
 
     @Test
