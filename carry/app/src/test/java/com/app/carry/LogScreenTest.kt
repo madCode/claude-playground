@@ -360,6 +360,21 @@ class LogScreenTest {
     }
 
     @Test
+    fun `a day of only bodyweight rows gets a post once a row is tapped`() {
+        // Before v4 a bodyweight row had no way to say it happened short of
+        // typing a number, so such a day saved with nothing to post.
+        show()
+        reach("10 x squat")
+        compose.onNodeWithContentDescription("squat, reps").performClick()
+        saving.value = SaveState.Saved
+        reach("Post what 2G did")
+        compose.onNodeWithText("Post what 2G did").performClick()
+        reach("Send it")
+        compose.onNode(hasText("- 10 x squat", substring = true)).assertIsDisplayed()
+        shoot("38-post-bodyweight")
+    }
+
+    @Test
     fun `the faint fill is the coach's count, not the board's words`() {
         // "10 total x deadlift" is 5 a side, and the importer compares reps
         // against 5. Filling 10 would put a wrong number in history.

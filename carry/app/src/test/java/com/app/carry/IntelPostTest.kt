@@ -386,4 +386,35 @@ class IntelPostTest {
             bullets(post),
         )
     }
+
+    @Test
+    fun `a row is in the post when it is filled in, and only then`() {
+        // #127 v4: weight, reps or done says a set happened. hurt alone,
+        // or a feel marker alone, is not a record the movement was in
+        // the block, and an untouched row stays out.
+        val sets = listOf(
+            set(0, "push up"), set(1, "squat"), set(2, "plank", prescribed = null, prescribedText = null, durationSec = 45),
+            set(3, "lunge"), set(4, "row"), set(5, "curl"),
+        )
+        val post = IntelPost.compose(
+            session(sets = sets),
+            mapOf(
+                0 to SessionPatch.Entry(reps = 10),
+                1 to SessionPatch.Entry(weight = 30.0),
+                2 to SessionPatch.Entry(done = true),
+                3 to SessionPatch.Entry(hurt = true),
+                4 to SessionPatch.Entry(easy = true),
+            ),
+            emptyList(),
+        )!!
+        assertEquals(listOf("- 10 x push up", "- 10 x squat", "- 45 sec of plank"), bullets(post))
+    }
+
+    @Test
+    fun `a bodyweight-only day has a post once its reps are filled`() {
+        val sets = listOf(set(0, "push up"), set(1, "air squat"))
+        assertEquals(null, IntelPost.compose(session(sets = sets), emptyMap(), emptyList()))
+        val post = IntelPost.compose(session(sets = sets), mapOf(0 to SessionPatch.Entry(reps = 10)), emptyList())!!
+        assertEquals(listOf("- 10 x push up"), bullets(post))
+    }
 }

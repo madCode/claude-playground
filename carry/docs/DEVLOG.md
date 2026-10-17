@@ -28,6 +28,20 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-17 — cycle 64: the minimum After page (#127, mockup v4)
+
+- Each row says it happened with its own fields: a weight; reps, which
+  one tap fills from the faint count; or *done* in a timed row's time
+  slot. An untouched row counts as not done, and the tally says so.
+- *skip* and *hard* are gone. Older files that say either still read.
+- *hurt* moved to the end of the name line; *mod* shows only while the
+  weight box is empty.
+- Labels sit above the boxes, and every word on the page but the box
+  contents is a size up.
+- A bodyweight-only day now gets a post.
+- Checked with gym-coach's own importer: every way a row says "done"
+  becomes a complete set; an untouched or *hurt*-only row becomes nothing.
+
 ## 2026-10-16 — cycle 59: a repeated line is posted once
 
 - A row added by hand whose name reads the same as a line the sheet

@@ -20,33 +20,6 @@ should start at the first line of *Wrong numbers*.
 
 Five decisions. Each is a question about what you want the app to claim,
 not a thing anyone is blocked from building.
-- [ ] **A minimum After page:
-  [#127](https://github.com/madCode/claude-playground/issues/127).** A UX
-  audit of every control, with personas, a mockup and the cost of each
-  change. It proposes a ✓ on every row, and with it an answer to the item
-  below. It also found that gym-coach never reads *hurt* *(audit: UX)*
-- [ ] **Which marks say "I did this movement"?** Folded into #127. You answered the narrow
-  version on 2026-10-16 — `done` qualifies a movement for the post — and
-  that shipped. But `done` is only offered on a TIMED row, because a timed
-  hold is the case where the number boxes are empty by definition. So a
-  wholly BODYWEIGHT class still has no post: air squats, push-ups and jump
-  lunges have no duration, so they get no `done` chip, and nothing else on
-  the row says the movement happened.
-
-  The marks that would fix it are `easy`, `hard` and `easier`. Each does
-  imply a set happened — you cannot call a set easy without doing it — so
-  the argument for counting them is decent. The argument against is that
-  they are judgements about a set rather than a record of one, and `hurt`
-  is the proof the distinction matters: tapping it while deciding is not
-  evidence you did the movement, which is why it stays out.
-
-  Two ways to go: count `easy`/`hard`/`easier` as evidence too, or draw the
-  `done` chip on every row rather than only timed ones. The second is the
-  smaller claim and probably the better one — it adds a way to say "I did
-  it" instead of reinterpreting marks that mean something else — but it
-  puts a chip on rows where the number boxes are the normal answer, which
-  is the reason it was timed-only to begin with *(you asked for the narrow
-  version; this is what it left out)*
 - [x] ~~**Aggregate facts about the owner's training are in this public
   repo.**~~ **Converted 2026-10-16.** The owner was asked and said they
   were "okay with leaving them if you absolutely need them to continue to
@@ -313,6 +286,11 @@ These are the open paths to one, hardest first.
 ### Owed on a device
 
 Only a real phone can answer these.
+- [ ] **The After page v4 on a phone.** Tap an empty reps box: it should
+  fill with the faint count, selected, and typing should replace it. With
+  TalkBack, the box should say "empty, tap for 10" and then the number.
+  Check a timed row's *done* tag, and the page at the largest font size
+  *(due with #127 v4)*
 - [ ] **TalkBack reads "You typed: …" when it appears after Save.** The
   test proves the line is a polite live region, not that TalkBack speaks
   it. With TalkBack on: add a row, type a name, save, and listen *(due
@@ -442,6 +420,14 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **The minimum After page, mockup v4
+  ([#127](https://github.com/madCode/claude-playground/issues/127)).**
+  Each row says "I did it" with its own fields: a weight, reps (one tap
+  fills the faint count), or *done* in a timed row's time slot. *skip* and
+  *hard* are gone, *hurt* sits on the name line, labels sit above the
+  boxes, and the page's type is a step up. This also answers **which marks
+  say "I did this movement"**: a bodyweight-only day now gets a post once
+  its reps are filled *(you approved v4)*
 - [x] **Two identical bullets could appear in one post, and both got
   marked.** A line that reads the same (case folded, NFC) is now posted
   once, and where a typed line meets the sheet's the sheet's copy is kept,

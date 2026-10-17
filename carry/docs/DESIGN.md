@@ -57,33 +57,62 @@ Two consequences worth stating, because they look like missing features:
    into a tail of at most two lines: by feel, and no weight. Present, not
    prominent.
 
-**After** — what you did. One row per exercise, two lines tall: weight
-and reps, each box labelled under it ("lb", "reps", visible rather than a
-placeholder that vanishes once typed in), and four chips (*easy*, *mod*, *hurt*, *skip*) — five on a timed
-row, which also gets *done*. Plus **add a row**, for anything the sheet didn't
-list.
+**After** — what you did (madCode approved the minimum page in #127,
+mockup v4). One row per exercise, two lines tall: the name with *hurt* at
+the end of it, then a weight box, a reps box (or on a timed row a *done*
+tag), *easy*, and *mod* while the weight box is empty. Plus **add a row**,
+for anything the sheet didn't list. Visible labels sit above the boxes
+("lb", "reps", "time"), stay put once something is typed, and are the
+words TalkBack reads on each box; the chips sit level with the boxes.
 
-*skip* is a different kind of thing from the other chips: it is not a quality
-of a set, it is the statement that there wasn't one. It had been in the
-schema, in the patch and in the importer — which logs skipped items so the
-coach stops re-asking — since before this screen existed, with no way to
-set it, so a movement deliberately skipped was indistinguishable from one
-not got to. Skipping clears the row and takes its boxes away: there is no
-number to put in them, and a weight against a set you did not do is the
-wrong number this app exists to avoid. Un-skipping does not bring the old
-number back, because nobody re-entered it.
+**Each row says "I did it" with its own fields.** There is no separate
+"did it" control, and there is no way to say "didn't do it":
 
-**There is no *hard* chip.** The coach treats a completed set as completed
-however it felt (madCode's decision, 2026-10-16; gym-coach is changing to
-match), so *hard* told it nothing it acts on. *easy* and *hurt* stay
-because nothing else can tell the coach those things (below). A file
-that already says `"hard": true` still reads, and the save writes back
-what the file held. It isn't shown, on the After tab or in a past
-session, so a row it alone answers reads as blank: not counted as filled
-and not as a set that happened. Tapping *easy* clears it, since the
-owner's fresh answer wins and the runner still reads `hard` until
-gym-coach changes. It is not part of the post's "did it" test, which
-never counted it.
+| Row | Says it happened | Untouched |
+|---|---|---|
+| Weighted | a weight. Blank reps mean all of them. | not done |
+| Bodyweight | reps. The empty box shows the runner's count faintly, and a tap fills it in, so "did them all" is one tap. *easy* or *mod* say a set happened too. | not done |
+| Timed | *done*, a tag in the reps box's slot under "time" | not done |
+| Added | its name | — |
+
+The faint count is `prescribed_reps`, the coach's number, not the board's
+words: "10 total" is 5 a side, and gym-coach's importer marks a set short
+when its reps fall below that number. The tally reads "N of M noted · K
+added · anything untouched counts as not done". *hurt* on its own is not
+"noted": it is the commonest reason to leave a row.
+
+**Why a blank bodyweight row isn't "done".** A blank row can't be told
+apart from one not done. If blank meant done, movements skipped or
+forgotten would enter history as completed sets, and a wrong number in
+history is the worst outcome here. One tap on the faint count is the
+price.
+
+**Checked against gym-coach's real importer** (`session_file.to_history`),
+on a file written by Carry's own save: each of the rows above, plus *easy*
+alone and *mod* alone, becomes a complete set. A row with only *hurt*,
+and an untouched row, become nothing.
+
+**What went, and why nothing the coach reads went with it:**
+
+- ***skip*.** Every coach rule already leaves a skipped set out, exactly
+  as it does an untouched row, so the control said nothing an untouched
+  row doesn't. An older file's `skipped` still reads: the row looks
+  untouched, its name faint, and a past session still shows the mark.
+  Any edit to such a row clears the flag, so a row is never skipped and
+  weighted at once.
+- ***hard*.** The coach treats a completed set as completed however it
+  felt (madCode's decision, 2026-10-16; gym-coach is changing to match).
+  An older file's `hard` still reads and is written back as it was. A
+  row only it answers reads as blank, and tapping *easy* clears it.
+- **A ✓ on every row** (mockups v2 and v3). Each row's own fields already
+  say it, and tap-to-fill keeps a bodyweight row at one tap.
+- ***done* as a chip.** It moved into the timed row's reps slot.
+
+**Type is a step up on this page** (`Look.After`): names 20sp, chips
+15sp, the tally 17sp, the post preview 14sp, buttons 17sp. Box contents
+stay 15sp. It is filled in from memory with cold hands, and checked at
+twice the font size, where the timed row's *done* tag widens rather than
+wrapping.
 
 *mod* is "I did the easier version" — knees, a box under the step-up. It
 exists because **a large share of this owner's logged sets carry no weight**, and
@@ -97,18 +126,11 @@ they had not used. The ladder itself stays in the owner's head: naming the
 next rung for every movement is a knowledge base we do not have and they
 do not need.
 
-*done* is "I did it, and there is nothing to say about it", and it appears
-only on a row the board prescribed in seconds. Those rows have no rep count
-and take no weight, so both boxes are empty by definition and every other
-chip claims something the owner may not mean — which left them nothing
-honest to tap, and a blank row is written blank by design, so a finished
-45-second plank reached history as nothing at all. It is also the only chip
-that is the *primary* affordance of the row rather than a note on it, which
-is why it is the brightest.
-
-Nothing downstream reads the field by name. What it changes is that the row
-reaches the importer at all, as a complete set — which is what the
-bodyweight rule counts.
+*done* is "I did it, and there is nothing to say about it", on a row the
+board prescribed in seconds: no rep count and no weight, so a finished
+45-second plank would otherwise reach history as nothing at all. Nothing
+downstream reads the field by name; what it changes is that the row
+reaches the importer at all, as a complete set.
 
 The same gap existed one layer up: the *since you started* screen dropped a
 whole session unless some row carried a number, so a class recorded only
