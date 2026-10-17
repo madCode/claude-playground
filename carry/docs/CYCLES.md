@@ -7,6 +7,16 @@ that hold become rules in CLAUDE.md or the cycles skill.
 
 ## 2026-10-16 run (cloud session)
 
+### Cycle 66 — build: a save refuses a file that changed underneath
+
+- **A new gate on a seam's input breaks every test that left the seam at
+  its default.** `readNow` defaulted to a folder with no grant, which
+  reads null; once null meant "refuse", tests that set only `write`
+  stopped writing. The `saved()` helper now sets both.
+- **Falsify a choice, not only a check.** The restore test stayed green
+  under every break of the new lines; it went red only when the
+  alternative baseline (the draft's fingerprint) was swapped in.
+
 ### Cycle 64 — build: the minimum After page (#127 v4)
 
 - **A text field reports its inner bounds.** `BasicTextField`'s semantics

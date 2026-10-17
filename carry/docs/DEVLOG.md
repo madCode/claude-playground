@@ -28,6 +28,18 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-17 — cycle 66: a save refuses a file that changed underneath
+
+- You answered "refuse and offer the new sheet". Save now reads the file
+  again just before writing and refuses if its content differs from what
+  the page read, any change at all.
+- The refusal says "This session changed since you opened it", is read
+  out by TalkBack, keeps your numbers, and offers *Use the new sheet
+  instead* beside the button you just tapped.
+- Carry's own earlier save doesn't trip it. A file deleted underneath is
+  refused too. After the app is killed, the file read on restore is the
+  baseline; a change made while it was dead shows the usual warning.
+
 ## 2026-10-17 — cycle 64: the minimum After page (#127, mockup v4)
 
 - Each row says it happened with its own fields: a weight; reps, which

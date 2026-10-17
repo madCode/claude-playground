@@ -219,6 +219,23 @@ numbers someone just entered cannot, so they get the protection:
   against a lateral raise. The draft keeps the bytes the numbers were typed
   against, and a save compares each edited row's identity between then and
   now, refusing if they differ.
+- **Never written over a file that changed since it was read** (madCode,
+  2026-10-17: "refuse and offer the new sheet"). Just before writing, the
+  save reads the file again and compares its content with the bytes on
+  screen, not its timestamp, since sync services touch those. Any
+  difference refuses the save with "This session changed since you opened
+  it", announced to TalkBack, and keeps the typing. The changed file is
+  then read in, which raises the rewritten-session warning, and a *Use the
+  new sheet instead* button sits under the refusal as well as in the
+  warning. A second tap of Save, after the warning, writes onto the new
+  sheet if the rows still line up.
+  - Carry's own save makes what it wrote the new baseline, so it never
+    trips this itself.
+  - A file that can't be read just before the save (deleted, moved) is
+    refused too, with the typing kept.
+  - After the process dies, the baseline is the file read on restore. A
+    change made while the app was dead is caught then, by the draft's
+    fingerprint, and shown as the rewritten-session warning.
 
 ### Numbers the importer would refuse
 
@@ -795,7 +812,8 @@ label on every file and its importer refuses a file without one.
 
 - **The save checks the file on disk**, just before writing: the form
   was filled against bytes read earlier, and a file replaced since by
-  one whose label isn't ours is not written over.
+  one whose label isn't ours is refused with its own message. Any other
+  change is refused as above.
 - **A sheet on screen is still held** over a refresh that finds a label
   problem, as over any unreadable refresh: the newest file may not be the
   one on screen, and dropping the sheet would hide the owner's typing.

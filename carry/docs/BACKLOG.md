@@ -63,6 +63,10 @@ not a thing anyone is blocked from building.
   the record, and names the row to fix. The findings and what is still
   open are kept there, not here, since this repository is public
   *(audit: security)*
+- [x] **Should a save refuse whenever the file changed underneath?**
+  **Answered 2026-10-17: refuse and offer the new sheet.** Built: any
+  change to the file's content since it was read refuses the save, keeps
+  the typing and offers *Use the new sheet instead* *(you decided)*
 
 ### Wrong numbers, or a road to one
 - [x] ~~**A weight over 1000 saves on the phone, and the importer then
