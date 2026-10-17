@@ -76,11 +76,13 @@ number back, because nobody re-entered it.
 however it felt (madCode's decision, 2026-10-16; gym-coach is changing to
 match), so *hard* told it nothing it acts on. *easy* and *hurt* stay
 because nothing else can tell the coach those things (below). A file
-that already says `"hard": true` still reads, and Carry leaves the field
-as it is: the reader keeps it, the save writes back what the file held,
-and a row answered only by it still counts as a set that happened. It
-isn't shown, on the After tab or in a past session. It is not part of
-the post's "did it" test, which never counted it.
+that already says `"hard": true` still reads, and the save writes back
+what the file held. It isn't shown, on the After tab or in a past
+session, so a row it alone answers reads as blank: not counted as filled
+and not as a set that happened. Tapping *easy* clears it, since the
+owner's fresh answer wins and the runner still reads `hard` until
+gym-coach changes. It is not part of the post's "did it" test, which
+never counted it.
 
 *mod* is "I did the easier version" — knees, a box under the step-up. It
 exists because **a large share of this owner's logged sets carry no weight**, and
