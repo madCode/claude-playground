@@ -186,7 +186,13 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     private class InstallFailed(cause: Throwable) : Exception(cause)
 
     /** Why a save stopped before writing, from the file as it is on disk. */
-    private enum class Gate { GONE, NOT_OURS, UNSETTLED, CHANGED }
+    private enum class Gate { GONE, NOT_OURS, UNSETTLED, OTHER_SESSION, CHANGED }
+
+    private class Check(val gate: Gate?, val onDisk: String?, val newRaw: String?, val newer: Session?, val result: Saved?)
+
+    /** The unreadable file the last save refused, to tell a sync still
+     *  landing from a file that will stay this way. */
+    private var unreadableSeen: String? = null
 
     /** How the folder is read. Replaced in tests so the stall path and the
      *  keep-last-good path can be exercised without a real provider; there
@@ -334,6 +340,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
             _edits.value = ready.session.onScreen(SessionPatch.entriesIn(ready.raw))
             _added.value = named(SessionPatch.addedIn(ready.raw))
         }
+        // "Use the new sheet" can follow a refusal that left another
+        // session off screen; with the draft gone, a read can show it.
+        refresh()
     }
 
     /**
@@ -467,25 +476,33 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                         return@launch
                     }
                     // The patch was built from the bytes last read, so any
-                    // other bytes on disk now -- a re-run, a sync, a file
+                    // other content on disk now -- a re-run, a sync, a file
                     // gone -- would be overwritten blind. Compared by
-                    // content, not timestamp: sync services touch mtimes.
-                    // After a save of our own, `ready.raw` is what we wrote,
-                    // so Carry never trips this on itself.
-                    val (gate, result) = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    // content, not timestamp, since sync services touch
+                    // mtimes, and ignoring a BOM, line endings and JSON
+                    // formatting, which change nothing. After a save of our
+                    // own `ready.raw` is what we wrote, so Carry never trips
+                    // this on itself.
+                    val check = withContext(kotlinx.coroutines.Dispatchers.IO) {
                         val onDisk = readNow(ready.documentId)
                         val label = onDisk?.let(SessionFiles::labelGuess)
+                        val newRaw = onDisk?.let { if (SessionFiles.parse(it) != null) it else SessionFiles.normalised(it) }
+                        val newer = newRaw?.let(SessionFiles::parse)
                         val gate = when {
                             onDisk == null -> Gate.GONE
                             label != null && label != SessionFiles.Label.OURS -> Gate.NOT_OURS
-                            onDisk == ready.raw -> null
-                            // Half synced, or otherwise unreadable: there is
-                            // no new sheet to offer yet, only a wait.
-                            SessionFiles.parse(onDisk) == null -> Gate.UNSETTLED
+                            SessionFiles.sameContent(onDisk, ready.raw) -> null
+                            // The same unreadable bytes as last time: not a
+                            // sync still landing, so waiting won't help, and
+                            // nothing readable is lost by writing over them.
+                            newer == null -> if (onDisk == unreadableSeen) null else Gate.UNSETTLED
+                            newer.sheetId != ready.session.sheetId -> Gate.OTHER_SESSION
                             else -> Gate.CHANGED
                         }
-                        gate to if (gate == null) write(ready.documentId, text) else null
+                        Check(gate, onDisk, newRaw, newer, if (gate == null) write(ready.documentId, text) else null)
                     }
+                    val gate = check.gate
+                    unreadableSeen = check.onDisk.takeIf { gate == Gate.UNSETTLED }
                     _saving.value = when (gate) {
                         Gate.GONE -> SaveState.Failed(
                             "Couldn't read the session file just before saving. It may have been moved or deleted. Nothing was written; your numbers are still here.",
@@ -496,15 +513,19 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                             damaged = false,
                         )
                         Gate.UNSETTLED -> SaveState.Failed(
-                            "This session changed since you opened it and doesn't read cleanly yet, perhaps a sync part way through. Nothing was written; your numbers are still here. Try again in a moment.",
+                            "The session file changed and Carry can't read it now, perhaps a sync part way through. Nothing was written; your numbers are still here. Wait a moment and tap Try again. If it still can't be read, Try again writes your session over it.",
                             damaged = false,
+                        )
+                        Gate.OTHER_SESSION -> SaveState.Failed(
+                            "This file now holds a different session, so your numbers weren't written into it. They're still here.",
+                            damaged = false, newSheet = true,
                         )
                         Gate.CHANGED -> SaveState.Failed(
                             "This session changed since you opened it, so nothing was written. Your numbers are still here.",
                             damaged = false, newSheet = true,
                         )
                         null -> null
-                    } ?: when (result!!) {
+                    } ?: when (check.result!!) {
                         Saved.YES -> {
                             // ALL of this is "only if nothing newer arrived
                             // while we wrote". It used to guard the one
@@ -559,11 +580,26 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                     // "Saving..." over a file that is already written, with
                     // the retry guard refusing another tap.
                     if (_saving.value == SaveState.Saved) rereadHistory()
-                    // Reading the changed file in is what puts the new sheet
-                    // on screen: with a draft, `reconcile` keeps the typing
-                    // and raises the rewritten-session warning, so "Use the
-                    // new sheet instead" discards toward the right bytes.
-                    if (gate == Gate.CHANGED) refresh()
+                    // The same session, changed: put it on screen. With a
+                    // draft, `reconcile` keeps the typing and raises the
+                    // rewritten-session warning, and the next save is
+                    // checked against these bytes. Not a whole refresh: that
+                    // takes the newest file in the folder, and one for
+                    // another session would hide the typing under it.
+                    // A different session stays off screen for the same
+                    // reason, until the owner chooses to drop their numbers.
+                    if (gate == Gate.CHANGED) {
+                        val now = _state.value as? CarryState.Ready
+                        if (now != null && now.documentId == ready.documentId && now.raw == ready.raw) {
+                            val newRaw = check.newRaw!!
+                            val newer = check.newer!!
+                            val adopted = CarryState.Ready(
+                                newer, newRaw, ready.documentId, SessionFiles.unreadableRows(newRaw, newer),
+                            )
+                            _state.value = adopted
+                            reconcile(adopted)
+                        }
+                    }
                 }
             }
         }

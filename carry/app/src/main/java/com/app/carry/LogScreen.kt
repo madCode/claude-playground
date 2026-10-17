@@ -138,14 +138,7 @@ fun LogScreen(
             // up the save refuses, every refresh re-raises the warning, and
             // the only exits were clearing app data or swiping the app
             // away -- which also destroys the numbers.
-            Text(
-                "Use the new sheet instead",
-                color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.After.Note,
-                modifier = Modifier
-                    .border(1.dp, Look.RuleStrong, RoundedCornerShape(4.dp))
-                    .clickable(onClick = onDiscard)
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-            )
+            NewSheetButton(onDiscard, Modifier.padding(bottom = 6.dp))
         }
         // On a borrowed day the eleven rows below are ANOTHER class's
         // block, and the session is whatever the owner adds by hand. Intel
@@ -721,6 +714,25 @@ internal fun typedBack(names: List<String>): String {
  *  name, so a weight typed at the end of a long one still shows. */
 private const val MAX_TYPED_NAME = 200
 
+/** Drops the typing and takes the file as it now stands. Its label says
+ *  what is lost, since it is one tap and the numbers can't be re-derived. */
+@Composable
+private fun NewSheetButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .heightIn(min = 48.dp)
+            .border(1.dp, Look.RuleStrong, RoundedCornerShape(4.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            "Drop my numbers, use the new sheet",
+            color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.After.Note,
+        )
+    }
+}
+
 sealed interface SaveState {
     data object Idle : SaveState
     data object Saving : SaveState
@@ -756,17 +768,9 @@ private fun SaveButton(state: SaveState, onSave: () -> Unit, added: List<AddedSe
             )
             // Here as well as in the warning at the top, because this is
             // where the owner just tapped, and the top may be scrolled away.
-            if (state.newSheet) {
-                Text(
-                    "Use the new sheet instead",
-                    color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.After.Note,
-                    modifier = Modifier
-                        .padding(bottom = 10.dp)
-                        .border(1.dp, Look.RuleStrong, RoundedCornerShape(4.dp))
-                        .clickable(onClick = onDiscard)
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                )
-            }
+            // Well clear of Try again, which is what the thumb is about to
+            // tap again, since this one throws the typing away.
+            if (state.newSheet) NewSheetButton(onDiscard, Modifier.padding(bottom = 28.dp))
         }
         // In the button's own item and above it, where the owner just
         // tapped: a separate item below could land off the bottom of the

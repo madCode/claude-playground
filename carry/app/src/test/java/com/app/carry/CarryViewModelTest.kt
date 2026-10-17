@@ -530,16 +530,20 @@ class CarryViewModelTest {
         assertEquals(rewritten, (model.state.value as CarryState.Ready).raw)
         assertTrue(model.fileMovedUnderEdits.value)
 
-        model.discardEdits()
+        model.discardEdits(); settled(model)
         assertEquals(emptyMap<Int, SessionPatch.Entry>(), model.edits.value)
         assertEquals(SaveState.Idle, model.saving.value)
-        assertEquals(rewritten, disk.text)
+        assertEquals(rewritten, (model.state.value as CarryState.Ready).raw)
+        assertEquals(0, disk.writes)
     }
 
     @Test
-    fun `a file changed into one that doesn't read yet offers a wait, not a sheet`() = runTest(dispatcher) {
-        // Cut off mid-sync. The page can't read it, so "Use the new sheet"
-        // would discard the typing toward the OLD sheet still on screen.
+    fun `a file that won't read is waited for once, then written over if it stays that way`() = runTest(dispatcher) {
+        // Cut off mid-sync, the next tap may find it whole. But a file that
+        // stays unreadable (a damaged sync conflict, a re-encoding) would
+        // refuse for ever, and the only way out deleted the draft. The
+        // same bytes on the next tap mean it isn't still landing, and
+        // nothing readable is lost by writing over it.
         val handle = SavedStateHandle()
         val model = viewModel(handle)
         val disk = Disk(sheet)
@@ -549,12 +553,81 @@ class CarryViewModelTest {
 
         disk.text = sheet.take(60)
         model.save(); settled(model)
+        assertEquals(0, disk.writes)
+        val state = model.saving.value as SaveState.Failed
+        assertTrue(state.why, "Wait a moment" in state.why)
+        assertFalse("there's no readable sheet to offer", state.newSheet)
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+
+        // Still landing: different bytes, still unreadable, still a wait.
+        disk.text = sheet.take(90)
+        model.save(); settled(model)
+        assertEquals(0, disk.writes)
+
+        // Settled as it is: written over, with the typing.
+        model.save(); settled(model)
+        assertEquals(SaveState.Saved, model.saving.value)
+        assertEquals(1, disk.writes)
+        assertTrue(disk.text!!, "95" in disk.text!!)
+    }
+
+    @Test
+    fun `a file that now holds another session keeps the typing on screen until the owner drops it`() = runTest(dispatcher) {
+        // Re-reading the folder here used to put the other session on
+        // screen, which cleared the refusal and hid the draft, and the next
+        // keystroke overwrote it: "your numbers are still here", then gone.
+        val handle = SavedStateHandle()
+        val model = viewModel(handle)
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+        val other = sheet.replace("2026-10-17:2G", "2026-10-17:3G").replace("\"2G\"", "\"3G\"")
+        disk.text = other
+        model.save(); settled(model)
 
         assertEquals(0, disk.writes)
         val state = model.saving.value as SaveState.Failed
-        assertTrue(state.why, "Try again in a moment" in state.why)
-        assertFalse(state.newSheet)
+        assertTrue(state.why, "different session" in state.why)
+        assertTrue(state.newSheet)
+        assertEquals("the typed-against sheet stays", sheet, (model.state.value as CarryState.Ready).raw)
         assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+        assertTrue(handle.keys().isNotEmpty())
+
+        // Typing on keeps the draft for this session, not a fresh one.
+        model.edit(1, SessionPatch.Entry(weight = 40.0, reps = 10))
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+
+        model.discardEdits(); settled(model)
+        assertEquals(other, (model.state.value as CarryState.Ready).raw)
+        assertEquals(emptyMap<Int, SessionPatch.Entry>(), model.edits.value)
+    }
+
+    @Test
+    fun `a file that only gained a BOM or CRLF line endings is not a change`() = runTest(dispatcher) {
+        // Through the real SessionFolder.read, so what is compared is what
+        // the provider's bytes decode to. A sync or an editor can add
+        // either without changing a thing.
+        val tree = android.net.Uri.parse("content://com.android.externalstorage.documents/tree/primary%3Agym")
+        val doc = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, "doc")
+        for (onDisk in listOf("\uFEFF" + sheet, sheet.replace("\n", "\r\n"))) {
+            val model = viewModel()
+            model.folder.remember(tree)
+            org.robolectric.Shadows.shadowOf(app.contentResolver).registerInputStreamSupplier(doc) {
+                java.io.ByteArrayInputStream(onDisk.toByteArray(Charsets.UTF_8))
+            }
+            assertEquals("the harness must reach the real read", onDisk, model.folder.read("doc"))
+            model.read = { ready() }
+            model.refresh(); settled(model)
+            model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+            var wrote = 0
+            model.write = { _, _ -> wrote++; Saved.YES }
+            model.save(); settled(model)
+            assertEquals("${model.saving.value}", SaveState.Saved, model.saving.value)
+            assertEquals(1, wrote)
+        }
     }
 
     @Test

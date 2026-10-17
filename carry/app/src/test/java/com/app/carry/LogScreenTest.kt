@@ -5,6 +5,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertCountEquals
@@ -207,7 +208,7 @@ class LogScreenTest {
             )
         }
         compose.onNodeWithText("Your numbers are still here", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Use the new sheet instead").performClick()
+        compose.onNodeWithText("Drop my numbers, use the new sheet").performClick()
         assertEquals(1, discarded)
         shoot("13-file-moved")
     }
@@ -286,7 +287,15 @@ class LogScreenTest {
         compose.onNodeWithText(why).assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
         shoot("40-save-file-changed")
-        compose.onNodeWithText("Use the new sheet instead").performClick()
+        val drop = compose.onNodeWithText("Drop my numbers, use the new sheet")
+        drop.assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+        val box = drop.fetchSemanticsNode().boundsInRoot
+        val tryAgain = compose.onNodeWithText("Try again").fetchSemanticsNode().boundsInRoot
+        with(compose.density) {
+            assertTrue("a 48dp target, got ${box.height.toDp()}", box.height.toDp() >= 48.dp)
+            assertTrue("kept clear of Try again", (tryAgain.top - box.bottom).toDp() >= 24.dp)
+        }
+        drop.performClick()
         assertEquals(1, discarded)
     }
 
