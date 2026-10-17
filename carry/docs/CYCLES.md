@@ -7,6 +7,16 @@ that hold become rules in CLAUDE.md or the cycles skill.
 
 ## 2026-10-16 run (cloud session)
 
+### Cycle 60 — build: the bump band reads every sheet
+
+- **Write a date in a fixture, check its weekday.** A screen test failed
+  on "Sat 4 Oct" for a Sunday, and the first guess was a merged
+  semantics node. `date -d 2026-10-04 +%a` before writing the assertion.
+- **A changed scope rewrites tests that pinned the old one.** Three tests
+  asserted "the newest sheet and nowhere else". Each was replaced or
+  widened on purpose, and the PR names them, so a reviewer can tell a
+  deliberate change from a test bent to pass.
+
 ### Cycle 59 — build: a repeated line is posted once
 
 - **Check a new screenshot's number against every `shoot(` in the test
