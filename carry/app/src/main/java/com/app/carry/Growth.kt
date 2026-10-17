@@ -427,7 +427,7 @@ object Growth {
         // without one is only taken from the newest sheet, because nothing
         // could tell whether a later sheet listed it.
         //
-        // The newest listing decides, and a row it excludes (skipped, hard,
+        // The newest listing decides, and a row it excludes (skipped,
         // lighter, no streak) does NOT fall back to an older sheet: that
         // older count is from before the set that superseded it.
         //
@@ -578,14 +578,14 @@ object Growth {
         val done = set.streakDone ?: 0
         val weight = set.suggestedWeight ?: return null
         // The count was written before the class and the owner has since
-        // filled the row in, so these two say the streak is about to
-        // break: the runner's own rules are that `hard` blocks the next
-        // bump, and a lighter set is not a set at this weight.
+        // filled the row in: a lighter set is not a set at this weight, so
+        // the streak is about to break. An older file's `hard` is not a
+        // reason -- the runner counts a completed set however it felt.
         //
         // Logged AT the weight is left alone. That count is stale by one
         // and understates, which is the safe direction -- and re-deriving
         // it here is the one thing this file must not do.
-        if (set.hard || (set.weight != null && set.weight < weight)) return null
+        if (set.weight != null && set.weight < weight) return null
         if (done <= 0 || done >= needed) return null
         return Bump(set.displayName, set.family, weight, done, needed, asOf)
     }

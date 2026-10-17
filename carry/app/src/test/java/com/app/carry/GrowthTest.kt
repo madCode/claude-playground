@@ -285,16 +285,14 @@ class GrowthTest {
     @Test
     fun `the newest listing of a movement decides, even when it leaves the band`() {
         // An older count is from before the newer set. When the newer row
-        // is out of the band -- marked hard, the streak finished, or no
-        // streak written -- the older count must not stand in for it.
+        // is out of the band -- the streak finished, no streak written,
+        // skipped, or lighter -- the older count must not stand in for it.
         val older = file("2026-10-01", sets = listOf(
-            set(0, "squat", "legs", done = "2", needed = "3", suggested = "25"),
             set(1, "row", "pull", done = "2", needed = "3", suggested = "30"),
             set(2, "press", "push", done = "2", needed = "3", suggested = "20"),
             set(3, "lunge", "legs", done = "1", needed = "3", suggested = "20"),
         ).joinToString(","))
         val newer = file("2026-10-11", sets = listOf(
-            set(0, "squat", "legs", done = "1", needed = "3", suggested = "25", hard = true),
             set(1, "row", "pull", done = "3", needed = "3", suggested = "35"),
             set(2, "press", "push"),
             set(3, "lunge", "legs", done = "2", needed = "3", suggested = "20"),
@@ -440,11 +438,11 @@ class GrowthTest {
 
     @Test
     fun `a row their own answer contradicts leaves the band`() {
-        // The count was written before the class. `hard` is the runner's
-        // own signal that the next bump is blocked, and a lighter set is
-        // not a set at that weight -- so "part way to a bump" is no
-        // longer true of either row, and the band is capped, so each
-        // would be taking a slot from one that is.
+        // The count was written before the class. A lighter set is not a
+        // set at that weight, so "part way to a bump" is no longer true
+        // of the row, and the band is capped, so it would be taking a
+        // slot from one that is. An older file's `hard` contradicts
+        // nothing: the runner counts a completed set however it felt.
         val since = Growth.of(
             listOf(
                 file("2026-10-11", sets = listOf(
@@ -457,10 +455,26 @@ class GrowthTest {
                 ).joinToString(",")),
             )
         )
-        // The third stays: that count is stale by one and understates,
+        // The other two stay: that count is stale by one and understates,
         // which is the safe direction, and re-deriving it here is the one
         // thing this file must not do.
-        assertEquals(listOf("did it as asked"), since.nearBump.map { it.name })
+        assertEquals(listOf("found it hard", "did it as asked"), since.nearBump.map { it.name })
+    }
+
+    @Test
+    fun `an older sheet's row marked hard still shows its count`() {
+        // Only an older file can say `hard` now, and the runner no longer
+        // reads it, so the row's count is as good as any other's. The
+        // newest sheet doesn't list squat, so the older listing decides.
+        val since = Growth.of(
+            listOf(
+                file("2026-10-04", sets = set(0, "squat", "legs", done = "2", needed = "3",
+                    suggested = "25", weight = "25", reps = "10", hard = true)),
+                file("2026-10-11", sets = set(0, "plank", "core")),
+            )
+        )
+        assertEquals(listOf("squat"), since.nearBump.map { it.name })
+        assertEquals("2026-10-04", since.nearBump.single().asOf)
     }
 
     @Test
