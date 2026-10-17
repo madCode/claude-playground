@@ -49,6 +49,11 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   app is killed, until you drop it. An unreadable file is written over
   only when it isn't JSON at all and has sat unchanged for two minutes;
   an empty file never.
+- After a third look: the sheet your typing was for is checked in its
+  own file, and a slow or failing folder never counts as "gone". When
+  that file holds another session, your numbers are listed as text
+  rather than kept under a Save that can't work, and they come back as
+  a draft if the file shows their sheet again.
 
 ## 2026-10-17 — cycle 65: the bump band keeps an old *hard* row
 

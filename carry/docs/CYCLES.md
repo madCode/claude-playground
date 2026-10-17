@@ -20,6 +20,10 @@ that hold become rules in CLAUDE.md or the cycles skill.
 - **A refusal test must refresh afterwards.** Carry refreshes on every
   resume, so a state that only holds until the next refresh doesn't
   hold. The second review's probe was one `refresh()` call.
+- **A timeout on the test dispatcher fires the moment the test idles.**
+  `withTimeoutOrNull` around an IO hop timed out instantly under
+  `runTest`. Wait on the wall clock (`withContext(IO)`) for anything
+  that does real I/O.
 - **`settled()` waits; it doesn't drive the scheduler.** Advancing it
   from a Default thread while `runTest` drained it ran two Main tasks at
   once, which was this class's intermittent failure.
