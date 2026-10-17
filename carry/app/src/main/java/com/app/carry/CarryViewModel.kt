@@ -340,8 +340,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
             _edits.value = ready.session.onScreen(SessionPatch.entriesIn(ready.raw))
             _added.value = named(SessionPatch.addedIn(ready.raw))
         }
-        // Dropping the numbers for the new sheet can follow a refusal that left another
-        // session off screen; with the draft gone, a read can show it.
+        // Dropping the numbers for the new sheet can follow a refusal that
+        // left another session off screen; with the draft gone, a read can
+        // show it.
         refresh()
     }
 
