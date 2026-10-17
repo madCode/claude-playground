@@ -130,7 +130,6 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             val client = container.client(s.token.trim())
             val siteUrl = catching { client.pages(repo.owner.login, repo.name)?.htmlUrl }.getOrNull()
-            container.blogs.clear()
             // Switching keeps the sign-in as stored now (it may have been renewed while the list
             // was open), and the blog left keeps it too.
             val switched = switching && container.accounts.switchTo(repo.owner.login, repo.name, repo.defaultBranch, siteUrl)
@@ -139,6 +138,8 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
                 // Expiry counts from when the token arrived, not from when a blog was picked.
                 container.accounts.save(deviceTokens?.let { fresh.withTokens(it, tokensAt) } ?: fresh)
             }
+            // After the switch: a read of the blog left, finishing now, can't put its title back.
+            container.blogs.clear()
             // A first read fills the category picker; if it fails, Home tries again.
             catching { container.blogs.refresh() }
             _state.update { it.copy(busy = false, done = true) }

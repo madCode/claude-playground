@@ -111,6 +111,17 @@ class TwoBlogsTest {
         assertEquals("A Sample Notebook", c.blogs.config.value.title)
     }
 
+    @Test fun aPostWithNoBlogIsKeptWithTheBlogItWentTo() = runBlocking {
+        val id = c.drafts.insert(Draft(title = "No blog yet", body = "x", state = PostState.Queued))
+        assertEquals(Publisher.Outcome.Done, c.publisher.publish(id))
+        assertEquals(aKey(), c.drafts.get(id)!!.blog)
+        switchTo("sample/other-blog")
+        val sha = c.drafts.get(id)!!.commitSha!!
+        a.runs[sha] = "completed" to "success"
+        assertTrue(c.buildWatcher.check(id, giveUp = false))
+        assertEquals(BuildState.Live, c.drafts.get(id)!!.buildState)
+    }
+
     @Test fun aSignedOutBlogsPostSaysToSignInToIt() = runBlocking {
         val id = c.drafts.insert(Draft(blog = aKey(), title = "Left behind", body = "x", state = PostState.Queued))
         c.signOut()

@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * The writer's blogs: each one's posts as last read, and fresh reads from GitHub. What it holds in
@@ -80,18 +82,29 @@ class BlogRepository(
         val gone = posts.snapshot(key).map { it.path } - cached.map { it.path }.toSet()
         // In chunks: older Android's SQLite takes at most 999 values in one statement.
         gone.chunked(500).forEach { posts.deletePaths(key, it) }
-        if (accounts.currentKey() == key) {
-            _config.value = index.config
-            _imageFolder.value = index.imageFolder
-            _siteUrl.value = index.siteUrl
-            paths = index.paths
-            postUrlHasBaseurl = index.postUrlHasBaseurl
+        view.withLock {
+            if (accounts.currentKey() == key) {
+                _config.value = index.config
+                _imageFolder.value = index.imageFolder
+                _siteUrl.value = index.siteUrl
+                paths = index.paths
+                postUrlHasBaseurl = index.postUrlHasBaseurl
+            }
         }
         return index
     }
 
-    /** Forgets the open blog's title, address and image folder, for another blog to start without them. */
-    fun clear() {
+    /**
+     * Held while the open blog's details are checked and set, or cleared: a clear after a switch
+     * then always comes after any read of the blog left.
+     */
+    private val view = Mutex()
+
+    /**
+     * Forgets the open blog's title, address and image folder. Called after switching or signing
+     * out, so another blog starts without them.
+     */
+    suspend fun clear() = view.withLock {
         _config.value = SiteConfig()
         _siteUrl.value = null
         _imageFolder.value = "assets/images"
@@ -121,4 +134,4 @@ class BlogRepository(
 fun CachedPost.toSummary() = PostSummary(PostPath(path), sha, title, categories, tags, published)
 
 /** Which blog this is, as [Account.blogKey] names it. */
-val Blog.key: String get() = "$owner/$name@$branch"
+val Blog.key: String get() = blogKey(owner, name, branch)

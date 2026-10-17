@@ -37,8 +37,11 @@ data class Account(
     val repoName: String get() = "$owner/$repo"
 
     /** Which blog a draft belongs to: `owner/repo@branch`. */
-    val blogKey: String get() = "$owner/$repo@$branch"
+    val blogKey: String get() = blogKey(owner, repo, branch)
 }
+
+/** The key a blog is known by, in drafts, the post cache and [SavedBlog]: `owner/repo@branch`. */
+fun blogKey(owner: String, repo: String, branch: String) = "$owner/$repo@$branch"
 
 /** Holds which blog is open, and, until it's moved into the database, the account from before. */
 val Context.accountDataStore: DataStore<Preferences> by preferencesDataStore(name = "account")
@@ -117,8 +120,10 @@ class AccountStore(
      */
     suspend fun switchTo(owner: String, repo: String, branch: String, siteUrl: String?): Boolean = lock.withLock {
         val signInId = currentKey()?.let { dao.blog(it) }?.signInId ?: return@withLock false
-        val blog = SavedBlog("$owner/$repo@$branch", owner, repo, branch, siteUrl, signInId)
+        val blog = SavedBlog(blogKey(owner, repo, branch), owner, repo, branch, siteUrl, signInId)
         dao.upsert(blog)
+        // The blog may have had a sign-in of its own, left from before a move to this phone.
+        dao.deleteUnused()
         store.edit { it[CURRENT] = blog.blogKey }
         true
     }
@@ -194,7 +199,7 @@ class AccountStore(
                     kind = if (refreshToken != null) SignInKind.GitHubApp else SignInKind.Token,
                     sealedToken = token, sealedRefreshToken = refreshToken, expiresAt = prefs[EXPIRES],
                 )
-                val blog = SavedBlog("$owner/$repo@$branch", owner, repo, branch, prefs[SITE_URL], signInId = 0)
+                val blog = SavedBlog(blogKey(owner, repo, branch), owner, repo, branch, prefs[SITE_URL], signInId = 0)
                 dao.importAccount(signIn, blog)
                 store.edit { p ->
                     p[CURRENT] = blog.blogKey

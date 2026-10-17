@@ -67,7 +67,7 @@ class Publisher(
 
     /** Null when a file changed under the commit: decide again from the blog as it is now. */
     private suspend fun attempt(id: Long): Outcome? {
-        val draft = drafts.get(id) ?: return Outcome.Done
+        var draft = drafts.get(id) ?: return Outcome.Done
         if (draft.state != PostState.Queued) return Outcome.Done
         // Sent at a random time and woken early: not yet. Nothing is read or sent before then.
         if ((draft.sendAfter ?: 0) > now().toInstant().toEpochMilli()) return Outcome.Retry
@@ -75,6 +75,8 @@ class Publisher(
         // To the blog it was written for, open or not, with that blog's own sign-in.
         val account = (draft.blog ?: accounts.currentKey())?.let { accounts.forBlog(it) }
             ?: return fail(draft, draft.blog?.let { "This post was written for ${it.substringBefore('@')}. Sign in to that blog to $verb it." } ?: "Sign in to $verb.")
+        // Kept with the post, so its build is watched, and its earlier edits found, on this blog.
+        if (draft.blog == null) draft = draft.copy(blog = account.blogKey).also { drafts.update(it) }
         val blog = blogs.blog(account)
         return try {
             val index = blogs.refresh(blog)

@@ -108,6 +108,16 @@ class AccountStoreTest {
         assertFalse(store.switchTo("writer", "blog", "main", null))
     }
 
+    @Test fun aSignInNoBlogUsesAnyMoreIsRemoved() = runBlocking {
+        val store = store()
+        store.save(account)
+        // A blog with a sign-in of its own, as one moved from another phone has.
+        store.save(account.copy(repo = "other", token = "github_pat_other"))
+        assertTrue(store.switchTo("writer", "blog", "main", null))
+        db.query("SELECT COUNT(*) FROM sign_ins", null).use { c -> c.moveToFirst(); assertEquals(1, c.getInt(0)) }
+        assertEquals("github_pat_other", store.forBlog(account.blogKey)!!.token)
+    }
+
     @Test fun aRenewalFinishingAfterSignOutDoesntSignBackIn() = runBlocking {
         val started = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
