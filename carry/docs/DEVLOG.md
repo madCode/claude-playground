@@ -42,6 +42,20 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 - Checked with gym-coach's own importer: every way a row says "done"
   becomes a complete set; an untouched or *hurt*-only row becomes nothing.
 
+## 2026-10-16 — cycle 60: "part way to a bump" is a history
+
+- The band on the Since tab read only the newest sheet, so a day whose
+  sheet had nothing part way (a plank-only day, an empty sheet) showed
+  nothing. The owner asked for a history: every movement where doing it
+  today at that level would earn a bump.
+- It now covers every movement across the sheets, each from the newest
+  sheet that lists it. If that newest listing is out of the band (marked
+  hard, done lighter, finished), an older count does not stand in.
+- A row from an older sheet shows that sheet's date, on screen and
+  aloud, because a later set Carry can't see could have moved it. No
+  cutoff yet; that is a question in the backlog.
+- A sheet that won't read stops the band at its day, and the band says
+  so, since that sheet may hold newer counts.
 ## 2026-10-16 — cycle 59: a repeated line is posted once
 
 - A row added by hand whose name reads the same as a line the sheet

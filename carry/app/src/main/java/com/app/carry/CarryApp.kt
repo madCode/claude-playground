@@ -154,13 +154,12 @@ fun growthOf(folder: Folder): Growth.Since {
     val atNewest = sheets.filter { SessionFiles.dateIn(it.name) == newestDate }
     return Growth.of(
         texts,
-        // The band's sheet, by the same rule as the gate below: the newest
-        // NAME that parses, so the two can't pick different days. Ties on a
-        // two-class day break by name, as [SessionFiles.newest] does for the
-        // Before tab, so the band is the sheet on screen, not whichever the
-        // provider happened to list first.
-        newest = atNewest.sortedByDescending { it.name }
-            .firstOrNull { SessionFiles.parse(it.text.orEmpty()) != null }?.text,
+        // The band's sheets, newest first by the same rule as the gate below
+        // and [SessionFiles.newest]: date in the NAME, then the name, so on a
+        // two-class day the sheet the Before tab shows leads, not whichever
+        // the provider happened to list first.
+        byName = sheets.sortedWith(compareBy({ SessionFiles.dateIn(it.name) }, { it.name }))
+            .reversed().map { SessionFiles.dateIn(it.name) to it.text.orEmpty() },
         newestRead = when {
             // `any`, so a readable first file stops the rest being
             // parsed again for an answer already known.
