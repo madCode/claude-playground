@@ -38,12 +38,14 @@
   - `data/`: Room, created by `PosterDatabase.create` with its migrations:
     - `Draft`: posts written on the phone, each with its blog's key (`owner/repo@branch`).
     - `SignIn`: a token or a GitHub App sign-in, its tokens sealed by `SecretCipher`.
-    - `SavedBlog`: a blog, keyed `owner/repo@branch`, and the sign-in that posts to it.
+    - `SavedBlog`: a blog, keyed `owner/repo@branch`, the sign-in that posts to it, and its title
+      as last read.
     - `CachedPost`: each blog's posts as last read, keyed by blog and path.
   - `AccountStore`: reads a blog with its sign-in as an `Account`. Which blog is open is a
     DataStore value; `current()` is that blog's, `forBlog(key)` any blog's. Either renews its
-    sign-in's token on use, under one lock with saving and signing out. Switch blog adds a blog
-    under the open one's sign-in; the blog left stays. On first use it moves the account an older
+    sign-in's token on use, under one lock with saving and removing. `blogs` lists every blog with
+    its sign-in; `open`, `addBlog` (under any sign-in) and `remove` (refused, in one transaction,
+    while a post is queued for one of its blogs) change them. On first use it moves the account an older
     version kept in DataStore into the tables, once, and gives drafts with no blog its key.
   - `BlogRepository`: refreshes a blog's cached posts, and holds the open blog's taxonomy, config,
     address and paths. `refresh(blog)` reads any blog, for a post going out to it, but changes
@@ -64,7 +66,8 @@
     run for its commit), `Notifier`.
   - `ui/`: Compose screens with a ViewModel each: `connect`, `home`, `editor` (the screen, its
     fields, toolbar, preview with `PreviewFetcher`, and term picker in their own files),
-    `settings` (with `BlogPrivacy`). `catching` is `runCatching` that lets cancellation through.
+    `settings` (with `BlogPrivacy`), `blogs` (the switcher's list, Your blogs and Remove, shared by
+    Home's sheet and Settings). `catching` is `runCatching` that lets cancellation through.
     `ui/theme`: the look as a `PosterStyle` (colours, type, shapes) and its `Whimsy` (marks,
     squiggles, row style, category colours, the stamp), read by small shared composables
     (`SectionHeading`, `TermPill`, `PosterFab`, `InkButton`). `DesignRoundTest` renders styles
