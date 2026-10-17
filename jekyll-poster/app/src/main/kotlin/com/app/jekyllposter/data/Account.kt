@@ -40,6 +40,30 @@ data class Account(
     val blogKey: String get() = blogKey(owner, repo, branch)
 }
 
+/** A blog the app can post to, with the sign-in it posts with, as the blog switcher lists it. */
+data class BlogEntry(
+    val key: String,
+    val owner: String,
+    val repo: String,
+    val branch: String,
+    /** The site's own title, once the blog has been read. */
+    val title: String?,
+    val signInId: Long,
+    val login: String,
+    val withGitHub: Boolean,
+) {
+    val repoName: String get() = "$owner/$repo"
+}
+
+/** What removing a sign-in did. */
+sealed interface Removal {
+    /** Removed, with the keys of the blogs that went with it. */
+    data class Removed(val blogs: List<String>) : Removal
+
+    /** Not removed: these posts are still to go out to its blogs, and would fail without it. */
+    data class Refused(val waiting: List<Draft>) : Removal
+}
+
 /** The key a blog is known by, in drafts, the post cache and [SavedBlog]: `owner/repo@branch`. */
 fun blogKey(owner: String, repo: String, branch: String) = "$owner/$repo@$branch"
 
@@ -69,6 +93,19 @@ class AccountStore(
     /** The open blog and its sign-in. */
     val account: Flow<Account?> = currentKey.flatMapLatest { key ->
         if (key == null) flowOf(null) else dao.watch(key).map { it?.let(::read) }
+    }
+
+    /** Every blog, grouped by the sign-in it posts with. */
+    val blogs: Flow<List<BlogEntry>> = flow {
+        imported()
+        emitAll(
+            dao.all().map { rows ->
+                rows.mapNotNull { row ->
+                    val b = row.blog
+                    row.signIn?.let { BlogEntry(b.blogKey, b.owner, b.repo, b.branch, b.title, b.signInId, it.login, it.kind == SignInKind.GitHubApp) }
+                }
+            },
+        )
     }
 
     /**
@@ -114,30 +151,51 @@ class AccountStore(
         Unit
     }
 
-    /**
-     * Opens another blog with the open blog's sign-in. The blog left keeps its sign-in, so posts
-     * still waiting for it go out to it. False when signed out meanwhile.
-     */
-    suspend fun switchTo(owner: String, repo: String, branch: String, siteUrl: String?): Boolean = lock.withLock {
-        val signInId = currentKey()?.let { dao.blog(it) }?.signInId ?: return@withLock false
-        val blog = SavedBlog(blogKey(owner, repo, branch), owner, repo, branch, siteUrl, signInId)
-        dao.upsert(blog)
-        // The blog may have had a sign-in of its own, left from before a move to this phone.
-        dao.deleteUnused()
-        store.edit { it[CURRENT] = blog.blogKey }
+    /** Opens blog [key], one already added. False when it has gone meanwhile. */
+    suspend fun open(key: String): Boolean = lock.withLock {
+        if (dao.blog(key) == null) return@withLock false
+        store.edit { it[CURRENT] = key }
         true
     }
 
     /**
-     * Signs out of the open blog's sign-in: it goes, with every blog it posts to, whose keys are
-     * returned. Drafts stay.
+     * A sign-in's account, through any of its blogs, its token renewed as [current]'s is: for
+     * listing the repositories it can add. Null when it was removed meanwhile.
      */
-    suspend fun signOut(): List<String> = lock.withLock {
-        val signInId = currentKey()?.let { dao.blog(it) }?.signInId
-        val removed = signInId?.let { dao.remove(it) }.orEmpty()
-        store.edit { it.remove(CURRENT) }
-        removed
+    suspend fun forSignIn(signInId: Long): Account? = lock.withLock {
+        dao.blogsOf(signInId).firstOrNull()?.let { renewed(it) }
     }
+
+    /**
+     * Adds a blog under sign-in [signInId], and opens it. Every other blog stays, so posts still
+     * waiting for them go out to them. False when the sign-in was removed meanwhile.
+     */
+    suspend fun addBlog(signInId: Long, owner: String, repo: String, branch: String, siteUrl: String?): Boolean = lock.withLock {
+        if (dao.signIn(signInId) == null) return@withLock false
+        val key = blogKey(owner, repo, branch)
+        dao.upsert(SavedBlog(key, owner, repo, branch, siteUrl, signInId, title = dao.blog(key)?.title))
+        // The blog may have had another sign-in, now unused: one left from before a move to this
+        // phone, or one the writer is moving it away from.
+        dao.deleteUnused()
+        store.edit { it[CURRENT] = key }
+        true
+    }
+
+    /**
+     * Removes sign-in [signInId] with every blog it posts to, unless a post is still to go out to
+     * one of them. Drafts stay. If the open blog went, another opens, or none is left.
+     */
+    suspend fun remove(signInId: Long): Removal = lock.withLock {
+        val removed = dao.removeUnlessWaiting(signInId) ?: return@withLock Removal.Refused(dao.waitingFor(signInId))
+        if (currentKey() in removed) {
+            val next = dao.firstBlog()
+            store.edit { if (next == null) it.remove(CURRENT) else it[CURRENT] = next }
+        }
+        Removal.Removed(removed)
+    }
+
+    /** Keeps blog [key]'s title, as its `_config.yml` gave it. */
+    suspend fun setTitle(key: String, title: String?) = dao.setTitle(key, title)
 
     /** Whether blog [key] still has a sign-in. */
     suspend fun has(key: String): Boolean = dao.blog(key) != null

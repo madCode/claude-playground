@@ -52,9 +52,11 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: () -> Unit, onSignOut: () -> Unit, onBlogPrivacy: () -> Unit = {}) {
+fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onBlogs: () -> Unit, onAddSignIn: () -> Unit, onBlogPrivacy: () -> Unit = {}) {
     val account by container.accounts.account.collectAsStateWithLifecycle(null)
     val siteUrl by container.blogs.siteUrl.collectAsStateWithLifecycle()
+    val config by container.blogs.config.collectAsStateWithLifecycle()
+    val blogs by container.accounts.blogs.collectAsStateWithLifecycle(emptyList())
     val uri = LocalUriHandler.current
     Scaffold(
         topBar = {
@@ -65,19 +67,25 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onSwitchBlog: ()
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
-            Heading("Your blog")
+            Heading("This blog")
             account?.let { a ->
-                Row(a.repoName, "Branch ${a.branch}")
+                Row(config.title ?: a.repoName, "${a.repoName} · branch ${a.branch} · @${a.login}")
                 siteUrl?.let { url -> Row(url, "The site", onClick = { uri.openUri(url) }) }
-                Row("Switch blog", "Pick another repository this sign-in can write to", onClick = onSwitchBlog)
                 Row("Blog & privacy", "Your commit email, the site's time zone, shared links, and what GitHub shows", onClick = onBlogPrivacy)
-                Heading("Account")
-                Row(
-                    a.login,
-                    if (a.refreshToken != null) "Signed in with GitHub" else "Signed in with a token",
-                )
-                Row("Sign out", "Drafts stay on this phone, for when you sign in to this blog again", onClick = onSignOut)
             }
+            Heading("Blogs and sign-ins")
+            val signIns = blogs.groupBy { it.signInId }.values
+            val count = { n: Int, one: String -> "$n $one${if (n == 1) "" else "s"}" }
+            Row("Your blogs", "${count(blogs.size, "blog")}, ${count(signIns.size, "sign-in")}. Switch, add or remove.", onClick = onBlogs)
+            signIns.forEach { its ->
+                val first = its.first()
+                Row(
+                    "@${first.login}",
+                    (if (first.withGitHub) "Signed in with GitHub · " else "Signed in with a token · ") + its.joinToString(", ") { it.title ?: it.repo },
+                    onClick = onBlogs,
+                )
+            }
+            Row("+ Add a sign-in", "A token, or Sign in with GitHub. For another account, or an organisation a token can't cover.", onClick = onAddSignIn)
             val scope = rememberCoroutineScope()
             Heading("Obsidian")
             val vault by container.settings.obsidianVault.collectAsStateWithLifecycle(null)
@@ -161,7 +169,7 @@ internal fun Row(title: String, detail: String, onClick: (() -> Unit)? = null, l
         Modifier.fillMaxWidth().let { if (onClick != null) it.clickable(role = Role.Button, onClickLabel = link, onClick = onClick) else it.semantics(mergeDescendants = true) {} }.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Text(title, style = MaterialTheme.typography.bodyLarge, color = if (onClick != null && title == "Sign out") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+        Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
         Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         // A row that leaves the app says so, looking like the link it is.
         if (link != null && onClick != null) {

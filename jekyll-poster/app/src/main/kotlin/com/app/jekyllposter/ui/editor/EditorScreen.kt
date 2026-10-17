@@ -8,6 +8,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
@@ -69,6 +72,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.jekyllposter.core.jekyll.Edit
 import com.app.jekyllposter.core.jekyll.PostPath
+import com.app.jekyllposter.data.BlogEntry
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
@@ -258,6 +262,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                     }
                 }
             }
+            state.to?.let { ToLine(it) }
             if (state.vaultPhotos > 0) {
                 VaultBanner(state.vaultPhotos, onChoose = { chooseVault.launch(null) }, onSkip = viewModel::skipVault)
             }
@@ -356,3 +361,15 @@ private fun plainField() = TextFieldDefaults.colors(
     focusedIndicatorColor = Color.Transparent,
     unfocusedIndicatorColor = Color.Transparent,
 )
+
+/** Where the post goes, when there's more than one blog: shares and New post take the open one. */
+@Composable
+private fun ToLine(blog: BlogEntry) {
+    Text(
+        "To ${blog.title ?: blog.repoName} · @${blog.login}",
+        style = MaterialTheme.typography.labelLarge,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            .border(BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(50))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    )
+}

@@ -19,6 +19,7 @@ import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.ImageImporter
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.data.PosterDatabase
+import com.app.jekyllposter.data.Removal
 import com.app.jekyllposter.data.SecretCipher
 import com.app.jekyllposter.data.Settings
 import com.app.jekyllposter.data.VaultImages
@@ -30,6 +31,7 @@ import com.app.jekyllposter.publish.Notifier
 import com.app.jekyllposter.publish.PublishQueue
 import com.app.jekyllposter.publish.Publisher
 import com.app.jekyllposter.publish.WorkManagerQueue
+import com.app.jekyllposter.ui.catching
 import com.app.jekyllposter.ui.editor.PreviewFetcher
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -155,9 +157,33 @@ class AppContainer(
     val images = ImageImporter(context.contentResolver, File(context.filesDir, "images"))
     val buildWatcher = BuildWatcher(drafts, accounts, { client(it.token) }, onBuildFinished)
 
-    /** Signs out: the sign-in and the blogs it posts to go; drafts stay for when it's signed in again. */
-    suspend fun signOut() {
-        blogs.forget(accounts.signOut())
+    /**
+     * Opens blog [key], an added one, and reads it. Nothing is published or changed on any blog.
+     * False when it has gone meanwhile.
+     */
+    suspend fun open(key: String): Boolean {
+        if (!accounts.open(key)) return false
+        // After the switch: a read of the blog left, finishing now, can't put its title back.
+        blogs.clear()
+        catching { blogs.refresh() }
+        return true
+    }
+
+    /**
+     * Removes a sign-in and the blogs it posts to, unless a post is still to go out to one of
+     * them; drafts stay, for when it's added again. What's kept of its blogs goes with it.
+     */
+    suspend fun remove(signInId: Long): Removal {
+        val open = accounts.currentKey()
+        val removal = accounts.remove(signInId)
+        if (removal is Removal.Removed) {
+            blogs.forget(removal.blogs)
+            if (accounts.currentKey() != open) {
+                blogs.clear()
+                catching { blogs.refresh() }
+            }
+        }
+        return removal
     }
 
     /**

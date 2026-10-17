@@ -48,7 +48,7 @@ import com.app.jekyllposter.core.github.DeviceFlow
 import com.app.jekyllposter.core.github.GitHubRepo
 
 @Composable
-fun ConnectScreen(viewModel: ConnectViewModel, onCancel: () -> Unit = {}, onConnected: () -> Unit) {
+fun ConnectScreen(viewModel: ConnectViewModel, onCancel: (() -> Unit)? = null, onConnected: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.done) { if (state.done) onConnected() }
     Scaffold { padding ->
@@ -58,9 +58,9 @@ fun ConnectScreen(viewModel: ConnectViewModel, onCancel: () -> Unit = {}, onConn
             BackHandler(onBack = viewModel::cancelSignIn)
             CodeStep(code, viewModel::cancelSignIn, Modifier.padding(padding))
         } else if (repos == null) {
-            TokenStep(state, viewModel, Modifier.padding(padding))
+            TokenStep(state, viewModel, onCancel, Modifier.padding(padding))
         } else {
-            val back = if (viewModel.switching) onCancel else viewModel::back
+            val back = onCancel?.takeIf { viewModel.addingTo != null } ?: viewModel::back
             BackHandler(onBack = back)
             RepoStep(state.login.orEmpty(), repos, state.busy, state.error, viewModel.installUrl, viewModel::choose, back, Modifier.padding(padding))
         }
@@ -68,18 +68,28 @@ fun ConnectScreen(viewModel: ConnectViewModel, onCancel: () -> Unit = {}, onConn
 }
 
 @Composable
-private fun TokenStep(state: ConnectViewModel.State, viewModel: ConnectViewModel, modifier: Modifier) {
+private fun TokenStep(state: ConnectViewModel.State, viewModel: ConnectViewModel, onCancel: (() -> Unit)?, modifier: Modifier) {
     val uri = LocalUriHandler.current
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Spacer(Modifier.padding(top = 24.dp))
-        Text("Post to your Jekyll blog", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
-        Text(
-            "Write on your phone; the app commits each post to your blog's GitHub repository, and GitHub Pages publishes it.",
-            style = MaterialTheme.typography.bodyLarge,
-        )
+        // Adding a sign-in beside the ones the app has: it can be left, and says what it's for.
+        if (onCancel != null) {
+            TextButton(onClick = onCancel) { Text("Cancel") }
+            Text("Add a sign-in", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+            Text(
+                "For a blog under another GitHub account, or an organisation your other token doesn't cover. Your other blogs stay as they are.",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        } else {
+            Spacer(Modifier.padding(top = 24.dp))
+            Text("Post to your Jekyll blog", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+            Text(
+                "Write on your phone; the app commits each post to your blog's GitHub repository, and GitHub Pages publishes it.",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
         if (viewModel.signInWithGitHubAvailable) {
             Button(onClick = viewModel::signInWithGitHub, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) { Text("Sign in with GitHub") }
             Text("Or use a token you make yourself:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

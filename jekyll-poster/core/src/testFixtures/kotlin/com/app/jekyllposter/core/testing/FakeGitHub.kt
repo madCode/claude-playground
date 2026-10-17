@@ -76,6 +76,16 @@ class FakeGitHub(
     fun addRepository(repo: String, files: Map<String, ByteArray>, owner: String = this.owner): FakeGitHub =
         FakeGitHub(files, owner, repo, branch, token).also { others["$owner/$repo"] = it }
 
+    /** Accounts served beside this one, by their token. */
+    private val accounts = mutableMapOf<String, FakeGitHub>()
+
+    /**
+     * Another GitHub account at the same address: [login]'s own repository, answered only for
+     * [token], and that token answered only for it. Its [log] shows every request it was sent.
+     */
+    fun addAccount(login: String, token: String, repo: String, files: Map<String, ByteArray>): FakeGitHub =
+        FakeGitHub(files, login, repo, branch, token).also { accounts[token] = it }
+
     init {
         val tree = files.mapValues { (_, bytes) -> putBlob(bytes) }
         val treeSha = putTree(tree)
@@ -108,10 +118,13 @@ class FakeGitHub(
 
     override fun close() {
         others.values.forEach { it.close() }
+        accounts.values.forEach { it.close() }
         server.close()
     }
 
     private fun handle(request: RecordedRequest): MockResponse {
+        // First, so this account's log holds only what was sent with its own token.
+        accounts[request.headers["Authorization"]?.removePrefix("Bearer ")]?.let { return it.handle(request) }
         val url = request.url
         val path = url.encodedPath.removePrefix("/")
         log += "${request.method} $path"

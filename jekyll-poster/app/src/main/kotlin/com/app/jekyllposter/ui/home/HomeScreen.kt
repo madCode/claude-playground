@@ -15,9 +15,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
@@ -29,6 +32,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,7 +53,9 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -65,6 +72,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.currentStateAsState
 import com.app.jekyllposter.core.jekyll.PostPath
 import com.app.jekyllposter.data.BuildState
+import com.app.jekyllposter.ui.blogs.AddButtons
+import com.app.jekyllposter.ui.blogs.BlogList
+import com.app.jekyllposter.ui.blogs.BlogsViewModel
 import com.app.jekyllposter.data.CachedPost
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
@@ -83,8 +93,19 @@ import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings: () -> Unit) {
+fun HomeScreen(
+    viewModel: HomeViewModel,
+    onOpenDraft: (Long) -> Unit,
+    onSettings: () -> Unit,
+    blogs: BlogsViewModel? = null,
+    onAddBlog: (Long) -> Unit = {},
+    onAddSignIn: () -> Unit = {},
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val blogState = blogs?.state?.collectAsStateWithLifecycle()?.value
+    var switching by rememberSaveable { mutableStateOf(false) }
+    // With one blog there's nothing to switch to: the title stays a title.
+    val several = (blogState?.blogCount ?: 0) > 1
     val snackbar = remember { SnackbarHostState() }
     var menu by remember { mutableStateOf(false) }
     LaunchedEffect(state.error) {
@@ -99,9 +120,18 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
                         SearchField(state.query.orEmpty(), viewModel::search)
                         return@TopAppBar
                     }
-                    Column {
-                        Text(state.siteTitle ?: "Your blog", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        state.account?.let { Text(it.repoName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Column(if (several) Modifier.clickable(role = Role.Button, onClickLabel = "Switch blog") { switching = true } else Modifier) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(state.siteTitle ?: "Your blog", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                            if (several) Icon(Icons.Default.ArrowDropDown, null)
+                        }
+                        state.account?.let { a ->
+                            // With several, which sign-in this blog posts with matters: name it.
+                            Text(
+                                if (several) "${a.repoName} · @${a.login}" else a.repoName,
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 },
                 actions = {
@@ -127,6 +157,19 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenDraft: (Long) -> Unit, onSettings
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
+        if (switching && blogState != null) {
+            val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ModalBottomSheet(onDismissRequest = { switching = false }, sheetState = sheet) {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        "Your blogs", style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(horizontal = 16.dp).semantics { heading() },
+                    )
+                    BlogList(blogState.groups, onOpen = { switching = false; if (it.key != state.account?.blogKey) blogs.open(it.key) })
+                    AddButtons(blogState.groups, onAddBlog = { switching = false; onAddBlog(it) }, onAddSignIn = { switching = false; onAddSignIn() })
+                }
+            }
+        }
         PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = viewModel::refresh, modifier = Modifier.padding(padding).fillMaxSize()) {
             LazyColumn(Modifier.fillMaxSize()) {
                 if (state.onPhone.isNotEmpty()) {

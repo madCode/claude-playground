@@ -6,6 +6,7 @@ import com.app.jekyllposter.core.testing.FakeGitHub
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
+import com.app.jekyllposter.data.Removal
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
 import com.app.jekyllposter.ui.connect.ConnectViewModel
@@ -49,10 +50,15 @@ class TwoBlogsTest {
 
     @After fun close() = a.close()
 
-    /** Settings → Switch blog → [repo], as the writer does it. */
-    private fun switchTo(repo: String) {
+    /**
+     * Opens [repo], as the writer does: from the switcher once it's added, or with Add a blog under
+     * the open blog's sign-in before that.
+     */
+    private fun switchTo(repo: String) = runBlocking {
+        val key = "$repo@main"
+        if (c.database.accounts().blog(key) != null) return@runBlocking assertTrue(c.open(key))
         val vm = ConnectViewModel(c)
-        vm.switchBlog()
+        vm.addBlogTo(c.database.accounts().blog(c.accounts.currentKey()!!)!!.signInId)
         idleUntil { vm.state.value.repos?.any { it.fullName == repo } == true }
         vm.choose(vm.state.value.repos!!.first { it.fullName == repo })
         idleUntil(10_000) { vm.state.value.done }
@@ -122,9 +128,11 @@ class TwoBlogsTest {
         assertEquals(BuildState.Live, c.drafts.get(id)!!.buildState)
     }
 
-    @Test fun aSignedOutBlogsPostSaysToSignInToIt() = runBlocking {
-        val id = c.drafts.insert(Draft(blog = aKey(), title = "Left behind", body = "x", state = PostState.Queued))
-        c.signOut()
+    @Test fun aPostForABlogWhoseSignInWasRemovedSaysToSignInToIt() = runBlocking {
+        val id = c.drafts.insert(Draft(blog = aKey(), title = "Left behind", body = "x", state = PostState.Failed))
+        assertTrue(c.remove(c.database.accounts().blog(aKey())!!.signInId) is Removal.Removed)
+        // Published again from the editor, with the sign-in gone.
+        c.drafts.update(c.drafts.get(id)!!.copy(state = PostState.Queued))
         val outcome = c.publisher.publish(id)
         assertTrue(outcome is Publisher.Outcome.Failed)
         assertTrue(c.drafts.get(id)!!.error!!.contains("sample/sample-blog"))
