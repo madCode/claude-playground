@@ -76,10 +76,10 @@ object Growth {
          * A row with none of this is blank, and is shown blank.
          */
         val answered: Boolean get() =
-            // `hard` is no longer offered or shown, but an older file that
-            // says it still records that a set happened.
+            // Not `hard`: it is no longer shown, and a row it alone
+            // answered would read as done with nothing to show why.
             weight != null || reps != null || skipped ||
-                easy || hard || easier || done || hurt || !note.isNullOrBlank() ||
+                easy || easier || done || hurt || !note.isNullOrBlank() ||
                 // An ADDED row's name is itself the answer: the sheet never
                 // listed it, so typing "ybell deadlift" and nothing else is
                 // a record that it happened. A sheet row's name is the

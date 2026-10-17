@@ -1,6 +1,7 @@
 package com.app.carry
 
 import android.graphics.Bitmap
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertCountEquals
@@ -333,17 +334,18 @@ class LogScreenTest {
     }
 
     @Test
-    fun `there is no hard chip, and a row the file marked hard keeps it`() {
+    fun `there is no hard chip, and a row the file marked hard reads as blank`() {
         // madCode, 2026-10-16: the coach treats a completed set as completed
-        // however it felt, so `hard` is no longer offered. A file that
-        // already says it keeps it: tapping `easy` doesn't clear it, because
-        // Carry doesn't change what it no longer shows.
+        // however it felt, so `hard` is no longer offered. A row an older
+        // file marked only `hard` looks blank, so it isn't counted filled.
+        // Tapping `easy` clears it: the owner's fresh answer wins.
         edits.value = mapOf(0 to SessionPatch.Entry(hard = true))
         show()
         compose.onAllNodesWithText("easy")[0].assertIsDisplayed()
         compose.onNodeWithText("hard").assertDoesNotExist()
+        compose.onNodeWithText("0 of 10 filled", substring = true).assertIsDisplayed()
         compose.onAllNodesWithText("easy")[0].performClick()
-        assertEquals(SessionPatch.Entry(easy = true, hard = true), edits.value[0])
+        assertEquals(SessionPatch.Entry(easy = true), edits.value[0])
     }
 
     @Test
@@ -391,6 +393,9 @@ class LogScreenTest {
         val skip = (0 until compose.onAllNodesWithText("skip").fetchSemanticsNodes().size)
             .map { compose.onAllNodesWithText("skip")[it].getUnclippedBoundsInRoot() }
             .filter { it.bottom >= done.top }.minBy { it.top }
+        // On this row: no lower than one chip line below `done`, or a
+        // missing skip would be answered by the next row's.
+        assertTrue("no skip on the timed row: $skip vs $done", skip.top <= done.bottom + 12.dp)
         assertTrue("the timed row's skip is off the screen: $skip in $width", skip.right <= width)
 
         reach("+ Add something the sheet missed")
