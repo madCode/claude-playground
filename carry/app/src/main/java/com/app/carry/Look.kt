@@ -19,6 +19,9 @@ object Look {
     val Chalk = Color(0xFFECEAE4)
     val ChalkDim = Color(0xFF8D8D86)
     val ChalkFaint = Color(0xFF80817B)
+    /** A value not yet entered, shown so it can be filled in with a tap:
+     *  dimmer than any text, so it never reads as a number typed. */
+    val Hint = Color(0xFF55575A)
 
     /** Means exactly one thing: this weight moved. Never used for anything else. */
     val Amber = Color(0xFFE0A33E)

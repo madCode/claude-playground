@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -339,7 +340,7 @@ private fun DoneTag(on: Boolean, label: String, onToggle: () -> Unit) {
         FieldLabel("time")
         Box(
             Modifier
-                .width(50.dp).heightIn(min = 44.dp)
+                .widthIn(min = 50.dp).heightIn(min = 44.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .background(if (on) Look.SlateRaised else Look.Slate)
                 .border(1.dp, if (on) Look.Chalk else Look.RuleStrong, RoundedCornerShape(4.dp))
@@ -350,6 +351,7 @@ private fun DoneTag(on: Boolean, label: String, onToggle: () -> Unit) {
             Text(
                 "done", color = if (on) Look.Chalk else Look.ChalkFaint,
                 fontFamily = Look.Figure, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
+                maxLines = 1, softWrap = false, modifier = Modifier.padding(horizontal = 4.dp),
             )
         }
     }
@@ -475,7 +477,7 @@ private fun NumberField(
                 Box(contentAlignment = Alignment.Center) {
                     if (value.text.isEmpty() && fill != null) {
                         Text(
-                            fill, color = Look.ChalkFaint, fontFamily = Look.Figure, fontSize = 15.sp,
+                            fill, color = Look.Hint, fontFamily = Look.Figure, fontSize = 15.sp,
                             modifier = Modifier.semantics { hideFromAccessibility() },
                         )
                     }
@@ -495,13 +497,16 @@ private fun NumberField(
                         onChange(fill)
                     }
                 }
-                .padding(vertical = 11.dp)
                 .semantics {
                     contentDescription = label
+                    // The faint number is hidden from TalkBack, so say what
+                    // focusing the box will put in it.
+                    if (fill != null && value.text.isEmpty()) stateDescription = "empty, tap for $fill"
                     // Spoken on the box itself, so a listener who lands on it
                     // hears what is wrong without finding the line below.
                     if (problem != null) error(problem)
-                },
+                }
+                .padding(vertical = 11.dp),
         )
     }
 }
