@@ -356,7 +356,7 @@ class ScreenshotTest {
     @Test fun yourBlogs() {
         twoBlogs()
         val blogs = BlogsViewModel(c)
-        shoot("23-your-blogs", ready = { blogs.state.value.blogCount == 2 }) { BlogsScreen(blogs, {}, {}, {}, {}, {}) }
+        shoot("23-your-blogs", ready = { blogs.state.value.blogCount == 2 }) { BlogsScreen(blogs, {}, {}, {}, {}) }
     }
 
     @Test fun removeRefused() {
@@ -366,7 +366,7 @@ class ScreenshotTest {
             blogs.askRemove(blogs.state.value.groups.single { it.login == "inkwell" })
             blogs.remove()
             idleUntil { blogs.state.value.removing?.waiting != null }
-        }) { BlogsScreen(blogs, {}, {}, {}, {}, {}) }
+        }) { BlogsScreen(blogs, {}, {}, {}, {}) }
     }
 
     @Test fun editorSaysWhereThePostGoes() {

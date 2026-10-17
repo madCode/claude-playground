@@ -28,7 +28,10 @@ class BuildWatcher(
         if (draft.buildState != BuildState.Building) return true
         // Asked of the blog the post went to, open or not; with its sign-in removed, there's no asking.
         val account = (draft.blog ?: accounts.currentKey())?.let { accounts.forBlog(it) }
-            ?: return true.also { drafts.update(draft.copy(buildState = BuildState.Unknown)) }
+            ?: return true.also {
+                // Read again: the editor may have saved the post while the sign-in was looked up.
+                drafts.get(id)?.takeIf { it.buildState == BuildState.Building }?.let { drafts.update(it.copy(buildState = BuildState.Unknown)) }
+            }
         val state = try {
             // Only the Pages deployment says whether the post is live: a failing test or lint
             // workflow on the same commit doesn't. GitHub's own is "pages build and deployment";

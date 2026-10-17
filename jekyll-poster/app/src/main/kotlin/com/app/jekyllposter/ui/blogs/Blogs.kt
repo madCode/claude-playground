@@ -26,7 +26,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -94,18 +93,15 @@ class BlogsViewModel(private val container: AppContainer) : ViewModel() {
     data class State(
         val groups: List<SignInGroup> = emptyList(),
         val removing: Removing? = null,
-        /** The last sign-in was removed: nothing is left to post to. */
-        val signedOut: Boolean = false,
     ) {
         val blogCount: Int get() = groups.sumOf { it.blogs.size }
     }
 
     private val removing = MutableStateFlow<Removing?>(null)
-    private val signedOut = MutableStateFlow(false)
 
     val state: StateFlow<State> =
-        combine(container.accounts.blogs, container.accounts.currentKey, container.drafts.all(), removing, signedOut) { blogs, open, drafts, r, out ->
-            State(groups(blogs, open, drafts), r, out)
+        combine(container.accounts.blogs, container.accounts.currentKey, container.drafts.all(), removing) { blogs, open, drafts, r ->
+            State(groups(blogs, open, drafts), r)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), State())
 
     /**
@@ -126,10 +122,8 @@ class BlogsViewModel(private val container: AppContainer) : ViewModel() {
         container.appScope.launch {
             when (val result = container.remove(asked.group.signInId)) {
                 is Removal.Refused -> removing.value = asked.copy(waiting = result.waiting)
-                is Removal.Removed -> {
-                    removing.value = null
-                    if (container.accounts.currentKey() == null) signedOut.value = true
-                }
+                // With the last sign-in gone, the app goes back to signing in (PosterNavHost).
+                is Removal.Removed -> removing.value = null
             }
         }
     }
@@ -253,9 +247,8 @@ fun RemoveDialog(removing: BlogsViewModel.Removing, onRemove: () -> Unit, onSend
 /** Settings → Your blogs: every blog to switch to, add or remove. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BlogsScreen(viewModel: BlogsViewModel, onBack: () -> Unit, onOpened: () -> Unit, onAddBlog: (Long) -> Unit, onAddSignIn: () -> Unit, onSignedOut: () -> Unit) {
+fun BlogsScreen(viewModel: BlogsViewModel, onBack: () -> Unit, onOpened: () -> Unit, onAddBlog: (Long) -> Unit, onAddSignIn: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    LaunchedEffect(state.signedOut) { if (state.signedOut) onSignedOut() }
     Scaffold(
         topBar = {
             TopAppBar(

@@ -14,7 +14,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.Shared
 import com.app.jekyllposter.ui.blogs.BlogsScreen
@@ -43,6 +47,12 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
     // Home leaves the composition while the editor is open and its effects run again on the way
     // back, so a share is taken once, here, or every Back would start another post from it.
     var pending by rememberSaveable { mutableStateOf(shared != null) }
+    // The last sign-in removed, from whichever screen, and whether or not that screen is still
+    // open: back to signing in. Only a change counts; the first value chose the first screen.
+    LaunchedEffect(nav) {
+        container.accounts.blogs.map { it.isEmpty() }.distinctUntilChanged().drop(1).filter { it }
+            .collect { nav.navigate("connect") { popUpTo(0) { inclusive = true } } }
+    }
     NavHost(nav, startDestination = if (signedIn == true) "home" else "connect") {
         composable("connect") {
             ConnectScreen(viewModel { ConnectViewModel(container) }) {
@@ -68,7 +78,6 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
                 onOpened = { nav.navigate("home") { popUpTo(0) { inclusive = true } } },
                 onAddBlog = { nav.navigate("add-blog/$it") },
                 onAddSignIn = { nav.navigate("add-sign-in") },
-                onSignedOut = { nav.navigate("connect") { popUpTo(0) { inclusive = true } } },
             )
         }
         composable("settings") {

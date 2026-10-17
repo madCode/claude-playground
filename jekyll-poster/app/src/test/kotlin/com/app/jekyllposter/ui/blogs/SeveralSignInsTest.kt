@@ -130,11 +130,10 @@ class SeveralSignInsTest {
         vm.remove()
         idleUntil { blogs.value.groups.size == 1 && runBlocking { c.accounts.currentKey() } == SAMPLE_BLOG }
         idleUntil { c.blogs.config.value.title == "A Sample Notebook" }
-        assertTrue(!blogs.value.signedOut)
 
         vm.askRemove(blogs.value.groups.single())
         vm.remove()
-        idleUntil { blogs.value.signedOut }
+        idleUntil { blogs.value.groups.isEmpty() }
         assertNull(runBlocking { c.accounts.current() })
     }
 
