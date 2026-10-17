@@ -16,8 +16,26 @@ Times are when each cycle landed, Pacific.
 - **Tried on a real blog:** posts from the phone land on the sample blog
   ([madCode/sample-blog](https://github.com/madCode/sample-blog), live on Pages). The live check
   workflow publishes and deletes one there through the app's own GitHub client.
-- **Waiting on you:** the GitHub App for Sign in with GitHub ([how](GITHUB_APP.md)); the
+- **Used for real:** madCode has published to their own blog from the phone.
+- **Waiting on you:** the design for several sign-ins and blogs
+  ([#137](https://github.com/madCode/claude-playground/issues/137)); the GitHub App for Sign in with GitHub ([how](GITHUB_APP.md)); the
   Android SDK in the environment's setup script.
+
+## Sat 17 Oct
+
+### Cycle 26: design for several sign-ins and blogs
+- **Asked for:** blogs under more than one GitHub account, and under one account and an
+  organisation, in one app, without signing out and in for each.
+- **Proposed** in [#137](https://github.com/madCode/claude-playground/issues/137), with mockups:
+  several sign-ins kept, one blog current at a time, a switcher from Home's title, privacy
+  switches per blog, queued posts sent under their own blog, and no requests for a blog that
+  isn't current except its own post going out. Three build cycles, audits between.
+- **Found:** a post queued for one blog (say, waiting for its random time) fails for good if the
+  writer switches blog before it sends, and is then hidden; its build watch asks the wrong
+  repository. Build cycle 1 fixes it. Also: a fine-grained token covers one owner, so blogs under
+  an account and an organisation can't share one sign-in today.
+- **Waiting on madCode:** OK to build, and three calls (switches per blog, a new blog starting
+  with them off, switching from the header).
 
 ## Tue 6 Oct
 
