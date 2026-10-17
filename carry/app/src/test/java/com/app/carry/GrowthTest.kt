@@ -45,6 +45,17 @@ class GrowthTest {
     """.trimIndent()
 
     @Test
+    fun `a row an older file marked only hard reads as blank`() {
+        // `hard` is no longer shown, so a row it alone answered would read
+        // as done in a past session with nothing on it to say why.
+        val day = file("2026-10-11", sets = set(0, "squat", "legs", hard = true))
+        val since = Growth.of(listOf(day))
+        assertEquals(0, since.sessions)
+        val withWeight = file("2026-10-11", sets = set(0, "squat", "legs", weight = "40", hard = true))
+        assertEquals("the file still reads", 1, Growth.of(listOf(withWeight)).sessions)
+    }
+
+    @Test
     fun `a day logged entirely by hand is a session`() {
         // The owner's call, 2026-10-16: "Yes if the 2G was
         // incomplete/completely off or I left a class early after only

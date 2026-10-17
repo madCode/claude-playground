@@ -287,6 +287,10 @@ These are the open paths to one, hardest first.
 
 
 ### Health and tidying
+- [ ] **The "part way to a bump" band still drops a row marked `hard`.**
+  Only an older file can say so now. Drop the check once gym-coach stops
+  reading `hard`, after #130 merges (it moves this code) *(found removing
+  the hard chip)*
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on
   instructions.** The gate is real but it is counting the wrong thing for
   a codebase this full of fail-closed guards — a third of branches have
@@ -426,6 +430,10 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **The *hard* chip is gone.** The coach treats a completed set as
+  completed however it felt, so *hard* told it nothing. Files that say
+  `hard` still read and keep it; it isn't shown *(you decided,
+  2026-10-16)*
 - [x] **A file with no `schema` is no longer accepted as ours.** You
   approved requiring `"schema": "gym-session/1"` after the laptop's check
   of the synced folder found every session file carrying exactly that. A

@@ -28,6 +28,13 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 63: the hard chip goes
+
+- The After tab no longer offers *hard*, and a past session no longer
+  shows it. The coach treats a finished set as finished however it felt.
+- Files that already say `hard` still read, and Carry leaves the field
+  alone.
+- Nothing drops out of the post: it never counted *hard* as "did it".
 ## 2026-10-16 — cycle 61: a session file must say what it is
 
 - A file with no `"schema"` line used to be read as a session, because
