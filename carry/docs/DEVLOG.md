@@ -42,6 +42,15 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   cutoff yet; that is a question in the backlog.
 - A sheet that won't read stops the band at its day, and the band says
   so, since that sheet may hold newer counts.
+## 2026-10-16 — cycle 59: a repeated line is posted once
+
+- A row added by hand whose name reads the same as a line the sheet
+  already has (`10 x bench press` typed beside the sheet's own) used to
+  put two identical bullets in the post, the typed one marked as if it
+  held a weight. The owner's answer was "show it once": the post now
+  carries one bullet, the sheet's, unmarked. "The same" is the same
+  text ignoring case and how an accent was encoded; "push up" and
+  "pushup" stay two. Both rows are still saved.
 
 ## 2026-10-16 — cycle 58: the After screen checks what the importer refuses
 

@@ -602,6 +602,14 @@ Three rules, and a review of the first version found it breaking all three.
   into `line` would have published a weight with no change here and no test
   failing. A row Carry cannot name itself is left out rather than guessed.
 
+- **A line that reads the same is posted once.** The owner's call,
+  2026-10-16: "show it once". *The same* is the same text with case folded
+  and the encoding normalised (NFC); spaces are already collapsed. Nothing
+  looser: "push up" and "pushup", or "10 x squat" and "12 x squat", stay
+  two bullets, because only identical words are certainly one movement.
+  Where a typed line meets the sheet's, the sheet's copy is kept, in the
+  typed one's place. That is the post only: both rows stay in the file.
+
 Sheet rows count when answered with a number, or *done* on a timed row;
 added rows count by name. The post is **shown in full
 before it is sent**. That last one is the load-bearing guard: the text is
