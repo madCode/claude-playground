@@ -9,9 +9,11 @@ and moves it to Done.
   ([#137](https://github.com/madCode/claude-playground/issues/137), approved):
   1. ~~Data and sending~~ (cycle 27).
   2. ~~Several sign-ins~~ (cycle 28).
-  3. Privacy per blog: the switches and the VPN gate; the switcher's rows show each blog's
-     switches (the mockup's pills), and a new blog opens Blog & privacy.
-     Then an audit: a log of a real run's requests per account, and a UX pass on the switcher.
+  3. ~~Privacy per blog~~ (cycle 29).
+- [ ] Audits for several blogs: a security/privacy read of the requests each account makes,
+  against a log of a real run's requests (not the code); a UX pass on the switcher.
+- [ ] A flake to count: `PreviewScreenTest.theEyeButtonShowsThePreview` failed once in a full
+  run in cycle 29 and passed in every run after; reproduce and count before fixing.
 - [ ] Adding the same GitHub account twice makes two identical sign-ins in Your blogs; reuse the
   existing one (by login and kind) instead
 - [ ] Find the Compose-test Room hang (DEVLOG, cycles 1 and 11: likely Compose's main
@@ -31,6 +33,7 @@ and moves it to Done.
 ## Done
 
 - [x] The GitHub App registered, for Sign in with GitHub (madCode)
+- [x] Cycle 29: privacy switches and the VPN per blog
 - [x] Cycle 28: several sign-ins, the blog switcher, Remove
 - [x] Cycle 27: a queued post goes to its own blog after switching; sign-ins and blogs in the database
 - [x] Cycle 26: design for several sign-ins and blogs (#137)
