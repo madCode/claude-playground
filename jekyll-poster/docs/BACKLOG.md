@@ -6,11 +6,12 @@ and moves it to Done.
 ## Next
 
 - [ ] Several sign-ins and blogs, in three build cycles with audits between
-  ([#137](https://github.com/madCode/claude-playground/issues/137), *waiting on madCode's review*):
-  1. Data and sending: Room v6 (`SignIn`, `Blog`, `CachedPost` per blog), the migration, and
-     `Publisher`/`BuildWatcher` by `draft.blog`. Fixes a post lost to a switch: one queued for
-     blog A fails for good if the writer switches to B before it sends (`Publisher.kt:75-77`).
+  ([#137](https://github.com/madCode/claude-playground/issues/137), approved):
+  1. ~~Data and sending~~ (cycle 27).
   2. Several sign-ins: Add a sign-in, Add a blog, the switcher sheet, Remove; the editor's "To" line.
+     Also: a post for a blog that isn't open that fails is hidden, with nothing to say so
+     (`HomeViewModel.kt`'s filter); the switcher should show it on its blog's row. And Remove
+     refuses while a blog of that sign-in has posts still to go: today Sign out lets them fail.
   3. Privacy per blog: the switches and the VPN gate.
 - [ ] Register the GitHub App and set the repository variables *(you: [how](GITHUB_APP.md))*
 - [ ] Find the Compose-test Room hang (DEVLOG, cycles 1 and 11: likely Compose's main
@@ -29,6 +30,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 27: a queued post goes to its own blog after switching; sign-ins and blogs in the database
 - [x] Cycle 26: design for several sign-ins and blogs (#137)
 - [x] Tried on madCode's own blog
 - [x] Edit a post that hasn't gone out yet

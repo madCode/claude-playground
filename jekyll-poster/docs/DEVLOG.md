@@ -17,11 +17,27 @@ Times are when each cycle landed, Pacific.
   ([madCode/sample-blog](https://github.com/madCode/sample-blog), live on Pages). The live check
   workflow publishes and deletes one there through the app's own GitHub client.
 - **Used for real:** madCode has published to their own blog from the phone.
-- **Waiting on you:** the design for several sign-ins and blogs
-  ([#137](https://github.com/madCode/claude-playground/issues/137)); the GitHub App for Sign in with GitHub ([how](GITHUB_APP.md)); the
+- **Waiting on you:** the GitHub App for Sign in with GitHub ([how](GITHUB_APP.md)); the
   Android SDK in the environment's setup script.
 
 ## Sat 17 Oct
+
+### Cycle 27: a queued post goes to its own blog (several blogs, 1 of 3)
+- **Asked for:** build cycle 1 of [#137](https://github.com/madCode/claude-playground/issues/137),
+  approved as proposed.
+- **Changed:** a post waiting to go out (for its random time, the VPN or a connection) goes to
+  the blog it was written for, with that blog's sign-in, even after Switch blog opened another;
+  its build is watched on its own blog. Before, it failed for good and was hidden. Behind it,
+  sign-ins and blogs moved from DataStore into the database (version 6): the account from
+  before is moved over on first start, drafts and all, and the blog's posts are cached per blog.
+  The screens didn't change.
+- **The review caught:** clearing the shown blog on a switch could race a refresh of the blog
+  left, putting its title back; a post with no blog could have its build watched on another;
+  a sign-in left from a move to a new phone was never removed. All fixed.
+- **Left:** a post for a blog that isn't open that fails stays hidden (cycle 2's switcher shows
+  it); Sign out still lets the blog's waiting posts fail (cycle 2's Remove refuses).
+- **Also:** GITHUB_APP.md says to pick Any account, so the app can be installed on an
+  organisation as well.
 
 ### Cycle 26: design for several sign-ins and blogs
 - **Asked for:** blogs under more than one GitHub account, and under one account and an
