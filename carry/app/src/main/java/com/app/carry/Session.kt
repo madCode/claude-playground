@@ -23,12 +23,10 @@ import kotlinx.serialization.json.JsonObject
 @Serializable
 data class Session(
     /**
-     * Nullable so that coercion cannot vouch for a file.
-     *
-     * [SessionFiles.parse] decides a file is ours by comparing this to
-     * [SCHEMA]. Were it non-nullable with a default, `coerceInputValues`
-     * would turn some other tool's `"schema": null` INTO "gym-session/1"
-     * and the gate would pass its own default back to itself.
+     * Not the gate: [SessionFiles.parse] decides a file is ours from the
+     * raw JSON ([SessionFiles.labelOf]) before this is decoded, so this
+     * default cannot vouch for a file with no label. It is here so that
+     * anything encoding a [Session] writes the label.
      */
     val schema: String? = SCHEMA,
     @SerialName("sheet_id") val sheetId: String,

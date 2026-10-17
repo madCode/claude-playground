@@ -116,7 +116,9 @@ fun SinceScreen(
         // ABOVE the empty check, deliberately: if every file in the folder
         // read short there are no days at all, and "Nothing logged yet" on
         // its own would be a flat lie about a folder full of sessions.
-        listOfNotNull(shortNote(since.short), newerSchemaNote(since.newerSchema)).forEach {
+        listOfNotNull(
+            shortNote(since.short), newerSchemaNote(since.newerSchema), unlabelledNote(since.unlabelled),
+        ).forEach {
             Text(
                 "\u26a0 $it", color = Look.BrickInk, fontFamily = Look.Name,
                 fontSize = Look.SmallSize,
@@ -135,7 +137,7 @@ fun SinceScreen(
                 // the real folder once. "Could not be counted" is true of
                 // both, and this is the sentence that tells the owner what
                 // to do next, so it has to survive the mixed case.
-                if (since.short > 0 || since.newerSchema > 0) "Nothing in that folder could be counted."
+                if (since.short > 0 || since.newerSchema > 0 || since.unlabelled > 0) "Nothing in that folder could be counted."
                 else "Nothing logged yet. This fills in as you save sessions.",
                 color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
                 modifier = Modifier.padding(top = 14.dp),
@@ -203,10 +205,12 @@ fun SinceScreen(
                         // intact and the APP is what is out of date,
                         // which is what the other screen says about the
                         // same file.
-                        if (since.newestRead == Growth.NewestRead.NEWER_SCHEMA) {
-                            "The newest sheet needs a newer Carry. Rather than show an older day's, this is blank."
-                        } else {
-                            "The newest sheet didn't read. Rather than show an older day's, this is blank."
+                        when (since.newestRead) {
+                            Growth.NewestRead.NEWER_SCHEMA ->
+                                "The newest sheet needs a newer Carry. Rather than show an older day's, this is blank."
+                            Growth.NewestRead.NO_LABEL ->
+                                "The newest sheet has a missing or unknown format label. Rather than show an older day's, this is blank."
+                            else -> "The newest sheet didn't read. Rather than show an older day's, this is blank."
                         },
                         color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
                         modifier = Modifier.padding(vertical = 10.dp),
@@ -589,6 +593,17 @@ internal fun shortNote(sessions: Int): String? = when {
  * the cost of on the Before tab.
  */
 private const val SETTLES = "A sync part way through can do that."
+
+/**
+ * Files, not sessions: with no label saying so, nothing says they are
+ * sessions. Apart from [shortNote] because they read fine and won't
+ * settle on their own, so "a sync part way through" would be wrong.
+ */
+internal fun unlabelledNote(files: Int): String? = when {
+    files <= 0 -> null
+    files == 1 -> "1 file in the folder has a missing or unknown \"schema\" label, so it isn't counted as a session."
+    else -> "$files files in the folder have a missing or unknown \"schema\" label, so they aren't counted as sessions."
+}
 
 /**
  * Said apart from [shortNote] because a newer schema is not damage.
