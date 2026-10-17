@@ -28,6 +28,18 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-17 — cycle 67: a set that hurt leaves the bump band
+
+- A row you mark *hurt* with a weight now leaves "Part way to a bump",
+  the same as a lighter one. gym-coach ends the streak there and the next
+  sheet says hold, so the band was promising a bump that wasn't coming.
+- A *hurt* row with no weight (reps only, a note, *done*) keeps its
+  count, because the coach's streaks only read sets with a weight.
+  Checked through the coach's own importer, not reasoned from its code.
+- Left: the same movement twice on one sheet, the first clean and the
+  second hurt, still shows the clean copy's count. It's rare, and the
+  coach's answer depends on board order.
+
 ## 2026-10-17 — cycle 66: a save refuses a file that changed underneath
 
 - You chose the simple version. Save reads the file again just before
