@@ -335,17 +335,14 @@ class IntelPostTest {
     private fun bullets(post: IntelPost.Post) = post.text.lines().filter { it.startsWith("- ") }
 
     @Test
-    fun `a line typed by hand that the sheet already has is posted once, and not marked`() {
+    fun `a line typed by hand that the sheet already has is posted once`() {
         // The owner's answer, 2026-10-16: "show it once". Both render
-        // "10 total x squat". The sheet's copy is the one kept, so the
-        // digits -- the board's own prescription -- are not flagged as a
-        // weight the owner typed.
+        // "10 total x squat", and the sheet's copy is the one kept.
         val post = IntelPost.compose(
             session(sets = listOf(set(0, "squat", prescribedText = "10 total"))),
             did(0), listOf(AddedSet(id = "a", name = "10 total x squat")),
         )!!
         assertEquals(listOf("- 10 total x squat"), bullets(post))
-        assertEquals(emptySet<String>(), post.suspect)
     }
 
     @Test
@@ -390,43 +387,34 @@ class IntelPostTest {
         )
     }
 
-    // ------------------------------------------------- what the preview calls out
-
     @Test
-    fun `a typed name that carries a number is flagged for a second look`() {
-        // The screen promises "the movements only, never your weights",
-        // and an added row's name is typed by hand, so that promise is not
-        // one this app can keep alone. Stripping trailing digits would
-        // mangle "bicep curl 21s", a real movement -- so the preview says
-        // which lines to look at, where the owner is already deciding.
+    fun `a row is in the post when it is filled in, and only then`() {
+        // #127 v4: weight, reps or done says a set happened. hurt alone,
+        // or a feel marker alone, is not a record the movement was in
+        // the block, and an untouched row stays out.
+        val sets = listOf(
+            set(0, "push up"), set(1, "squat"), set(2, "plank", prescribed = null, prescribedText = null, durationSec = 45),
+            set(3, "lunge"), set(4, "row"), set(5, "curl"),
+        )
         val post = IntelPost.compose(
-            session(), did(0),
-            listOf(AddedSet(id = "a", name = "ybell deadlift 26"),
-                   AddedSet(id = "b", name = "pop squat")),
+            session(sets = sets),
+            mapOf(
+                0 to SessionPatch.Entry(reps = 10),
+                1 to SessionPatch.Entry(weight = 30.0),
+                2 to SessionPatch.Entry(done = true),
+                3 to SessionPatch.Entry(hurt = true),
+                4 to SessionPatch.Entry(easy = true),
+            ),
+            emptyList(),
         )!!
-        assertEquals(setOf("- ybell deadlift 26"), post.suspect)
-        assertTrue(post.text, post.text.contains("- pop squat"))
+        assertEquals(listOf("- 10 x push up", "- 10 x squat", "- 45 sec of plank"), bullets(post))
     }
 
     @Test
-    fun `a movement the runner named is never flagged, however many digits it has`() {
-        // "bicep curl 21s", "90/90 hip stretch", "3 way shoulder" are real
-        // movements. Flagging one lights the warning on a line the owner
-        // never typed and cannot fix -- on every intel day, until they
-        // learn to ignore it.
-        val post = IntelPost.compose(
-            session(sets = listOf(set(0, "bicep curl 21s"), set(1, "90/90 hip stretch"))),
-            did(0, 1), emptyList(),
-        )!!
-        assertEquals(emptySet<String>(), post.suspect)
-    }
-
-    @Test
-    fun `the prescription's own digits are not what gets flagged`() {
-        // "10 x bench press" is digits by design. Testing the whole line
-        // would mark every row on an intel day and mean nothing.
-        val post = IntelPost.compose(session(), did(0, 1), emptyList())!!
-        assertTrue(post.text, post.text.contains("- 10 x bench press"))
-        assertEquals(emptySet<String>(), post.suspect)
+    fun `a bodyweight-only day has a post once its reps are filled`() {
+        val sets = listOf(set(0, "push up"), set(1, "air squat"))
+        assertEquals(null, IntelPost.compose(session(sets = sets), emptyMap(), emptyList()))
+        val post = IntelPost.compose(session(sets = sets), mapOf(0 to SessionPatch.Entry(reps = 10)), emptyList())!!
+        assertEquals(listOf("- 10 x push up"), bullets(post))
     }
 }

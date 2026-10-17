@@ -182,8 +182,8 @@ internal fun durationText(seconds: Int): String =
  * `prescribed_text` is free text from the same file, and the same writer,
  * as `line` and `suggested` — and `suggested` holds "try 45 lb (up from 40,
  * held 3x)". This field is both shown to the owner and published, so it is
- * the one place a runner revision could put a weight in a post under the
- * words "never your weights". A scheme is digits, separators and the words
+ * the one place a runner revision could put a weight in a post the owner
+ * reads as "the movements only". A scheme is digits, separators and the words
  * "total"/"each"; anything else is refused outright rather than trusted,
  * and the row simply carries no prescription.
  */

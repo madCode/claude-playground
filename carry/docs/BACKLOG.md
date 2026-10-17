@@ -20,33 +20,6 @@ should start at the first line of *Wrong numbers*.
 
 Five decisions. Each is a question about what you want the app to claim,
 not a thing anyone is blocked from building.
-- [ ] **A minimum After page:
-  [#127](https://github.com/madCode/claude-playground/issues/127).** A UX
-  audit of every control, with personas, a mockup and the cost of each
-  change. It proposes a ✓ on every row, and with it an answer to the item
-  below. It also found that gym-coach never reads *hurt* *(audit: UX)*
-- [ ] **Which marks say "I did this movement"?** Folded into #127. You answered the narrow
-  version on 2026-10-16 — `done` qualifies a movement for the post — and
-  that shipped. But `done` is only offered on a TIMED row, because a timed
-  hold is the case where the number boxes are empty by definition. So a
-  wholly BODYWEIGHT class still has no post: air squats, push-ups and jump
-  lunges have no duration, so they get no `done` chip, and nothing else on
-  the row says the movement happened.
-
-  The marks that would fix it are `easy`, `hard` and `easier`. Each does
-  imply a set happened — you cannot call a set easy without doing it — so
-  the argument for counting them is decent. The argument against is that
-  they are judgements about a set rather than a record of one, and `hurt`
-  is the proof the distinction matters: tapping it while deciding is not
-  evidence you did the movement, which is why it stays out.
-
-  Two ways to go: count `easy`/`hard`/`easier` as evidence too, or draw the
-  `done` chip on every row rather than only timed ones. The second is the
-  smaller claim and probably the better one — it adds a way to say "I did
-  it" instead of reinterpreting marks that mean something else — but it
-  puts a chip on rows where the number boxes are the normal answer, which
-  is the reason it was timed-only to begin with *(you asked for the narrow
-  version; this is what it left out)*
 - [ ] **Should an old count leave the "part way to a bump" band?** The
   band now reaches back across every sheet, and a row from an older sheet
   shows its date. The runner's streak has no time limit, so the band has
@@ -91,16 +64,6 @@ not a thing anyone is blocked from building.
   open are kept there, not here, since this repository is public
   *(audit: security)*
 
-- [ ] **The weight guard only sees decimal digits, and only on a typed
-  name.** `Char.isDigit` is Unicode `Nd`, so a load written as a word or a
-  symbol publishes silently — verified unflagged: `ybell deadlift heavy`,
-  `deadlift twenty six`, `deadlift ½ rack`. And the other way: a
-  legitimate name with a digit in it IS flagged when hand-typed —
-  `bicep curl 21s`, `90/90 hip stretch`, `3 way shoulder` — which is the
-  false alarm that costs the guard its meaning. Both directions are the
-  same question: is a digit test the right instrument at all, or should
-  this be a "you typed this name, read it" prompt with no claim about
-  weights? Needs deciding before patching *(audit: security)*
 ### Wrong numbers, or a road to one
 - [x] ~~**A weight over 1000 saves on the phone, and the importer then
   refuses the whole day.**~~ **Done 2026-10-16:** the owner asked for the
@@ -305,6 +268,15 @@ These are the open paths to one, hardest first.
 ### Owed on a device
 
 Only a real phone can answer these.
+- [ ] **The After page v4 on a phone.** Tap an empty reps box: it should
+  fill with the faint count, selected, and typing should replace it. With
+  TalkBack, the box should say "empty, tap for 10" and then the number.
+  Check a timed row's *done* tag, and the page at the largest font size
+  *(due with #127 v4)*
+- [ ] **TalkBack reads "You typed: …" when it appears after Save.** The
+  test proves the line is a polite live region, not that TalkBack speaks
+  it. With TalkBack on: add a row, type a name, save, and listen *(due
+  with the typed-name change)*
 - [ ] A persisted tree permission surviving `adb install -r`, which can revoke it
   and look exactly like a first run. Partly done 2026-10-12 **on an emulator**: the
   grant was taken through the real picker and held across a force-stop and
@@ -430,10 +402,14 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
-- [x] **The *hard* chip is gone.** The coach treats a completed set as
-  completed however it felt, so *hard* told it nothing. Files that say
-  `hard` still read and keep it; it isn't shown *(you decided,
-  2026-10-16)*
+- [x] **The minimum After page, mockup v4
+  ([#127](https://github.com/madCode/claude-playground/issues/127)).**
+  Each row says "I did it" with its own fields: a weight, reps (one tap
+  fills the faint count), or *done* in a timed row's time slot. *skip* and
+  *hard* are gone, *hurt* sits on the name line, labels sit above the
+  boxes, and the page's type is a step up. This also answers **which marks
+  say "I did this movement"**: a bodyweight-only day now gets a post once
+  its reps are filled *(you approved v4)*
 - [x] **A file with no `schema` is no longer accepted as ours.** You
   approved requiring `"schema": "gym-session/1"` after the laptop's check
   of the synced folder found every session file carrying exactly that. A
@@ -454,6 +430,16 @@ means the After tab, which is a form built for afterwards. Unsketched.
   once, and where a typed line meets the sheet's the sheet's copy is kept,
   unmarked. Different words, even near-identical ones, stay two bullets;
   the file keeps both rows *(you asked: "show it once")*
+- [x] **The weight guard is gone; a typed name is shown back instead.**
+  The digit test missed "deadlift twenty six" and "½ rack" and flagged
+  "bicep curl 21s". After a save, the screen shows each typed name and
+  asks whether the weight is in the weight box. The number boxes are
+  labelled "lb" and "reps" *(you asked: "show the typed name back, no
+  digit check")*
+- [x] **The *hard* chip is gone.** The coach treats a completed set as
+  completed however it felt, so *hard* told it nothing. Files that say
+  `hard` still read and keep it; it isn't shown *(you decided,
+  2026-10-16)*
 - [x] **The bars on *Heaviest by what it trains* are gone; the number
   stays.** They encoded every weight in the family with no scale and no
   time direction, and their count varied with how many sets the family had,

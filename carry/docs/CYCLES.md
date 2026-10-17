@@ -7,12 +7,27 @@ that hold become rules in CLAUDE.md or the cycles skill.
 
 ## 2026-10-16 run (cloud session)
 
+### Cycle 64 — build: the minimum After page (#127 v4)
+
+- **A text field reports its inner bounds.** `BasicTextField`'s semantics
+  node is the text, not the padded box, whatever the modifier order, so a
+  layout test compares centres rather than edges.
+- **Prove the hand-off with the real importer.** A throwaway test wrote a
+  file through `SessionPatch`; `session_file.to_history` read it. That is
+  what confirmed "10 total" must fill 5, not 10.
+
 ### Cycle 63 — build: drop the hard chip
 
 - **A layout test can lose its premise when a chip goes.** The timed-row
   test asserted `skip` wraps below `done`; with one chip fewer it fits.
   Assert what the test guards (skip on screen), not the layout that once
   carried it.
+
+### Cycle 62 — build: show a typed name back
+
+- **`clearAndSetSemantics` takes a node out of the test tree too.** To
+  hide a visible label from TalkBack and still assert on it, use
+  `hideFromAccessibility()` and check `SemanticsProperties.HideFromAccessibility`.
 
 ### Cycle 61 — build: require the schema label
 

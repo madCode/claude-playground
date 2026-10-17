@@ -28,13 +28,20 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
-## 2026-10-16 — cycle 63: the hard chip goes
+## 2026-10-17 — cycle 64: the minimum After page (#127, mockup v4)
 
-- The After tab no longer offers *hard*, and a past session no longer
-  shows it. The coach treats a finished set as finished however it felt.
-- Files that already say `hard` still read, and Carry leaves the field
-  alone.
-- Nothing drops out of the post: it never counted *hard* as "did it".
+- Each row says it happened with its own fields: a weight; reps, which
+  one tap fills from the faint count; or *done* in a timed row's time
+  slot. An untouched row counts as not done, and the tally says so.
+- *skip* and *hard* are gone. Older files that say either still read.
+- *hurt* moved to the end of the name line; *mod* shows only while the
+  weight box is empty.
+- Labels sit above the boxes, and every word on the page but the box
+  contents is a size up.
+- A bodyweight-only day now gets a post.
+- Checked with gym-coach's own importer: every way a row says "done"
+  becomes a complete set; an untouched or *hurt*-only row becomes nothing.
+
 ## 2026-10-16 — cycle 61: a session file must say what it is
 
 - A file with no `"schema"` line used to be read as a session, because
@@ -70,6 +77,22 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   carries one bullet, the sheet's, unmarked. "The same" is the same
   text ignoring case and how an accent was encoded; "push up" and
   "pushup" stay two. Both rows are still saved.
+## 2026-10-16 — cycle 62: a typed name shown back, and labelled boxes
+
+- The post no longer marks lines with a digit in them. That check missed
+  weights written as words or symbols and flagged real movements.
+- Instead, after a save, the After tab shows each name you typed and
+  asks whether the weight is in the weight box. It stays until you edit
+  again. TalkBack reads it out.
+- The weight and reps boxes now say "lb" and "reps" under them, so "the
+  weight box" is easy to find.
+## 2026-10-16 — cycle 63: the hard chip goes
+
+- The After tab no longer offers *hard*, and a past session no longer
+  shows it. The coach treats a finished set as finished however it felt.
+- Files that already say `hard` still read, and Carry leaves the field
+  alone.
+- Nothing drops out of the post: it never counted *hard* as "did it".
 
 ## 2026-10-16 — cycle 58: the After screen checks what the importer refuses
 

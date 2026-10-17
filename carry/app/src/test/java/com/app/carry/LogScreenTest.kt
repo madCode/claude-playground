@@ -1,6 +1,9 @@
 package com.app.carry
 
 import android.graphics.Bitmap
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -19,6 +22,9 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performCustomAccessibilityActionWithLabel
+import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -64,12 +70,17 @@ class LogScreenTest {
      *  composition, with the same scroll. */
     private val saving = mutableStateOf<SaveState>(SaveState.Idle)
 
-    private fun show(state: SaveState = SaveState.Idle, unreadable: Int = 0) {
+    private fun show(
+        state: SaveState = SaveState.Idle, unreadable: Int = 0, fontScale: Float = 1f,
+        session: Session = SampleSession.today,
+    ) {
         saving.value = state
         compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
             LogScreen(
                 unreadable = unreadable,
-                session = SampleSession.today,
+                session = session,
                 entries = edits.value,
                 added = added.value,
                 onEdit = { ref, e -> edits.value = edits.value + (ref to e) },
@@ -79,14 +90,15 @@ class LogScreenTest {
                 saving = saving.value,
                 onShare = { shared = it },
             )
+            }
         }
     }
 
     @Test
     fun `typing a weight and reps records exactly what was typed`() {
         show()
-        compose.onNodeWithContentDescription("bench press weight in pounds").performTextReplacement("45")
-        compose.onNodeWithContentDescription("bench press reps").performTextReplacement("8")
+        compose.onNodeWithContentDescription("bench press, lb").performTextReplacement("45")
+        compose.onNodeWithContentDescription("bench press, reps").performTextReplacement("8")
         assertEquals(SessionPatch.Entry(weight = 45.0, reps = 8), edits.value[0])
     }
 
@@ -98,7 +110,7 @@ class LogScreenTest {
         // back, so "12." became "12" and the next key made 125: a weight
         // ten times too large, silently, in a training history.
         show()
-        val field = compose.onNodeWithContentDescription("bench press weight in pounds")
+        val field = compose.onNodeWithContentDescription("bench press, lb")
         "12.5".forEach { field.performTextInput(it.toString()) }
         assertEquals(12.5, edits.value[0]!!.weight!!, 0.001)
     }
@@ -111,9 +123,9 @@ class LogScreenTest {
         // see is what gets written; the failure that matters is the two
         // drifting apart silently.
         show()
-        val field = compose.onNodeWithContentDescription("bench press weight in pounds")
+        val field = compose.onNodeWithContentDescription("bench press, lb")
         "12.5.7".forEach { field.performTextInput(it.toString()) }
-        val shown = compose.onNodeWithContentDescription("bench press weight in pounds")
+        val shown = compose.onNodeWithContentDescription("bench press, lb")
             .fetchSemanticsNode().config
             .getOrNull(androidx.compose.ui.semantics.SemanticsProperties.EditableText)?.text
         assertEquals("12.57", shown)
@@ -125,7 +137,7 @@ class LogScreenTest {
         // A mistyped weight has to be unmakeable; the write path supports
         // it, and the screen must actually produce the blank entry.
         show()
-        val field = compose.onNodeWithContentDescription("bench press weight in pounds")
+        val field = compose.onNodeWithContentDescription("bench press, lb")
         field.performTextReplacement("95")
         field.performTextReplacement("")
         assertTrue("expected a blank entry, got ${edits.value[0]}", edits.value[0]!!.blank)
@@ -171,7 +183,7 @@ class LogScreenTest {
         // Previously this asserted 0 saves without interacting at all,
         // so it could only fail if the button were entirely unwired.
         show()
-        compose.onNodeWithContentDescription("bench press weight in pounds").performTextInput("45")
+        compose.onNodeWithContentDescription("bench press, lb").performTextInput("45")
         compose.onAllNodesWithText("easy")[0].performClick()
         reach("+ Add something the sheet missed"); compose.onNodeWithText("+ Add something the sheet missed").performClick()
         assertEquals("typing must not write to the file", 0, saves)
@@ -207,7 +219,7 @@ class LogScreenTest {
         // makes it 1000. So the box keeps what was typed and says so, in
         // words under the row and on the box itself for TalkBack.
         show()
-        val field = compose.onNodeWithContentDescription("bench press weight in pounds")
+        val field = compose.onNodeWithContentDescription("bench press, lb")
         "2500".forEach { field.performTextInput(it.toString()) }
         assertEquals(2500.0, edits.value[0]!!.weight!!, 0.001)
         field.assertTextEquals("2500")
@@ -226,7 +238,7 @@ class LogScreenTest {
         // would save as "no reps" under a box reading 8.5; the importer
         // wants a whole number, so the row is held and flagged instead.
         show()
-        val field = compose.onNodeWithContentDescription("bench press reps")
+        val field = compose.onNodeWithContentDescription("bench press, reps")
         "8.".forEach { field.performTextInput(it.toString()) }
         assertEquals("mid-typing is not a mistake", SessionPatch.Entry(reps = 8), edits.value[0])
         compose.onAllNodesWithText("whole number", substring = true).assertCountEquals(0)
@@ -241,7 +253,7 @@ class LogScreenTest {
         show()
         reach("+ Add something the sheet missed"); compose.onNodeWithText("+ Add something the sheet missed").performClick()
         compose.onNodeWithContentDescription("added exercise name").performTextReplacement("pop squat")
-        compose.onNodeWithContentDescription("added exercise reps").performTextReplacement("1200")
+        compose.onNodeWithContentDescription("added exercise, reps").performTextReplacement("1200")
         assertEquals(1200, added.value.single().reps)
         compose.onNodeWithText("Reps 1200 is over 1000. Fix it to save.").assertIsDisplayed()
     }
@@ -265,7 +277,7 @@ class LogScreenTest {
         show()
         reach("+ Add something the sheet missed"); compose.onNodeWithText("+ Add something the sheet missed").performClick()
         compose.onNodeWithText("what was it?").assertIsDisplayed()
-        compose.onNodeWithContentDescription("added exercise weight in pounds")
+        compose.onNodeWithContentDescription("added exercise, lb")
             .performTextReplacement("20")
         assertEquals(20.0, added.value.single().weight)
         compose.onNodeWithText("name this").assertIsDisplayed()
@@ -283,54 +295,15 @@ class LogScreenTest {
         show()
         reach("+ Add something the sheet missed"); compose.onNodeWithText("+ Add something the sheet missed").performClick()
         reach("+ Add something the sheet missed"); compose.onNodeWithText("+ Add something the sheet missed").performClick()
-        val boxes = compose.onAllNodesWithContentDescription("added exercise weight in pounds")
+        val boxes = compose.onAllNodesWithContentDescription("added exercise, lb")
         boxes[1].performTextReplacement("30")
         assertEquals(30.0, added.value[1].weight)
 
         // What the save's re-seed does: the blank row is gone.
         added.value = listOf(added.value[1])
         compose.waitForIdle()
-        compose.onAllNodesWithContentDescription("added exercise weight in pounds")[0]
+        compose.onAllNodesWithContentDescription("added exercise, lb")[0]
             .assertTextEquals("30")
-    }
-
-    @Test
-    fun `skipping something is sayable, and is not the same as leaving it blank`() {
-        // `skipped` was in the schema, in the patch and in the importer
-        // before this screen existed, with no way to set it — so a
-        // movement deliberately skipped looked exactly like one not got
-        // to, and the coach kept suggesting it for ever.
-        show()
-        compose.onAllNodesWithText("skip")[0].performClick()
-        assertEquals(SessionPatch.Entry(skipped = true), edits.value[0])
-        assertEquals("blank is still blank", null, edits.value[1])
-        compose.onNodeWithText("1 skipped", substring = true).assertIsDisplayed()
-        shoot("19-skipped")
-    }
-
-    @Test
-    fun `skipping clears what was typed, and un-skipping does not put it back`() {
-        // A weight against a set you did not do is the wrong number this
-        // app exists to avoid, so it goes. Bringing it back on un-skip
-        // would be this app inventing a number nobody re-entered.
-        show()
-        compose.onNodeWithContentDescription("bench press weight in pounds").performTextReplacement("45")
-        assertEquals(45.0, edits.value[0]?.weight)
-        compose.onAllNodesWithText("skip")[0].performClick()
-        assertEquals(SessionPatch.Entry(skipped = true), edits.value[0])
-        compose.onAllNodesWithText("skip")[0].performClick()
-        assertEquals(SessionPatch.Entry(), edits.value[0])
-    }
-
-    @Test
-    fun `a skipped row is not counted as filled`() {
-        // It is answered, not filled. Counting it as filled would say the
-        // form is further along than it is.
-        show()
-        compose.onNodeWithContentDescription("bench press weight in pounds").performTextReplacement("45")
-        compose.onNodeWithText("1 of 10 filled", substring = true).assertIsDisplayed()
-        compose.onAllNodesWithText("skip")[0].performClick()
-        compose.onNodeWithText("0 of 10 filled", substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -343,7 +316,7 @@ class LogScreenTest {
         show()
         compose.onAllNodesWithText("easy")[0].assertIsDisplayed()
         compose.onNodeWithText("hard").assertDoesNotExist()
-        compose.onNodeWithText("0 of 10 filled", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("0 of 10 noted", substring = true).assertIsDisplayed()
         compose.onAllNodesWithText("easy")[0].performClick()
         assertEquals(SessionPatch.Entry(easy = true), edits.value[0])
     }
@@ -360,46 +333,165 @@ class LogScreenTest {
     }
 
     @Test
-    fun `only a timed row is offered the way to say it just happened`() {
-        // One chip, on one row shape. The weighted rows at the top of the
-        // sheet have a number to give, so "done" there would be a second
-        // way to say what the weight box already says -- and two ways to
-        // record one thing is how the two disagree.
+    fun `a timed row says it happened with done, in the reps box's place`() {
+        // #127 v4: a hold prescribes no count, so the reps slot holds a
+        // `done` tag under a "time" label. It writes the existing `done`.
         show()
-        // The sample's only timed row: 45 seconds of sit-up, no reps, no
-        // weight. Both boxes are empty by definition. Scrolled to, because
-        // a LazyColumn has not composed it yet -- which is also why this
-        // counts "done" against "hurt" rather than asserting it absent at
-        // the top: how far ahead the list composes is not this test's
-        // claim, and "hurt" is on every row.
         reach("sit-up")
-        val anyRow = compose.onAllNodesWithText("hurt").fetchSemanticsNodes().size
-        assertTrue("expected several rows composed, saw $anyRow", anyRow > 1)
         compose.onAllNodesWithText("done").assertCountEquals(1)
-        compose.onAllNodesWithText("done")[0].performClick()
+        compose.onNodeWithContentDescription("sit-up, reps").assertDoesNotExist()
+        compose.onNodeWithContentDescription("sit-up, time").performClick()
         assertEquals(SessionPatch.Entry(done = true), edits.value[9])
-
-        // And the tally counts it, because the row is no longer blank --
-        // otherwise the form reads as unfinished with nothing left to do.
-        compose.onNodeWithText("1 of 10 filled", substring = true).assertIsDisplayed()
-
-        // A timed row carries the most chips, and what once slid off the
-        // right edge was `skip` -- the one chip on the row that says a set
-        // did not happen, on the one row shape that has no number to say it
-        // with instead. The chips wrap when they must; either way this
-        // row's `skip` (the first at or below `done`) is inside the screen.
-        val done = compose.onAllNodesWithText("done")[0].getUnclippedBoundsInRoot()
-        val width = compose.onRoot().getUnclippedBoundsInRoot().right
-        val skip = (0 until compose.onAllNodesWithText("skip").fetchSemanticsNodes().size)
-            .map { compose.onAllNodesWithText("skip")[it].getUnclippedBoundsInRoot() }
-            .filter { it.bottom >= done.top }.minBy { it.top }
-        // On this row: no lower than one chip line below `done`, or a
-        // missing skip would be answered by the next row's.
-        assertTrue("no skip on the timed row: $skip vs $done", skip.top <= done.bottom + 12.dp)
-        assertTrue("the timed row's skip is off the screen: $skip in $width", skip.right <= width)
-
+        compose.onNodeWithText("1 of 10 noted", substring = true).assertIsDisplayed()
+        val tag = compose.onNodeWithContentDescription("sit-up, time").getUnclippedBoundsInRoot()
+        val label = compose.onNodeWithText("time", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue("the time label sits above its tag: $label vs $tag", label.bottom <= tag.top)
         reach("+ Add something the sheet missed")
         shoot("22-timed-row")
+    }
+
+    @Test
+    fun `a bodyweight row is done in one tap on its faint reps`() {
+        // The empty reps box shows the runner's count faintly; focusing it
+        // fills it in, so "did them all" is one tap. Typing still works.
+        show()
+        reach("10 x squat")
+        val box = compose.onNodeWithContentDescription("squat, reps")
+        box.performClick()
+        assertEquals(SessionPatch.Entry(reps = 10), edits.value[8])
+        box.performTextReplacement("7")
+        assertEquals(SessionPatch.Entry(reps = 7), edits.value[8])
+        compose.onNodeWithText("1 of 10 noted", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a day of only bodyweight rows gets a post once a row is tapped`() {
+        // Before v4 a bodyweight row had no way to say it happened short of
+        // typing a number, so such a day saved with nothing to post.
+        show()
+        reach("10 x squat")
+        compose.onNodeWithContentDescription("squat, reps").performClick()
+        saving.value = SaveState.Saved
+        reach("Post what 2G did")
+        compose.onNodeWithText("Post what 2G did").performClick()
+        reach("Send it")
+        compose.onNode(hasText("- 10 x squat", substring = true)).assertIsDisplayed()
+        shoot("38-post-bodyweight")
+    }
+
+    private fun bodyweight(ref: Int, name: String, asked: String, reps: Int?, weight: Double? = null) = ExerciseSet(
+        ref = ref, line = "$asked x $name", canonical = name, prescribedReps = reps, prescribedText = asked,
+        suggestedWeight = weight,
+    )
+
+    private val mixed = Session(
+        sheetId = "2026-10-17:3G", date = "2026-10-17", classTag = "3G",
+        sets = listOf(
+            bodyweight(0, "jump lunge", "10 total", 5),
+            bodyweight(1, "push-up", "6-12", 6),
+            bodyweight(2, "bench press", "10", 10, weight = 45.0),
+        ),
+    )
+
+    @Test
+    fun `the faint fill is the coach's count, not the board's words`() {
+        // "10 total x jump lunge" is 5 a side, and the importer compares reps
+        // against 5. Filling 10 would put a wrong number in history.
+        show(session = mixed)
+        compose.onNodeWithContentDescription("jump lunge, reps").performClick()
+        assertEquals(5, edits.value[0]?.reps)
+    }
+
+    @Test
+    fun `a tap-fill keeps what was already entered on the row`() {
+        // The tap watcher outlives recompositions; a stale copy of the row
+        // would write reps over it as it was before these edits.
+        show(session = mixed)
+        compose.onNodeWithContentDescription("jump lunge, lb").performTextReplacement("20")
+        compose.onAllNodesWithText("easy")[0].performClick()
+        compose.onNodeWithContentDescription("jump lunge, reps").performClick()
+        assertEquals(SessionPatch.Entry(weight = 20.0, reps = 5, easy = true), edits.value[0])
+    }
+
+    @Test
+    @OptIn(androidx.compose.ui.test.ExperimentalTestApi::class)
+    fun `a range, a weighted row, and focus without a tap fill nothing`() {
+        show(session = mixed)
+        // A range's floor would go into history as the count done.
+        compose.onNodeWithContentDescription("push-up, reps").performClick()
+        assertEquals(null, edits.value[1])
+        // A weighted row: blank reps already mean all of them, and a stray
+        // tap would record a set with no weight.
+        compose.onNodeWithContentDescription("bench press, reps").performClick()
+        assertEquals(null, edits.value[2])
+        // Focus by keyboard or D-pad is not a tap.
+        compose.onNodeWithContentDescription("jump lunge, reps").requestFocus()
+        assertEquals(null, edits.value[0])
+        // TalkBack: the count is said, and the fill is an action.
+        compose.onNodeWithContentDescription("jump lunge, reps")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "empty, prescribed 5"))
+            .performCustomAccessibilityActionWithLabel("Fill in 5")
+        assertEquals(5, edits.value[0]?.reps)
+    }
+
+    @Test
+    fun `untouched means not done, and the tally says so`() {
+        show()
+        compose.onNodeWithText(
+            "0 of 10 noted · anything untouched counts as not done", substring = true,
+        ).assertIsDisplayed()
+        compose.onNodeWithText("skip").assertDoesNotExist()
+        // hurt alone does not say a set happened.
+        compose.onAllNodesWithText("hurt")[0].performClick()
+        compose.onNodeWithText("0 of 10 noted", substring = true).assertIsDisplayed()
+        compose.onAllNodesWithText("easy")[0].performClick()
+        compose.onNodeWithText("1 of 10 noted", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun `an older file's skipped row reads as not done, and an edit clears it`() {
+        // There is no skip control any more. A file that says `skipped`
+        // still reads; the row looks untouched, and typing on it clears
+        // the flag rather than saving two answers at once.
+        edits.value = mapOf(0 to SessionPatch.Entry(skipped = true))
+        show()
+        compose.onNodeWithText("skip").assertDoesNotExist()
+        compose.onNodeWithText("0 of 10 noted", substring = true).assertIsDisplayed()
+        shoot("19-skipped")
+        compose.onNodeWithContentDescription("bench press, lb").performTextReplacement("45")
+        assertEquals(SessionPatch.Entry(weight = 45.0), edits.value[0])
+    }
+
+    @Test
+    fun `mod shows only while the weight box is empty`() {
+        show()
+        val before = compose.onAllNodesWithText("mod").fetchSemanticsNodes().size
+        compose.onNodeWithContentDescription("bench press, lb").performTextReplacement("45")
+        assertEquals(before - 1, compose.onAllNodesWithText("mod").fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun `hurt sits on the name line, and labels sit above the boxes`() {
+        show()
+        val name = compose.onNodeWithText("10 x bench press").getUnclippedBoundsInRoot()
+        val hurt = compose.onAllNodesWithText("hurt")[0].getUnclippedBoundsInRoot()
+        val box = compose.onNodeWithContentDescription("bench press, lb").getUnclippedBoundsInRoot()
+        val easy = compose.onAllNodesWithText("easy")[0].getUnclippedBoundsInRoot()
+        val lb = compose.onAllNodesWithText("lb", useUnmergedTree = true)[0].getUnclippedBoundsInRoot()
+        assertTrue("hurt is beside the name: $hurt vs $name", hurt.top < name.bottom && hurt.bottom > name.top)
+        assertTrue("the lb label is above its box: $lb vs $box", lb.bottom <= box.top)
+        // Chips level with the boxes, not with the labels.
+        val off = (easy.top + easy.bottom - box.top - box.bottom).value / 2
+        assertTrue("easy is level with the box: $easy vs $box", off in -6f..6f)
+    }
+
+    @Test
+    fun `at twice the font size every row is still reachable`() {
+        show(fontScale = 2f)
+        compose.onNodeWithText("How did it go?").assertIsDisplayed()
+        reach("sit-up")
+        compose.onNodeWithContentDescription("sit-up, time").assertIsDisplayed()
+        shoot("37-log-large-text")
     }
 
     @Test
@@ -490,56 +582,101 @@ class LogScreenTest {
     }
 
     @Test
-    fun `a name that looks like it carries a weight is called out before sending`() {
-        // The promise under the button is "the movements only — never your
-        // weights", and a typed name can break it. The app cannot fix that
-        // for you without mangling real names, so it shows you which lines
-        // to look at, at the moment you are deciding to send.
-        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+    fun `after a save, each typed name is shown back with the question`() {
+        // madCode's call, 2026-10-16: "show the typed name back, no digit
+        // check". A digit test missed these two and flagged real names, so
+        // the screen asks instead, about every name the owner typed.
         added.value = listOf(
-            AddedSet(id = "a", name = "ybell deadlift 26", weight = 26.0),
-            AddedSet(id = "b", name = "pop squat", weight = 15.0),
+            AddedSet(id = "a", name = "deadlift twenty six", reps = 8),
+            AddedSet(id = "b", name = "\u00bd rack row", weight = 20.0),
         )
+        show(SaveState.Saved)
+        reach("You typed")
+        val note = compose.onNodeWithText(
+            "You typed: \"\u2068deadlift twenty six\u2069\", \"\u2068\u00bd rack row\u2069\". " +
+                "Is each weight in its weight box?"
+        )
+        note.assertIsDisplayed()
+        // Announced when it appears, without taking focus.
+        note.assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+        // Above the button just tapped, not below it where the list may end.
+        assertTrue(
+            "the line must sit above the Saved button",
+            note.getUnclippedBoundsInRoot().bottom <= compose.onNodeWithText("Saved").getUnclippedBoundsInRoot().top,
+        )
+        shoot("35-typed-back")
+        // And it goes with "Saved": the next edit sets the form back to Idle.
+        saving.value = SaveState.Idle
+        compose.onNodeWithText("You typed", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a typed name is shown back on one line, whole, and cut visibly only past 200`() {
+        // A line separator in a name read from the file would break the
+        // sentence; a weight at the end of a long name must still show.
+        val long = "a".repeat(180) + " deadlift 26 lb"
+        added.value = listOf(
+            AddedSet(id = "a", name = "row\u2028machine", weight = 30.0),
+            AddedSet(id = "b", name = long, weight = 26.0),
+            AddedSet(id = "c", name = "x".repeat(300), weight = 10.0),
+        )
+        show(SaveState.Saved)
+        // The long names make their own boxes scrollable; the list is the
+        // first scrollable node, being their ancestor.
+        compose.onAllNodes(hasScrollAction())[0].performScrollToNode(hasText("You typed", substring = true))
+        val text = compose.onNode(hasText("You typed", substring = true))
+            .fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("")
+        assertTrue(text, "\u2068row machine\u2069" in text)
+        assertTrue(text, "deadlift 26 lb\u2069" in text)
+        assertTrue(text, "x".repeat(200) + "\u2026\u2069" in text)
+    }
+
+    @Test
+    fun `nothing is shown back before the save`() {
+        added.value = listOf(AddedSet(id = "a", name = "deadlift twenty six", weight = 26.0))
+        show(SaveState.Idle)
+        reach("Save")
+        compose.onNodeWithText("You typed", substring = true).assertDoesNotExist()
+        // The control: the same row, saved, is shown back.
+        saving.value = SaveState.Saved
+        reach("You typed")
+        compose.onNodeWithText("You typed", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a save with no typed name shows nothing back`() {
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        added.value = listOf(AddedSet(id = "a", name = "  ", weight = null))
+        show(SaveState.Saved)
+        reach("Post what 2G did")
+        compose.onNodeWithText("You typed", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a typed name with digits in it is posted plainly, with no mark`() {
+        // "bicep curl 21s" is a movement. The digit test flagged it; the
+        // question after the save replaces that test, so the post carries
+        // no mark at all and the caption makes no promise about weights.
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        added.value = listOf(AddedSet(id = "a", name = "bicep curl 21s", weight = 15.0))
         show(SaveState.Saved)
         reach("Post what 2G did")
         compose.onNodeWithText("Post what 2G did").performClick()
-        // The caption names the MARK, not the colour. "Check the lines in
-        // red" was no use to a reader who has no red -- a colour vision
-        // deficiency, glare, a greyscale display -- which is the whole
-        // reason the mark is in the text, and the caption went on naming
-        // the colour anyway.
-        compose.onNodeWithText("⚠ marks the lines", substring = true).assertIsDisplayed()
-        // The flagged bullet carries the mark and the clean one does not.
-        // Asserted on the same node, because the preview is one Text: an
-        // "is the glyph anywhere in here" check passes just as happily
-        // when EVERY line is marked, which is the other way to be wrong.
-        val preview = compose.onNode(hasText("⚠ - ybell deadlift 26", substring = true))
-        preview.assertIsDisplayed()
-        preview.assert(hasText("\n- pop squat", substring = true))
-        // ...and the one thing said out loud is said on the CAPTION, a
-        // short node, naming the flagged line.
-        compose.onNodeWithContentDescription(
-            "marked, because it looks like it carries a weight: ybell deadlift 26", substring = true
-        ).assertIsDisplayed()
-        // The preview itself must keep NO description. Compose offers a
-        // text node LINE and PAGE navigation only while its description
-        // is empty, so labelling this one took away the listener's
-        // ability to step through the post a bullet at a time -- and the
-        // label it gave them instead read every flagged line twice and
-        // flattened the blank line under the heading into a bare comma.
-        preview.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
-        // Scroll past the preview, so the shot shows the flagged bullet
-        // and not just the warning above it.
         reach("Send it")
-        shoot("21-post-flagged")
+        val preview = compose.onNode(hasText("- bicep curl 21s", substring = true))
+        preview.assertIsDisplayed()
+        compose.onNodeWithText("\u26a0", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("The movements only. A name you typed goes out as you typed it.").assertIsDisplayed()
+        // No description on the preview, so it stays navigable line by line.
+        preview.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
+        shoot("36-post-typed-digits")
     }
 
     @Test
     fun `a line the sheet already has, typed again by hand, is in the post once`() {
         // The owner's answer, 2026-10-16: "show it once". The sheet lists
         // "10 x bench press" and the owner also added a row with that whole
-        // line as its name. The preview shows one bullet, unmarked, since
-        // its digits are the board's prescription and not a weight.
+        // line as its name. The preview shows it as one bullet.
         edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
         added.value = listOf(AddedSet(id = "a", name = "10 x bench press", weight = 45.0))
         show(SaveState.Saved)
@@ -555,44 +692,19 @@ class LogScreenTest {
     }
 
     @Test
-    fun `with nothing flagged the caption speaks for itself`() {
-        // The other half of the caption's description, and the one a
-        // regression could break silently: with nothing to flag there must
-        // be NO description at all, so the caption's own words are what
-        // TalkBack reads. An empty string or a repeat of those words would
-        // suppress them instead -- announcing a blank node where the
-        // promise under the button should be.
-        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
-        added.value = listOf(AddedSet(id = "a", name = "pop squat", weight = 15.0))
-        show(SaveState.Saved)
-        reach("Post what 2G did")
-        compose.onNodeWithText("Post what 2G did").performClick()
-        val caption = compose.onNode(hasText("The movements only", substring = true))
-        caption.assertIsDisplayed()
-        caption.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
-    }
-
-    @Test
-    fun `past three flagged lines the rest are counted, not dropped`() {
-        // Naming them all is unbounded and naming none hands the job back
-        // to the glyph in the preview -- which is the channel a listener
-        // may not get, and the reason any of this was written.
-        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
-        // The first name starts with a hyphen on purpose: only the post's
-        // own "- " bullet comes off, so a typed name is read as typed. A
-        // blanket trim of leading hyphens would say "26 lb curl" -- an app
-        // that renames a movement while reading it out.
-        added.value = listOf("-26 lb curl", "ybell deadlift 30", "ybell deadlift 35",
-            "ybell deadlift 40", "ybell deadlift 45").mapIndexed { i, n ->
-            AddedSet(id = "a$i", name = n, weight = 20.0)
-        }
-        show(SaveState.Saved)
-        reach("Post what 2G did")
-        compose.onNodeWithText("Post what 2G did").performClick()
-        compose.onNodeWithContentDescription(
-            "5 lines in the post are marked, because they look like they carry a weight: " +
-                "-26 lb curl; ybell deadlift 30; ybell deadlift 35; and 2 more.",
-        ).assertIsDisplayed()
+    fun `the number boxes say which is weight and which is reps`() {
+        // madCode, 2026-10-16: visible labels, not only placeholders. The
+        // question after a save names "the weight box", so it must be
+        // findable without TalkBack. Hidden from TalkBack, whose label on
+        // the box already says it.
+        show(SaveState.Idle)
+        val lb = compose.onAllNodesWithText("lb", useUnmergedTree = true)
+        val reps = compose.onAllNodesWithText("reps", useUnmergedTree = true)
+        assertTrue(lb.fetchSemanticsNodes().isNotEmpty())
+        assertTrue(reps.fetchSemanticsNodes().isNotEmpty())
+        lb[0].assertIsDisplayed()
+        lb[0].assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.HideFromAccessibility))
+        reps[0].assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.HideFromAccessibility))
     }
 
     @Test
