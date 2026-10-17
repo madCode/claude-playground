@@ -777,12 +777,10 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                     if (gate == Gate.CHANGED || gate == Gate.OTHER_SESSION) {
                         val now = _state.value as? CarryState.Ready
                         if (now != null && now.documentId == ready.documentId && now.raw == ready.raw) {
+                            // For another session, `reconcile` finds the
+                            // typed-against file holds it and sets the
+                            // numbers aside as text: no Save could reach them.
                             val refused = _saving.value
-                            // Another session: no save can reach the typed-
-                            // against one, so its numbers are set aside as
-                            // text rather than kept on a sheet whose Save
-                            // would only refuse again.
-                            if (gate == Gate.OTHER_SESSION) savedDraft()?.takeIf { it.sheetId == ready.session.sheetId }?.let(::hold)
                             val newRaw = check.newRaw!!
                             val newer = check.newer!!
                             val adopted = CarryState.Ready(
