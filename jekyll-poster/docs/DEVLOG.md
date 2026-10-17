@@ -17,10 +17,11 @@ Times are when each cycle landed, Pacific.
   ([madCode/sample-blog](https://github.com/madCode/sample-blog), live on Pages). The live check
   workflow publishes and deletes one there through the app's own GitHub client.
 - **Used for real:** madCode has published to their own blog from the phone.
-- **Several blogs:** cycles 1 and 2 of 3 are in: blogs under several accounts, a switcher from
-  the title, Remove. Cycle 3 makes the privacy switches per blog.
-- **Waiting on you:** the GitHub App for Sign in with GitHub ([how](GITHUB_APP.md)); the
-  Android SDK in the environment's setup script.
+- **Several blogs:** cycles 1 and 2 of 3 are built (cycle 2 in
+  [#141](https://github.com/madCode/claude-playground/pull/141)): blogs under several accounts,
+  a switcher from the title, Remove. Cycle 3 makes the privacy switches per blog.
+- **Waiting on you:** the Android SDK in the environment's setup script. The GitHub App is
+  registered.
 
 ## Sat 17 Oct
 

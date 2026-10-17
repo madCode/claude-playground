@@ -14,7 +14,6 @@ and moves it to Done.
      Then an audit: a log of a real run's requests per account, and a UX pass on the switcher.
 - [ ] Adding the same GitHub account twice makes two identical sign-ins in Your blogs; reuse the
   existing one (by login and kind) instead
-- [ ] Register the GitHub App and set the repository variables *(you: [how](GITHUB_APP.md))*
 - [ ] Find the Compose-test Room hang (DEVLOG, cycles 1 and 11: likely Compose's main
   dispatcher bound to the first test's looper)
 
@@ -31,6 +30,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] The GitHub App registered, for Sign in with GitHub (madCode)
 - [x] Cycle 28: several sign-ins, the blog switcher, Remove
 - [x] Cycle 27: a queued post goes to its own blog after switching; sign-ins and blogs in the database
 - [x] Cycle 26: design for several sign-ins and blogs (#137)
