@@ -34,7 +34,11 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   writing; if it changed, is empty or can't be read, nothing is saved.
 - Your numbers stay on screen and are listed as text under the message,
   one row per line, so you can enter them again whatever happens next.
-- *Drop my numbers, load the new file* is the one way on.
+- *Drop my numbers, load the new file* is the one way on, shown when
+  there is a readable file to load.
+- If Carry's own write fails and damages the file, *Try again* repairs it
+  rather than taking the damage for someone else's change, and the
+  "may be damaged" warning stays until it does.
 - A BOM or Windows line endings don't count as a change, and Carry's own
   earlier save doesn't trip it.
 - Not handled: a resume can still bring a different session on screen

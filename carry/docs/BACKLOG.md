@@ -258,6 +258,12 @@ These are the open paths to one, hardest first.
 
 
 ### Health and tidying
+- [ ] **Finish an older session.** A *finish this session* button on a
+  past day in Since that opens it on the After tab for editing, with the
+  same save checks, #140's changed-file refusal included. Today only the
+  newest sheet is editable; once a newer sheet lands, an unfinished older
+  one can only be edited by hand. The "record, not a form" rule in
+  DESIGN needs revisiting with it *(you approved)*
 - [ ] **A resume can put another session on screen over pending
   typing.** The refresh on every resume shows the newest session; the
   draft for the old one is then hidden, and the next keystroke replaces

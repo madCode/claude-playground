@@ -230,9 +230,14 @@ numbers someone just entered cannot, so they get the protection:
     row is listed as text ("10 x deadlift: 95 lb, 8 reps"), so the numbers
     can be entered again whatever loads next.
   - One button, *Drop my numbers, load the new file*: full size, well
-    clear of *Try again*, labelled with what it costs.
-  - Carry's own save makes what it wrote the new baseline, so it never
-    trips this itself.
+    clear of *Try again*, labelled with what it costs. Only when the file
+    on disk reads; for a missing, empty or broken one there is nothing to
+    load, so the refusal and the list are all there is.
+  - The baseline is what Carry itself last left on disk: after a good
+    save, what it wrote. After a write that failed and left the file
+    damaged, it is whatever that write left, so *Try again* repairs it
+    unless something else has changed the file since. The "may be
+    damaged" warning stays until a good save.
   - **Not handled:** the refresh on every resume can still put a different
     session on screen while typing is pending, as before. The session
     file is temporary, so that is left for when the brain moves to the
