@@ -165,6 +165,12 @@ object SessionPatch {
     fun apply(original: String, edits: Map<Int, Entry>, added: List<AddedSet> = emptyList()): Outcome {
         val doc = runCatching { Session.json.parseToJsonElement(original) as? JsonObject }.getOrNull()
             ?: return Outcome.Refused("That file isn't JSON this app can read, so nothing was changed.")
+        // The same gate as the read. The file can be replaced between the
+        // read and the save, and a patch copies every top-level key, so
+        // checking here is also what keeps `"schema"` in every file written.
+        if (SessionFiles.labelOf(doc) != SessionFiles.Label.OURS) {
+            return Outcome.Refused("That file's \"schema\" label is missing or isn't one Carry knows, so nothing was changed.")
+        }
 
         unshaped(doc)?.let { return Outcome.Refused(it) }
         val setsIn = (doc["sets"].orAbsent() as? JsonArray).orEmptyList().map { it as JsonObject }

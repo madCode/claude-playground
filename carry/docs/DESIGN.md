@@ -138,7 +138,7 @@ Carry never writes it; anything that needs words goes in the note.
 
 ### When there is no sheet to show
 
-Seven states, and they are separate because each needs different words. A
+Nine states, and they are separate because each needs different words. A
 wrong diagnosis sends someone to fix the wrong thing:
 
 | State | What it means | What it offers |
@@ -148,6 +148,7 @@ wrong diagnosis sends someone to fix the wrong thing:
 | Lost the folder | chosen, but the grant is gone — asked of the system, never guessed from an empty folder | the picker |
 | Nothing to carry | folder readable, no session written yet | the picker |
 | Can't read that session / Carry is out of date | a file that is there but truncated mid-sync, or written by a newer coach | the picker |
+| No format label / Unknown format label | a file that reads as JSON but has no `"schema"`, or one that isn't `gym-session/1` or a later `gym-session/N`; the message names the file and quotes an unknown label | the picker |
 | Folder isn't answering | the read passed 15 seconds; a provider can block forever with no timeout to set | the picker |
 | That's your whole phone | a whole volume picked rather than a folder | the picker |
 
@@ -332,8 +333,42 @@ nearly every movement fresh because the studio changes the setup most
 classes — so most of a real sheet arrives on the same rung, one clean set
 of the three a bump needs. A heading saying they were *close* to anything
 was a claim the rows could not support, and *each one* was a claim about
-scope: the band is the newest sheet only, streaks strictly in progress,
-and five of those.
+scope: streaks strictly in progress, and five of those.
+
+**It is a history, not the newest sheet.** The owner's call, 2026-10-16:
+*"'Since' should be a history, it should include the stuff where I am
+almost at a bump across. Anything where if I happened to do that exercise
+today at that level, I would achieve a bump."* So the band covers every
+movement across the sheets, each taken from the newest sheet that lists
+it. Reading the newest sheet alone blanked the band whenever that sheet
+had nothing part way, a plank-only day for instance.
+
+- **The same movement** is the runner's `key`. A row with no key is only
+  taken from the newest sheet, since nothing could tell whether a later
+  sheet listed it.
+- **The newest listing decides.** If it is out of the band (skipped,
+  *hard*, lighter, a streak finished or none written), the movement is
+  out. An older sheet's count never stands in for it, because that count
+  is from before the newer set. A row on the newer sheet that didn't
+  decode still counts as a listing, by the `key` in its raw JSON. On one
+  sheet listing a movement twice, a skipped copy doesn't hide the other.
+- **A sheet that won't read stops the band.** It may list any movement
+  with a newer count, so rows from older days are left out and the band
+  says "A sheet didn't read, so nothing older than it is shown here." The
+  other class on that sheet's own day still counts, since both were
+  written from the same history.
+- **A row from an older sheet shows that sheet's date**, beside the pips
+  under its name and in its spoken label ("as of Sun 4 Oct"), or "as of an
+  older sheet" when that date won't read or isn't before the newest
+  sheet's. The runner counted it from
+  the history it had when it wrote that sheet. A later set that left no
+  row with that key in the folder, such as a row typed by hand or a day
+  with no sheet, is one Carry cannot see. So the row says how old its
+  count is rather than claiming to be current. The runner's streak has no
+  time limit, so neither does the band; whether it should is the owner's
+  call.
+- **Order and cap are unchanged.** Fewest sets away leads; ties keep the
+  sheets' order, newest sheet first and each in board order; five rows.
 
 **The two numbers on a row are about different things**, and the row says
 so. The pips count clean sets; the weight is what the runner says to use
@@ -575,6 +610,14 @@ Three rules, and a review of the first version found it breaking all three.
   into `line` would have published a weight with no change here and no test
   failing. A row Carry cannot name itself is left out rather than guessed.
 
+- **A line that reads the same is posted once.** The owner's call,
+  2026-10-16: "show it once". *The same* is the same text with case folded
+  and the encoding normalised (NFC); spaces are already collapsed. Nothing
+  looser: "push up" and "pushup", or "10 x squat" and "12 x squat", stay
+  two bullets, because only identical words are certainly one movement.
+  Where a typed line meets the sheet's, the sheet's copy is kept, in the
+  typed one's place. That is the post only: both rows stay in the file.
+
 Sheet rows count when answered with a number, or *done* on a timed row;
 added rows count by name. The post is **shown in full
 before it is sent**. That last one is the load-bearing guard: the text is
@@ -715,9 +758,30 @@ importer drops.
 unknown key is ignored, so a newer runner can add fields without breaking
 an older build; and a `null` where a plain value is expected falls back to
 that field's default, so one odd key cannot cost a whole day's numbers.
-`schema` is the exception and is deliberately nullable: it is what decides
-the file is ours at all, and a non-nullable `schema` would have coercion
-hand the gate its own default back.
+
+**`"schema": "gym-session/1"` is required.** It is checked on the raw JSON
+before anything is decoded, so no default or coercion can vouch for a
+file. A missing or `null` label, or any other value (a bare number
+included), is refused with the file named and the label quoted, not as
+damage: the file read fine, and "wait for the sync" would not help. A
+later `gym-session/N` still says to update Carry. The coach writes the
+label on every file and its importer refuses a file without one.
+
+- **The save checks the file on disk**, just before writing: the form
+  was filled against bytes read earlier, and a file replaced since by
+  one whose label isn't ours is not written over.
+- **A sheet on screen is still held** over a refresh that finds a label
+  problem, as over any unreadable refresh: the newest file may not be the
+  one on screen, and dropping the sheet would hide the owner's typing.
+  The save's own check is what stops a write.
+- **The label is read at the top level.** The `gym-session/N` regex is
+  only for a file cut off mid-sync, where there is no JSON to read.
+- **An unknown label is quoted back safely**: without control, format or
+  line-separator characters, and cut at 40 characters with an ellipsis.
+- **Every file Carry writes keeps the label**, since a patch copies every
+  top-level key.
+- The Since tab counts unlabelled files in their own sentence. The
+  new-sheet notification goes by file name and does not read the label.
 
 **The rows are decoded one at a time**, so a row this build cannot read
 costs that row rather than the day — a value of the wrong type, or a
@@ -732,7 +796,7 @@ that is not an object, two rows sharing a `ref` — and both the read and
 the save refuse exactly those. (What depends on the owner's own input,
 like an edit naming a row that has gone, stays in the save: it is
 answerable from the screen.) On top of that the read refuses a file that
-is not JSON, one whose `schema` is not ours, and one whose `sheet_id` or
+is not JSON, one whose `schema` is missing or not ours, and one whose `sheet_id` or
 `date` will not read.
 
 A reader that accepts what its writer rejects is worse than one that
@@ -750,16 +814,17 @@ The Since tab is the exception to all of this: a day that read short is
 left out of its history entirely. Its figures are claims rather than a
 sheet, and "heaviest 50" over a day whose heaviest row did not decode is
 a confident wrong number. The one figure taken from the unfiltered read
-is the newest sheet behind "part way to a bump", because dropping a
-short day there would not leave a gap — it would promote yesterday's
-sheet into the answer to "where do I stand today".
+is "part way to a bump", because dropping a short day there would not
+leave a gap — it would hand that day's movements to an older sheet's
+counts.
 
 A newest sheet that will not parse AT ALL is not in that read either, so
 the band is **withheld** and says so, rather than quietly becoming the
 previous session's. That needs the filenames, which `Growth` never sees:
 it cannot tell a newest sheet that failed from a folder that ends earlier
 — they are the same input — so the question is answered one layer up and
-passed in. An older file failing costs the band nothing.
+passed in. An older file failing cuts the band at that file's day
+rather than withholding it, and says so under the rows.
 
 The question asked there is about the newest **date**, not the newest
 file: two classes on one day are two files, and if either read there is a
@@ -769,7 +834,9 @@ which is what the Before tab says about the same file.
 
 The sentence says *the newest sheet*, never *today's*. The newest file is
 the newest by name, which on a rest day is last week's and can be dated
-ahead; the Before tab is careful about exactly this.
+ahead; the Before tab is careful about exactly this. The band orders the
+sheets by the same rule, so on a two-class day the Before tab's sheet
+leads.
 
 Left out, but not left out quietly: the tab says how many sessions are
 not in its totals, above the figures they are missing from. This is the
@@ -782,9 +849,8 @@ other way to check.
 
 Three words in that sentence are load-bearing. **Sessions**, not days:
 two classes on one date are two files. **These totals**, not "here": the
-bump band above is drawn from the newest sheet whether it read short or
-not, so "isn't counted here" would be contradicted by the first thing
-under it. And no **part of**: a file where every row failed still parses,
+bump band above reads every sheet whether it read short or not, so
+"isn't counted here" would be contradicted by the first thing under it. And no **part of**: a file where every row failed still parses,
 so "part" is false in exactly the worst case. It ends with the clause the
 Before tab has and this one was missing — *"a sync part way through can
 do that"* — because a file being replaced reads as zero bytes for a

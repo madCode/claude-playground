@@ -535,6 +535,26 @@ class LogScreenTest {
     }
 
     @Test
+    fun `a line the sheet already has, typed again by hand, is in the post once`() {
+        // The owner's answer, 2026-10-16: "show it once". The sheet lists
+        // "10 x bench press" and the owner also added a row with that whole
+        // line as its name. The preview shows one bullet, unmarked, since
+        // its digits are the board's prescription and not a weight.
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        added.value = listOf(AddedSet(id = "a", name = "10 x bench press", weight = 45.0))
+        show(SaveState.Saved)
+        reach("Post what 2G did")
+        compose.onNodeWithText("Post what 2G did").performClick()
+        reach("Send it")
+        val preview = compose.onNode(hasText("2G floor block", substring = true))
+        preview.assertIsDisplayed()
+        val text = preview.fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("")
+        assertEquals(text, 1, text.lines().count { it.endsWith("- 10 x bench press") })
+        compose.onNodeWithText("⚠ marks the lines", substring = true).assertDoesNotExist()
+        shoot("31-post-repeated-line")
+    }
+
+    @Test
     fun `with nothing flagged the caption speaks for itself`() {
         // The other half of the caption's description, and the one a
         // regression could break silently: with nothing to flag there must

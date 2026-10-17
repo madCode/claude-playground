@@ -35,6 +35,41 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 - Files that already say `hard` still read, and Carry leaves the field
   alone.
 - Nothing drops out of the post: it never counted *hard* as "did it".
+## 2026-10-16 — cycle 61: a session file must say what it is
+
+- A file with no `"schema"` line used to be read as a session, because
+  the app filled in the label itself. Now only `gym-session/1` is read.
+- A missing or unknown label gets its own message naming the file
+  ("No format label", "Unknown format label"), not "didn't read
+  cleanly", since waiting for a sync won't fix it. The Since tab counts
+  such files in their own sentence.
+- The save refuses one too, so every file Carry writes keeps the label.
+- Checked first: the laptop's copy of the synced folder held only
+  session files, all labelled `gym-session/1`. The phone's side wasn't
+  checked.
+## 2026-10-16 — cycle 60: "part way to a bump" is a history
+
+- The band on the Since tab read only the newest sheet, so a day whose
+  sheet had nothing part way (a plank-only day, an empty sheet) showed
+  nothing. The owner asked for a history: every movement where doing it
+  today at that level would earn a bump.
+- It now covers every movement across the sheets, each from the newest
+  sheet that lists it. If that newest listing is out of the band (marked
+  hard, done lighter, finished), an older count does not stand in.
+- A row from an older sheet shows that sheet's date, on screen and
+  aloud, because a later set Carry can't see could have moved it. No
+  cutoff yet; that is a question in the backlog.
+- A sheet that won't read stops the band at its day, and the band says
+  so, since that sheet may hold newer counts.
+## 2026-10-16 — cycle 59: a repeated line is posted once
+
+- A row added by hand whose name reads the same as a line the sheet
+  already has (`10 x bench press` typed beside the sheet's own) used to
+  put two identical bullets in the post, the typed one marked as if it
+  held a weight. The owner's answer was "show it once": the post now
+  carries one bullet, the sheet's, unmarked. "The same" is the same
+  text ignoring case and how an accent was encoded; "push up" and
+  "pushup" stay two. Both rows are still saved.
 
 ## 2026-10-16 — cycle 58: the After screen checks what the importer refuses
 

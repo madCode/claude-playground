@@ -116,7 +116,9 @@ fun SinceScreen(
         // ABOVE the empty check, deliberately: if every file in the folder
         // read short there are no days at all, and "Nothing logged yet" on
         // its own would be a flat lie about a folder full of sessions.
-        listOfNotNull(shortNote(since.short), newerSchemaNote(since.newerSchema)).forEach {
+        listOfNotNull(
+            shortNote(since.short), newerSchemaNote(since.newerSchema), unlabelledNote(since.unlabelled),
+        ).forEach {
             Text(
                 "\u26a0 $it", color = Look.BrickInk, fontFamily = Look.Name,
                 fontSize = Look.SmallSize,
@@ -135,7 +137,7 @@ fun SinceScreen(
                 // the real folder once. "Could not be counted" is true of
                 // both, and this is the sentence that tells the owner what
                 // to do next, so it has to survive the mixed case.
-                if (since.short > 0 || since.newerSchema > 0) "Nothing in that folder could be counted."
+                if (since.short > 0 || since.newerSchema > 0 || since.unlabelled > 0) "Nothing in that folder could be counted."
                 else "Nothing logged yet. This fills in as you save sessions.",
                 color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
                 modifier = Modifier.padding(top = 14.dp),
@@ -144,7 +146,7 @@ fun SinceScreen(
         }
 
         LazyColumn(Modifier.weight(1f), state = list) {
-            if (since.nearBump.isNotEmpty()) {
+            if (since.nearBump.isNotEmpty() || since.bandCut) {
                 // "Close to a bump" was a claim the rows could not
                 // support. The runner counts a streak from the first clean
                 // set, so a movement done ONCE arrives here at 1 of 3 --
@@ -156,12 +158,12 @@ fun SinceScreen(
                 //
                 // The pips are worth keeping; the word "close" was not --
                 // and nor was "each one", which read as every movement
-                // trained. This band is five exclusions deep: one sheet
-                // (so the second class of a two-class day is absent), rows
-                // not skipped, a streak the runner wrote, one strictly in
-                // progress, a suggested weight (so a bodyweight movement
-                // part way through is dropped), and then five of those.
-                // This claims nothing but what every row in it IS.
+                // trained. Each movement is its newest listing across the
+                // sheets, and that listing must be: not skipped, a streak
+                // the runner wrote, one strictly in progress, a suggested
+                // weight (so a bodyweight movement part way through is
+                // dropped); then five of those. A row from an older sheet
+                // says its date. This claims nothing but what every row IS.
                 item { Band("Part way to a bump") }
                 // Fewest sets away first, and capped so the band cannot
                 // take the screen from the ones under it. On a sheet where
@@ -171,6 +173,15 @@ fun SinceScreen(
                 items(since.nearBump.take(MAX_BUMP_ROWS)) { BumpRow(it) }
                 if (since.nearBump.size > MAX_BUMP_ROWS) {
                     item { More(since.nearBump.size - MAX_BUMP_ROWS) }
+                }
+                if (since.bandCut) {
+                    item {
+                        Text(
+                            "A sheet didn't read, so nothing older than it is shown here.",
+                            color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
+                            modifier = Modifier.padding(vertical = 10.dp),
+                        )
+                    }
                 }
             } else if (since.newestRead != Growth.NewestRead.FINE) {
                 // The heading with nothing under it, which the band never
@@ -194,10 +205,12 @@ fun SinceScreen(
                         // intact and the APP is what is out of date,
                         // which is what the other screen says about the
                         // same file.
-                        if (since.newestRead == Growth.NewestRead.NEWER_SCHEMA) {
-                            "The newest sheet needs a newer Carry. Rather than show an older day's, this is blank."
-                        } else {
-                            "The newest sheet didn't read. Rather than show an older day's, this is blank."
+                        when (since.newestRead) {
+                            Growth.NewestRead.NEWER_SCHEMA ->
+                                "The newest sheet needs a newer Carry. Rather than show an older day's, this is blank."
+                            Growth.NewestRead.NO_LABEL ->
+                                "The newest sheet has a missing or unknown format label. Rather than show an older day's, this is blank."
+                            else -> "The newest sheet didn't read. Rather than show an older day's, this is blank."
                         },
                         color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.SmallSize,
                         modifier = Modifier.padding(vertical = 10.dp),
@@ -279,7 +292,13 @@ private fun spoken(bump: Growth.Bump): String = listOfNotNull(
     // made that claim; it shows three things side by side. This label
     // joined them into a sentence, which is how it became one.
     "next at ${figure(bump.weight)} pounds",
+    bump.asOf?.let { "as of ${asOfText(it)}" },
 ).joinToString(", ")
+
+/** A [Growth.Bump.asOf] in words: the sheet's date, or "an older sheet"
+ *  when its date can't be shown. */
+private fun asOfText(asOf: String): String =
+    if (asOf == Growth.OLDER_SHEET) "an older sheet" else SessionFiles.formatDate(asOf)
 
 /** The one actionable thing in the data: another clean set moves it. */
 @Composable
@@ -300,10 +319,20 @@ private fun BumpRow(bump: Growth.Bump) {
         Look.family(bump.family)?.let { hue ->
             Box(Modifier.width(3.dp).height(22.dp).clip(RoundedCornerShape(2.dp)).background(hue))
         }
-        Text(
-            bump.name, color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.NameSize,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-        )
+        // The date on a line of its own under the name, so neither cuts the
+        // other at large text: it is what says this count may have moved.
+        Column(Modifier.weight(1f)) {
+            Text(
+                bump.name, color = Look.Chalk, fontFamily = Look.Name, fontSize = Look.NameSize,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(),
+            )
+            bump.asOf?.let {
+                Text(
+                    "as of ${asOfText(it)}", color = Look.ChalkDim, fontFamily = Look.Name,
+                    fontSize = Look.SmallSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
         // Past ten, pips cannot tell the truth and are not countable at a
         // glance anyway. Clamping `needed` alone LIES: 12 of 40 draws ten
         // lit pips and no unlit ones -- the picture of a bump already
@@ -564,6 +593,17 @@ internal fun shortNote(sessions: Int): String? = when {
  * the cost of on the Before tab.
  */
 private const val SETTLES = "A sync part way through can do that."
+
+/**
+ * Files, not sessions: with no label saying so, nothing says they are
+ * sessions. Apart from [shortNote] because they read fine and won't
+ * settle on their own, so "a sync part way through" would be wrong.
+ */
+internal fun unlabelledNote(files: Int): String? = when {
+    files <= 0 -> null
+    files == 1 -> "1 file in the folder has a missing or unknown \"schema\" label, so it isn't counted as a session."
+    else -> "$files files in the folder have a missing or unknown \"schema\" label, so they aren't counted as sessions."
+}
 
 /**
  * Said apart from [shortNote] because a newer schema is not damage.

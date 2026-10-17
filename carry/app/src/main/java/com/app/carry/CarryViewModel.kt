@@ -204,6 +204,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      */
     internal var write: (String, String) -> Saved = { id, text -> folder.save(id, text) }
 
+    /** The file as it is on disk now, read just before a write. */
+    internal var readNow: (String) -> String? = { folder.read(it) }
+
     /** The same seam for the folder's history, which is read on its own
      *  schedule: on resume with the sheet, and again whenever a save has
      *  changed what the folder holds. */
@@ -460,10 +463,19 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                         rereadHistory()
                         return@launch
                     }
+                    // The patch was built from the bytes last read. If the
+                    // file has since been replaced by one whose label isn't
+                    // ours, a write would put our session over it.
                     val result = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        write(ready.documentId, text)
+                        val label = readNow(ready.documentId)?.let(SessionFiles::labelGuess)
+                        if (label != null && label != SessionFiles.Label.OURS) null
+                        else write(ready.documentId, text)
                     }
                     _saving.value = when (result) {
+                        null -> SaveState.Failed(
+                            "The session file was replaced by one whose \"schema\" label is missing or isn't one Carry knows. Nothing was written.",
+                            damaged = false,
+                        )
                         Saved.YES -> {
                             // ALL of this is "only if nothing newer arrived
                             // while we wrote". It used to guard the one

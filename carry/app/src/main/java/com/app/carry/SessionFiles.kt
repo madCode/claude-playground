@@ -3,6 +3,7 @@ package com.app.carry
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.decodeFromJsonElement
 
 /**
@@ -75,6 +76,64 @@ object SessionFiles {
      * a shared space -- other things write there, and a half-synced file is
      * normal, not exceptional.
      */
+    /**
+     * What a file's `"schema"` says about it. Only [OURS] is read.
+     *
+     * A missing label is NOT taken as ours. Every file the coach writes
+     * carries `gym-session/1`, and its importer refuses a file without
+     * it; a reader that accepted one would open a form for a file the
+     * importer then drops, or read another tool's JSON as a session.
+     */
+    enum class Label { OURS, NEWER, MISSING, UNKNOWN }
+
+    /** [Label] of [doc]'s `schema`: missing (absent or null), ours, a later
+     *  `gym-session/N`, or anything else, a bare number included. */
+    fun labelOf(doc: JsonObject): Label {
+        val value = doc["schema"]?.takeIf { it !is JsonNull } ?: return Label.MISSING
+        val text = (value as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return Label.UNKNOWN
+        if (text == Session.SCHEMA) return Label.OURS
+        val version = LABEL.matchEntire(text)?.groupValues?.get(1)?.toIntOrNull()
+        return if (version != null && version > 1) Label.NEWER else Label.UNKNOWN
+    }
+
+    /** [labelOf] for raw text, or null when it is not a JSON object at all
+     *  -- that is damage, which is a different message. */
+    fun labelOf(text: String): Label? = runCatching {
+        Session.json.parseToJsonElement(text) as? JsonObject
+    }.getOrNull()?.let(::labelOf)
+
+    /**
+     * [labelOf], or for text that isn't JSON (truncated mid-sync) a later
+     * `gym-session/N` spotted by [looksLikeNewerSchema]. The regex only
+     * for the truncated case: it matches a `"schema"` nested anywhere.
+     */
+    fun labelGuess(text: String): Label? =
+        labelOf(text) ?: Label.NEWER.takeIf { looksLikeNewerSchema(text) }
+
+    /**
+     * The label as written, made safe to show, for the message that says
+     * Carry doesn't know it: no control, format or line-separator
+     * characters (they can reorder or break the line), and cut at
+     * [MAX_LABEL] code points with an ellipsis, so a cut is visible and
+     * never splits a character.
+     */
+    fun labelText(text: String): String? {
+        val raw = runCatching {
+            (Session.json.parseToJsonElement(text) as? JsonObject)?.get("schema")
+        }.getOrNull()?.takeIf { it !is JsonNull }?.toString() ?: return null
+        val shown = raw.readable().filter { c ->
+            val type = Character.getType(c).toByte()
+            !c.isISOControl() && type != Character.FORMAT &&
+                type != Character.LINE_SEPARATOR && type != Character.PARAGRAPH_SEPARATOR
+        }
+        return if (shown.codePointCount(0, shown.length) <= MAX_LABEL) shown
+        else shown.substring(0, shown.offsetByCodePoints(0, MAX_LABEL)) + "\u2026"
+    }
+
+    private const val MAX_LABEL = 40
+
+    private val LABEL = Regex("gym-session/(\\d+)")
+
     /** A readable file whose schema we do not know -- "update the app" and
      *  "wait for the sync" need different words. */
     fun looksLikeNewerSchema(text: String): Boolean =
@@ -103,8 +162,8 @@ object SessionFiles {
         val rows = doc?.let(::rowsIn)
         // The head is decoded with `sets` taken out, so one bad row cannot
         // take the date and the class tag with it.
-        val head = doc?.let { Session.json.decodeFromJsonElement<Session>(JsonObject(it - "sets")) }
-        if (rows == null) null else head?.takeIf { it.schema == Session.SCHEMA }?.copy(sets = rows)
+        if (doc == null || rows == null || labelOf(doc) != Label.OURS) null
+        else Session.json.decodeFromJsonElement<Session>(JsonObject(doc - "sets")).copy(sets = rows)
     } catch (_: IllegalArgumentException) {
         // SerializationException extends this, so one catch covers both.
         null
