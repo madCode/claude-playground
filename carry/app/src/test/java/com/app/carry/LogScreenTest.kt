@@ -270,6 +270,27 @@ class LogScreenTest {
     }
 
     @Test
+    fun `a save refused because the file changed is announced and offers the new sheet`() {
+        var discarded = 0
+        val why = "This session changed since you opened it, so nothing was written. Your numbers are still here."
+        compose.setContent {
+            LogScreen(
+                session = SampleSession.today,
+                entries = mapOf(0 to SessionPatch.Entry(weight = 45.0, reps = 10)), added = emptyList(),
+                onEdit = { _, _ -> }, onAdd = {}, onEditAdded = { _, _ -> },
+                onSave = {}, saving = SaveState.Failed(why, damaged = false, newSheet = true),
+                onDiscard = { discarded++ },
+            )
+        }
+        reach("Try again")
+        compose.onNodeWithText(why).assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+        shoot("40-save-file-changed")
+        compose.onNodeWithText("Use the new sheet instead").performClick()
+        assertEquals(1, discarded)
+    }
+
+    @Test
     fun `a row with a number and no name asks for the name in the row`() {
         // The save refuses this row, so the ask belongs in the box that
         // fixes it. Finding out at the save button is how the number got

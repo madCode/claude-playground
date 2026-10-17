@@ -193,7 +193,7 @@ fun LogScreen(
                 itemsIndexed(added, sessionKey, onEditAdded)
                 item { AddRow(onAdd, loud = false) }
             }
-            item { SaveButton(saving, onSave, added) }
+            item { SaveButton(saving, onSave, added, onDiscard) }
             // Only once it is written down. Before that the post would be
             // offering to publish numbers that are not yet anywhere, and
             // the moment to hand intel over is when the logging is done.
@@ -727,11 +727,17 @@ sealed interface SaveState {
     data object Saved : SaveState
     /** Not saved. [damaged] means the file itself needs rescuing, which is
      *  a different thing to tell someone than "try again". */
-    data class Failed(val why: String, val damaged: Boolean) : SaveState
+    data class Failed(
+        val why: String,
+        val damaged: Boolean,
+        /** The file changed on disk since it was read: offer to take it,
+         *  as the rewritten-session warning does. */
+        val newSheet: Boolean = false,
+    ) : SaveState
 }
 
 @Composable
-private fun SaveButton(state: SaveState, onSave: () -> Unit, added: List<AddedSet>) {
+private fun SaveButton(state: SaveState, onSave: () -> Unit, added: List<AddedSet>, onDiscard: () -> Unit) {
     val label = when (state) {
         SaveState.Idle -> "Save"
         SaveState.Saving -> "Saving…"
@@ -748,6 +754,19 @@ private fun SaveButton(state: SaveState, onSave: () -> Unit, added: List<AddedSe
                 // listener no other sign that nothing was saved.
                 modifier = Modifier.padding(bottom = 8.dp).semantics { liveRegion = LiveRegionMode.Polite },
             )
+            // Here as well as in the warning at the top, because this is
+            // where the owner just tapped, and the top may be scrolled away.
+            if (state.newSheet) {
+                Text(
+                    "Use the new sheet instead",
+                    color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.After.Note,
+                    modifier = Modifier
+                        .padding(bottom = 10.dp)
+                        .border(1.dp, Look.RuleStrong, RoundedCornerShape(4.dp))
+                        .clickable(onClick = onDiscard)
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                )
+            }
         }
         // In the button's own item and above it, where the owner just
         // tapped: a separate item below could land off the bottom of the

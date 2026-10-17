@@ -185,6 +185,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
 
     private class InstallFailed(cause: Throwable) : Exception(cause)
 
+    /** Why a save stopped before writing, from the file as it is on disk. */
+    private enum class Gate { GONE, NOT_OURS, CHANGED }
+
     /** How the folder is read. Replaced in tests so the stall path and the
      *  keep-last-good path can be exercised without a real provider; there
      *  is no other way in, because the read is deliberately not injectable
@@ -463,19 +466,38 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                         rereadHistory()
                         return@launch
                     }
-                    // The patch was built from the bytes last read. If the
-                    // file has since been replaced by one whose label isn't
-                    // ours, a write would put our session over it.
-                    val result = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        val label = readNow(ready.documentId)?.let(SessionFiles::labelGuess)
-                        if (label != null && label != SessionFiles.Label.OURS) null
-                        else write(ready.documentId, text)
+                    // The patch was built from the bytes last read, so any
+                    // other bytes on disk now -- a re-run, a sync, a file
+                    // gone -- would be overwritten blind. Compared by
+                    // content, not timestamp: sync services touch mtimes.
+                    // After a save of our own, `ready.raw` is what we wrote,
+                    // so Carry never trips this on itself.
+                    val (gate, result) = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        val onDisk = readNow(ready.documentId)
+                        val label = onDisk?.let(SessionFiles::labelGuess)
+                        val gate = when {
+                            onDisk == null -> Gate.GONE
+                            label != null && label != SessionFiles.Label.OURS -> Gate.NOT_OURS
+                            onDisk != ready.raw -> Gate.CHANGED
+                            else -> null
+                        }
+                        gate to if (gate == null) write(ready.documentId, text) else null
                     }
-                    _saving.value = when (result) {
-                        null -> SaveState.Failed(
+                    _saving.value = when (gate) {
+                        Gate.GONE -> SaveState.Failed(
+                            "Couldn't read the session file just before saving. It may have been moved or deleted. Nothing was written; your numbers are still here.",
+                            damaged = false,
+                        )
+                        Gate.NOT_OURS -> SaveState.Failed(
                             "The session file was replaced by one whose \"schema\" label is missing or isn't one Carry knows. Nothing was written.",
                             damaged = false,
                         )
+                        Gate.CHANGED -> SaveState.Failed(
+                            "This session changed since you opened it, so nothing was written. Your numbers are still here.",
+                            damaged = false, newSheet = true,
+                        )
+                        null -> null
+                    } ?: when (result!!) {
                         Saved.YES -> {
                             // ALL of this is "only if nothing newer arrived
                             // while we wrote". It used to guard the one
@@ -530,6 +552,11 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                     // "Saving..." over a file that is already written, with
                     // the retry guard refusing another tap.
                     if (_saving.value == SaveState.Saved) rereadHistory()
+                    // Reading the changed file in is what puts the new sheet
+                    // on screen: with a draft, `reconcile` keeps the typing
+                    // and raises the rewritten-session warning, so "Use the
+                    // new sheet instead" discards toward the right bytes.
+                    if (gate == Gate.CHANGED) refresh()
                 }
             }
         }

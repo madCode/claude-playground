@@ -345,6 +345,9 @@ class CarryViewModelTest {
         onWrite: (String) -> Unit = {},
     ): String? {
         var written: String? = null
+        // The disk holds what the page read, as it does unless something
+        // else wrote it; the tests of that case set their own.
+        model.readNow = { (model.state.value as? CarryState.Ready)?.raw }
         model.write = { _, text -> written = text; onWrite(text); outcome }
         model.save()
         // Settled, not "no longer Saving": a refresh landing during the
@@ -486,10 +489,115 @@ class CarryViewModelTest {
         assertTrue("expected a refusal, got $state", state is SaveState.Failed)
         assertTrue((state as SaveState.Failed).why, "\"schema\" label" in state.why)
 
-        // The control: the same save over a labelled file goes through.
-        model.readNow = { """{"schema":"gym-session/1","sheet_id":"x","date":"2026-10-17","sets":[]}""" }
+        // The control: the same save over the file it was typed against goes through.
+        model.readNow = { (model.state.value as CarryState.Ready).raw }
         model.save(); settled(model)
         assertEquals(1, wrote)
+    }
+
+    /** A folder of one file: what the page reads, what a save checks and what it writes. */
+    private class Disk(var text: String?) { var writes = 0 }
+
+    private fun CarryViewModel.on(disk: Disk) {
+        read = { ready(disk.text!!) }
+        readNow = { disk.text }
+        write = { _, text -> disk.writes++; disk.text = text; Saved.YES }
+    }
+
+    @Test
+    fun `a save refuses a file that changed since it was read, keeps the typing, and offers the new sheet`() = runTest(dispatcher) {
+        // madCode, 2026-10-17: "refuse and offer the new sheet". Any change
+        // counts, not only one the identity check can see.
+        val handle = SavedStateHandle()
+        val model = viewModel(handle)
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+        val rewritten = sheet.replace("10 x deadlift", "12 x deadlift")
+        disk.text = rewritten
+        model.save(); settled(model)
+
+        assertEquals("nothing may reach the folder", 0, disk.writes)
+        val state = model.saving.value
+        assertTrue("expected a refusal, got $state", state is SaveState.Failed)
+        assertTrue((state as SaveState.Failed).why, "changed since you opened it" in state.why)
+        assertTrue("the refusal offers the new sheet", state.newSheet)
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+        assertTrue("the typing is still recoverable", handle.keys().isNotEmpty())
+        // The changed file is read in, so the offer discards toward it.
+        assertEquals(rewritten, (model.state.value as CarryState.Ready).raw)
+        assertTrue(model.fileMovedUnderEdits.value)
+
+        model.discardEdits()
+        assertEquals(emptyMap<Int, SessionPatch.Entry>(), model.edits.value)
+        assertEquals(SaveState.Idle, model.saving.value)
+        assertEquals(rewritten, disk.text)
+    }
+
+    @Test
+    fun `Carry's own save is the file the next save checks against`() = runTest(dispatcher) {
+        val model = viewModel()
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        model.save(); settled(model)
+        assertEquals(SaveState.Saved, model.saving.value)
+
+        model.edit(1, SessionPatch.Entry(weight = 45.0, reps = 10))
+        model.save(); settled(model)
+        assertEquals("the second save must not see the first as a change", SaveState.Saved, model.saving.value)
+        assertEquals(2, disk.writes)
+        assertTrue(disk.text!!, "45" in disk.text!! && "95" in disk.text!!)
+    }
+
+    @Test
+    fun `a file deleted underneath is not written, and the typing stays`() = runTest(dispatcher) {
+        val handle = SavedStateHandle()
+        val model = viewModel(handle)
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+        disk.text = null
+        model.save(); settled(model)
+
+        assertEquals(0, disk.writes)
+        val state = model.saving.value as SaveState.Failed
+        assertTrue(state.why, "moved or deleted" in state.why)
+        assertFalse("there is no new sheet to offer", state.newSheet)
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+        assertTrue(handle.keys().isNotEmpty())
+    }
+
+    @Test
+    fun `after the process dies, the file read on restore is the one a save checks`() = runTest(dispatcher) {
+        // Only the draft survives. A change made while the app was dead is
+        // caught on restore by the draft's fingerprint, which raises the
+        // rewritten-session warning; from then on the re-read file is what
+        // a save compares against, so the owner can save once they've seen it.
+        val handle = SavedStateHandle()
+        val disk = Disk(sheet)
+        val first = viewModel(handle)
+        first.on(disk)
+        first.refresh(); settled(first)
+        first.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+        // A row nobody typed into, so the rows still line up.
+        disk.text = sheet.replace("10 x bench press", "12 x bench press")
+        val reborn = viewModel(handle)
+        reborn.on(disk)
+        reborn.refresh(); settled(reborn)
+        assertTrue("the change while dead is said on restore", reborn.fileMovedUnderEdits.value)
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), reborn.edits.value[0])
+
+        reborn.save(); settled(reborn)
+        assertEquals(SaveState.Saved, reborn.saving.value)
+        assertEquals(1, disk.writes)
     }
 
     @Test
@@ -503,6 +611,7 @@ class CarryViewModelTest {
         model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
 
         var wrote = 0
+        model.readNow = { (model.state.value as CarryState.Ready).raw }
         model.write = { _, _ -> wrote++; model.save(); Saved.YES }
         model.save()
         settled(model)
