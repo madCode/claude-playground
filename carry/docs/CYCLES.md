@@ -7,6 +7,13 @@ that hold become rules in CLAUDE.md or the cycles skill.
 
 ## 2026-10-16 run (cloud session)
 
+### Cycle 59 — build: a repeated line is posted once
+
+- **Check a new screenshot's number against every `shoot(` in the test
+  tree.** The started branch had `22-post-repeated-line` beside an
+  existing `22-timed-row` and `22-past-session`; the PNGs sort together
+  and a reviewer reads the wrong pair. `grep -rhoE 'shoot\("[0-9]+' app/src/test`.
+
 ### Cycle 58 — build: the After screen checks what the importer refuses
 
 - **Read the parse next to the check.** The range check was the ask, but

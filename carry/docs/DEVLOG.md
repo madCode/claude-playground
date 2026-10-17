@@ -28,6 +28,16 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-16 — cycle 59: a repeated line is posted once
+
+- A row added by hand whose name reads the same as a line the sheet
+  already has (`10 x bench press` typed beside the sheet's own) used to
+  put two identical bullets in the post, the typed one marked as if it
+  held a weight. The owner's answer was "show it once": the post now
+  carries one bullet, the sheet's, unmarked. "The same" is the same
+  text ignoring case and how an accent was encoded; "push up" and
+  "pushup" stay two. Both rows are still saved.
+
 ## 2026-10-16 — cycle 58: the After screen checks what the importer refuses
 
 - A weight over 1000, reps over 1000, or reps with a fraction now show a

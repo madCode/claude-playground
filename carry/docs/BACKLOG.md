@@ -93,16 +93,6 @@ not a thing anyone is blocked from building.
   same question: is a digit test the right instrument at all, or should
   this be a "you typed this name, read it" prompt with no claim about
   weights? Needs deciding before patching *(audit: security)*
-- [ ] **Two identical bullets can appear in one post, and both get
-  marked.** `IntelPost` dedupes by (prescription, name), which is right —
-  it is what keeps a hand-typed row from eating the sheet's own — but a
-  name typed WITH its scheme (`10 total x squat`, no prescription) renders
-  the same line as the sheet's (`10 total x` + `squat`). The pair survives
-  the dedupe, the post carries the bullet twice, and the preview marks
-  both. `IntelPostTest` already constructs this state on purpose, so the
-  behaviour is pinned; what is undecided is whether the post should carry
-  it *(audit: security)*
-
 ### Wrong numbers, or a road to one
 - [x] ~~**A weight over 1000 saves on the phone, and the importer then
   refuses the whole day.**~~ **Done 2026-10-16:** the owner asked for the
@@ -454,6 +444,11 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **Two identical bullets could appear in one post, and both got
+  marked.** A line that reads the same (case folded, NFC) is now posted
+  once, and where a typed line meets the sheet's the sheet's copy is kept,
+  unmarked. Different words, even near-identical ones, stay two bullets;
+  the file keeps both rows *(you asked: "show it once")*
 - [x] **The bars on *Heaviest by what it trains* are gone; the number
   stays.** They encoded every weight in the family with no scale and no
   time direction, and their count varied with how many sets the family had,
