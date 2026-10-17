@@ -56,23 +56,22 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
             // On the main thread, where navigation must happen: Room's flow can hand it over elsewhere.
             .collect { withContext(Dispatchers.Main) { nav.navigate("connect") { popUpTo(0) { inclusive = true } } } }
     }
+    // Home, and for a blog added beside others, its Blog & privacy over it: its switches start off.
+    val connected = { openPrivacy: Boolean ->
+        nav.navigate("home") { popUpTo(0) { inclusive = true } }
+        if (openPrivacy) nav.navigate("privacy")
+    }
     NavHost(nav, startDestination = if (signedIn == true) "home" else "connect") {
         composable("connect") {
-            ConnectScreen(viewModel { ConnectViewModel(container) }) {
-                nav.navigate("home") { popUpTo(0) { inclusive = true } }
-            }
+            ConnectScreen(viewModel { ConnectViewModel(container) }) { connected(it) }
         }
         composable("add-sign-in") {
-            ConnectScreen(viewModel { ConnectViewModel(container) }, onCancel = { nav.popBackStack() }) {
-                nav.navigate("home") { popUpTo(0) { inclusive = true } }
-            }
+            ConnectScreen(viewModel { ConnectViewModel(container) }, onCancel = { nav.popBackStack() }) { connected(it) }
         }
         composable("add-blog/{signIn}", arguments = listOf(navArgument("signIn") { type = NavType.LongType })) { entry ->
             val signIn = entry.arguments!!.getLong("signIn")
             // Straight to the sign-in's repositories, with its token already in hand.
-            ConnectScreen(viewModel { ConnectViewModel(container).also { it.addBlogTo(signIn) } }, onCancel = { nav.popBackStack() }) {
-                nav.navigate("home") { popUpTo(0) { inclusive = true } }
-            }
+            ConnectScreen(viewModel { ConnectViewModel(container).also { it.addBlogTo(signIn) } }, onCancel = { nav.popBackStack() }) { connected(it) }
         }
         composable("blogs") {
             BlogsScreen(

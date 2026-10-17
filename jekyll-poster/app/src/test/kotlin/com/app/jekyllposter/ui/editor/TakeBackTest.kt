@@ -37,7 +37,7 @@ class TakeBackTest {
         app.publishNow = false
         val id = runBlocking {
             app.signIn()
-            c.settings.setSendAtRandomTime(true)
+            c.privacy.update(SAMPLE_BLOG) { it.copy(sendAtRandomTime = true) }
             c.drafts.insert(Draft(title = "Quiet", body = "Hello.", state = PostState.Queued, sendAfter = System.currentTimeMillis() + 3_600_000))
         }
         val editor = open(id)

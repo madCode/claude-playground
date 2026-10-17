@@ -1,5 +1,13 @@
 package com.app.jekyllposter.ui.settings
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -46,20 +54,32 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Blog & privacy") },
+                title = {
+                    Column {
+                        Text("Blog & privacy")
+                        // These switches are this blog's own: the page names which blog it is.
+                        listOfNotNull(state.title, state.repoName, state.login?.let { "@$it" }).takeIf { it.isNotEmpty() }?.let {
+                            Text(
+                                it.joinToString(" · "), style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
+            if (state.isNew) NewBlogBanner(state.title ?: state.repoName ?: "this blog")
             Heading("Writing anonymously")
             when {
                 state.anonymous -> Row("All set for writing anonymously", "Every switch below that keeps your name, place and habits off the blog is on.")
                 state.settingUpAnonymous -> Row("Setting up…", "Turning on the switches below.")
                 else -> Row(
                     "Set up for writing anonymously",
-                    "Turns on the switches below that keep your name, place and habits off the blog. See also “Beyond the app”, at the end.",
+                    "Turns on the switches below, for this blog, that keep your name, place and habits off it. See also “Beyond the app”, at the end.",
                     onClick = { confirmAnonymous = true },
                 )
             }
@@ -71,7 +91,7 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
                     !state.onlyThroughVpn -> "Off: the app reaches GitHub over whatever connection the phone has, and GitHub sees where you are."
                     state.waitingForVpn -> "No VPN connection, so nothing is sent to GitHub. Posts you publish wait for it. " +
                         "A VPN that leaves this app out (split tunneling), or carries only some addresses, counts as none."
-                    else -> "GitHub and your blog's site see your VPN's address, not yours. If the VPN drops, nothing is sent until it's back."
+                    else -> "GitHub and your blog's site see your VPN's address, not yours, even while another blog is open. If the VPN drops, nothing is sent for this blog until it's back."
                 },
                 state.onlyThroughVpn,
                 viewModel::setOnlyThroughVpn,
@@ -167,6 +187,7 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
             Row("Free sites are public repositories", "Anyone can read their history. A private one needs a paid plan, in your name.")
             Row("Your own domain", "Whoever sells it knows who paid, and shows it to anyone who asks unless it's kept private.")
             Row("Your theme", "Analytics or comments in your theme see you when you open your own posts.")
+            Row("Your other blogs", "With two accounts on one phone and no VPN on either, GitHub sees both from the same address.")
         }
     }
     if (confirmAnonymous) {
@@ -211,3 +232,21 @@ private const val UTC = "UTC"
 /** [id], or [UTC] for any name of it. */
 private fun sameZone(id: String): String =
     if (runCatching { ZoneId.of(id).normalized() == ZoneOffset.UTC }.getOrDefault(false)) UTC else id
+
+/** A blog added beside others starts with every switch off: said once, until its first post. */
+@Composable
+private fun NewBlogBanner(name: String) {
+    Column(
+        Modifier.padding(16.dp).fillMaxWidth()
+            .border(BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline), MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.shapes.medium)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text("New here: every switch started off", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+        Text(
+            "Set these before your first post here. They apply to $name only; your other blogs keep their own.",
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}

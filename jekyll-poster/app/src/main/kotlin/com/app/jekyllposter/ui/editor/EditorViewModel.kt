@@ -35,6 +35,7 @@ import java.time.LocalDateTime
 import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -42,6 +43,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -235,8 +238,11 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         return preview.page(draft.title, ObsidianNote.linkPosts(draft.body, targets(linkable.value), container.blogs.postUrlHasBaseurl), dark)
     }
 
-    /** Asked for a VPN and there's none: a queued post says it waits for it. */
-    val waitingForVpn: StateFlow<Boolean> = container.waitingForVpn.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    /** The post's blog asks for a VPN and there's none: a queued post says it waits for it. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val waitingForVpn: StateFlow<Boolean> = container.drafts.watch(id).map { it?.blog }.distinctUntilChanged()
+        .flatMapLatest { container.waitingForVpn(it ?: container.accounts.currentKey()) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /** The blog's posts a `[[link]]` can go to: ones the site builds, newest first. */
     val linkable: StateFlow<List<CachedPost>> = container.blogs.cachedPosts
@@ -478,7 +484,9 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 val again = draft.editable && draft.editingPath == null && draft.sentShas.isEmpty()
                 // A random moment in the next few hours, so commit times don't trace the writer's
                 // day. Deleting a post is never delayed: the writer wants it gone.
-                val sendAfter = if ((destination ?: draft.destination) != Destination.Delete && container.settings.sendAtRandomTime()) {
+                val sendAfter = if ((destination ?: draft.destination) != Destination.Delete &&
+                    container.privacy.get(draft.blog ?: container.accounts.currentKey()).sendAtRandomTime
+                ) {
                     System.currentTimeMillis() + Random.nextLong(RANDOM_WINDOW.inWholeMilliseconds)
                 } else {
                     null

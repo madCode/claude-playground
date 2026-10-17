@@ -258,7 +258,7 @@ class ScreenshotTest {
 
     @Test fun waitingForTheVpn() {
         signIn()
-        runBlocking { c.setOnlyThroughVpn(true) }
+        runBlocking { c.setOnlyThroughVpn(SAMPLE_BLOG, true) }
         app.vpn.up.value = false
         val privacy = BlogPrivacyViewModel(c) { ZoneId.of("Europe/Lisbon") }
         shoot("18-blog-privacy-no-vpn", ready = { privacy.state.value.waitingForVpn && privacy.state.value.visibility != Visibility.Loading }) {
@@ -269,7 +269,7 @@ class ScreenshotTest {
     @Test fun homeWaitingForTheVpn() {
         signIn()
         runBlocking {
-            c.setOnlyThroughVpn(true)
+            c.setOnlyThroughVpn(SAMPLE_BLOG, true)
             c.drafts.insert(Draft(title = "Sourdough, round five", state = PostState.Queued))
         }
         app.vpn.up.value = false

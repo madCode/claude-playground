@@ -3,6 +3,7 @@ package com.app.jekyllposter.ui.settings
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.core.github.CommitAuthor
+import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
 import java.time.ZoneId
@@ -38,7 +39,7 @@ class BlogPrivacyViewModelTest {
         app.vpn.up.value = false
         vm.writeAnonymously()
         idleUntil(10_000) { vm.state.value.anonymous && vm.state.value.waitingForVpn }
-        assertEquals(CommitAuthor("sample", "1001+sample@users.noreply.github.com"), runBlocking { c.settings.commitAuthor("sample") { null } })
+        assertEquals(CommitAuthor("sample", "1001+sample@users.noreply.github.com"), runBlocking { c.privacy.commitAuthor(SAMPLE_BLOG, "sample") { null } })
         // The site's time zone is a commit: left for the writer to choose.
         assertEquals("America/Los_Angeles", vm.state.value.siteZone)
     }
@@ -73,7 +74,7 @@ class BlogPrivacyViewModelTest {
         idleUntil { vm.state.value.commitAsNoReply }
         // GitHub can't be asked now; the kept address still signs the commit.
         app.github.failures["user"] = 500
-        val author = runBlocking { c.settings.commitAuthor("sample") { error("looked up again") } }
+        val author = runBlocking { c.privacy.commitAuthor(SAMPLE_BLOG, "sample") { error("looked up again") } }
         assertEquals("1001+sample@users.noreply.github.com", author!!.email)
     }
 
