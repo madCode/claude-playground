@@ -33,9 +33,9 @@ Times are when each cycle landed, Pacific.
   switches. A blog added beside others starts with them off and opens Blog & privacy, which says
   so until its first post. The switches kept for the whole app move to every blog on update
   (database version 8).
-- **Not as designed, for you to confirm:** a new blog's VPN switch starts on if another blog uses
-  it. The design said every switch off; with it off, the new blog was read from your own address
-  before you could see its page.
+- **Changed from the design, confirmed by madCode:** a new blog's VPN switch starts on if another
+  blog uses it. The design said every switch off; with it off, the new blog was read from your own
+  address before you could see its page.
 - **The review caught:** the preview reusing the last blog's connection after a switch; a new
   blog read without the VPN; the VPN switch lost by updating while signed out; a personal blog's
   token renewal held up by another blog's VPN; a re-added blog with no warning. The second look
