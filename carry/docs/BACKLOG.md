@@ -83,16 +83,6 @@ not a thing anyone is blocked from building.
   open are kept there, not here, since this repository is public
   *(audit: security)*
 
-- [ ] **The weight guard only sees decimal digits, and only on a typed
-  name.** `Char.isDigit` is Unicode `Nd`, so a load written as a word or a
-  symbol publishes silently — verified unflagged: `ybell deadlift heavy`,
-  `deadlift twenty six`, `deadlift ½ rack`. And the other way: a
-  legitimate name with a digit in it IS flagged when hand-typed —
-  `bicep curl 21s`, `90/90 hip stretch`, `3 way shoulder` — which is the
-  false alarm that costs the guard its meaning. Both directions are the
-  same question: is a digit test the right instrument at all, or should
-  this be a "you typed this name, read it" prompt with no claim about
-  weights? Needs deciding before patching *(audit: security)*
 ### Wrong numbers, or a road to one
 - [x] ~~**A weight over 1000 saves on the phone, and the importer then
   refuses the whole day.**~~ **Done 2026-10-16:** the owner asked for the
@@ -319,6 +309,10 @@ These are the open paths to one, hardest first.
 ### Owed on a device
 
 Only a real phone can answer these.
+- [ ] **TalkBack reads "You typed: …" when it appears after Save.** The
+  test proves the line is a polite live region, not that TalkBack speaks
+  it. With TalkBack on: add a row, type a name, save, and listen *(due
+  with the typed-name change)*
 - [ ] A persisted tree permission surviving `adb install -r`, which can revoke it
   and look exactly like a first run. Partly done 2026-10-12 **on an emulator**: the
   grant was taken through the real picker and held across a force-stop and
@@ -449,6 +443,12 @@ means the After tab, which is a form built for afterwards. Unsketched.
   once, and where a typed line meets the sheet's the sheet's copy is kept,
   unmarked. Different words, even near-identical ones, stay two bullets;
   the file keeps both rows *(you asked: "show it once")*
+- [x] **The weight guard is gone; a typed name is shown back instead.**
+  The digit test missed "deadlift twenty six" and "½ rack" and flagged
+  "bicep curl 21s". After a save, the screen shows each typed name and
+  asks whether the weight is in the weight box. The number boxes are
+  labelled "lb" and "reps" *(you asked: "show the typed name back, no
+  digit check")*
 - [x] **The bars on *Heaviest by what it trains* are gone; the number
   stays.** They encoded every weight in the family with no scale and no
   time direction, and their count varied with how many sets the family had,

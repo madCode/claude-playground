@@ -18,6 +18,7 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -486,56 +487,101 @@ class LogScreenTest {
     }
 
     @Test
-    fun `a name that looks like it carries a weight is called out before sending`() {
-        // The promise under the button is "the movements only — never your
-        // weights", and a typed name can break it. The app cannot fix that
-        // for you without mangling real names, so it shows you which lines
-        // to look at, at the moment you are deciding to send.
-        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+    fun `after a save, each typed name is shown back with the question`() {
+        // madCode's call, 2026-10-16: "show the typed name back, no digit
+        // check". A digit test missed these two and flagged real names, so
+        // the screen asks instead, about every name the owner typed.
         added.value = listOf(
-            AddedSet(id = "a", name = "ybell deadlift 26", weight = 26.0),
-            AddedSet(id = "b", name = "pop squat", weight = 15.0),
+            AddedSet(id = "a", name = "deadlift twenty six", reps = 8),
+            AddedSet(id = "b", name = "\u00bd rack row", weight = 20.0),
         )
+        show(SaveState.Saved)
+        reach("You typed")
+        val note = compose.onNodeWithText(
+            "You typed: \"\u2068deadlift twenty six\u2069\", \"\u2068\u00bd rack row\u2069\". " +
+                "Is each weight in its weight box?"
+        )
+        note.assertIsDisplayed()
+        // Announced when it appears, without taking focus.
+        note.assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+        // Above the button just tapped, not below it where the list may end.
+        assertTrue(
+            "the line must sit above the Saved button",
+            note.getUnclippedBoundsInRoot().bottom <= compose.onNodeWithText("Saved").getUnclippedBoundsInRoot().top,
+        )
+        shoot("35-typed-back")
+        // And it goes with "Saved": the next edit sets the form back to Idle.
+        saving.value = SaveState.Idle
+        compose.onNodeWithText("You typed", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a typed name is shown back on one line, whole, and cut visibly only past 200`() {
+        // A line separator in a name read from the file would break the
+        // sentence; a weight at the end of a long name must still show.
+        val long = "a".repeat(180) + " deadlift 26 lb"
+        added.value = listOf(
+            AddedSet(id = "a", name = "row\u2028machine", weight = 30.0),
+            AddedSet(id = "b", name = long, weight = 26.0),
+            AddedSet(id = "c", name = "x".repeat(300), weight = 10.0),
+        )
+        show(SaveState.Saved)
+        // The long names make their own boxes scrollable; the list is the
+        // first scrollable node, being their ancestor.
+        compose.onAllNodes(hasScrollAction())[0].performScrollToNode(hasText("You typed", substring = true))
+        val text = compose.onNode(hasText("You typed", substring = true))
+            .fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("")
+        assertTrue(text, "\u2068row machine\u2069" in text)
+        assertTrue(text, "deadlift 26 lb\u2069" in text)
+        assertTrue(text, "x".repeat(200) + "\u2026\u2069" in text)
+    }
+
+    @Test
+    fun `nothing is shown back before the save`() {
+        added.value = listOf(AddedSet(id = "a", name = "deadlift twenty six", weight = 26.0))
+        show(SaveState.Idle)
+        reach("Save")
+        compose.onNodeWithText("You typed", substring = true).assertDoesNotExist()
+        // The control: the same row, saved, is shown back.
+        saving.value = SaveState.Saved
+        reach("You typed")
+        compose.onNodeWithText("You typed", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a save with no typed name shows nothing back`() {
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        added.value = listOf(AddedSet(id = "a", name = "  ", weight = null))
+        show(SaveState.Saved)
+        reach("Post what 2G did")
+        compose.onNodeWithText("You typed", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a typed name with digits in it is posted plainly, with no mark`() {
+        // "bicep curl 21s" is a movement. The digit test flagged it; the
+        // question after the save replaces that test, so the post carries
+        // no mark at all and the caption makes no promise about weights.
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
+        added.value = listOf(AddedSet(id = "a", name = "bicep curl 21s", weight = 15.0))
         show(SaveState.Saved)
         reach("Post what 2G did")
         compose.onNodeWithText("Post what 2G did").performClick()
-        // The caption names the MARK, not the colour. "Check the lines in
-        // red" was no use to a reader who has no red -- a colour vision
-        // deficiency, glare, a greyscale display -- which is the whole
-        // reason the mark is in the text, and the caption went on naming
-        // the colour anyway.
-        compose.onNodeWithText("⚠ marks the lines", substring = true).assertIsDisplayed()
-        // The flagged bullet carries the mark and the clean one does not.
-        // Asserted on the same node, because the preview is one Text: an
-        // "is the glyph anywhere in here" check passes just as happily
-        // when EVERY line is marked, which is the other way to be wrong.
-        val preview = compose.onNode(hasText("⚠ - ybell deadlift 26", substring = true))
-        preview.assertIsDisplayed()
-        preview.assert(hasText("\n- pop squat", substring = true))
-        // ...and the one thing said out loud is said on the CAPTION, a
-        // short node, naming the flagged line.
-        compose.onNodeWithContentDescription(
-            "marked, because it looks like it carries a weight: ybell deadlift 26", substring = true
-        ).assertIsDisplayed()
-        // The preview itself must keep NO description. Compose offers a
-        // text node LINE and PAGE navigation only while its description
-        // is empty, so labelling this one took away the listener's
-        // ability to step through the post a bullet at a time -- and the
-        // label it gave them instead read every flagged line twice and
-        // flattened the blank line under the heading into a bare comma.
-        preview.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
-        // Scroll past the preview, so the shot shows the flagged bullet
-        // and not just the warning above it.
         reach("Send it")
-        shoot("21-post-flagged")
+        val preview = compose.onNode(hasText("- bicep curl 21s", substring = true))
+        preview.assertIsDisplayed()
+        compose.onNodeWithText("\u26a0", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("The movements only. A name you typed goes out as you typed it.").assertIsDisplayed()
+        // No description on the preview, so it stays navigable line by line.
+        preview.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
+        shoot("36-post-typed-digits")
     }
 
     @Test
     fun `a line the sheet already has, typed again by hand, is in the post once`() {
         // The owner's answer, 2026-10-16: "show it once". The sheet lists
         // "10 x bench press" and the owner also added a row with that whole
-        // line as its name. The preview shows one bullet, unmarked, since
-        // its digits are the board's prescription and not a weight.
+        // line as its name. The preview shows it as one bullet.
         edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
         added.value = listOf(AddedSet(id = "a", name = "10 x bench press", weight = 45.0))
         show(SaveState.Saved)
@@ -551,44 +597,19 @@ class LogScreenTest {
     }
 
     @Test
-    fun `with nothing flagged the caption speaks for itself`() {
-        // The other half of the caption's description, and the one a
-        // regression could break silently: with nothing to flag there must
-        // be NO description at all, so the caption's own words are what
-        // TalkBack reads. An empty string or a repeat of those words would
-        // suppress them instead -- announcing a blank node where the
-        // promise under the button should be.
-        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
-        added.value = listOf(AddedSet(id = "a", name = "pop squat", weight = 15.0))
-        show(SaveState.Saved)
-        reach("Post what 2G did")
-        compose.onNodeWithText("Post what 2G did").performClick()
-        val caption = compose.onNode(hasText("The movements only", substring = true))
-        caption.assertIsDisplayed()
-        caption.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
-    }
-
-    @Test
-    fun `past three flagged lines the rest are counted, not dropped`() {
-        // Naming them all is unbounded and naming none hands the job back
-        // to the glyph in the preview -- which is the channel a listener
-        // may not get, and the reason any of this was written.
-        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0))
-        // The first name starts with a hyphen on purpose: only the post's
-        // own "- " bullet comes off, so a typed name is read as typed. A
-        // blanket trim of leading hyphens would say "26 lb curl" -- an app
-        // that renames a movement while reading it out.
-        added.value = listOf("-26 lb curl", "ybell deadlift 30", "ybell deadlift 35",
-            "ybell deadlift 40", "ybell deadlift 45").mapIndexed { i, n ->
-            AddedSet(id = "a$i", name = n, weight = 20.0)
-        }
-        show(SaveState.Saved)
-        reach("Post what 2G did")
-        compose.onNodeWithText("Post what 2G did").performClick()
-        compose.onNodeWithContentDescription(
-            "5 lines in the post are marked, because they look like they carry a weight: " +
-                "-26 lb curl; ybell deadlift 30; ybell deadlift 35; and 2 more.",
-        ).assertIsDisplayed()
+    fun `the number boxes say which is weight and which is reps`() {
+        // madCode, 2026-10-16: visible labels, not only placeholders. The
+        // question after a save names "the weight box", so it must be
+        // findable without TalkBack. Hidden from TalkBack, whose label on
+        // the box already says it.
+        show(SaveState.Idle)
+        val lb = compose.onAllNodesWithText("lb", useUnmergedTree = true)
+        val reps = compose.onAllNodesWithText("reps", useUnmergedTree = true)
+        assertTrue(lb.fetchSemanticsNodes().isNotEmpty())
+        assertTrue(reps.fetchSemanticsNodes().isNotEmpty())
+        lb[0].assertIsDisplayed()
+        lb[0].assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.HideFromAccessibility))
+        reps[0].assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.HideFromAccessibility))
     }
 
     @Test

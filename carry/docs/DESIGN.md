@@ -57,8 +57,9 @@ Two consequences worth stating, because they look like missing features:
    into a tail of at most two lines: by feel, and no weight. Present, not
    prominent.
 
-**After** — what you did. One row per exercise, two lines tall: weight,
-reps, and five chips (*easy*, *hard*, *mod*, *hurt*, *skip*) — six on a timed
+**After** — what you did. One row per exercise, two lines tall: weight
+and reps, each box labelled under it ("lb", "reps", visible rather than a
+placeholder that vanishes once typed in), and five chips (*easy*, *hard*, *mod*, *hurt*, *skip*) — six on a timed
 row, which also gets *done*. Plus **add a row**, for anything the sheet didn't
 list.
 
@@ -501,23 +502,11 @@ The session files still leave only through the share sheet.
 
 ## Handing the block over
 
-The preview is the whole of the egress control -- the share sheet is the
-only way anything of the owner's leaves -- and it marks a suspect line in the TEXT as well as in red.
-Colour alone is unreadable in glare, on a greyscale display, or to
-anyone with a colour vision deficiency, and it is silent to TalkBack.
-The caption above the preview names that mark rather than the colour.
-The mark is on the preview only: what goes to the share sheet is the
-post text, handed over untouched.
-
-What is said out loud is said on the CAPTION, and the preview itself
-carries no content description at all. That is deliberate and it is the
-opposite of the obvious move: Compose offers a text node LINE and PAGE
-navigation only while its description is empty, so a label on the
-preview costs a listener the ability to step through the post a bullet
-at a time -- and whatever that label says about the flagged lines, it
-must then read the whole post too, or the post becomes unreachable. The
-caption is short, says how many lines are marked and which, and leaves
-the post to be read as a post.
+The preview is the whole of the egress control: the share sheet is the
+only way anything of the owner's leaves, and the post is shown in full
+before it goes. It carries no content description, because Compose offers
+a text node line-by-line navigation only while its description is empty,
+so a listener can step through the post a bullet at a time.
 
 Intel for the owner's class is posted on a small minority of days, which is
 why most of their history is borrowed from the other class's block. Nobody
@@ -550,17 +539,22 @@ Three rules, and a review of the first version found it breaking all three.
   like a rep scheme, and a duration only if it is between one second and an
   hour. Anything else and the row simply carries no prescription. A field
   that cannot be validated is not published.
-- **The promise it cannot keep, it checks instead.** The screen says "the
-  movements only — never your weights", and an added row's name is typed by
-  hand, so that is not something the app can guarantee. Stripping trailing
-  digits would silently mangle `bicep curl 21s`, a real movement. So any
-  bullet whose *movement name* carries a digit is shown in brick in the
-  preview, with the line above changed to say so. The prescription's own
-  digits are excluded from the test, or every line on an intel day would be
-  flagged and the flag would mean nothing. Nor is a name the runner parsed:
-  `bicep curl 21s` and `90/90 hip stretch` are real movements, and a
-  warning that fires on a line nobody typed is one the owner learns to
-  ignore.
+- **A typed name is shown back, not tested.** An added row's name is
+  typed by hand, so a weight can end up in it. A digit test tried to
+  catch that and failed both ways: it missed "deadlift twenty six" and
+  "½ rack", and flagged real movements like "bicep curl 21s" and "90/90
+  hip stretch". madCode's call, 2026-10-16: "show the typed name back, no
+  digit check". So after a save, a line just above the Saved button reads
+  *You typed: "deadlift twenty six". Is the weight in the weight box?*,
+  naming every typed name. It is a line, not a dialog: a dialog on every
+  save with an added row is one the owner learns to dismiss unread. It
+  sits in the button's own list item, where the owner just tapped, and it
+  shows with "Saved" and goes with it (the next edit, or a re-read on
+  returning to the app). It is announced politely, so TalkBack reads it
+  without moving focus. Each name is shown on one line, as a directional
+  isolate, and cut with an ellipsis only past 200 characters. Carry matches nothing and the
+  file is unchanged. The caption over the post says what is true: "The
+  movements only. A name you typed goes out as you typed it."
 - **It is built from fields this app owns.** `canonical` and `components`
   are parsed out by the runner; `line` is the sheet text verbatim and Carry
   does not own what goes in it. Its sibling `suggested` already holds "try

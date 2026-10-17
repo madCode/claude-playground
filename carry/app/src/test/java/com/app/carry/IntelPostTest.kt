@@ -389,44 +389,4 @@ class IntelPostTest {
             bullets(post),
         )
     }
-
-    // ------------------------------------------------- what the preview calls out
-
-    @Test
-    fun `a typed name that carries a number is flagged for a second look`() {
-        // The screen promises "the movements only, never your weights",
-        // and an added row's name is typed by hand, so that promise is not
-        // one this app can keep alone. Stripping trailing digits would
-        // mangle "bicep curl 21s", a real movement -- so the preview says
-        // which lines to look at, where the owner is already deciding.
-        val post = IntelPost.compose(
-            session(), did(0),
-            listOf(AddedSet(id = "a", name = "ybell deadlift 26"),
-                   AddedSet(id = "b", name = "pop squat")),
-        )!!
-        assertEquals(setOf("- ybell deadlift 26"), post.suspect)
-        assertTrue(post.text, post.text.contains("- pop squat"))
-    }
-
-    @Test
-    fun `a movement the runner named is never flagged, however many digits it has`() {
-        // "bicep curl 21s", "90/90 hip stretch", "3 way shoulder" are real
-        // movements. Flagging one lights the warning on a line the owner
-        // never typed and cannot fix -- on every intel day, until they
-        // learn to ignore it.
-        val post = IntelPost.compose(
-            session(sets = listOf(set(0, "bicep curl 21s"), set(1, "90/90 hip stretch"))),
-            did(0, 1), emptyList(),
-        )!!
-        assertEquals(emptySet<String>(), post.suspect)
-    }
-
-    @Test
-    fun `the prescription's own digits are not what gets flagged`() {
-        // "10 x bench press" is digits by design. Testing the whole line
-        // would mark every row on an intel day and mean nothing.
-        val post = IntelPost.compose(session(), did(0, 1), emptyList())!!
-        assertTrue(post.text, post.text.contains("- 10 x bench press"))
-        assertEquals(emptySet<String>(), post.suspect)
-    }
 }

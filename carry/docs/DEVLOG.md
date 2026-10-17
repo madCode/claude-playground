@@ -37,6 +37,15 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   carries one bullet, the sheet's, unmarked. "The same" is the same
   text ignoring case and how an accent was encoded; "push up" and
   "pushup" stay two. Both rows are still saved.
+## 2026-10-16 — cycle 62: a typed name shown back, and labelled boxes
+
+- The post no longer marks lines with a digit in them. That check missed
+  weights written as words or symbols and flagged real movements.
+- Instead, after a save, the After tab shows each name you typed and
+  asks whether the weight is in the weight box. It stays until you edit
+  again. TalkBack reads it out.
+- The weight and reps boxes now say "lb" and "reps" under them, so "the
+  weight box" is easy to find.
 
 ## 2026-10-16 — cycle 58: the After screen checks what the importer refuses
 

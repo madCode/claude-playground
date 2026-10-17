@@ -78,6 +78,5 @@ class RunnerContractTest {
         assertTrue(post.text, post.text.contains("- 45 sec of plank"))
         // The runner's math numbers must not be what goes out.
         assertTrue("5 a side is the math, not the board", !post.text.contains("- 5 x"))
-        assertEquals(emptySet<String>(), post.suspect)
     }
 }
