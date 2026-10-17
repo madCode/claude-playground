@@ -218,8 +218,9 @@ class AccountStoreTest {
         asking.cancel()
         release.complete(Unit)
         runCatching { asking.await() }
-        // GitHub replaced the refresh token as it answered: the new one is kept.
-        assertEquals("ghr_new", store.forBlog(account.blogKey)!!.refreshToken)
+        // GitHub replaced the refresh token as it answered: the new one is kept. Read as stored,
+        // without renewing again, which would hide a dropped answer.
+        assertEquals("ghr_new", store.account.first()!!.refreshToken)
     }
 
     @Test fun aTokenThatCannotBeUnsealedReadsAsSignedOut() = runBlocking {
