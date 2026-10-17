@@ -37,7 +37,9 @@ Times are when each cycle landed, Pacific.
 - **The review caught:** removing the open blog's sign-in could briefly read as signed out,
   jumping to the sign-in screen, or, cut short, leave the app pointing at the removed blog; Add
   a blog for a sign-in removed meanwhile threw away the new token typed in; a post being watched
-  stayed "the site is rebuilding" for good once its sign-in was removed. All fixed, with tests.
+  stayed "the site is rebuilding" for good once its sign-in was removed. A second look caught
+  that Back during the last removal left Home empty instead of returning to signing in. All
+  fixed, with tests.
 - **Left:** adding the same account twice gives two identical sign-ins in the list (no harm,
   just two rows). The privacy switches are still app-wide: cycle 3.
 
