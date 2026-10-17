@@ -537,6 +537,27 @@ class CarryViewModelTest {
     }
 
     @Test
+    fun `a file changed into one that doesn't read yet offers a wait, not a sheet`() = runTest(dispatcher) {
+        // Cut off mid-sync. The page can't read it, so "Use the new sheet"
+        // would discard the typing toward the OLD sheet still on screen.
+        val handle = SavedStateHandle()
+        val model = viewModel(handle)
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+        disk.text = sheet.take(60)
+        model.save(); settled(model)
+
+        assertEquals(0, disk.writes)
+        val state = model.saving.value as SaveState.Failed
+        assertTrue(state.why, "Try again in a moment" in state.why)
+        assertFalse(state.newSheet)
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+    }
+
+    @Test
     fun `Carry's own save is the file the next save checks against`() = runTest(dispatcher) {
         val model = viewModel()
         val disk = Disk(sheet)

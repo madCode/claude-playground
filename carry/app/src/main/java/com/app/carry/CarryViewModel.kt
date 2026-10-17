@@ -186,7 +186,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     private class InstallFailed(cause: Throwable) : Exception(cause)
 
     /** Why a save stopped before writing, from the file as it is on disk. */
-    private enum class Gate { GONE, NOT_OURS, CHANGED }
+    private enum class Gate { GONE, NOT_OURS, UNSETTLED, CHANGED }
 
     /** How the folder is read. Replaced in tests so the stall path and the
      *  keep-last-good path can be exercised without a real provider; there
@@ -478,8 +478,11 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                         val gate = when {
                             onDisk == null -> Gate.GONE
                             label != null && label != SessionFiles.Label.OURS -> Gate.NOT_OURS
-                            onDisk != ready.raw -> Gate.CHANGED
-                            else -> null
+                            onDisk == ready.raw -> null
+                            // Half synced, or otherwise unreadable: there is
+                            // no new sheet to offer yet, only a wait.
+                            SessionFiles.parse(onDisk) == null -> Gate.UNSETTLED
+                            else -> Gate.CHANGED
                         }
                         gate to if (gate == null) write(ready.documentId, text) else null
                     }
@@ -490,6 +493,10 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                         )
                         Gate.NOT_OURS -> SaveState.Failed(
                             "The session file was replaced by one whose \"schema\" label is missing or isn't one Carry knows. Nothing was written.",
+                            damaged = false,
+                        )
+                        Gate.UNSETTLED -> SaveState.Failed(
+                            "This session changed since you opened it and doesn't read cleanly yet, perhaps a sync part way through. Nothing was written; your numbers are still here. Try again in a moment.",
                             damaged = false,
                         )
                         Gate.CHANGED -> SaveState.Failed(
