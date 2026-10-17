@@ -10,6 +10,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Holds what is on screen across Activity recreation.
@@ -57,6 +58,35 @@ data class Draft(
 
 data class UpdateProblem(val why: String, val offerLink: Boolean)
 
+/**
+ * Held numbers in words, for a draft whose sheet is gone: each row named
+ * by the line the sheet printed, since there is no sheet left to show
+ * them against. Only what was typed; untouched rows are left out.
+ */
+internal fun Draft.summary(): String {
+    val rows = edits.entries.sortedBy { it.key }.filterNot { it.value.blank }.map { (ref, e) ->
+        val line = fromIdentities[ref]?.substringBefore('\u0000')
+            ?.let { runCatching { Session.json.parseToJsonElement(it).jsonPrimitive.content }.getOrNull() }
+            ?: "row ${ref + 1}"
+        listOfNotNull(
+            line,
+            e.weight?.let { "${it.asWeight()} lb" },
+            (e.reps?.toString() ?: e.fractionalReps?.asWeight())?.let { "$it reps" },
+            "done".takeIf { e.done }, "easy".takeIf { e.easy }, "mod".takeIf { e.easier },
+            "hurt".takeIf { e.hurt }, e.note?.takeIf { it.isNotBlank() },
+        ).joinToString(" ")
+    } + added.filterNot { it.blank }.map { a ->
+        listOfNotNull(
+            a.name.ifBlank { "unnamed row" },
+            a.weight?.let { "${it.asWeight()} lb" },
+            (a.reps?.toString() ?: a.fractionalReps?.asWeight())?.let { "$it reps" },
+        ).joinToString(" ")
+    }
+    val (day, cls) = sheetId.split(':', limit = 2).let { it[0] to it.getOrNull(1) }
+    return "Not saved: what you typed for ${listOfNotNull(cls, day).joinToString(" on ")}, " +
+        "a session no longer in the folder. ${rows.joinToString("; ").ifEmpty { "(nothing)" }}."
+}
+
 class CarryViewModel(app: Application, private val handle: SavedStateHandle) : AndroidViewModel(app) {
 
     val folder = SessionFolder(app)
@@ -71,6 +101,16 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      *  re-derived -- but it must not be written blind. */
     private val _fileMovedUnderEdits = mutableStateOf(false)
     val fileMovedUnderEdits: State<Boolean> = _fileMovedUnderEdits
+
+    /** True while the sheet on screen is kept for the typing on it, though
+     *  the folder's newest read is another session. */
+    private val _anotherSession = mutableStateOf(false)
+    val anotherSession: State<Boolean> = _anotherSession
+
+    /** Unsaved typing for sessions no longer in the folder, kept apart
+     *  until the owner drops it. */
+    private val _held = mutableStateOf<List<Draft>>(emptyList())
+    val held: State<List<Draft>> = _held
 
     private val _edits = mutableStateOf<Map<Int, SessionPatch.Entry>>(emptyMap())
     val edits: State<Map<Int, SessionPatch.Entry>> = _edits
@@ -105,6 +145,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      *  session isn't on this form, so it doesn't count. */
     val unsaved: Boolean get() {
         if (_saving.value == SaveState.Saving) return true
+        if (savedHeld().isNotEmpty()) return true
         val draft = savedDraft() ?: return false
         val showing = (_state.value as? CarryState.Ready)?.session?.sheetId ?: return true
         return draft.sheetId == showing
@@ -186,13 +227,18 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     private class InstallFailed(cause: Throwable) : Exception(cause)
 
     /** Why a save stopped before writing, from the file as it is on disk. */
-    private enum class Gate { GONE, NOT_OURS, UNSETTLED, OTHER_SESSION, CHANGED }
+    private enum class Gate { GONE, NOT_OURS, EMPTY, UNDECODABLE, UNSETTLED, OTHER_SESSION, CHANGED }
 
     private class Check(val gate: Gate?, val onDisk: String?, val newRaw: String?, val newer: Session?, val result: Saved?)
 
-    /** The unreadable file the last save refused, to tell a sync still
-     *  landing from a file that will stay this way. */
-    private var unreadableSeen: String? = null
+    /** The unreadable file the last save refused, and when, to tell a
+     *  sync still landing from a file that will stay this way. */
+    private var unreadableSeen: Seen? = null
+
+    private class Seen(val documentId: String, val text: String, val at: Long)
+
+    /** Monotonic, for [SETTLED_AFTER_MS]; a seam so tests needn't wait. */
+    internal var clock: () -> Long = { android.os.SystemClock.elapsedRealtime() }
 
     /** How the folder is read. Replaced in tests so the stall path and the
      *  keep-last-good path can be exercised without a real provider; there
@@ -236,6 +282,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         reading?.cancel()
         reading = viewModelScope.launch {
             val next = withTimeoutOrNull(STALL_AFTER_MS) { read() }
+            val previous = _state.value
             _state.value = when {
                 // A provider can block forever -- openInputStream has no
                 // timeout and runCatching never fires. Without this the
@@ -248,7 +295,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
             // two sittings opens showing the first sitting's numbers rather
             // than blank boxes the owner would fill in from memory. Only on
             // a NEW file: re-seeding would throw away edits in progress.
-            (_state.value as? CarryState.Ready)?.let { reconcile(it) }
+            (_state.value as? CarryState.Ready)?.let { reconcile(it, previous) }
         }
         // The folder is the history, so this is every file in it. Off the
         // main thread and beside the sheet rather than behind it: the lobby
@@ -266,12 +313,42 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      * was indistinguishable from one being filled in, and every later file
      * triggered the keep-and-warn path with nothing actually typed.
      */
-    private suspend fun reconcile(ready: CarryState.Ready) {
-        val draft = savedDraft()
+    private suspend fun reconcile(ready: CarryState.Ready, previous: CarryState? = null) {
+        _held.value = savedHeld()
+        val pending = savedDraft()
+        val forOther = pending?.takeIf { it.sheetId != ready.session.sheetId }
+        if (forOther != null) {
+            // Typing for a session that is no longer the one this read
+            // found: the file now holds another, or the day's other class
+            // arrived. Showing the new one would hide the typing, and the
+            // next keystroke would replace the draft. So the sheet it was
+            // typed against stays on screen -- from memory, or found again
+            // in the folder after the process died -- until the owner saves
+            // it or drops it.
+            val typedAgainst = (previous as? CarryState.Ready)?.takeIf { it.session.sheetId == forOther.sheetId }
+                ?: withTimeoutOrNull(STALL_AFTER_MS) { findSheet(forOther.sheetId) }
+            if (typedAgainst != null) {
+                _state.value = typedAgainst
+                _anotherSession.value = true
+                _edits.value = forOther.edits
+                _added.value = forOther.added
+                _fileMovedUnderEdits.value = forOther.fromFingerprint != typedAgainst.raw.hashCode()
+                return
+            }
+            // Its file is gone from the folder. The numbers are kept aside,
+            // where typing on this sheet can't overwrite them, and listed
+            // until the owner drops them. Never a draft shown against
+            // another session, let alone written into it.
+            val held = savedHeld() + forOther
+            runCatching { handle[HELD] = Session.json.encodeToString(held) }
+            handle.remove<String>(DRAFT)
+            _held.value = held
+        }
+        val draft = pending.takeIf { forOther == null }
+        _anotherSession.value = false
         when {
-            // Not ours. A draft for another session must never be shown
-            // against this one, let alone written into it.
-            draft == null || draft.sheetId != ready.session.sheetId -> {
+            // Nothing typed for this session.
+            draft == null -> {
                 // Two full parses of the document. Small for a real sheet,
                 // but this runs on every resume and the file comes from
                 // somewhere else -- so it goes where the read already is.
@@ -335,6 +412,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     fun discardEdits() {
         handle.remove<String>(DRAFT)
         _fileMovedUnderEdits.value = false
+        _anotherSession.value = false
         _saving.value = SaveState.Idle
         (_state.value as? CarryState.Ready)?.let { ready ->
             _edits.value = ready.session.onScreen(SessionPatch.entriesIn(ready.raw))
@@ -374,6 +452,30 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
 
     private fun savedDraft(): Draft? = handle.get<String>(DRAFT)?.let {
         runCatching { Session.json.decodeFromString<Draft>(it) }.getOrNull()
+    }
+
+    private fun savedHeld(): List<Draft> = handle.get<String>(HELD)?.let {
+        runCatching { Session.json.decodeFromString<List<Draft>>(it) }.getOrNull()
+    }.orEmpty()
+
+    /** The owner's choice to let held numbers go. Nothing else clears them. */
+    fun dropHeld() {
+        handle.remove<String>(HELD)
+        _held.value = emptyList()
+    }
+
+    /** The sheet a draft was typed against, found again in the folder. */
+    internal var findSheet: suspend (String) -> CarryState.Ready? = { sheetId ->
+        withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                folder.list().filter { (_, name) -> SessionFiles.isSessionFile(name) }.firstNotNullOfOrNull { (id, _) ->
+                    val text = folder.read(id) ?: return@firstNotNullOfOrNull null
+                    val session = SessionFiles.parse(text)?.takeIf { it.sheetId == sheetId }
+                        ?: return@firstNotNullOfOrNull null
+                    CarryState.Ready(session, text, id, SessionFiles.unreadableRows(text, session))
+                }
+            }.getOrNull()
+        }
     }
 
     /**
@@ -493,17 +595,33 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                             onDisk == null -> Gate.GONE
                             label != null && label != SessionFiles.Label.OURS -> Gate.NOT_OURS
                             SessionFiles.sameContent(onDisk, ready.raw) -> null
-                            // The same unreadable bytes as last time: not a
-                            // sync still landing, so waiting won't help, and
-                            // nothing readable is lost by writing over them.
-                            newer == null -> if (onDisk == unreadableSeen) null else Gate.UNSETTLED
+                            // A sync part way through: never written over.
+                            onDisk.isBlank() -> Gate.EMPTY
+                            // JSON this build can't decode may still be a
+                            // session the coach's importer reads, so it is
+                            // never written over either.
+                            newer == null && SessionFiles.isJson(onDisk) -> Gate.UNDECODABLE
+                            // Not JSON at all, so no reader can use it. Once
+                            // the same bytes have sat in the same file for
+                            // [SETTLED_AFTER_MS] it isn't a sync landing, and
+                            // writing over it loses no readable session.
+                            newer == null -> {
+                                val seen = unreadableSeen
+                                if (seen != null && seen.documentId == ready.documentId && seen.text == onDisk &&
+                                    clock() - seen.at >= SETTLED_AFTER_MS
+                                ) null else Gate.UNSETTLED
+                            }
                             newer.sheetId != ready.session.sheetId -> Gate.OTHER_SESSION
                             else -> Gate.CHANGED
                         }
                         Check(gate, onDisk, newRaw, newer, if (gate == null) write(ready.documentId, text) else null)
                     }
                     val gate = check.gate
-                    unreadableSeen = check.onDisk.takeIf { gate == Gate.UNSETTLED }
+                    // The first sighting's time is kept while the bytes
+                    // stay the same, so tapping again doesn't restart it.
+                    unreadableSeen = if (gate != Gate.UNSETTLED) null else unreadableSeen
+                        ?.takeIf { it.documentId == ready.documentId && it.text == check.onDisk }
+                        ?: Seen(ready.documentId, check.onDisk!!, clock())
                     _saving.value = when (gate) {
                         Gate.GONE -> SaveState.Failed(
                             "Couldn't read the session file just before saving. It may have been moved or deleted. Nothing was written; your numbers are still here.",
@@ -513,8 +631,16 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                             "The session file was replaced by one whose \"schema\" label is missing or isn't one Carry knows. Nothing was written.",
                             damaged = false,
                         )
+                        Gate.EMPTY -> SaveState.Failed(
+                            "The session file is empty right now, most likely a sync part way through. Nothing was written; your numbers are still here. Try again in a moment.",
+                            damaged = false,
+                        )
+                        Gate.UNDECODABLE -> SaveState.Failed(
+                            "The session file changed into one this version of Carry can't read, though the coach may still be able to. Nothing was written over it; your numbers are still here. Check the file on the laptop, or update Carry.",
+                            damaged = false,
+                        )
                         Gate.UNSETTLED -> SaveState.Failed(
-                            "The session file changed and Carry can't read it now, perhaps a sync part way through. Nothing was written; your numbers are still here. Wait a moment and tap Try again. If it still can't be read, Try again writes your session over it.",
+                            "The session file changed and can't be read, perhaps a sync part way through. Nothing was written; your numbers are still here. If it is still unreadable in two minutes, Try again writes your session over it.",
                             damaged = false,
                         )
                         Gate.OTHER_SESSION -> SaveState.Failed(
@@ -549,9 +675,14 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                             // warning flag it may have set is its to clear.
                             val now = _state.value as? CarryState.Ready
                             if (now != null && now.documentId == ready.documentId && now.raw == ready.raw) {
+                                val waiting = _anotherSession.value
                                 _state.value = ready.copy(raw = text)
                                 handle.remove<String>(DRAFT)
                                 _fileMovedUnderEdits.value = false
+                                _anotherSession.value = false
+                                // The typing kept this sheet on screen over
+                                // a newer session; saved, it can show.
+                                if (waiting) refresh()
                                 // Re-seed from what was actually written, so
                                 // the next refresh cannot blank the form by
                                 // reading a state captured before the save.
@@ -630,6 +761,17 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
          */
         const val STALL_AFTER_MS = 15_000L
         const val DRAFT = "draft"
+        const val HELD = "held"
+
+        /**
+         * How long an unreadable file must sit unchanged before a save may
+         * write over it. A sync writing in place leaves partial bytes for
+         * as long as the transfer takes, which on a phone's connection is
+         * seconds; two minutes is well past that, short enough that the
+         * owner in a lobby isn't stuck, and it only applies to bytes that
+         * aren't JSON at all.
+         */
+        const val SETTLED_AFTER_MS = 120_000L
     }
 }
 

@@ -89,6 +89,12 @@ fun LogScreen(
     /** The file changed under numbers that have not been saved. */
     fileMoved: Boolean = false,
     onDiscard: () -> Unit = {},
+    /** The sheet on screen is kept for the typing on it; the folder's
+     *  newest is another session. */
+    anotherSession: Boolean = false,
+    /** Unsaved typing for sessions no longer in the folder, in words. */
+    held: List<String> = emptyList(),
+    onDropHeld: () -> Unit = {},
     modifier: Modifier = Modifier,
     /** Rows the file lists that this build could not read. Said here as
      *  well as on the Before tab, because here the consequence is a box
@@ -128,7 +134,22 @@ fun LogScreen(
                 modifier = Modifier.padding(bottom = 6.dp),
             )
         }
-        if (fileMoved) {
+        held.forEach {
+            Text(
+                "\u26a0 $it",
+                color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.After.Note,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+        }
+        if (held.isNotEmpty()) NewSheetButton(onDropHeld, Modifier.padding(bottom = 6.dp), "Drop these numbers")
+        if (anotherSession) {
+            Text(
+                "\u26a0 A different session is now in the folder. These are your numbers for this one, not saved yet: save them, or drop them to see the new session.",
+                color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.After.Note,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+            NewSheetButton(onDiscard, Modifier.padding(bottom = 6.dp))
+        } else if (fileMoved) {
             Text(
                 "\u26a0 The coach rewrote this session while you were filling it in. Your numbers are still here; check they line up before saving.",
                 color = Look.BrickInk, fontFamily = Look.Name, fontSize = Look.After.Note,
@@ -717,7 +738,11 @@ private const val MAX_TYPED_NAME = 200
 /** Drops the typing and takes the file as it now stands. Its label says
  *  what is lost, since it is one tap and the numbers can't be re-derived. */
 @Composable
-private fun NewSheetButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun NewSheetButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    label: String = "Drop my numbers, use the new sheet",
+) {
     Box(
         modifier
             .heightIn(min = 48.dp)
@@ -727,7 +752,7 @@ private fun NewSheetButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            "Drop my numbers, use the new sheet",
+            label,
             color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.After.Note,
         )
     }

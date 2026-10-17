@@ -300,6 +300,30 @@ class LogScreenTest {
     }
 
     @Test
+    fun `typing kept over another session says so, and held typing is listed until dropped`() {
+        var discarded = 0
+        var dropped = 0
+        val held = "Not saved: what you typed for 2G on 2026-10-16, a session no longer in the folder. 10 x deadlift 95 lb 8 reps."
+        compose.setContent {
+            LogScreen(
+                session = SampleSession.today,
+                entries = mapOf(0 to SessionPatch.Entry(weight = 45.0, reps = 10)), added = emptyList(),
+                onEdit = { _, _ -> }, onAdd = {}, onEditAdded = { _, _ -> },
+                onSave = {}, saving = SaveState.Idle,
+                anotherSession = true, onDiscard = { discarded++ },
+                held = listOf(held), onDropHeld = { dropped++ },
+            )
+        }
+        compose.onNodeWithText("A different session is now in the folder", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("\u26a0 $held").assertIsDisplayed()
+        shoot("41-log-another-session")
+        compose.onNodeWithText("Drop these numbers").performClick()
+        assertEquals(1, dropped)
+        compose.onNodeWithText("Drop my numbers, use the new sheet").performClick()
+        assertEquals(1, discarded)
+    }
+
+    @Test
     fun `a row with a number and no name asks for the name in the row`() {
         // The save refuses this row, so the ask belongs in the box that
         // fixes it. Finding out at the save button is how the number got

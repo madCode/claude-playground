@@ -227,6 +227,9 @@ data class LogBinding(
     val saving: SaveState,
     val fileMoved: Boolean = false,
     val onDiscard: () -> Unit = {},
+    val anotherSession: Boolean = false,
+    val held: List<String> = emptyList(),
+    val onDropHeld: () -> Unit = {},
     val onEdit: (Int, SessionPatch.Entry) -> Unit,
     val onAdd: () -> Unit,
     val onEditAdded: (Int, AddedSet) -> Unit,
@@ -347,6 +350,7 @@ fun CarryApp(
                         onEdit = log.onEdit, onAdd = log.onAdd, onEditAdded = log.onEditAdded,
                         onSave = log.onSave, saving = log.saving, fileMoved = log.fileMoved,
                         onDiscard = log.onDiscard, unreadable = state.unreadable,
+                        anotherSession = log.anotherSession, held = log.held, onDropHeld = log.onDropHeld,
                     )
                     2 -> log.since?.let { SinceScreen(it, newerBuild = log.newerBuild, installing = log.installing, onGetBuild = log.onGetBuild) } ?: TodayScreen(state.session, unreadable = state.unreadable)
                     else -> TodayScreen(state.session, unreadable = state.unreadable)

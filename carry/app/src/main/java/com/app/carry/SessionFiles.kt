@@ -169,6 +169,10 @@ object SessionFiles {
         null
     }
 
+    /** Whether [text] is well-formed JSON at all, after [normalised]. */
+    fun isJson(text: String): Boolean =
+        runCatching { Session.json.parseToJsonElement(normalised(text)) }.isSuccess
+
     /**
      * [text] without what a sync or an editor may add without changing
      * anything: a leading byte-order mark, and CRLF line endings.
