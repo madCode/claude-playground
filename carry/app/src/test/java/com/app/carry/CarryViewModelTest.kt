@@ -516,7 +516,7 @@ class CarryViewModelTest {
             val state = model.saving.value as SaveState.Failed
             assertEquals("This session file changed since you opened it, so nothing was saved.", state.why)
             assertEquals(listOf("deadlift: 95 lb, 8 reps"), state.typed)
-            assertTrue(state.newFile)
+            assertEquals("a file to load only when one reads", onDisk == sheet.replace("10 x bench press", "12 x bench press"), state.newFile)
             assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
             assertTrue("the typing is still recoverable", handle.keys().isNotEmpty())
         }
@@ -540,12 +540,16 @@ class CarryViewModelTest {
     }
 
     @Test
-    fun `a file that only gained a BOM or CRLF line endings saves`() = runTest(dispatcher) {
+    fun `a file that only gained a BOM, CRLF line endings or a reformat saves`() = runTest(dispatcher) {
         // Through the real SessionFolder.read, so what is compared is what
         // the provider's bytes decode to.
         val tree = android.net.Uri.parse("content://com.android.externalstorage.documents/tree/primary%3Agym")
         val doc = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, "doc")
-        for (onDisk in listOf("\uFEFF" + sheet, sheet.replace("\n", "\r\n"))) {
+        // Reordered keys, and compact rather than indented: the JSON branch.
+        val obj = Session.json.parseToJsonElement(sheet) as kotlinx.serialization.json.JsonObject
+        val reordered = kotlinx.serialization.json.JsonObject(obj.entries.reversed().associate { it.key to it.value }).toString()
+        assertTrue("the fixture must differ as text", reordered != sheet && !reordered.contains("\n"))
+        for (onDisk in listOf("\uFEFF" + sheet, sheet.replace("\n", "\r\n"), reordered)) {
             val model = viewModel()
             model.folder.remember(tree)
             org.robolectric.Shadows.shadowOf(app.contentResolver).registerInputStreamSupplier(doc) {
@@ -562,6 +566,51 @@ class CarryViewModelTest {
             assertEquals("${model.saving.value}", SaveState.Saved, model.saving.value)
             assertEquals(1, wrote)
         }
+    }
+
+    @Test
+    fun `after Carry's own damaged write, Try again repairs the file`() = runTest(dispatcher) {
+        // The write truncated the file and couldn't put it back. That file
+        // is Carry's own doing, so it is the baseline for Try again; taking
+        // it for someone else's change blocked saving for good.
+        val handle = SavedStateHandle()
+        val model = viewModel(handle)
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+
+        model.write = { _, text -> disk.writes++; disk.text = text.take(30); Saved.NO_FILE_DAMAGED }
+        model.save(); settled(model)
+        assertTrue((model.saving.value as SaveState.Failed).damaged)
+
+        // Typing on doesn't hide the warning; the file is still broken.
+        model.edit(1, SessionPatch.Entry(weight = 40.0, reps = 10))
+        assertTrue("the damage warning stays", (model.saving.value as SaveState.Failed).damaged)
+
+        model.write = { _, text -> disk.writes++; disk.text = text; Saved.YES }
+        model.save(); settled(model)
+        assertEquals(SaveState.Saved, model.saving.value)
+        assertEquals(2, disk.writes)
+        assertTrue(disk.text!!, "95" in disk.text!! && "40" in disk.text!!)
+    }
+
+    @Test
+    fun `a damaged file changed again by someone else is refused, still saying it may be damaged`() = runTest(dispatcher) {
+        val model = viewModel()
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        model.write = { _, text -> disk.writes++; disk.text = text.take(30); Saved.NO_FILE_DAMAGED }
+        model.save(); settled(model)
+
+        disk.text = sheet.replace("10 x bench press", "12 x bench press")
+        model.save(); settled(model)
+        assertEquals(1, disk.writes)
+        val state = model.saving.value as SaveState.Failed
+        assertTrue(state.damaged)
+        assertTrue(state.why, "may be damaged" in state.why && "changed since you opened it" in state.why)
     }
 
     @Test
