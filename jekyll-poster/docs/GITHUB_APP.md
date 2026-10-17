@@ -9,12 +9,15 @@ flow). The second needs a GitHub App, which only its owner can register. About f
 4. **Webhook**: untick Active.
 5. **Repository permissions**: Contents → Read and write; Actions → Read-only; Metadata →
    Read-only (required anyway).
-6. **Where can this app be installed?** Only on this account (or any account, to share it).
+6. **Where can this app be installed?** **Any account** if a blog is under an organisation (or
+   to share the app); Only on this account can't be installed anywhere else.
 7. Create it. On its page, note the **Client ID** (`Iv23…`; not a secret) and the URL name
    in its public link (`github.com/apps/<slug>`).
 8. Optional: under **Optional features**, opt out of **User-to-server token expiration** to get
    tokens that don't expire. With expiry on, the app renews tokens itself.
-9. **Install App** → your account → only your blog's repository.
+9. **Install App** → your account → only your blog's repository. For a blog under an
+   organisation, Install App again → the organisation → its blog's repository (an owner of it
+   installs it, or approves your request). One Sign in with GitHub then lists both.
 
 Then build with them, or set them as repository **variables** (Settings → Secrets and variables
 → Actions → Variables) named `JEKYLL_POSTER_CLIENT_ID` and `JEKYLL_POSTER_APP_SLUG`, and CI's
