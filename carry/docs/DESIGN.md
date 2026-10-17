@@ -233,6 +233,9 @@ numbers someone just entered cannot, so they get the protection:
     trips this itself.
   - A file that can't be read just before the save (deleted, moved) is
     refused too, with the typing kept.
+  - A changed file that doesn't parse yet (a sync part way through) is
+    refused with "try again in a moment" and no offer, since there is no
+    new sheet to take.
   - After the process dies, the baseline is the file read on restore. A
     change made while the app was dead is caught then, by the draft's
     fingerprint, and shown as the rewritten-session warning.
