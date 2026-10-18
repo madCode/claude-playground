@@ -64,10 +64,51 @@ class TodayScreenTest {
         compose.onNodeWithText("15 lb").assertIsDisplayed()
 
         // Everything with no number is one tail line, not six rows.
-        compose.onNodeWithText("By feel: lateral raise, tricep extension · bench").assertIsDisplayed()
+        // `lateral raise` is no longer here: the file holds a neighbour for
+        // it, so it gets a row of its own with where that number came from.
+        compose.onNodeWithText("By feel: tricep extension · bench").assertIsDisplayed()
+        compose.onNodeWithText("shoulder press 20 lb, 10/10").assertIsDisplayed()
         compose.onNodeWithText("No weight: squat, sit-up").assertIsDisplayed()
 
         shoot("01-today")
+    }
+
+    @Test
+    fun `a movement with no number of its own shows the nearest one, with where it came from`() {
+        // On 2026-10-18 the owner's sheet sent four movements out "by
+        // feel" while the file held a neighbour for two of them. The name
+        // alone tells them nothing they did not know standing there.
+        compose.setContent { TodayScreen(SampleSession.today, java.time.LocalDate.of(2026, 10, 17)) }
+
+        // The provenance is the point: the number is only trustworthy next
+        // to the movement it was borrowed from.
+        compose.onNodeWithText("shoulder press 20 lb, 10/10").assertIsDisplayed()
+        // ...and it has left the undifferentiated list.
+        compose.onNodeWithText("By feel: tricep extension · bench").assertIsDisplayed()
+    }
+
+    @Test
+    fun `only three borrowed numbers are given rows, and the rest stay in the tail`() {
+        // These are rows, not one concatenated line, so an unbounded count
+        // would push the weights the owner actually came for off a glance.
+        val many = SampleSession.today.copy(
+            sets = SampleSession.today.sets.map {
+                if (it.suggestedWeight == null && it.suggested == null)
+                    it.copy(related = "neighbour of ${it.canonical} 20 lb, 10/10") else it
+            } + listOf(
+                SampleSession.today.sets[6].copy(ref = 20, canonical = "fourth", related = "d 5 lb, 1/1"),
+                SampleSession.today.sets[6].copy(ref = 21, canonical = "fifth", related = "e 5 lb, 1/1"),
+            ),
+        )
+        compose.setContent { TodayScreen(many, java.time.LocalDate.of(2026, 10, 17)) }
+
+        // Four sets carry a related line. The third still gets its row...
+        compose.onNodeWithText("d 5 lb, 1/1").assertIsDisplayed()
+        // ...and the fourth does not, which is the cap doing its work.
+        compose.onNodeWithText("e 5 lb, 1/1").assertDoesNotExist()
+        // The overflow is not dropped, only demoted: its name is still on
+        // the sheet, in the tail line, so nothing vanishes off the board.
+        compose.onNodeWithText("fifth", substring = true).assertIsDisplayed()
     }
 
     @Test

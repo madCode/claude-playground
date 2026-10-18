@@ -16,12 +16,13 @@ object SampleSession {
         // without it shows a screen nobody will ever see. `prescribedReps`
         // stays the runner's math number: "10 total" is 5 a side.
         asked: String? = "10", seconds: Int? = null, reps: Int? = 10,
+        related: String? = null,
     ) = ExerciseSet(
         ref = ref, line = "${asked ?: seconds} x $name", canonical = name, variant = JsonNull,
         prescribedReps = reps, prescribedText = asked, prescribedDurationSec = seconds,
         family = family, suggestedWeight = weight,
         previousWeight = previous, streakDone = done, streakNeeded = needed,
-        suggested = suggested,
+        suggested = suggested, related = related,
     )
 
     val today = Session(
@@ -35,7 +36,8 @@ object SampleSession {
             set(3, "goblet squat · harder", "legs", 25.0),
             set(4, "deadlift", "legs", 25.0, done = 2, needed = 3, asked = "10 total", reps = 5),
             set(5, "bicep curl · seated", "combo", 15.0, asked = "6-12", reps = 6),
-            set(6, "lateral raise", "push", null, asked = "8 each", reps = 8),
+            set(6, "lateral raise", "push", null, asked = "8 each", reps = 8,
+                related = "shoulder press 20 lb, 10/10"),
             set(7, "tricep extension · bench", "push", null),
             set(8, "squat", "legs", null, suggested = "no weight needed"),
             // The one timed row: a hold has no rep count, and how long is

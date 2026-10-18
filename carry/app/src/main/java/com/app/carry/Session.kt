@@ -101,6 +101,16 @@ data class ExerciseSet(
     /** Parsed out by the runner so the screen never has to read prose. */
     @SerialName("suggested_weight") val suggestedWeight: Double? = null,
     @SerialName("previous_weight") val previousWeight: Double? = null,
+    /**
+     * The nearest thing the coach could find when this movement has no
+     * history of its own: "goblet forward lunge 30 lb, 10/10".
+     *
+     * Verbatim, and shown verbatim. It names the OTHER movement it came
+     * from, and that provenance is the whole point -- "~30" on its own
+     * reads as a suggestion, and a wrong number is worse than no number.
+     * Carry must not strip it down to the figure.
+     */
+    val related: String? = null,
     /** legs | push | pull | core | combo -- from the knowledge base's muscle groups. */
     val family: String? = null,
     /** Clean sets held at this weight, and how many a bump needs. */
