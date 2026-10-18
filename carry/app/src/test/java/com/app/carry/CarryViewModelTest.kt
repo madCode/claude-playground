@@ -1041,4 +1041,95 @@ class CarryViewModelTest {
         assertEquals("Android couldn't take the update: No space left on device.", model.updateProblem.value!!.why)
         assertFalse(model.installing.value)
     }
+
+    private fun sheetOn(date: String) = """
+        {"schema":"gym-session/1","sheet_id":"$date:2G","date":"$date","class":"2G",
+         "sets":[{"ref":0,"line":"10 x deadlift","canonical":"deadlift"}]}
+    """.trimIndent()
+
+    /** Two sheets, the newest listed first, whose writes land back in [files]. */
+    private class TwoSheets : Folder {
+        val files = mutableMapOf("new" to "", "old" to "")
+        override val label: String? = "Sync/gym"
+        override val chosen = true
+        override val grantLost = false
+        private val names = mapOf("new" to "session-2026-10-17-2G.json", "old" to "session-2026-10-10-2G.json")
+        override fun list() = names.filterKeys { it in files }.toList()
+        override fun read(documentId: String) = files[documentId]
+        override fun write(documentId: String, text: String) = true.also { files[documentId] = text }
+    }
+
+    private fun finishingModel(folder: TwoSheets, handle: SavedStateHandle = SavedStateHandle()) =
+        viewModel(handle).also { model ->
+            folder.files["new"] = sheetOn("2026-10-17")
+            folder.files["old"] = sheetOn("2026-10-10")
+            model.read = { carryState(folder, model.finishing) }
+            model.readNow = { folder.read(it) }
+            model.write = { id, text -> folder.write(id, text); Saved.YES }
+        }
+
+    @Test
+    fun `an older session can be finished, and the save lands in its own file`() = runTest(dispatcher) {
+        val folder = TwoSheets()
+        val model = finishingModel(folder)
+        model.refresh(); settled(model)
+        assertEquals("2026-10-17:2G", (model.state.value as CarryState.Ready).session.sheetId)
+
+        assertTrue(model.finishOlder("2026-10-10:2G"))
+        settled(model)
+        val ready = model.state.value as CarryState.Ready
+        assertEquals("2026-10-10:2G", ready.session.sheetId)
+        assertTrue("every screen has to say it isn't the newest", ready.older)
+
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        model.save(); settled(model)
+        assertEquals(SaveState.Saved, model.saving.value)
+        assertEquals(95.0, SessionPatch.entriesIn(folder.files["old"]!!)[0]?.weight)
+        assertTrue("the newest sheet is untouched", SessionPatch.entriesIn(folder.files["new"]!!).isEmpty())
+
+        assertTrue(model.backToNewest())
+        settled(model)
+        assertEquals("2026-10-17:2G", (model.state.value as CarryState.Ready).session.sheetId)
+        assertFalse((model.state.value as CarryState.Ready).older)
+    }
+
+    @Test
+    fun `unsaved typing stops another session being opened over it`() = runTest(dispatcher) {
+        // There is one draft. Typing on the older sheet would replace the
+        // newest sheet's unsaved numbers, so the switch is refused instead.
+        val folder = TwoSheets()
+        val model = finishingModel(folder)
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 60.0))
+
+        assertFalse(model.finishOlder("2026-10-10:2G"))
+        settled(model)
+        assertEquals("2026-10-17:2G", (model.state.value as CarryState.Ready).session.sheetId)
+        assertEquals(60.0, model.edits.value[0]?.weight)
+    }
+
+    @Test
+    fun `the session being finished survives the process dying, and goes when its file does`() = runTest(dispatcher) {
+        val folder = TwoSheets()
+        val handle = SavedStateHandle()
+        finishingModel(folder, handle).apply { refresh(); settled(this); finishOlder("2026-10-10:2G"); settled(this) }
+
+        val reborn = finishingModel(folder, handle)
+        reborn.refresh(); settled(reborn)
+        assertEquals("2026-10-10:2G", (reborn.state.value as CarryState.Ready).session.sheetId)
+
+        // Part way through a sync's replace: still listed, not readable. The
+        // sheet on screen and the pin both hold.
+        folder.files["old"] = "{\"sche"
+        reborn.refresh(); settled(reborn)
+        assertEquals("2026-10-10:2G", (reborn.state.value as CarryState.Ready).session.sheetId)
+        assertEquals("2026-10-10:2G", reborn.finishing)
+
+        // Gone from the listing. The newest comes back, and the pin goes, so
+        // the old day doesn't spring back open if the file returns.
+        folder.files.remove("old")
+        reborn.refresh(); settled(reborn)
+        assertEquals("2026-10-17:2G", (reborn.state.value as CarryState.Ready).session.sheetId)
+        assertEquals(null, reborn.finishing)
+    }
 }

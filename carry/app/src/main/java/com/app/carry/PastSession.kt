@@ -43,11 +43,12 @@ import androidx.compose.ui.unit.sp
  * form, and every band on the Since screen is cut across days rather than
  * along one.
  *
- * **A record, not a form.** There is no way to change anything here, by
- * design: the one editable session is today's, on the Log tab. Two ways to
- * write the same file is how a wrong number gets in, and this app's whole
- * premise is that a wrong number in a training history is worse than a
- * missing one because nothing downstream can tell the difference.
+ * **A record, not a form.** Nothing here can be typed into. A day left
+ * unfinished is finished on the After tab, which [onFinish] puts it on, so
+ * there is still one way to write a file: two is how a wrong number gets
+ * in, and this app's whole premise is that a wrong number in a training
+ * history is worse than a missing one because nothing downstream can tell
+ * the difference.
  *
  * Which is also why **a blank row is shown blank**. The rows nobody filled
  * in are half the answer to "what did I do that day", and rendering them
@@ -55,7 +56,17 @@ import androidx.compose.ui.unit.sp
  * does not know.
  */
 @Composable
-fun PastSession(day: Growth.Day, onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun PastSession(
+    day: Growth.Day,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    /** Puts this day on the After tab; null where only reading is offered. */
+    onFinish: (() -> Unit)? = null,
+    /** Unsaved typing on the After tab, which finishing this day would replace. */
+    finishBlocked: Boolean = false,
+    /** This day is the one on the After tab already. */
+    editing: Boolean = false,
+) {
     // There is no nav library here -- the app is three tabs and nothing
     // else -- so the system back button has nothing to pop and would
     // leave the app from a screen the owner opened by tapping a row.
@@ -80,14 +91,34 @@ fun PastSession(day: Growth.Day, onBack: () -> Unit, modifier: Modifier = Modifi
             // Said once, here, rather than implied by the absence of
             // boxes: a screen full of numbers that cannot be touched
             // reads as broken until something says it is a record.
-            if (day.backfilled) {
-                "A record of a day logged before Carry. Nothing here can be edited."
-            } else {
-                "What you saved that day. The only session you can change is today's, on After."
+            when {
+                day.backfilled -> "A record of a day logged before Carry. Nothing here can be edited."
+                editing -> "What you saved that day. It's on the After tab now, to finish."
+                onFinish == null -> "What you saved that day. The only session you can change is today's, on After."
+                finishBlocked -> "What you saved that day. Save or discard what's typed on After first, then this one can be finished."
+                else -> "What you saved that day. Finishing it puts it on the After tab."
             },
             color = Look.ChalkFaint, fontFamily = Look.Name, fontSize = Look.SmallSize,
             modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
         )
+        if (onFinish != null && !day.backfilled && !editing && !finishBlocked) {
+            Box(
+                Modifier
+                    .heightIn(min = 48.dp)
+                    .clickable(onClick = onFinish, role = Role.Button),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Text(
+                    "Finish this session",
+                    color = Look.Amber, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
+                    fontSize = Look.SmallSize, maxLines = 1,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .border(1.dp, Look.Amber, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                )
+            }
+        }
 
         if (day.rows.isEmpty()) {
             // A day in the list whose file holds no rows at all. Not

@@ -173,7 +173,9 @@ class TodayScreenTest {
         // The common case on a 3G day, and the one most likely to crash:
         // no weighted rows at all.
         val empty = SampleSession.today.copy(sets = emptyList())
-        compose.setContent { TodayScreen(empty) }
+        // Today by the sheet's own date: the sample is a fixed day, and
+        // the clock moving past it turns the screen into "No sheet for today".
+        compose.setContent { TodayScreen(empty, today = java.time.LocalDate.parse(empty.date)) }
         compose.onNodeWithText("Carry these in").assertIsDisplayed()
         // No shoot() here: Robolectric's capture comes back flat for this
         // screen and the blank check would fail. The assertions above are

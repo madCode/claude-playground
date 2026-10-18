@@ -60,6 +60,11 @@ fun SinceScreen(
     newerBuild: Int? = null,
     installing: Boolean = false,
     onGetBuild: () -> Unit = {},
+    /** Puts a past day on the After tab, by its sheet id; null offers none. */
+    onFinish: ((String) -> Unit)? = null,
+    finishBlocked: Boolean = false,
+    /** The sheet the After tab holds now. */
+    editing: String? = null,
 ) {
     // There is no nav library here and this does not justify adding one:
     // the app is three tabs, and one nullable id inside this screen keeps
@@ -94,7 +99,11 @@ fun SinceScreen(
         if (opened != null && since.days.none { it.sheetId == opened }) opened = null
     }
     if (open != null) {
-        PastSession(open, onBack = { opened = null }, modifier = modifier)
+        PastSession(
+            open, onBack = { opened = null }, modifier = modifier,
+            onFinish = onFinish?.let { { it(open.sheetId) } },
+            finishBlocked = finishBlocked, editing = open.sheetId == editing,
+        )
         return
     }
     Column(modifier.fillMaxSize().background(Look.Slate).padding(horizontal = 14.dp)) {

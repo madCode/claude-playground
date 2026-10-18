@@ -47,6 +47,9 @@ fun TodayScreen(
      *  or it reads as the coach not prescribing it. */
     unreadable: Int = 0,
     modifier: Modifier = Modifier,
+    /** An older sheet the owner is finishing: "no sheet for today" and
+     *  "the most recent" would both be claims about the folder it can't make. */
+    older: Boolean = false,
 ) {
     val day = SessionFiles.dayOf(session.date, today)
     val weighted = session.sets.filter { it.suggestedWeight != null }
@@ -66,13 +69,17 @@ fun TodayScreen(
         val sheetName = listOfNotNull(session.classTag, SessionFiles.formatDate(session.date))
             .joinToString(" · ")
         Text(
-            if (stale) "No sheet for today" else sheetName,
+            if (stale && !older) "No sheet for today" else sheetName,
             color = Look.Chalk, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
             fontSize = Look.TitleSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 16.dp),
         )
         Text(
-            if (stale) "Showing the most recent: $sheetName" else "Carry these in",
+            when {
+                older -> "What that sheet suggested"
+                stale -> "Showing the most recent: $sheetName"
+                else -> "Carry these in"
+            },
             color = Look.ChalkDim, fontFamily = Look.Name,
             fontSize = Look.SmallSize, maxLines = 2, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 3.dp, bottom = 10.dp),

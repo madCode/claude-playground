@@ -258,17 +258,14 @@ These are the open paths to one, hardest first.
 
 
 ### Health and tidying
-- [ ] **Finish an older session.** A *finish this session* button on a
-  past day in Since that opens it on the After tab for editing, with the
-  same save checks, #140's changed-file refusal included. Today only the
-  newest sheet is editable; once a newer sheet lands, an unfinished older
-  one can only be edited by hand. The "record, not a form" rule in
-  DESIGN needs revisiting with it *(you approved)*
 - [ ] **A resume can put another session on screen over pending
   typing.** The refresh on every resume shows the newest session; the
   draft for the old one is then hidden, and the next keystroke replaces
   it. Left for the brain-on-the-phone move, since the session file goes
-  then *(the simple save refusal, #136 closed)*
+  then. Finishing an older session (cycle 68) has the same exposure: a
+  sync that briefly drops the old file from the listing puts the newest
+  back under the typing, and the pin goes with it *(the simple save
+  refusal, #136 closed; review of cycle 68)*
 - [ ] **Carry and gym-coach disagree about an old *hard*-only row.** An
   old session whose only record is `hard` on bodyweight rows reaches
   gym-coach's history, which still counts `hard` as an answer. Carry's
@@ -422,6 +419,12 @@ Nothing exists for "the sheet is wrong and I know it now". Adding a row currentl
 means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
+
+- [x] **Finish an older session.** Built 2026-10-18: a *Finish this
+  session* button on a past day in Since puts that sheet on the After tab,
+  pinned by `sheet_id`, with the same save checks. A strip on every tab
+  says an older sheet is on screen; switching is refused over unsaved
+  typing. DESIGN.md's "record, not a form" now says how *(you approved)*
 
 - [x] **A set marked *hurt* leaves the "part way to a bump" band.** The
   runner ends a streak at a hurt set with a weight and says hold, so the

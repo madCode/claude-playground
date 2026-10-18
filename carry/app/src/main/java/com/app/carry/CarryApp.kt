@@ -10,6 +10,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -87,6 +94,10 @@ sealed interface CarryState {
          *  cannot act on, and the save still writes those rows back
          *  untouched. */
         val unreadable: Int = 0,
+        /** An older sheet the owner chose to finish, rather than the newest.
+         *  Every screen says so, since the lobby glance must not be mistaken
+         *  for today's. */
+        val older: Boolean = false,
     ) : CarryState
 }
 
@@ -96,10 +107,39 @@ sealed interface CarryState {
  * thing [SessionFolder] is asked for is a list of names and the text of one
  * file.
  */
-fun carryState(folder: Folder): CarryState {
+fun carryState(folder: Folder, finishing: String? = null): CarryState {
     if (folder.grantLost) return CarryState.NeedsFolder(lostGrant = true, holding = folder.label)
     if (!folder.chosen) return CarryState.NeedsFolder()
     val files = folder.list()
+    // [finishing] is a sheet id, which only the file's contents carry. It
+    // starts with the sheet's date, so only the files named for that day are
+    // read: one or two, not every file back to it. None listed means the
+    // sheet has really gone, and the newest is shown instead. One listed
+    // that won't read is a sync part way through, so it is reported as
+    // unreadable and the screen keeps the sheet it had: falling back to the
+    // newest there would put another day's form under the owner's typing.
+    if (finishing != null) {
+        val sameDay = files.filter { (_, name) ->
+            SessionFiles.isSessionFile(name) && SessionFiles.dateIn(name) == finishing.substringBefore(':')
+        }
+        var unread: CarryState? = null
+        for ((id, name) in sameDay) {
+            val text = folder.read(id)
+            val session = text?.let(SessionFiles::parse)
+            if (text == null || session == null) {
+                unread = text?.let { unreadable(name, it) } ?: CarryState.Unreadable(name, CarryState.Unreadable.Why.DAMAGED)
+                continue
+            }
+            // A back-filled day is a record, never a form, whatever asked for it.
+            if (session.sheetId == finishing && !Growth.backfilledIn(text)) {
+                // The newest asked for by id is just the newest: no strip, and
+                // the pin has nothing left to do.
+                val older = name != SessionFiles.newest(files.map { it.second })
+                return CarryState.Ready(session, text, id, SessionFiles.unreadableRows(text, session), older = older)
+            }
+        }
+        unread?.let { return it }
+    }
     // An empty folder is NOT a lost grant. The likeliest reason by far is
     // that the coach has not written today's session yet, and telling
     // someone they lost a folder they just picked sends them round the
@@ -243,6 +283,12 @@ data class LogBinding(
     /** True while the newer build downloads, between the tap and Android's installer. */
     val installing: Boolean = false,
     val onGetBuild: () -> Unit = {},
+    /** Puts an older session on the After tab, by sheet id; false when
+     *  unsaved typing refused it. */
+    val onFinishOlder: ((String) -> Boolean)? = null,
+    val onBackToNewest: () -> Boolean = { false },
+    /** Typing on the After tab not yet saved. */
+    val unsaved: Boolean = false,
 )
 
 @Composable
@@ -334,12 +380,20 @@ fun CarryApp(
             // bounced back to the lobby screen on every rotation is an
             // irritation the other two never see.
             var tab by rememberSaveable { mutableStateOf(0) }
+            // The sheet asked for from Since. The After tab is shown once it
+            // has landed, not at the tap: until the read returns, After still
+            // holds the newest sheet, and typing there would go into it.
+            var goTo by rememberSaveable { mutableStateOf<String?>(null) }
+            LaunchedEffect(state.session.sheetId, goTo) {
+                if (goTo != null && goTo == state.session.sheetId) { tab = 1; goTo = null }
+            }
             Column(modifier.fillMaxSize().background(Look.Slate)) {
                 Row(Modifier.fillMaxWidth()) {
                     Tab("Before", tab == 0, Modifier.weight(1f)) { tab = 0 }
                     Tab("After", tab == 1, Modifier.weight(1f)) { tab = 1 }
                     if (log.since != null) Tab("Since", tab == 2, Modifier.weight(1f)) { tab = 2 }
                 }
+                if (state.older) Finishing(state.session, blocked = log.unsaved, onBack = { log.onBackToNewest() })
                 when (tab) {
                     1 -> LogScreen(
                         session = state.session, entries = log.entries, added = log.added,
@@ -348,10 +402,49 @@ fun CarryApp(
                         onSave = log.onSave, saving = log.saving, fileMoved = log.fileMoved,
                         onDiscard = log.onDiscard, unreadable = state.unreadable,
                     )
-                    2 -> log.since?.let { SinceScreen(it, newerBuild = log.newerBuild, installing = log.installing, onGetBuild = log.onGetBuild) } ?: TodayScreen(state.session, unreadable = state.unreadable)
-                    else -> TodayScreen(state.session, unreadable = state.unreadable)
+                    2 -> log.since?.let {
+                        SinceScreen(
+                            it, newerBuild = log.newerBuild, installing = log.installing, onGetBuild = log.onGetBuild,
+                            onFinish = log.onFinishOlder?.let { finish -> { id -> if (finish(id)) goTo = id } },
+                            finishBlocked = log.unsaved, editing = state.session.sheetId,
+                        )
+                    } ?: TodayScreen(state.session, unreadable = state.unreadable, older = state.older)
+                    else -> TodayScreen(state.session, unreadable = state.unreadable, older = state.older)
                 }
             }
+        }
+    }
+}
+
+/**
+ * Says an older session is on screen, on every tab, with the way back. The
+ * Before tab is read in one glance in the lobby, and an old sheet there
+ * must not pass for today's.
+ */
+@Composable
+private fun Finishing(session: Session, blocked: Boolean, onBack: () -> Unit) {
+    val day = listOfNotNull(session.classTag, SessionFiles.formatDate(session.date)).joinToString(" · ")
+    Row(
+        Modifier.fillMaxWidth().background(Look.Amber).padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            if (blocked) "Finishing $day. Save or discard what's typed to go back to the newest." else "Finishing $day, an older session.",
+            color = Look.Slate, fontFamily = Look.Name, fontSize = 13.sp,
+            // Polite, so TalkBack says which sheet is on screen when the
+            // switch lands, which is a moment after the tap.
+            modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
+        )
+        if (!blocked) Box(
+            Modifier.heightIn(min = 48.dp)
+                .clickable(onClick = onBack, role = Role.Button)
+                .semantics { contentDescription = "Back to the newest session" },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                "Newest", color = Look.Slate, fontFamily = Look.Name, fontWeight = FontWeight.Bold,
+                fontSize = 13.sp, modifier = Modifier.padding(horizontal = 8.dp),
+            )
         }
     }
 }
@@ -438,5 +531,6 @@ class SessionLoader(
     private val folder: Folder,
     private val io: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.IO,
 ) {
-    suspend fun load(): CarryState = kotlinx.coroutines.withContext(io) { carryState(folder) }
+    suspend fun load(finishing: String? = null): CarryState =
+        kotlinx.coroutines.withContext(io) { carryState(folder, finishing) }
 }

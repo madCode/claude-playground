@@ -102,6 +102,9 @@ class MainActivity : ComponentActivity() {
                         newerBuild = model.updates.newer.collectAsState().value,
                         installing = model.installing.collectAsState().value,
                         onGetBuild = ::getBuild,
+                        onFinishOlder = model::finishOlder,
+                        onBackToNewest = model::backToNewest,
+                        unsaved = model.unsaved,
                     ),
                 )
             }

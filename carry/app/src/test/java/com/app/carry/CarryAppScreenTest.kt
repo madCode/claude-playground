@@ -172,7 +172,10 @@ class CarryAppScreenTest {
 
     @Test
     fun `a ready session shows the sheet`() {
-        compose.setContent { CarryApp(readyFor(), onChooseFolder = {}) }
+        // Dated today: CarryApp reads the real clock, and the fixed sample
+        // date would read as a past sheet once the clock passed it.
+        val today = SampleSession.today.copy(date = java.time.LocalDate.now().toString())
+        compose.setContent { CarryApp(readyFor(today), onChooseFolder = {}) }
         compose.onNodeWithText("Carry these in").assertIsDisplayed()
     }
 }
