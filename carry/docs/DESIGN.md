@@ -60,8 +60,8 @@ Two consequences worth stating, because they look like missing features:
 **After** — what you did (madCode approved the minimum page in #127,
 mockup v4). One row per exercise, two lines tall: the name with *hurt* at
 the end of it, then a weight box, a reps box (or on a timed row a *done*
-tag), *easy*, and *mod* while the weight box is empty. Plus **add a row**,
-for anything the sheet didn't list. Visible labels sit above the boxes
+tag), *easy*, and *mod* on a row the coach gave no weight. Plus **add a
+row**, for anything the sheet didn't list. Visible labels sit above the boxes
 ("lb", "reps", "time"), stay put once something is typed, and are the
 words TalkBack reads on each box; the chips sit level with the boxes.
 
@@ -123,6 +123,26 @@ and an untouched row, become nothing.
 stay 15sp. It is filled in from memory with cold hands, and checked at
 twice the font size, where the timed row's *done* tag widens rather than
 wrapping.
+
+**Add takes you to the row.** A tap on *add a row* puts the cursor and
+the keyboard in the new row's name box, and scrolls the list to it if it
+is off screen: below the button on a borrowed day, above it on a normal
+one. While the last added row is still completely empty, Add makes no
+second one and goes back to that row instead. The focus is spent by the
+tap: a rotation or a restored draft brings the row back, not the cursor.
+An empty added row is harmless: the save leaves it out of the file and
+never refuses over it.
+
+**Where *mod* shows** is decided by the row, not by what is typed, so the
+chip never vanishes mid-entry and the row never jumps:
+
+- A sheet row the coach gave **no weight** (`suggested_weight` is null,
+  the same test as tap-to-fill): always. That includes a first-timer on a
+  weighted movement, where the owner may still type a weight.
+- A sheet row the coach gave **a weight**: never, unless *mod* is already
+  set, so it is never on where it can't be seen and turned off.
+- An **added row**: while its weight box is empty, or while *mod* is on.
+  The coach suggests nothing for it, so the box is the only sign.
 
 *mod* is "I did the easier version" — knees, a box under the step-up. It
 exists because **a large share of this owner's logged sets carry no weight**, and
