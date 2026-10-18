@@ -267,3 +267,12 @@ data class AddedSet(
         fun newId(): String = java.util.UUID.randomUUID().toString().take(8)
     }
 }
+
+/**
+ * The added rows after a tap on Add: one more blank row, unless the last
+ * one is still blank. A second tap then means "take me to it" rather than
+ * a second empty row the owner has to find, which is what a tap that
+ * seemed to do nothing used to produce.
+ */
+fun List<AddedSet>.withRowAdded(): List<AddedSet> =
+    if (lastOrNull()?.blank == true) this else this + AddedSet(id = AddedSet.newId())
