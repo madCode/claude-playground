@@ -257,6 +257,40 @@ These are the open paths to one, hardest first.
 
 
 
+- [ ] **Say what to type when one row stands for several rounds**
+  *(you asked, 2026-10-18; needs gym-coach's half first)*. A board that
+  prescribes `8 / 6 / 4` is three sets of one movement, and Carry gives it
+  one row. Nothing on either screen says what that row means, so the
+  convention lives only in the owner's head: they record *"only my max
+  weight-rep combo"*.
+
+  That is the right convention — one true (weight, reps) pair is exactly
+  what the coach's arithmetic consumes, and it is cheap to log after a
+  class. The problem is that it is unstated, so nothing can verify a row
+  followed it, and a tired day could quietly change what the record means.
+
+  **The hint, on the After tab where the typing happens** — not on the
+  Before tab, which is read standing in a lobby: a row of several rounds
+  says so, and says what to log. Something close to
+  "3 rounds · log your heaviest set", with the weight box taking the reps
+  achieved at that weight.
+
+  **Read it from a field, never from the text.** gym-coach will emit
+  `rounds: [8, 6, 4]`, null when there is one round. Carry must not regex
+  `prescribed_text` for a ladder: rows arrive with their structure already
+  attached, which is the rule this app rests on, and the corpus writes
+  ladders two ways (54 slash forms, 17 comma). A parser here would be a
+  second place to keep teaching board syntax, on the device where it is
+  hardest to fix.
+
+  Sizing, measured on the 277-post corpus: a three-rung ladder is in
+  **10% of posts**, so this is not a rare shape.
+
+  Pairs with gym-coach naming which rung its suggested weight is for. The
+  two together make the screens coherent — the sheet advises the set you
+  pick up first, the input records the heaviest one you finished. Either
+  alone leaves the other half unexplained *(you asked)*
+
 ### Health and tidying
 - [ ] **A resume can put another session on screen over pending
   typing.** The refresh on every resume shows the newest session; the
