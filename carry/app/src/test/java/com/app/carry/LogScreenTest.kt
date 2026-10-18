@@ -12,6 +12,11 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.StateRestorationTester
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -34,6 +39,10 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.core.app.ApplicationProvider
+import android.content.Context
+import android.view.inputmethod.InputMethodManager
+import org.robolectric.Shadows.shadowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -43,6 +52,9 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -85,7 +97,7 @@ class LogScreenTest {
                 entries = edits.value,
                 added = added.value,
                 onEdit = { ref, e -> edits.value = edits.value + (ref to e) },
-                onAdd = { added.value = added.value + AddedSet(id = AddedSet.newId()) },
+                onAdd = { added.value = added.value.withRowAdded() },
                 onEditAdded = { i, row -> added.value = added.value.toMutableList().also { it[i] = row } },
                 onSave = { saves++ },
                 saving = saving.value,
@@ -93,6 +105,33 @@ class LogScreenTest {
             )
             }
         }
+    }
+
+    /** The added-row name box that has focus, once one does. */
+    private fun focusedName() = compose.onNode(hasContentDescription("added exercise name") and isFocused())
+
+    private fun waitForFocusedName() = compose.waitUntil(5_000) {
+        compose.onAllNodes(hasContentDescription("added exercise name") and isFocused())
+            .fetchSemanticsNodes().isNotEmpty()
+    }
+
+    private fun focusedNameText(): String? = focusedName().fetchSemanticsNode().config
+        .getOrNull(SemanticsProperties.EditableText)?.text
+
+    private fun tapAdd(label: String = "+ Add something the sheet missed") {
+        reach(label); compose.onNodeWithText(label).performClick()
+    }
+
+    /** The *mod* chip on the row whose weight box is [weightBox]. The rows
+     *  merge no semantics, so every chip on the screen is a sibling of every
+     *  box; "on the row" is told by sitting level with the box instead. */
+    private fun modOn(weightBox: String) = chipOn("mod", weightBox)
+
+    private fun chipOn(chip: String, weightBox: String): androidx.compose.ui.test.SemanticsNodeInteraction {
+        val box = compose.onNodeWithContentDescription(weightBox).fetchSemanticsNode().boundsInRoot
+        return compose.onNode(hasText(chip) and SemanticsMatcher("level with $weightBox") {
+            it.boundsInRoot.top < box.bottom && it.boundsInRoot.bottom > box.top
+        })
     }
 
     @Test
@@ -324,9 +363,12 @@ class LogScreenTest {
         // the file holds 30. The screen says "Saved" and shows a number
         // that is not there -- re-entering from memory is how a wrong
         // number gets into the history.
+        // Seeded, not tapped: a second Add on a blank row adds nothing. The
+        // owner gets here by adding a row, adding another, then clearing
+        // the first.
+        added.value = listOf(AddedSet(id = AddedSet.newId()), AddedSet(id = AddedSet.newId()))
         show()
-        reach("+ Add something the sheet missed"); compose.onNodeWithText("+ Add something the sheet missed").performClick()
-        reach("+ Add something the sheet missed"); compose.onNodeWithText("+ Add something the sheet missed").performClick()
+        reach("+ Add something the sheet missed")
         val boxes = compose.onAllNodesWithContentDescription("added exercise, lb")
         boxes[1].performTextReplacement("30")
         assertEquals(30.0, added.value[1].weight)
@@ -359,9 +401,10 @@ class LogScreenTest {
         // weight to progress, so this is the only axis they have — and
         // it is independent of how it felt.
         show()
-        compose.onAllNodesWithText("mod")[0].performClick()
-        compose.onAllNodesWithText("easy")[0].performClick()
-        assertEquals(SessionPatch.Entry(easier = true, easy = true), edits.value[0])
+        compose.onNode(hasScrollAction()).performScrollToNode(hasContentDescription("squat, lb"))
+        modOn("squat, lb").performClick()
+        chipOn("easy", "squat, lb").performClick()
+        assertEquals(SessionPatch.Entry(easier = true, easy = true), edits.value[8])
     }
 
     @Test
@@ -495,11 +538,207 @@ class LogScreenTest {
     }
 
     @Test
-    fun `mod shows only while the weight box is empty`() {
+    fun `mod stays put while a weight is typed on a row the coach gave no weight`() {
+        // It used to be decided per keystroke: the first digit took the
+        // chip away and the row jumped under the owner's thumb.
         show()
-        val before = compose.onAllNodesWithText("mod").fetchSemanticsNodes().size
+        compose.onNode(hasScrollAction()).performScrollToNode(hasContentDescription("lateral raise, lb"))
+        modOn("lateral raise, lb").assertIsDisplayed()
+        val box = compose.onNodeWithContentDescription("lateral raise, lb")
+        "12.5".forEach { box.performTextInput(it.toString()) }
+        modOn("lateral raise, lb").assertIsDisplayed().performClick()
+        assertEquals(SessionPatch.Entry(weight = 12.5, easier = true), edits.value[6])
+    }
+
+    @Test
+    fun `a row the coach gave a weight offers no mod, typed into or not`() {
+        show()
+        modOn("bench press, lb").assertDoesNotExist()
         compose.onNodeWithContentDescription("bench press, lb").performTextReplacement("45")
-        assertEquals(before - 1, compose.onAllNodesWithText("mod").fetchSemanticsNodes().size)
+        modOn("bench press, lb").assertDoesNotExist()
+        // The control: the matcher does find a chip where there is one.
+        compose.onNode(hasScrollAction()).performScrollToNode(hasContentDescription("squat, lb"))
+        modOn("squat, lb").assertIsDisplayed()
+    }
+
+    @Test
+    fun `mod set on a weighted row stays in sight until it is turned off`() {
+        // An older file, or a row the runner has since given a weight: the
+        // flag is on, so it must be visible and undoable.
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 45.0, easier = true))
+        show()
+        modOn("bench press, lb").assertIsDisplayed().performClick()
+        assertEquals(SessionPatch.Entry(weight = 45.0), edits.value[0])
+        modOn("bench press, lb").assertDoesNotExist()
+    }
+
+    @Test
+    fun `an added row offers mod only while its weight box is empty`() {
+        // The coach suggests nothing for a row typed by hand, so the box
+        // is the only sign of whether it carried a weight.
+        show()
+        tapAdd()
+        modOn("added exercise, lb").assertIsDisplayed()
+        compose.onNodeWithContentDescription("added exercise, lb").performTextReplacement("30")
+        modOn("added exercise, lb").assertDoesNotExist()
+    }
+
+    @Test
+    fun `mod on a weighted row and on a bodyweight row, with weights typed`() {
+        // The pair of rows whose look this rule decides, for the PR's
+        // before and after.
+        show()
+        compose.onNodeWithContentDescription("bench press, lb").performTextReplacement("45")
+        shoot("41-mod-weighted")
+        reach("10 x squat")
+        compose.onNodeWithContentDescription("squat, lb").performTextReplacement("10")
+        reach("45 sec of sit-up")
+        shoot("42-mod-bodyweight")
+    }
+
+    @Test
+    fun `Add puts the cursor in the new row's name, not where it was`() {
+        // madCode's report: the cursor stayed in another row, so a second
+        // tap looked necessary and made a second row.
+        added.value = listOf(AddedSet(id = "a1", name = "pop squat", reps = 10))
+        show()
+        reach("pop squat")
+        compose.onNodeWithText("pop squat").performClick()
+        compose.onNodeWithText("pop squat").assertIsFocused()
+        tapAdd()
+        waitForFocusedName()
+        assertEquals(2, added.value.size)
+        assertEquals("the new, empty row has it", "", focusedNameText())
+        focusedName().assertIsDisplayed()
+        compose.onNodeWithText("pop squat").assertIsNotFocused()
+    }
+
+    @Test
+    fun `on a borrowed day Add scrolls down to the row it made, keyboard up`() {
+        // The button leads and the added rows follow it, so with a few
+        // already there the new one starts below the screen.
+        added.value = (1..8).map { AddedSet(id = "a$it", name = "move $it", reps = 10) }
+        show(session = SampleSession.today.copy(borrowedFrom = "3G"))
+        compose.onNodeWithContentDescription("bench press, lb").assertDoesNotExist()
+        val keyboard = shadowOf(
+            ApplicationProvider.getApplicationContext<Context>().getSystemService(InputMethodManager::class.java)
+        )
+        assertFalse("nothing has asked for the keyboard yet", keyboard.isSoftInputVisible)
+        tapAdd("+ Add what you did")
+        waitForFocusedName()
+        assertEquals(9, added.value.size)
+        assertEquals("", focusedNameText())
+        focusedName().assertIsDisplayed()
+        // Robolectric records the request to show it; whether a given
+        // keyboard app then appears is the phone's to check.
+        assertTrue("the keyboard opens on the name", keyboard.isSoftInputVisible)
+    }
+
+    @Test
+    fun `a second Add while the new row is still empty adds nothing and goes back to it`() {
+        show()
+        tapAdd()
+        waitForFocusedName()
+        val first = added.value.single().id
+        // Somewhere else, the way madCode's cursor was.
+        compose.onNodeWithContentDescription("added exercise, reps").performClick()
+        compose.onNodeWithContentDescription("added exercise name").assertIsNotFocused()
+        tapAdd()
+        waitForFocusedName()
+        assertEquals(listOf(first), added.value.map { it.id })
+        // Once anything is in it, Add makes another.
+        compose.onNodeWithContentDescription("added exercise name").performTextReplacement("plank jack")
+        tapAdd()
+        compose.waitUntil(5_000) { added.value.size == 2 }
+    }
+
+    @Test
+    fun `focus moved by Add is not moved again by a restore`() {
+        // The draft brings the empty row back after rotation or process
+        // death; the focus it got from the tap must not come with it, or
+        // every restore would yank the cursor (and the keyboard) there.
+        val restorer = StateRestorationTester(compose)
+        restorer.setContent {
+            LogScreen(
+                session = SampleSession.today, entries = edits.value, added = added.value,
+                onEdit = { ref, e -> edits.value = edits.value + (ref to e) },
+                onAdd = { added.value = added.value.withRowAdded() },
+                onEditAdded = { i, row -> added.value = added.value.toMutableList().also { it[i] = row } },
+                onSave = {}, saving = SaveState.Idle,
+            )
+        }
+        tapAdd()
+        waitForFocusedName()
+        // Restored while the cursor is still where Add put it: a request
+        // that survived would be re-made by the restored composition.
+        restorer.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+        reach("what was it?")
+        compose.onNodeWithContentDescription("added exercise name").assertIsDisplayed().assertIsNotFocused()
+        assertEquals(1, added.value.size)
+        // And not on a later re-render either: typing elsewhere changes
+        // the rows, which recomposes the list under the cursor.
+        val reps = compose.onNodeWithContentDescription("added exercise, reps")
+        reps.performClick()
+        reps.performTextInput("5")
+        compose.waitForIdle()
+        reps.assertIsFocused()
+        compose.onNodeWithContentDescription("added exercise name").assertIsNotFocused()
+    }
+
+    /** A sheet row as a real file writes it: the variant names the implement. */
+    private fun row(ref: Int, name: String, implement: String?, weight: Double? = null) = ExerciseSet(
+        ref = ref, line = "10 x $name", canonical = name,
+        variant = implement?.let { buildJsonObject { put("implement", it) } } ?: JsonNull,
+        prescribedReps = 10, prescribedText = "10", suggestedWeight = weight,
+    )
+
+    private val implements = SampleSession.today.copy(sets = listOf(
+        row(0, "hammer curl", "double_dumbbell"),
+        row(1, "push-up", "bodyweight"),
+        row(2, "mystery move", null),
+        row(3, "goblet squat", "kettlebell", weight = 25.0),
+    ))
+
+    @Test
+    fun `a dumbbell row the coach gave no weight offers no mod, typed into or not`() {
+        // Most weighted rows carry no suggested weight -- the coach rarely
+        // has one -- so that alone would put mod on nearly every row.
+        show(session = implements)
+        modOn("hammer curl, lb").assertDoesNotExist()
+        compose.onNodeWithContentDescription("hammer curl, lb").performTextReplacement("20")
+        modOn("hammer curl, lb").assertDoesNotExist()
+        modOn("goblet squat, lb").assertDoesNotExist()
+        // The control: the matcher finds the chip on the bodyweight row.
+        modOn("push-up, lb").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a bodyweight-implement row keeps mod while a weight is typed`() {
+        show(session = implements)
+        modOn("push-up, lb").assertIsDisplayed()
+        val box = compose.onNodeWithContentDescription("push-up, lb")
+        "10".forEach { box.performTextInput(it.toString()) }
+        modOn("push-up, lb").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a row with no implement falls back to whether the coach gave a weight`() {
+        // An older runner, or a variant this build can't read: the
+        // suggested weight is the best the file says.
+        show(session = implements)
+        modOn("mystery move, lb").assertIsDisplayed()
+        compose.onNodeWithContentDescription("mystery move, lb").performTextReplacement("15")
+        modOn("mystery move, lb").assertIsDisplayed()
+    }
+
+    @Test
+    fun `mod already set on a dumbbell row is shown, so it can be turned off`() {
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 20.0, easier = true))
+        show(session = implements)
+        modOn("hammer curl, lb").assertIsDisplayed().performClick()
+        assertEquals(SessionPatch.Entry(weight = 20.0), edits.value[0])
+        modOn("hammer curl, lb").assertDoesNotExist()
     }
 
     @Test

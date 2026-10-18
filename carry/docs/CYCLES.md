@@ -5,6 +5,20 @@ differently. Newest first; read the top before starting. What was built is
 in [DEVLOG.md](DEVLOG.md). Kept to the last ten or so cycles; older lessons
 that hold become rules in CLAUDE.md or the cycles skill.
 
+## 2026-10-18 (cloud session)
+
+### Cycle 69 — fix: Add takes you to the new row, and mod stays put
+
+- **The rows merge no semantics, so a sibling matcher can't scope a chip.**
+  Every chip on the After page is a sibling of every box. Find a row's
+  chip by sitting level with its box (`chipOn` in `LogScreenTest`).
+- **Robolectric records the keyboard.** `shadowOf(InputMethodManager)
+  .isSoftInputVisible` turns true on a focus request, so "the keyboard
+  opens" can be asserted. Start from false, or it proves nothing.
+- **A background run's own timeout kills it, files half-edited.** A
+  falsification script stopped mid-case left a broken source; restore
+  with `git checkout` and give the run the full time it needs.
+
 ## 2026-10-16 run (cloud session)
 
 ### Cycle 66 — build: a save refuses a file that changed underneath

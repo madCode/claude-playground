@@ -28,6 +28,31 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-18 — cycle 69: Add takes you to the new row, and mod stays put
+
+madCode reported both from the phone and approved the fixes.
+
+- **Add** now puts the cursor and keyboard in the new row's name, and
+  scrolls to it, on a borrowed day and a normal one. Before, focus stayed
+  wherever it was, so a tap looked like it had done nothing, and a second
+  tap made a second row.
+- While the last added row is still empty, Add makes no new row and goes
+  back to that one.
+- The focus happens once per tap. A rotation or a restored draft brings
+  the row back but doesn't move the cursor.
+- An empty added row is harmless, checked: the save leaves it out of the
+  file, never refuses over it, and doesn't count it anywhere.
+- ***mod*** on a sheet row is now decided by the row's implement, not by
+  what is typed in the weight box, so it no longer disappears on the first
+  digit. Bodyweight, band and TRX rows show it; dumbbell and kettlebell
+  rows don't, unless it is already set. A row with no implement falls back
+  to whether the coach gave it a weight. The review caught that the
+  suggested weight alone is missing on most weighted rows, which would
+  have put *mod* nearly everywhere. Added rows keep the old rule.
+- The coach's importer keeps `easier` on any row, weighted or not, but
+  only the no-weight rule reads it. On a weighted row it is recorded and
+  changes no suggestion.
+
 ## 2026-10-18 — cycle 68: finish an older session
 
 - A past day on the Since tab now has a **Finish this session** button.

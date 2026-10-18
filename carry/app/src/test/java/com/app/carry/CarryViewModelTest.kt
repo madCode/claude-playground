@@ -16,6 +16,9 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -461,6 +464,30 @@ class CarryViewModelTest {
         assertTrue(state.why, state.why.contains("an added row needs a name"))
         assertEquals("the row stays, so it can be named", 20.0, model.added.value[0].weight)
         assertTrue("and the typing is still recoverable", handle.keys().isNotEmpty())
+    }
+
+    @Test
+    fun `Add on a still-empty last row adds nothing, and an empty row is never written`() = runTest(dispatcher) {
+        // The screen sends the owner to the empty row instead; a second
+        // blank row would be one more thing to find and leave behind.
+        val model = viewModel()
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+        model.addRow()
+        model.addRow()
+        assertEquals(1, model.added.value.size)
+        model.editAdded(0, model.added.value[0].copy(name = "pop squat"))
+        model.addRow()
+        assertEquals(2, model.added.value.size)
+
+        // The second row is left empty: the save goes through, and the file
+        // holds the named row only.
+        model.save(); settled(model)
+        assertEquals(SaveState.Saved, model.saving.value)
+        // Read raw: `addedIn` drops blank rows itself, so it would hide one.
+        val written = Session.json.parseToJsonElement(disk.text!!).jsonObject["added"]!!.jsonArray
+        assertEquals(listOf("pop squat"), written.map { it.jsonObject["name"]!!.jsonPrimitive.content })
     }
 
     @Test

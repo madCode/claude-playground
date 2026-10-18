@@ -56,6 +56,14 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -154,7 +162,27 @@ fun LogScreen(
         // matters most on those days was at the bottom, under eleven rows
         // of the wrong workout.
         val borrowed = session.borrowedFrom
-        LazyColumn(Modifier.weight(1f)) {
+        val list = rememberLazyListState()
+        // Add takes the owner to the row it made (or to the blank one it
+        // declined to duplicate): that row's name box gets focus, and the
+        // keyboard with it. Plain `remember`, so it is spent by the one tap:
+        // a rotation or a restored draft composes afresh and moves nothing.
+        var focusLast by remember { mutableStateOf(false) }
+        val nameFocus = remember { FocusRequester() }
+        val focusId = if (focusLast) added.lastOrNull()?.id else null
+        val add = { onAdd(); focusLast = true }
+        LaunchedEffect(focusId) {
+            val id = focusId ?: return@LaunchedEffect
+            val i = added.indexOfLast { it.id == id }
+            // Mirrors the items below: the warning and the button lead on
+            // a borrowed day, the sheet's rows on a normal one.
+            val index = (if (borrowed != null) 2 else session.sets.size) + i
+            if (!list.fullyShows(index)) list.scrollToItem(index)
+            snapshotFlow { list.layoutInfo.visibleItemsInfo.any { it.index == index } }.first { it }
+            nameFocus.requestFocus()
+            focusLast = false
+        }
+        LazyColumn(Modifier.weight(1f), state = list) {
             if (borrowed != null) {
                 item {
                     Text(
@@ -164,8 +192,8 @@ fun LogScreen(
                         modifier = Modifier.padding(bottom = 8.dp),
                     )
                 }
-                item { AddRow(onAdd, loud = true) }
-                itemsIndexed(added, sessionKey, onEditAdded)
+                item { AddRow(add, loud = true) }
+                itemsIndexed(added, sessionKey, onEditAdded, focusId, nameFocus)
             }
             // No key: a file with two rows sharing a ref is real enough
             // that SessionPatch refuses it by name, and LazyColumn throws
@@ -179,6 +207,7 @@ fun LogScreen(
                     // go into history as the reps done.
                     prescribedReps = set.prescribedReps.takeIf { set.prescribedText?.isRange() != true },
                     tapFills = set.suggestedWeight == null,
+                    offersMod = set.offersMod,
                     timed = set.timed,
                     family = set.family,
                     entry = entries[set.ref] ?: SessionPatch.Entry(),
@@ -190,8 +219,8 @@ fun LogScreen(
             // borrowed day the added rows ARE the session and lead, on a
             // normal day they are the afterthought the name suggests.
             if (borrowed == null) {
-                itemsIndexed(added, sessionKey, onEditAdded)
-                item { AddRow(onAdd, loud = false) }
+                itemsIndexed(added, sessionKey, onEditAdded, focusId, nameFocus)
+                item { AddRow(add, loud = false) }
             }
             item { SaveButton(saving, onSave, added, onDiscard) }
             // Only once it is written down. Before that the post would be
@@ -226,17 +255,27 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexed(
     added: List<AddedSet>,
     sessionKey: String,
     onEditAdded: (Int, AddedSet) -> Unit,
+    focusId: String?,
+    nameFocus: FocusRequester,
 ) {
     items(added.size) { i ->
         val row = added[i]
+        val focus = nameFocus.takeIf { focusId != null && row.id == focusId && i == added.lastIndex }
         // Keyed by the row's own id, not by $i. Keyed by index, a box
         // kept its text when the list shrank under it -- save a session
         // where the first added row was left blank and it is dropped,
         // the second slides into slot 0, and its weight box renders the
         // blank row's empty string while the file holds 30. The screen
         // says "Saved" and shows a number that is not there.
-        AddedRow(row, "$sessionKey-added-${row.id}") { onEditAdded(i, it) }
+        AddedRow(row, "$sessionKey-added-${row.id}", focus) { onEditAdded(i, it) }
     }
+}
+
+/** Partly on screen is not enough: the box being focused may be the half cut off. */
+private fun LazyListState.fullyShows(index: Int): Boolean {
+    val info = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return false
+    return info.offset >= layoutInfo.viewportStartOffset &&
+        info.offset + info.size <= layoutInfo.viewportEndOffset
 }
 
 /**
@@ -272,6 +311,9 @@ private fun LogRow(
      *  runner suggests no weight: on a weighted row a stray tap would record
      *  a set with no weight, and blank reps already mean "all of them". */
     tapFills: Boolean,
+    /** [ExerciseSet.offersMod]. Decided by the row, not by the weight box,
+     *  which made the chip vanish on the first digit and the row jump. */
+    offersMod: Boolean,
     family: String?,
     entry: SessionPatch.Entry,
     key: String,
@@ -334,10 +376,10 @@ private fun LogRow(
             // older file's: the owner's fresh answer wins.
             Chip("easy", entry.easy, Look.Amber) { change(entry.copy(easy = !entry.easy, hard = false)) }
             // "I did the easier version" -- knees, a box under the step-up.
-            // Only where there is no weight, since that is the only axis a
+            // Only on a no-weight row, since that is the only axis a
             // bodyweight movement has; kept while it is on, so it can't be
             // left set where nobody can see it.
-            if (entry.weight == null || entry.easier) {
+            if (offersMod || entry.easier) {
                 Chip("mod", entry.easier, Look.ChalkDim) { change(entry.copy(easier = !entry.easier)) }
             }
         }
@@ -386,7 +428,7 @@ private fun FieldLabel(text: String) {
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
-private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
+private fun AddedRow(row: AddedSet, key: String, focus: FocusRequester?, onChange: (AddedSet) -> Unit) {
     val weightProblem = LogCheck.row(row.weight, null, null).firstOrNull()
     val repsProblem = LogCheck.row(null, row.reps, row.fractionalReps).firstOrNull()
     // Same two-line shape as a sheet row, for the same reason: a name the
@@ -418,7 +460,9 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
                     }
                     inner()
                 },
-                modifier = Modifier.weight(1f).semantics { contentDescription = "added exercise name" },
+                modifier = Modifier.weight(1f)
+                    .then(if (focus != null) Modifier.focusRequester(focus) else Modifier)
+                    .semantics { contentDescription = "added exercise name" },
             )
             Chip("hurt", row.hurt, Look.Brick) { onChange(row.copy(hurt = !row.hurt)) }
         }
@@ -436,6 +480,8 @@ private fun AddedRow(row: AddedSet, key: String, onChange: (AddedSet) -> Unit) {
                 onChange(row.copy(reps = reps, fractionalReps = fractional))
             }
             Chip("easy", row.easy, Look.Amber) { onChange(row.copy(easy = !row.easy, hard = false)) }
+            // The coach suggests nothing for an added row, so the weight
+            // box is the only sign of whether it carried one.
             if (row.weight == null || row.easier) {
                 Chip("mod", row.easier, Look.ChalkDim) { onChange(row.copy(easier = !row.easier)) }
             }

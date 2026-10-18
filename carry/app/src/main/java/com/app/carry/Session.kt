@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * The session file, as the companion script defines it.
@@ -15,10 +16,12 @@ import kotlinx.serialization.json.JsonObject
  * and writes the same file back.
  *
  * [ExerciseSet.variant] is deliberately an opaque [JsonElement]. It carries
- * the variant words the coach matches on, and Carry has no business reading
- * or reconstructing them -- it only has to hand them back byte-for-byte.
+ * the variant words the coach matches on, and Carry has no business
+ * reconstructing them -- it only has to hand them back byte-for-byte.
  * That is the "never invent an exercise's identity" rule, enforced by the
- * type rather than by care.
+ * type rather than by care. One key is read, never written: `implement`,
+ * to tell a no-weight row from a weighted one ([ExerciseSet.offersMod]),
+ * because `suggested_weight` is null on most weighted rows too.
  */
 @Serializable
 data class Session(
@@ -141,6 +144,22 @@ data class ExerciseSet(
      * an extra chip on a row that also has boxes costs nothing.
      */
     val timed: Boolean get() = prescribedDurationSec?.let { it > 0 } == true
+
+    /** The variant's `implement` ("bodyweight", "double_dumbbell"...), or
+     *  null when the variant is not an object or the key is missing or not
+     *  a string. */
+    val implement: String?
+        get() = ((variant as? JsonObject)?.get("implement") as? JsonPrimitive)
+            ?.takeIf { it.isString }?.content
+
+    /**
+     * Whether the After page offers *mod* ("I did the easier version"),
+     * whatever is typed: on the coach's no-weight implements, and never on
+     * a dumbbell or kettlebell row. Without an implement it falls back to
+     * the runner giving no weight, which is the best this file says.
+     */
+    val offersMod: Boolean
+        get() = implement?.let { it in NO_WEIGHT_IMPLEMENTS } ?: (suggestedWeight == null)
 
     /** The amber case, and the only number you would get wrong from memory --
      *  by feel you repeat last session's weight. */
@@ -277,3 +296,15 @@ data class AddedSet(
         fun newId(): String = java.util.UUID.randomUUID().toString().take(8)
     }
 }
+
+/** gym-coach's `NO_WEIGHT_IMPLEMENTS` (gym_lib.py), kept the same. */
+internal val NO_WEIGHT_IMPLEMENTS = setOf("bodyweight", "band", "trx")
+
+/**
+ * The added rows after a tap on Add: one more blank row, unless the last
+ * one is still blank. A second tap then means "take me to it" rather than
+ * a second empty row the owner has to find, which is what a tap that
+ * seemed to do nothing used to produce.
+ */
+fun List<AddedSet>.withRowAdded(): List<AddedSet> =
+    if (lastOrNull()?.blank == true) this else this + AddedSet(id = AddedSet.newId())
