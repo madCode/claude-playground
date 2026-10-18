@@ -1053,7 +1053,8 @@ class CarryViewModelTest {
         override val label: String? = "Sync/gym"
         override val chosen = true
         override val grantLost = false
-        override fun list() = listOf("new" to "session-2026-10-17-2G.json", "old" to "session-2026-10-10-2G.json")
+        private val names = mapOf("new" to "session-2026-10-17-2G.json", "old" to "session-2026-10-10-2G.json")
+        override fun list() = names.filterKeys { it in files }.toList()
         override fun read(documentId: String) = files[documentId]
         override fun write(documentId: String, text: String) = true.also { files[documentId] = text }
     }
@@ -1117,8 +1118,15 @@ class CarryViewModelTest {
         reborn.refresh(); settled(reborn)
         assertEquals("2026-10-10:2G", (reborn.state.value as CarryState.Ready).session.sheetId)
 
-        // A sync replaced the file. The newest comes back, and the pin goes,
-        // so the old day doesn't spring back open if the file returns.
+        // Part way through a sync's replace: still listed, not readable. The
+        // sheet on screen and the pin both hold.
+        folder.files["old"] = "{\"sche"
+        reborn.refresh(); settled(reborn)
+        assertEquals("2026-10-10:2G", (reborn.state.value as CarryState.Ready).session.sheetId)
+        assertEquals("2026-10-10:2G", reborn.finishing)
+
+        // Gone from the listing. The newest comes back, and the pin goes, so
+        // the old day doesn't spring back open if the file returns.
         folder.files.remove("old")
         reborn.refresh(); settled(reborn)
         assertEquals("2026-10-17:2G", (reborn.state.value as CarryState.Ready).session.sheetId)

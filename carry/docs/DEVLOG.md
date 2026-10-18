@@ -35,8 +35,18 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   boxes and checks as the newest, the refusal over a changed file
   included. A day logged before Carry isn't offered.
 - While an older sheet is on screen, a strip under the tabs says
-  *Finishing <day>, not the newest* on every tab, with a **Newest** button
-  back. Opening Carry from the launcher is always the newest sheet.
+  *Finishing <day>, an older session* on every tab, with a **Newest**
+  button back. Opening Carry from the launcher is always the newest sheet.
+- The review found three ways the first version could put numbers in the
+  wrong file or stall, all fixed:
+  - A sync part way through replacing the old file dropped back to the
+    newest sheet under the typing. Now the old sheet stays on screen.
+  - After opened at the tap, before the old sheet had loaded, so typing
+    there went into the newest file. Now it opens once the sheet is there.
+  - Finding the old sheet read every file back to it. Now it reads only
+    that day's files.
+- Two tests went red on main today and are fixed here. Their sample sheet
+  is dated 17 October, and the Before tab compares it with the real clock.
 - Switching sheets is refused while there is unsaved typing, and the page
   says to save or discard first: there is one draft, so typing on another
   sheet would have replaced it.

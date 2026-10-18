@@ -389,15 +389,28 @@ class PastSessionScreenTest {
     }
 
     @Test
-    fun `an older session is finished from its page, which moves to the After tab`() {
+    fun `an older session is finished from its page, and After shows it once it has landed`() {
         var asked: String? = null
-        openThatDayIn(binding(onFinishOlder = { asked = it; true }))
+        val state = mutableStateOf<CarryState>(readyFor())
+        val log = binding(onFinishOlder = { asked = it; true })
+        compose.setContent { CarryApp(state.value, onChooseFolder = {}, log = log) }
+        compose.onNodeWithText("Since").performClick()
+        reach(thatDay)
+        compose.onNode(thatDay).performClick()
         shoot("22b-past-session-finish")
         compose.onNodeWithText("Finish this session").performClick()
         compose.waitForIdle()
         assertTrue("finishing asks for that day's own sheet, got $asked", asked == day.sheetId)
+        // Not yet: until the read lands, After would be the newest sheet's
+        // form, and typing there would go into the newest file.
+        assertTrue(compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isEmpty())
+
+        val past = SessionFiles.parse(SampleSession.pastFile)!!
+        state.value = CarryState.Ready(past, SampleSession.pastFile, "old", older = true)
+        compose.waitForIdle()
         // The After tab's boxes, which no other screen has.
         assertTrue(compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isNotEmpty())
+        compose.onNodeWithText("an older session", substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -422,12 +435,12 @@ class PastSessionScreenTest {
         var back = 0
         val older = readyFor(SampleSession.today).copy(older = true)
         compose.setContent { CarryApp(older, onChooseFolder = {}, log = binding(onBackToNewest = { back++; true })) }
-        compose.onNodeWithText("not the newest", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("an older session", substring = true).assertIsDisplayed()
         // The Before tab's own words must not contradict the strip.
         compose.onNodeWithText("most recent", substring = true).assertDoesNotExist()
         compose.onNodeWithText("No sheet for today").assertDoesNotExist()
         shoot("22c-finishing-banner")
-        compose.onNodeWithText("Newest").performClick()
+        compose.onNodeWithContentDescription("Back to the newest session").performClick()
         assertTrue("the way back was taken once, got $back", back == 1)
     }
 

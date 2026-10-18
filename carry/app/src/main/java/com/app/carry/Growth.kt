@@ -672,7 +672,7 @@ object Growth {
      * `true` simply means "not backfilled", which is the safe reading: it
      * costs a line of wording, not a session.
      */
-    private fun backfilledIn(text: String): Boolean = runCatching {
+    internal fun backfilledIn(text: String): Boolean = runCatching {
         val flag = (Session.json.parseToJsonElement(text) as? JsonObject)?.get("backfilled")
         (flag as? JsonPrimitive)?.takeIf { !it.isString }?.content == "true"
     }.getOrDefault(false)

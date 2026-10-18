@@ -12,6 +12,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -106,21 +111,31 @@ fun carryState(folder: Folder, finishing: String? = null): CarryState {
     if (folder.grantLost) return CarryState.NeedsFolder(lostGrant = true, holding = folder.label)
     if (!folder.chosen) return CarryState.NeedsFolder()
     val files = folder.list()
-    // [finishing] is a sheet id, which only the file's contents carry, so the
-    // older sheets are read newest first until it turns up. One that has
-    // left the folder, or no longer reads, falls back to the newest rather
-    // than to an error: the owner asked for an old day, not for a broken one.
+    // [finishing] is a sheet id, which only the file's contents carry. It
+    // starts with the sheet's date, so only the files named for that day are
+    // read: one or two, not every file back to it. None listed means the
+    // sheet has really gone, and the newest is shown instead. One listed
+    // that won't read is a sync part way through, so it is reported as
+    // unreadable and the screen keeps the sheet it had: falling back to the
+    // newest there would put another day's form under the owner's typing.
     if (finishing != null) {
-        val newestName = SessionFiles.newest(files.map { it.second })
-        files.filter { (_, name) -> SessionFiles.isSessionFile(name) && name != newestName }
-            .sortedWith(compareBy({ SessionFiles.dateIn(it.second) }, { it.second })).reversed()
-            .firstNotNullOfOrNull { (id, _) ->
-                val text = folder.read(id) ?: return@firstNotNullOfOrNull null
-                val session = SessionFiles.parse(text)?.takeIf { it.sheetId == finishing }
-                    ?: return@firstNotNullOfOrNull null
-                CarryState.Ready(session, text, id, SessionFiles.unreadableRows(text, session), older = true)
+        val sameDay = files.filter { (_, name) ->
+            SessionFiles.isSessionFile(name) && SessionFiles.dateIn(name) == finishing.substringBefore(':')
+        }
+        var unread: CarryState? = null
+        for ((id, name) in sameDay) {
+            val text = folder.read(id)
+            val session = text?.let(SessionFiles::parse)
+            if (text == null || session == null) {
+                unread = text?.let { unreadable(name, it) } ?: CarryState.Unreadable(name, CarryState.Unreadable.Why.DAMAGED)
+                continue
             }
-            ?.let { return it }
+            // A back-filled day is a record, never a form, whatever asked for it.
+            if (session.sheetId == finishing && !Growth.backfilledIn(text)) {
+                return CarryState.Ready(session, text, id, SessionFiles.unreadableRows(text, session), older = true)
+            }
+        }
+        unread?.let { return it }
     }
     // An empty folder is NOT a lost grant. The likeliest reason by far is
     // that the coach has not written today's session yet, and telling
@@ -362,6 +377,13 @@ fun CarryApp(
             // bounced back to the lobby screen on every rotation is an
             // irritation the other two never see.
             var tab by rememberSaveable { mutableStateOf(0) }
+            // The sheet asked for from Since. The After tab is shown once it
+            // has landed, not at the tap: until the read returns, After still
+            // holds the newest sheet, and typing there would go into it.
+            var goTo by rememberSaveable { mutableStateOf<String?>(null) }
+            LaunchedEffect(state.session.sheetId, goTo) {
+                if (goTo != null && goTo == state.session.sheetId) { tab = 1; goTo = null }
+            }
             Column(modifier.fillMaxSize().background(Look.Slate)) {
                 Row(Modifier.fillMaxWidth()) {
                     Tab("Before", tab == 0, Modifier.weight(1f)) { tab = 0 }
@@ -380,7 +402,7 @@ fun CarryApp(
                     2 -> log.since?.let {
                         SinceScreen(
                             it, newerBuild = log.newerBuild, installing = log.installing, onGetBuild = log.onGetBuild,
-                            onFinish = log.onFinishOlder?.let { finish -> { id -> if (finish(id)) tab = 1 } },
+                            onFinish = log.onFinishOlder?.let { finish -> { id -> if (finish(id)) goTo = id } },
                             finishBlocked = log.unsaved, editing = state.session.sheetId,
                         )
                     } ?: TodayScreen(state.session, unreadable = state.unreadable, older = state.older)
@@ -404,12 +426,16 @@ private fun Finishing(session: Session, blocked: Boolean, onBack: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            if (blocked) "Finishing $day. Save or discard what's typed to go back to the newest." else "Finishing $day, not the newest.",
+            if (blocked) "Finishing $day. Save or discard what's typed to go back to the newest." else "Finishing $day, an older session.",
             color = Look.Slate, fontFamily = Look.Name, fontSize = 13.sp,
-            modifier = Modifier.weight(1f),
+            // Polite, so TalkBack says which sheet is on screen when the
+            // switch lands, which is a moment after the tap.
+            modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
         )
         if (!blocked) Box(
-            Modifier.heightIn(min = 48.dp).clickable(onClick = onBack, role = Role.Button),
+            Modifier.heightIn(min = 48.dp)
+                .clickable(onClick = onBack, role = Role.Button)
+                .semantics { contentDescription = "Back to the newest session" },
             contentAlignment = Alignment.Center,
         ) {
             Text(

@@ -365,15 +365,25 @@ is never offered, and says so.
 
 **Finishing an older session.** The sheet the After tab holds is pinned by
 its `sheet_id`, kept across a process death but not a fresh launch, so
-opening Carry from the launcher is always the newest sheet. While it is
-pinned, a strip under the tabs says *Finishing <day>, not the newest* on
-every tab, with a *Newest* button back: the Before tab is read in one
-glance, and an old sheet there must not pass for today's. Switching either
-way is refused while there is unsaved typing, since there is one draft and
-typing on another sheet would replace it; the page and the strip say to
-save or discard first. A pinned sheet that leaves the folder drops the pin
-and the newest comes back. The coach re-reads every past file the day
-after and follows an edit, so a session finished late reaches its history.
+opening Carry from the launcher is always the newest sheet. The id starts
+with the sheet's date, so only the files named for that day are read. While
+it is pinned, a strip under the tabs says *Finishing <day>, an older
+session* on every tab, with a *Newest* button back: the Before tab is read
+in one glance, and an old sheet there must not pass for today's.
+
+- The After tab opens once the asked-for sheet has landed, not at the tap.
+  Until then After still holds the newest sheet, and typing there would go
+  into the newest file.
+- Switching either way is refused while there is unsaved typing, since
+  there is one draft and typing on another sheet would replace it. The page
+  and the strip say to save or discard first. A partial save is fine: a
+  session can be finished in two sittings.
+- A pinned sheet that no file for its day lists has gone: the pin drops and
+  the newest comes back. One that is listed but won't read is a sync part
+  way through, so the screen keeps the sheet it had, pin and all.
+- A back-filled day is never opened as a form, even if asked for.
+- The coach re-reads every past file the day after and follows an edit, so
+  a session finished late reaches its history.
 
 The rows travel on the day rather than being re-read when the screen opens.
 The file was already parsed, off the main thread, by the read that built

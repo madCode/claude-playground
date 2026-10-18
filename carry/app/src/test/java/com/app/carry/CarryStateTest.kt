@@ -658,12 +658,27 @@ class CarryStateTest {
     }
 
     @Test
-    fun `a sheet asked for that isn't there, or is the newest, gives the newest`() {
-        for (asked in listOf("2026-09-01:2G", "2026-10-17:2G")) {
-            val state = carryState(twoSheets, finishing = asked) as CarryState.Ready
-            assertEquals(asked, "new", state.documentId)
-            assertEquals(asked, false, state.older)
-        }
+    fun `a sheet asked for that has gone gives the newest`() {
+        val state = carryState(twoSheets, finishing = "2026-09-01:2G") as CarryState.Ready
+        assertEquals("new", state.documentId)
+        assertEquals(false, state.older)
+    }
+
+    @Test
+    fun `a sheet asked for that is listed but won't read is unreadable, not the newest`() {
+        // A sync part way through replacing it. Falling back to the newest
+        // here would put another day's form under the owner's typing.
+        val mid = FakeFolder(files = twoSheets.files, contents = mapOf("new" to VALID, "old" to "{\"sche"))
+        assertTrue(carryState(mid, finishing = "2026-10-10:2G") is CarryState.Unreadable)
+    }
+
+    @Test
+    fun `a back-filled day is never opened as a form`() {
+        val backfilled = FakeFolder(
+            files = twoSheets.files,
+            contents = twoSheets.contents + ("old" to twoSheets.contents.getValue("old").replaceFirst("{", "{\"backfilled\":true,")),
+        )
+        assertEquals(false, (carryState(backfilled, finishing = "2026-10-10:2G") as CarryState.Ready).older)
     }
 
     @Test
