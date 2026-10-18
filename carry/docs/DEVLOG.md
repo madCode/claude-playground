@@ -42,10 +42,13 @@ madCode reported both from the phone and approved the fixes.
   the row back but doesn't move the cursor.
 - An empty added row is harmless, checked: the save leaves it out of the
   file, never refuses over it, and doesn't count it anywhere.
-- ***mod*** on a sheet row is now decided by whether the coach gave the
-  row a weight, not by what is typed in the weight box. It no longer
-  disappears on the first digit. A row the coach gave a weight shows no
-  *mod*, unless it is already set. Added rows keep the old rule.
+- ***mod*** on a sheet row is now decided by the row's implement, not by
+  what is typed in the weight box, so it no longer disappears on the first
+  digit. Bodyweight, band and TRX rows show it; dumbbell and kettlebell
+  rows don't, unless it is already set. A row with no implement falls back
+  to whether the coach gave it a weight. The review caught that the
+  suggested weight alone is missing on most weighted rows, which would
+  have put *mod* nearly everywhere. Added rows keep the old rule.
 - The coach's importer keeps `easier` on any row, weighted or not, but
   only the no-weight rule reads it. On a weighted row it is recorded and
   changes no suggestion.

@@ -136,4 +136,24 @@ class SessionTest {
         assertFalse(plank.copy(prescribedDurationSec = 0).timed)
         assertFalse(plank.copy(prescribedDurationSec = null).timed)
     }
+
+    @Test
+    fun `only a string implement in an object variant is read`() {
+        // Carry reads this one key of a variant it otherwise hands back
+        // untouched, so anything odd there means "unknown", never a guess.
+        fun set(variant: String) = Session.json.decodeFromString<ExerciseSet>(
+            """{"ref":0,"line":"10 x curl","variant":$variant}"""
+        )
+        assertEquals("double_dumbbell", set("""{"implement":"double_dumbbell","arms":"both"}""").implement)
+        assertNull(set("null").implement)
+        assertNull(set("\"bodyweight\"").implement)
+        assertNull(set("""["bodyweight"]""").implement)
+        assertNull(set("""{"arms":"both"}""").implement)
+        assertNull(set("""{"implement":null}""").implement)
+        assertNull(set("""{"implement":3}""").implement)
+        assertNull(set("""{"implement":{"name":"bodyweight"}}""").implement)
+        assertTrue(set("""{"implement":"trx"}""").offersMod)
+        assertFalse(set("""{"implement":"kettlebell"}""").offersMod)
+        assertTrue("no implement, no weight: the fallback", set("""{"implement":3}""").offersMod)
+    }
 }

@@ -136,11 +136,14 @@ never refuses over it.
 **Where *mod* shows** is decided by the row, not by what is typed, so the
 chip never vanishes mid-entry and the row never jumps:
 
-- A sheet row the coach gave **no weight** (`suggested_weight` is null,
-  the same test as tap-to-fill): always. That includes a first-timer on a
-  weighted movement, where the owner may still type a weight.
-- A sheet row the coach gave **a weight**: never, unless *mod* is already
-  set, so it is never on where it can't be seen and turned off.
+- A sheet row whose variant's `implement` is **bodyweight, band or trx**
+  (the coach's `NO_WEIGHT_IMPLEMENTS`): always.
+- A sheet row on **any other implement** (a dumbbell, a kettlebell): never,
+  even with no suggested weight, which is most weighted rows.
+- A sheet row with **no readable implement**: when `suggested_weight` is
+  null, the same test as tap-to-fill.
+- Any sheet row with *mod* **already set** shows it, so it is never on
+  where it can't be seen and turned off.
 - An **added row**: while its weight box is empty, or while *mod* is on.
   The coach suggests nothing for it, so the box is the only sign.
 

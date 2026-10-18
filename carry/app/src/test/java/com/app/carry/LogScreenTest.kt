@@ -52,6 +52,9 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -666,12 +669,76 @@ class LogScreenTest {
         }
         tapAdd()
         waitForFocusedName()
-        compose.onNodeWithContentDescription("added exercise, reps").performClick()
+        // Restored while the cursor is still where Add put it: a request
+        // that survived would be re-made by the restored composition.
         restorer.emulateSavedInstanceStateRestore()
         compose.waitForIdle()
         reach("what was it?")
         compose.onNodeWithContentDescription("added exercise name").assertIsDisplayed().assertIsNotFocused()
         assertEquals(1, added.value.size)
+        // And not on a later re-render either: typing elsewhere changes
+        // the rows, which recomposes the list under the cursor.
+        val reps = compose.onNodeWithContentDescription("added exercise, reps")
+        reps.performClick()
+        reps.performTextInput("5")
+        compose.waitForIdle()
+        reps.assertIsFocused()
+        compose.onNodeWithContentDescription("added exercise name").assertIsNotFocused()
+    }
+
+    /** A sheet row as a real file writes it: the variant names the implement. */
+    private fun row(ref: Int, name: String, implement: String?, weight: Double? = null) = ExerciseSet(
+        ref = ref, line = "10 x $name", canonical = name,
+        variant = implement?.let { buildJsonObject { put("implement", it) } } ?: JsonNull,
+        prescribedReps = 10, prescribedText = "10", suggestedWeight = weight,
+    )
+
+    private val implements = SampleSession.today.copy(sets = listOf(
+        row(0, "hammer curl", "double_dumbbell"),
+        row(1, "push-up", "bodyweight"),
+        row(2, "mystery move", null),
+        row(3, "goblet squat", "kettlebell", weight = 25.0),
+    ))
+
+    @Test
+    fun `a dumbbell row the coach gave no weight offers no mod, typed into or not`() {
+        // Most weighted rows carry no suggested weight -- the coach rarely
+        // has one -- so that alone would put mod on nearly every row.
+        show(session = implements)
+        modOn("hammer curl, lb").assertDoesNotExist()
+        compose.onNodeWithContentDescription("hammer curl, lb").performTextReplacement("20")
+        modOn("hammer curl, lb").assertDoesNotExist()
+        modOn("goblet squat, lb").assertDoesNotExist()
+        // The control: the matcher finds the chip on the bodyweight row.
+        modOn("push-up, lb").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a bodyweight-implement row keeps mod while a weight is typed`() {
+        show(session = implements)
+        modOn("push-up, lb").assertIsDisplayed()
+        val box = compose.onNodeWithContentDescription("push-up, lb")
+        "10".forEach { box.performTextInput(it.toString()) }
+        modOn("push-up, lb").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a row with no implement falls back to whether the coach gave a weight`() {
+        // An older runner, or a variant this build can't read: the
+        // suggested weight is the best the file says.
+        show(session = implements)
+        modOn("mystery move, lb").assertIsDisplayed()
+        compose.onNodeWithContentDescription("mystery move, lb").performTextReplacement("15")
+        modOn("mystery move, lb").assertIsDisplayed()
+    }
+
+    @Test
+    fun `mod already set on a dumbbell row is shown, so it can be turned off`() {
+        edits.value = mapOf(0 to SessionPatch.Entry(weight = 20.0, easier = true))
+        show(session = implements)
+        modOn("hammer curl, lb").assertIsDisplayed().performClick()
+        assertEquals(SessionPatch.Entry(weight = 20.0), edits.value[0])
+        modOn("hammer curl, lb").assertDoesNotExist()
     }
 
     @Test

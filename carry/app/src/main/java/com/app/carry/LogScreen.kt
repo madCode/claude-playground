@@ -206,7 +206,8 @@ fun LogScreen(
                     // A range has no single count to fill: its floor would
                     // go into history as the reps done.
                     prescribedReps = set.prescribedReps.takeIf { set.prescribedText?.isRange() != true },
-                    unweighted = set.suggestedWeight == null,
+                    tapFills = set.suggestedWeight == null,
+                    offersMod = set.offersMod,
                     timed = set.timed,
                     family = set.family,
                     entry = entries[set.ref] ?: SessionPatch.Entry(),
@@ -306,13 +307,13 @@ private fun LogRow(
      *  the importer compares reps against this. Null for a range ("6-12"),
      *  whose floor would go into history as the count done. */
     prescribedReps: Int?,
-    /** The runner suggests no weight for this row. Two things follow:
-     *  - A tap on the empty reps box fills in [prescribedReps]. On a weighted
-     *    row a stray tap would record a set with no weight, and blank reps
-     *    already mean "all of them".
-     *  - *mod* is offered, whatever is typed in the weight box. Deciding by
-     *    the box made the chip vanish on the first digit and the row jump. */
-    unweighted: Boolean,
+    /** A tap on the empty reps box fills in [prescribedReps]. Only where the
+     *  runner suggests no weight: on a weighted row a stray tap would record
+     *  a set with no weight, and blank reps already mean "all of them". */
+    tapFills: Boolean,
+    /** [ExerciseSet.offersMod]. Decided by the row, not by the weight box,
+     *  which made the chip vanish on the first digit and the row jump. */
+    offersMod: Boolean,
     family: String?,
     entry: SessionPatch.Entry,
     key: String,
@@ -365,7 +366,7 @@ private fun LogRow(
                 val count = prescribedReps?.takeIf { it > 0 }?.toString()
                 NumberField(
                     repsField(entry.reps, entry.fractionalReps), "$key-r", "$name, reps", "reps", repsProblem,
-                    hint = count, fill = count.takeIf { unweighted },
+                    hint = count, fill = count.takeIf { tapFills },
                 ) { text ->
                     val (reps, fractional) = parseReps(text)
                     change(entry.copy(reps = reps, fractionalReps = fractional))
@@ -375,10 +376,10 @@ private fun LogRow(
             // older file's: the owner's fresh answer wins.
             Chip("easy", entry.easy, Look.Amber) { change(entry.copy(easy = !entry.easy, hard = false)) }
             // "I did the easier version" -- knees, a box under the step-up.
-            // Only where the runner suggests no weight, since that is the
-            // only axis a bodyweight movement has; kept while it is on, so
-            // it can't be left set where nobody can see it.
-            if (unweighted || entry.easier) {
+            // Only on a no-weight row, since that is the only axis a
+            // bodyweight movement has; kept while it is on, so it can't be
+            // left set where nobody can see it.
+            if (offersMod || entry.easier) {
                 Chip("mod", entry.easier, Look.ChalkDim) { change(entry.copy(easier = !entry.easier)) }
             }
         }
