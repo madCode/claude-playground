@@ -356,9 +356,24 @@ weight the marker is the whole record. The same test decides whether the
 session appears on that screen at all.
 
 It is a **record, not a form**, and says so. There is nothing on it to type
-into: the one editable session is today's, on the After tab, and two ways
-to write one file is how a wrong number gets in. A back-filled day — a
-record of training from before this app — says that instead.
+into, because two ways to write one file is how a wrong number gets in. A
+day left unfinished has a *Finish this session* button instead, which puts
+that sheet on the After tab, so it is filled in with the same boxes and
+saved through the same checks as the newest one, the changed-file refusal
+included. A back-filled day — a record of training from before this app —
+is never offered, and says so.
+
+**Finishing an older session.** The sheet the After tab holds is pinned by
+its `sheet_id`, kept across a process death but not a fresh launch, so
+opening Carry from the launcher is always the newest sheet. While it is
+pinned, a strip under the tabs says *Finishing <day>, not the newest* on
+every tab, with a *Newest* button back: the Before tab is read in one
+glance, and an old sheet there must not pass for today's. Switching either
+way is refused while there is unsaved typing, since there is one draft and
+typing on another sheet would replace it; the page and the strip say to
+save or discard first. A pinned sheet that leaves the folder drops the pin
+and the newest comes back. The coach re-reads every past file the day
+after and follows an edit, so a session finished late reaches its history.
 
 The rows travel on the day rather than being re-read when the screen opens.
 The file was already parsed, off the main thread, by the read that built

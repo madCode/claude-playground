@@ -28,6 +28,24 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-18 — cycle 68: finish an older session
+
+- A past day on the Since tab now has a **Finish this session** button.
+  It puts that sheet on the After tab, filled in and saved with the same
+  boxes and checks as the newest, the refusal over a changed file
+  included. A day logged before Carry isn't offered.
+- While an older sheet is on screen, a strip under the tabs says
+  *Finishing <day>, not the newest* on every tab, with a **Newest** button
+  back. Opening Carry from the launcher is always the newest sheet.
+- Switching sheets is refused while there is unsaved typing, and the page
+  says to save or discard first: there is one draft, so typing on another
+  sheet would have replaced it.
+- The coach already re-reads every past file the day after and follows an
+  edit, so a session finished late reaches its history. Checked in its
+  importer (`import_finished`).
+- Left: deleting a row from a past session. Nothing asked for it, and the
+  coach never removes a row, so a blanked box stays in its history.
+
 ## 2026-10-17 — cycle 67: a set that hurt leaves the bump band
 
 - A row you mark *hurt* with a weight now leaves "Part way to a bump",

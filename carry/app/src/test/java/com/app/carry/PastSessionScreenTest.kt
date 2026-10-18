@@ -371,6 +371,66 @@ class PastSessionScreenTest {
         assertTrue("a row tapped at arm's length, and it measured ${dp}dp", dp >= 48f)
     }
 
+    private fun binding(
+        unsaved: Boolean = false,
+        onFinishOlder: (String) -> Boolean = { true },
+        onBackToNewest: () -> Boolean = { true },
+    ) = LogBinding(
+        entries = emptyMap(), added = emptyList(), saving = SaveState.Idle,
+        onEdit = { _, _ -> }, onAdd = {}, onEditAdded = { _, _ -> }, onSave = {},
+        since = since, onFinishOlder = onFinishOlder, onBackToNewest = onBackToNewest, unsaved = unsaved,
+    )
+
+    private fun openThatDayIn(log: LogBinding, state: CarryState = readyFor()) {
+        compose.setContent { CarryApp(state, onChooseFolder = {}, log = log) }
+        compose.onNodeWithText("Since").performClick()
+        reach(thatDay)
+        compose.onNode(thatDay).performClick()
+    }
+
+    @Test
+    fun `an older session is finished from its page, which moves to the After tab`() {
+        var asked: String? = null
+        openThatDayIn(binding(onFinishOlder = { asked = it; true }))
+        shoot("22b-past-session-finish")
+        compose.onNodeWithText("Finish this session").performClick()
+        compose.waitForIdle()
+        assertTrue("finishing asks for that day's own sheet, got $asked", asked == day.sheetId)
+        // The After tab's boxes, which no other screen has.
+        assertTrue(compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isNotEmpty())
+    }
+
+    @Test
+    fun `unsaved typing on After holds the finish back, and says why`() {
+        var asked = false
+        openThatDayIn(binding(unsaved = true, onFinishOlder = { asked = true; true }))
+        compose.onNodeWithText("Finish this session").assertDoesNotExist()
+        compose.onNodeWithText("Save or discard what's typed on After first", substring = true).assertIsDisplayed()
+        assertTrue("nothing was asked", !asked)
+    }
+
+    @Test
+    fun `a day logged before Carry is not offered for finishing`() {
+        val backfilled = Growth.of(listOf(SampleSession.pastFile.replaceFirst("{", "{\"backfilled\": true,"))).days.single()
+        assertTrue("the fixture must read as back-filled", backfilled.backfilled)
+        compose.setContent { PastSession(backfilled, onBack = {}, onFinish = {}) }
+        compose.onNodeWithText("Finish this session").assertDoesNotExist()
+    }
+
+    @Test
+    fun `an older session on screen says so on the Before tab, with the way back`() {
+        var back = 0
+        val older = readyFor(SampleSession.today).copy(older = true)
+        compose.setContent { CarryApp(older, onChooseFolder = {}, log = binding(onBackToNewest = { back++; true })) }
+        compose.onNodeWithText("not the newest", substring = true).assertIsDisplayed()
+        // The Before tab's own words must not contradict the strip.
+        compose.onNodeWithText("most recent", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("No sheet for today").assertDoesNotExist()
+        shoot("22c-finishing-banner")
+        compose.onNodeWithText("Newest").performClick()
+        assertTrue("the way back was taken once, got $back", back == 1)
+    }
+
     private fun shoot(name: String) {
         compose.waitForIdle()
         val shot = compose.onRoot().captureToImage().asAndroidBitmap()

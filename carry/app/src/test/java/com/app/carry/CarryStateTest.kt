@@ -644,6 +644,28 @@ class CarryStateTest {
         assertNull(SessionFiles.parse("""{"schema":null,"sheet_id":"a","date":"b","sets":[]}"""))
     }
 
+    private val twoSheets = FakeFolder(
+        files = listOf("new" to "session-2026-10-17-2G.json", "old" to "session-2026-10-10-2G.json"),
+        contents = mapOf("new" to VALID, "old" to VALID.replace("2026-10-17", "2026-10-10")),
+    )
+
+    @Test
+    fun `an older sheet asked for by its id is the one on screen, marked older`() {
+        val state = carryState(twoSheets, finishing = "2026-10-10:2G") as CarryState.Ready
+        assertEquals("old", state.documentId)
+        assertEquals("2026-10-10:2G", state.session.sheetId)
+        assertTrue(state.older)
+    }
+
+    @Test
+    fun `a sheet asked for that isn't there, or is the newest, gives the newest`() {
+        for (asked in listOf("2026-09-01:2G", "2026-10-17:2G")) {
+            val state = carryState(twoSheets, finishing = asked) as CarryState.Ready
+            assertEquals(asked, "new", state.documentId)
+            assertEquals(asked, false, state.older)
+        }
+    }
+
     @Test
     fun `no folder means the picker`() {
         assertEquals(CarryState.NeedsFolder(), carryState(FakeFolder(chosen = false)))

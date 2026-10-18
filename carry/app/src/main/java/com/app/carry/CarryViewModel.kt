@@ -219,7 +219,33 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      *  keep-last-good path can be exercised without a real provider; there
      *  is no other way in, because the read is deliberately not injectable
      *  through the constructor a ViewModelProvider has to call. */
-    internal var read: suspend () -> CarryState = { SessionLoader(folder).load() }
+    internal var read: suspend () -> CarryState = { SessionLoader(folder).load(finishing) }
+
+    /**
+     * The older session the owner chose to finish, by its sheet id, or null
+     * for the newest. In the saved state so a process death keeps it, and
+     * nowhere else: a fresh launch opens on the newest sheet, which is what
+     * the lobby glance needs.
+     */
+    internal val finishing: String? get() = handle[FINISHING]
+
+    /**
+     * Puts an older session on the After tab, where the newest one's save
+     * checks (#140's changed-file refusal included) apply to it unchanged.
+     * Refused while there is unsaved typing: there is one draft, and typing
+     * on another sheet would replace it.
+     */
+    fun finishOlder(sheetId: String): Boolean = switchTo(sheetId)
+
+    /** Back to the newest sheet, refused over unsaved typing like [finishOlder]. */
+    fun backToNewest(): Boolean = switchTo(null)
+
+    private fun switchTo(sheetId: String?): Boolean {
+        if (unsaved) return false
+        if (sheetId == null) handle.remove<String>(FINISHING) else handle[FINISHING] = sheetId
+        refresh()
+        return true
+    }
 
     /**
      * The same seam for the write.
@@ -265,6 +291,10 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                 next == null -> CarryState.Stalled
                 else -> keepLastGood(_state.value, next)
             }
+            // The sheet asked for has gone, or is the newest now: the pin has
+            // nothing left to do, and held it would spring back open when the
+            // file did.
+            if ((_state.value as? CarryState.Ready)?.older == false) handle.remove<String>(FINISHING)
             // Seed what the file already records, so a session finished in
             // two sittings opens showing the first sitting's numbers rather
             // than blank boxes the owner would fill in from memory. Only on
@@ -342,6 +372,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     fun forgetFolder() {
         folder.forget()
         handle.remove<String>(DRAFT)
+        handle.remove<String>(FINISHING)
         _edits.value = emptyMap()
         _added.value = emptyList()
         _fileMovedUnderEdits.value = false
@@ -632,6 +663,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
          */
         const val STALL_AFTER_MS = 15_000L
         const val DRAFT = "draft"
+        const val FINISHING = "finishing"
         const val DAMAGED = "Couldn't save, and the file on disk may be damaged. Don't let it sync before checking it."
     }
 }
