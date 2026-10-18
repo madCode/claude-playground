@@ -262,7 +262,10 @@ These are the open paths to one, hardest first.
   typing.** The refresh on every resume shows the newest session; the
   draft for the old one is then hidden, and the next keystroke replaces
   it. Left for the brain-on-the-phone move, since the session file goes
-  then *(the simple save refusal, #136 closed)*
+  then. Finishing an older session (cycle 68) has the same exposure: a
+  sync that briefly drops the old file from the listing puts the newest
+  back under the typing, and the pin goes with it *(the simple save
+  refusal, #136 closed; review of cycle 68)*
 - [ ] **Carry and gym-coach disagree about an old *hard*-only row.** An
   old session whose only record is `hard` on bodyweight rows reaches
   gym-coach's history, which still counts `hard` as an answer. Carry's

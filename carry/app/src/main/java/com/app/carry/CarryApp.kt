@@ -132,7 +132,10 @@ fun carryState(folder: Folder, finishing: String? = null): CarryState {
             }
             // A back-filled day is a record, never a form, whatever asked for it.
             if (session.sheetId == finishing && !Growth.backfilledIn(text)) {
-                return CarryState.Ready(session, text, id, SessionFiles.unreadableRows(text, session), older = true)
+                // The newest asked for by id is just the newest: no strip, and
+                // the pin has nothing left to do.
+                val older = name != SessionFiles.newest(files.map { it.second })
+                return CarryState.Ready(session, text, id, SessionFiles.unreadableRows(text, session), older = older)
             }
         }
         unread?.let { return it }

@@ -658,10 +658,12 @@ class CarryStateTest {
     }
 
     @Test
-    fun `a sheet asked for that has gone gives the newest`() {
-        val state = carryState(twoSheets, finishing = "2026-09-01:2G") as CarryState.Ready
-        assertEquals("new", state.documentId)
-        assertEquals(false, state.older)
+    fun `a sheet asked for that has gone, or is the newest, gives the newest`() {
+        for (asked in listOf("2026-09-01:2G", "2026-10-17:2G")) {
+            val state = carryState(twoSheets, finishing = asked) as CarryState.Ready
+            assertEquals(asked, "new", state.documentId)
+            assertEquals(asked, false, state.older)
+        }
     }
 
     @Test
