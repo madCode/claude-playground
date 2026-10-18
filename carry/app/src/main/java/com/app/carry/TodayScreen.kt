@@ -56,6 +56,13 @@ fun TodayScreen(
     val changed = weighted.filter { it.change != null }
     val held = weighted.filter { it.change == null }
     val noNumber = session.sets.filter { it.suggestedWeight == null }
+    // A movement with no number of its own, but a neighbour the coach could
+    // point at, is worth more than its name in a list: "by feel" told the
+    // owner nothing they did not already know while the file held "goblet
+    // forward lunge 30 lb, 10/10". Capped, because these are rows rather
+    // than one concatenated line, and the sheet is read in a single glance.
+    val borrowed = noNumber.filter { !it.related.isNullOrBlank() }.take(MAX_RELATED)
+    val tail = noNumber - borrowed.toSet()
 
     Column(modifier.fillMaxSize().background(Look.Slate).padding(horizontal = 14.dp)) {
         // On a past sheet the headline is the ANSWER to "why am I looking at
@@ -110,7 +117,8 @@ fun TodayScreen(
             // renders first -- so the app would crash on every launch with
             // no way to fix it from the phone.
             items(changed + held) { SheetRow(it) }
-            if (noNumber.isNotEmpty()) item { TailLine(noNumber) }
+            items(borrowed) { RelatedRow(it) }
+            if (tail.isNotEmpty()) item { TailLine(tail) }
         }
     }
 }
@@ -198,6 +206,43 @@ private fun StreakPips(set: ExerciseSet) {
     }
 }
 
+/**
+ * A movement with no weight of its own, under the nearest one the coach
+ * found: `cross-back lunge` over `goblet forward lunge 30 lb, 10/10`.
+ *
+ * Deliberately NOT shaped like [SheetRow]. That row's big right-hand
+ * figure is a number earned by this movement's own history; this one is a
+ * guess sideways from a different movement, and the two must not be
+ * mistaken for each other in a lobby. So the number stays inside the
+ * sentence that says where it came from, at the size of a note.
+ */
+@Composable
+private fun RelatedRow(set: ExerciseSet) {
+    val related = set.related ?: return
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Look.family(set.family)?.let { hue ->
+                Box(Modifier.width(3.dp).height(16.dp).clip(RoundedCornerShape(2.dp)).background(hue))
+            }
+            Text(
+                set.displayName, color = Look.Chalk, fontFamily = Look.Name,
+                fontSize = Look.NameSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+        }
+        // Indented to the name, and never squeezed to one line: the weight
+        // sits at the END of this string, so an ellipsis would eat the only
+        // part worth carrying in.
+        Text(
+            related, color = Look.ChalkDim, fontFamily = Look.Name,
+            fontSize = Look.SmallSize, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 11.dp, top = 1.dp),
+        )
+    }
+}
+
 @Composable
 private fun TailLine(rest: List<ExerciseSet>) {
     // Capped: these names are concatenated into single Text nodes, and the
@@ -249,6 +294,10 @@ private const val MAX_PIPS = 10
 
 /** Names folded into the tail line; past this nobody is reading them. */
 private const val MAX_TAIL_NAMES = 40
+
+/** Three borrowed numbers is the most a glance can hold beside the real
+ *  ones; the rest of the no-number movements stay in the tail line. */
+private const val MAX_RELATED = 3
 
 /** 45.0 reads as "45"; 12.5 keeps its half. Dumbbells come in halves. */
 internal fun Double?.asWeight(): String {
