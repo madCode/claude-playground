@@ -292,6 +292,23 @@ These are the open paths to one, hardest first.
   alone leaves the other half unexplained *(you asked)*
 
 ### Health and tidying
+- [ ] **Bring updates up to newspaperss's.** Carry's in-app update
+  (`DebugUpdates`, `UpdateInstaller`) is as safe as newspaperss's
+  (`SelfUpdate`) but needs more from the owner. Four gaps:
+  - **It waits for a tap.** newspaperss downloads a new test build on
+    Wi-Fi and installs it while the app is closed and nothing is running.
+  - **It only checks on a return to the app.** newspaperss also checks in
+    the background, every six hours.
+  - **It leaves the file checks to Android.** newspaperss checks the
+    package, a higher version code and the signing key itself, and gives
+    up on a build after three failed installs.
+  - **The installer and `REQUEST_INSTALL_PACKAGES` ship in every build.**
+    newspaperss keeps both in the debug source set, and `check` fails if a
+    release's merged manifest asks to install apps.
+  Keep Carry's own rule: never install over unsaved typing on the After
+  tab, so a background install waits for no draft and no save in progress.
+  A device check is owed with it, since the install itself happens in
+  Android's hands *(you approved, 2026-10-19)*
 - [ ] **A resume can put another session on screen over pending
   typing.** The refresh on every resume shows the newest session; the
   draft for the old one is then hidden, and the next keystroke replaces
