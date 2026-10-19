@@ -728,10 +728,13 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
  */
 @Composable
 private fun TypedBack(added: List<AddedSet>) {
-    // `(?U)` so `\\s` also folds U+2028 and friends, which would break the
-    // sentence across lines.
+    // Unicode separators as well as ASCII whitespace, so U+2028 and friends
+    // fold rather than breaking the sentence across lines. NOT `(?U)`: that
+    // inline flag compiles on the JVM and throws on Android, whose regex is
+    // ICU's, so every unit test passed and the app died on the phone -- on
+    // the recomposition after a save that had already written the file.
     val names = added.mapNotNull { row ->
-        row.name.readable().replace(Regex("(?U)\\s+"), " ").trim().takeIf { it.isNotEmpty() }?.let(::clip)
+        row.name.readable().replace(SPACES, " ").trim().takeIf { it.isNotEmpty() }?.let(::clip)
     }.distinct()
     if (names.isEmpty()) return
     Text(
@@ -852,3 +855,15 @@ private fun SaveButton(state: SaveState, onSave: () -> Unit, added: List<AddedSe
 private fun String.isRange(): Boolean = any { it == '-' || it == '/' }
 
 private fun Double?.asWeightField(): String = this?.let { asWeight() } ?: ""
+
+/**
+ * ASCII whitespace plus every Unicode separator, so a name carrying U+2028 or
+ * a non-breaking space folds to one ordinary space instead of breaking the
+ * sentence across lines.
+ *
+ * Built once rather than per row, and as a character class rather than the
+ * `(?U)` flag it replaces: Android's regex is ICU's, which rejects that inline
+ * flag outright, while the JVM accepts it — so unit tests and Robolectric both
+ * passed and the phone threw PatternSyntaxException instead.
+ */
+internal val SPACES = Regex("[\\p{Z}\\s]+")
