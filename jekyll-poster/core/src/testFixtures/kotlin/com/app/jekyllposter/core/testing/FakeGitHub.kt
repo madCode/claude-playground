@@ -1,6 +1,7 @@
 package com.app.jekyllposter.core.testing
 
 import java.io.File
+import java.net.InetAddress
 import java.net.URLDecoder
 import java.security.MessageDigest
 import java.util.Base64
@@ -95,15 +96,18 @@ class FakeGitHub(
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse = synchronized(this@FakeGitHub) { handle(request) }
         }
-        server.start()
+        // 127.0.0.1 by number, never "localhost": on a device that name goes through Android's
+        // DNS, which can refuse it (an UnknownHostException as the app starts).
+        server.start(InetAddress.getByAddress("localhost", byteArrayOf(127, 0, 0, 1)), 0)
     }
 
-    val apiBase get() = server.url("/")
+    val apiBase get() = server.url("/").newBuilder().host("127.0.0.1").build()
 
-    val head: String get() = refs.getValue(branch)
+    // Under the server's lock: a device test reads these while a publish is landing.
+    val head: String get() = synchronized(this) { refs.getValue(branch) }
 
     /** The files on the branch now. */
-    fun files(): Map<String, ByteArray> = trees.getValue(commits.getValue(head).tree).mapValues { blobs.getValue(it.value) }
+    fun files(): Map<String, ByteArray> = synchronized(this) { trees.getValue(commits.getValue(head).tree).mapValues { blobs.getValue(it.value) } }
 
     fun text(path: String): String? = files()[path]?.toString(Charsets.UTF_8)
 

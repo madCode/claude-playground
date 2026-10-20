@@ -3,6 +3,14 @@
 For the next cycle: what to do differently, newest first. What each cycle built is in
 [DEVLOG.md](DEVLOG.md). Keep the last ten or so.
 
+### Cycle 36 — build: device tests on an emulator, on every PR
+
+- A cloud session can't run an emulator (no KVM): the PR's own CI is the only run. Make the
+  first push print what a dead app leaves (`adb logcat -d -b crash`, logcat as an artifact),
+  or a crash at start reads only "Instrumentation did not complete".
+- Nothing on the device looks up "localhost": the fake GitHub is 127.0.0.1 by number.
+- Falsify device tests in one pushed commit that breaks each covered feature, then revert it.
+
 ### Cycle 35 — build: a request record in debug builds
 
 - Android lint crashed (`Unexpected owner function: null`, in `ExperimentalDetector`) on a class
