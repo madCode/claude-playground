@@ -241,9 +241,14 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      */
     fun refresh() {
         reading?.cancel()
+        // The resume right after the picker re-reads a folder that was never
+        // taken, and would replace the refusal before the owner had read it.
+        // Taken here, not in the read, so a read already in flight can't use it.
+        val holdRefusal = refusedPick.also { refusedPick = false }
         reading = viewModelScope.launch {
             val next = withTimeoutOrNull(STALL_AFTER_MS) { read() }
             _state.value = when {
+                holdRefusal -> _state.value
                 // A provider can block forever -- openInputStream has no
                 // timeout and runCatching never fires. Without this the
                 // owner sits on "Reading" with no button and no way out but
@@ -342,7 +347,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     /** The owner picked a whole volume; say so rather than holding it. */
     fun rejectedTooWide() {
         _state.value = CarryState.NeedsFolder(tooWide = true, holding = folder.label)
+        refusedPick = true
     }
+    private var refusedPick = false
 
     fun discardEdits() {
         clearDraft()

@@ -311,17 +311,6 @@ These are the open paths to one, hardest first.
   alone leaves the other half unexplained *(you asked)*
 
 ### Health and tidying
-- [ ] **Branch coverage is 67% while the Kover floor is 85% on
-  instructions.** The gate is real but it is counting the wrong thing for
-  a codebase this full of fail-closed guards — a third of branches have
-  never been taken. Not a demand for a second gate (a test written only to
-  lift a number is worse than the number), but worth one pass over the
-  classes with the widest gap: `SessionFolder` 78%, `CarryAppKt` 77%
-  *(audit: CI health)*
-- [ ] `MainActivity` is at **0%** and `LogBinding` at 0%. The first is the
-  SAF plumbing the emulator is honest about and unit tests are not, so it
-  is the one place a device check earns its keep; the second is a plain
-  data holder *(audit: CI health)*
 ### Owed on a device
 
 Only a real phone can answer these.
@@ -335,10 +324,6 @@ Only a real phone can answer these.
   test proves the line is a polite live region, not that TalkBack speaks
   it. With TalkBack on: add a row, type a name, save, and listen *(due
   with the typed-name change)*
-- [ ] A persisted tree permission surviving `adb install -r`, which can revoke it
-  and look exactly like a first run. Partly done 2026-10-12 **on an emulator**: the
-  grant was taken through the real picker and held across a force-stop and
-  relaunch. **A phone and a reinstall are still owed** *(device)*
 - [ ] **Does tapping a notification preserve typed-but-unsaved numbers?**
   The tap itself is confirmed — it opens the app on the Before tab. What is
   NOT confirmed is the property the `SINGLE_TOP` fix exists for: that the
@@ -360,7 +345,13 @@ Only a real phone can answer these.
   install while Carry is closed (no dialog on Android 12+, once Carry has
   installed itself); no install while the After tab holds unsaved typing;
   a release build with no "install unknown apps" entry. The steps are in
-  DEVLOG.md, cycle 72.
+  DEVLOG.md, cycle 72. **And the folder grant surviving it:** an update
+  replaces the installed app the way `adb install -r` does, which can
+  revoke a persisted tree grant and look exactly like a first run. After
+  the update, Carry should open on the sheet, not on *Pick your folder*
+  or *Lost the folder*. Held across a force-stop and relaunch on an
+  emulator (2026-10-12); a reinstall on a phone is still owed *(merged
+  with the reinstall check, which asked the same of the same moment)*
 - [x] ~~The round trip through Syncthing, end to end~~ **Confirmed on the
   owner's own phone, 2026-10-16.** A blank, labelled session file placed in
   the synced folder on the laptop reached the phone, parsed, appeared on the
@@ -476,6 +467,18 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **One pass of tests over the fail-closed guards, and `MainActivity`
+  off 0%.** Real behaviour tests, each falsified: the folder against a
+  provider (junk rows, a file over 1 MB, a trickling stream, a read-only
+  grant, re-picking), finishing a sheet the provider won't hand over, the
+  finishing strip over unsaved typing, and the Activity's picker and
+  notification ask. Branch coverage went from 72.9% to 74.5% overall (CI,
+  main against the PR): `SessionFolder` 45 to 61 of 72 branches,
+  `CarryAppKt` 150 to 159 of 178, `MainActivity` from 0 to 11 of 30, and
+  from almost no instructions run to 73% of them. The Activity test found
+  the whole-phone refusal being wiped by the resume after the picker;
+  fixed. What only a device shows (a grant surviving a reinstall, the real
+  picker) stays under *Owed on a device* *(audit: CI health)*
 - [x] **Bring updates up to newspaperss's** *(you approved, 2026-10-19)*.
   Cycle 71 (#158): the installer, `REQUEST_INSTALL_PACKAGES` and
   `INTERNET` are debug-only, `check` guards the release manifest, and

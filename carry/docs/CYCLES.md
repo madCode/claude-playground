@@ -5,6 +5,25 @@ differently. Newest first; read the top before starting. What was built is
 in [DEVLOG.md](DEVLOG.md). Kept to the last ten or so cycles; older lessons
 that hold become rules in CLAUDE.md or the cycles skill.
 
+## 2026-10-20 (cloud session, second Carry agent, later)
+
+### Cycle 73 — build: tests for the guards, and `MainActivity`
+
+- **Results from a script on a shared path are unproven** (cycle 71's
+  note on the scratchpad): rerun every falsification it touched.
+- **Drive the real Activity in Robolectric** with
+  `createAndroidComposeRule<MainActivity>()`, `shadowOf(activity)
+  .nextStartedActivityForResult` and `receiveResult`, then
+  `scenario.moveToState` for the resume. Before asserting a screen, wait
+  for the one read it depends on (wrap the ViewModel's `read` seam and
+  count).
+- **`compose.waitUntil` in an Activity test runs on `runTest`'s virtual
+  time**, the same trap CLAUDE.md names for `withTimeoutOrNull`: it timed
+  out with its condition already true, about one run in five, and on CI.
+  Wait on the real clock and call `compose.waitForIdle()` each pass
+  (`MainActivityTest.until`). A dump on timeout showed it: catch the flake
+  before guessing at it.
+
 ## 2026-10-20 (cloud session, first Carry agent)
 
 ### Cycle 72 — build: updates, part two (Wi-Fi download, background install)

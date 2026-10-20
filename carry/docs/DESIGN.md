@@ -208,7 +208,7 @@ wrong diagnosis sends someone to fix the wrong thing:
 | Can't read that session / Carry is out of date | a file that is there but truncated mid-sync, or written by a newer coach | the picker |
 | No format label / Unknown format label | a file that reads as JSON but has no `"schema"`, or one that isn't `gym-session/1` or a later `gym-session/N`; the message names the file and quotes an unknown label | the picker |
 | Folder isn't answering | the read passed 15 seconds; a provider can block forever with no timeout to set | the picker |
-| That's your whole phone | a whole volume picked rather than a folder | the picker |
+| That's your whole phone | a whole volume picked rather than a folder; kept through the read when Carry comes back from the picker, and gone at the next return to the app | the picker |
 
 **A past sheet is headed "No sheet for today"**, with "Showing the most
 recent" under it: on a rest day that is the ordinary state, not a failed
