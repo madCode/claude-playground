@@ -23,6 +23,8 @@ android {
         // Each device test in a process of its own, with the app's data cleared: the app's
         // DataStores are process-wide, and a sign-in would carry into the next test.
         testInstrumentationRunnerArguments["clearPackageData"] = "true"
+        // Files a test keeps (the live check's request record) are pulled into the build's outputs.
+        testInstrumentationRunnerArguments["useTestStorageService"] = "true"
         // A GitHub App's client ID turns on "Sign in with GitHub" (device flow). Not a secret: the
         // device flow needs no client secret. Empty hides the button and leaves token sign-in.
         buildConfigField("String", "GITHUB_CLIENT_ID", "\"${providers.gradleProperty("githubClientId").getOrElse("")}\"")
@@ -140,6 +142,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.uiautomator)
+    androidTestImplementation(libs.androidx.test.storage)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(libs.espresso.core)

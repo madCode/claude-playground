@@ -22,6 +22,8 @@ claude-playground repository; run commands from this folder. The rules every pro
   session has no KVM for one). `DeviceTestRunner` swaps in `DeviceTestApp`: the real app, with
   `FakeGitHub` serving the sample blog on the device itself, over plain HTTP to localhost, which
   only debug builds allow. Each test runs in a process of its own with the app's data cleared.
+  `LiveOnTheDeviceTest` runs only in "Jekyll Poster device live check" (nightly): the real GitHub,
+  two of the tester's blogs, the request record kept as an artifact.
 - `sample-blog/`: a small Jekyll blog with every front matter shape the app reads. It is the
   tests' fixture and the blog to try the app on.
 

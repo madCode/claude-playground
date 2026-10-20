@@ -11,13 +11,15 @@ import kotlinx.coroutines.runBlocking
 
 /**
  * The real app on a device, with GitHub swapped for a [FakeGitHub] serving the sample blog on
- * this phone. Everything else is the app's own: WorkManager, the Keystore, notifications.
+ * this phone. Everything else is the app's own: WorkManager, the Keystore, notifications. A live
+ * run (the `liveRepoA` argument, see [LiveOnTheDeviceTest]) keeps the real GitHub instead.
  */
 class DeviceTestApp : PosterApp() {
     lateinit var github: FakeGitHub
         private set
 
     override fun createContainer(): AppContainer {
+        if (!InstrumentationRegistry.getArguments().getString("liveRepoA").isNullOrBlank()) return AppContainer(this)
         // Off the main thread, where Android refuses network sockets, the server's own included.
         // Logged in full: a crash here reaches CI's log without its stack trace.
         github = try {
