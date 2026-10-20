@@ -93,7 +93,9 @@ class SessionFolderProviderTest {
         val folder = folderListing(arrayOf("doc-1", today))
         val huge = ByteArray(1_000_001) { ' '.code.toByte() }
         session.encodeToByteArray().copyInto(huge)
-        serve("doc-1", huge.inputStream())
+        // A fresh stream per open: one shared stream would be empty by the
+        // second read, and an empty file is unreadable for another reason.
+        shadowOf(context.contentResolver).registerInputStreamSupplier(doc("doc-1")) { huge.inputStream() }
         assertNull(folder.read("doc-1"))
         assertEquals(CarryState.Unreadable(today, CarryState.Unreadable.Why.DAMAGED), carryState(folder))
     }

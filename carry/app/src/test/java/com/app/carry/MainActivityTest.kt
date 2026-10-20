@@ -12,6 +12,12 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.work.Configuration
+import androidx.work.testing.SynchronousExecutor
+import androidx.work.testing.WorkManagerTestInitHelper
+import kotlinx.coroutines.job
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -22,6 +28,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.ExternalResource
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
@@ -35,7 +42,24 @@ import org.robolectric.annotation.Config
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [Build.VERSION_CODES.TIRAMISU])
 class MainActivityTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    /**
+     * Before the Activity starts: a WorkManager that runs nothing, so the
+     * hourly check scheduled in onCreate can't touch the folder mid-test,
+     * and an update check already done, so a CI build (which has a build
+     * number) doesn't ask GitHub from a unit test.
+     */
+    @get:Rule(order = 0) val quiet = object : ExternalResource() {
+        override fun before() {
+            val app = ApplicationProvider.getApplicationContext<Context>()
+            WorkManagerTestInitHelper.initializeTestWorkManager(
+                app, Configuration.Builder().setExecutor(SynchronousExecutor()).build(),
+            )
+            app.getSharedPreferences("debug-updates", Context.MODE_PRIVATE).edit()
+                .putLong("checked", System.currentTimeMillis()).apply()
+        }
+    }
+
+    @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val folder = Uri.parse("content://com.android.externalstorage.documents/tree/primary%3ASync%2Fgym")
@@ -66,11 +90,21 @@ class MainActivityTest {
     private fun waitFor(text: String) =
         compose.waitUntil(10_000) { compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty() }
 
+    /** Until the resume's folder read has landed: it runs on IO, which the
+     *  Compose clock doesn't wait for, so a screen seen before it proves
+     *  nothing about what the read leaves there. */
+    private fun readsLanded() {
+        val model = ViewModelProvider(compose.activity)[CarryViewModel::class.java]
+        compose.waitUntil(10_000) { model.viewModelScope.coroutineContext.job.children.none { it.isActive } }
+        compose.waitForIdle()
+    }
+
     @Test
     fun `a whole volume picked by mistake is refused, said, and not held`() {
         compose.onNodeWithText("Pick your folder").assertExists()
         pick(wholePhone)
-        waitFor("That's your whole phone")
+        readsLanded()
+        compose.onNodeWithText("That's your whole phone").assertExists()
         assertTrue("a whole-phone grant must not be taken: $grants", grants.isEmpty())
         assertNull(SessionFolder(context).uri)
     }
@@ -101,8 +135,8 @@ class MainActivityTest {
         waitFor("Nothing to carry")
         val request = shadowOf(compose.activity).lastRequestedPermission
         assertEquals(listOf(Manifest.permission.POST_NOTIFICATIONS), request?.requestedPermissions?.toList())
-        // Not marked until the owner answers: a launch that threw used to
-        // burn the only ask the app makes.
+        // Not marked until the owner answers, so a launch that throws
+        // doesn't burn the only ask the app makes.
         assertFalse(SessionWatchWorker.asked(context))
 
         @Suppress("DEPRECATION")

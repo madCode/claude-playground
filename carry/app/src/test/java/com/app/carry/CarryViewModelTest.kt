@@ -911,6 +911,22 @@ class CarryViewModelTest {
     }
 
     @Test
+    fun `the whole-phone refusal outlasts the read right after the pick, and only that one`() = runTest(dispatcher) {
+        // The Activity resumes after every pick, and that resume re-reads a
+        // folder that was never taken.
+        val model = viewModel()
+        model.read = { CarryState.NeedsFolder() }
+        model.rejectedTooWide()
+        model.refresh()
+        advanceUntilIdle()
+        assertTrue("the refusal was replaced: ${model.state.value}", (model.state.value as? CarryState.NeedsFolder)?.tooWide == true)
+        // The next return to the app says what is true now.
+        model.refresh()
+        advanceUntilIdle()
+        assertEquals(CarryState.NeedsFolder(), model.state.value)
+    }
+
+    @Test
     fun `the folder outlives the activity that asked for it`() {
         // Held against the Application, so an abandoned read cannot keep a
         // destroyed Activity alive while a blocked provider finishes.

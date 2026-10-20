@@ -254,11 +254,6 @@ fun growthOf(folder: Folder): Growth.Since {
  */
 fun keepLastGood(previous: CarryState, next: CarryState): CarryState = when {
     next is CarryState.Ready -> next
-    // The resume after the picker re-reads a folder that was never taken,
-    // so it would replace "that's your whole phone" with the plain picker
-    // before the owner had read why.
-    next is CarryState.NeedsFolder && !next.lostGrant &&
-        previous is CarryState.NeedsFolder && previous.tooWide -> previous
     next is CarryState.NeedsFolder -> next          // the folder itself is gone; say so
     previous is CarryState.Ready -> previous
     else -> next
