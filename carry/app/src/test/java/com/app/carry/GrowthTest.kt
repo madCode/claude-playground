@@ -45,14 +45,16 @@ class GrowthTest {
     """.trimIndent()
 
     @Test
-    fun `a row an older file marked only hard reads as blank`() {
-        // `hard` is no longer shown, so a row it alone answered would read
-        // as done in a past session with nothing on it to say why.
-        val day = file("2026-10-11", sets = set(0, "squat", "legs", hard = true))
+    fun `a row an older file marked only hard is a session, as gym-coach counts it`() {
+        // gym-coach's importer turns a hard-only row into a history entry
+        // (session_file._answered), so leaving the day out here had the
+        // Since tab and the coach disagree about which classes happened.
+        val day = file("2026-10-11", sets = set(0, "sit-up", "core", hard = true) + "," + set(1, "squat", "legs"))
         val since = Growth.of(listOf(day))
-        assertEquals(0, since.sessions)
-        val withWeight = file("2026-10-11", sets = set(0, "squat", "legs", weight = "40", hard = true))
-        assertEquals("the file still reads", 1, Growth.of(listOf(withWeight)).sessions)
+        assertEquals(1, since.sessions)
+        val rows = since.days.single().rows
+        assertEquals(listOf(true, false), rows.map { it.answered })
+        assertEquals(listOf("hard"), rows[0].marks)
     }
 
     @Test
