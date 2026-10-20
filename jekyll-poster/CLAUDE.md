@@ -35,7 +35,8 @@ claude-playground repository; run commands from this folder. The rules every pro
     tools/emulator-check.sh                    # the laptop's emulator checks: docs/DEVICE-CHECKS.md
 
 To try a change against a real blog, run the "Jekyll Poster live check" workflow on its branch:
-it publishes a post to the sample blog, waits for Pages, then deletes it. A cloud session starts
+it publishes a post to each of the tester's three blogs, waits for Pages, then deletes it. It also
+runs nightly. A cloud session starts
 it through the GitHub tools and reads its logs; it can't run it itself, since the session's
 GitHub proxy refuses the commit calls the app makes, and the container has no KVM for an
 emulator. The test blogs and their tokens: [docs/TESTER_ACCOUNT.md](docs/TESTER_ACCOUNT.md).
