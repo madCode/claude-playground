@@ -24,6 +24,8 @@ claude-playground repository; run commands from this folder. The rules every pro
   only debug builds allow. Each test runs in a process of its own with the app's data cleared.
   `LiveOnTheDeviceTest` runs only in "Jekyll Poster device live check" (nightly): the real GitHub,
   two of the tester's blogs, the request record kept as an artifact.
+- `sender/`: a test-only second app, installed beside the app in the device tests, so photos and
+  notes are shared into it from another process.
 - `sample-blog/`: a small Jekyll blog with every front matter shape the app reads. It is the
   tests' fixture and the blog to try the app on.
 
@@ -33,8 +35,8 @@ claude-playground repository; run commands from this folder. The rules every pro
     ./gradlew :app:testDebugUnitTest     # Robolectric tests
     ./gradlew build koverVerify          # everything CI runs (fails below 85% line coverage)
     ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest'   # PNGs in app/build/screenshots
-    ./gradlew :app:connectedDebugAndroidTest   # device tests, on a running emulator
-    tools/emulator-check.sh                    # the laptop's emulator checks: docs/DEVICE-CHECKS.md
+    ./gradlew :sender:installDebug :app:connectedDebugAndroidTest   # device tests, on a running emulator
+    tools/emulator-check.sh                    # an emulator for the checks a person runs: docs/DEVICE-CHECKS.md
 
 To try a change against a real blog, run the "Jekyll Poster live check" workflow on its branch:
 it publishes a post to each of the tester's three blogs, waits for Pages, then deletes it. It also

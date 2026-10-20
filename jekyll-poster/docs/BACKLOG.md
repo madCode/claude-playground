@@ -6,12 +6,13 @@ and moves it to Done.
 ## Next
 
 - [ ] More device tests on the suite cycle 36 started (`OnTheDeviceTest`): the New post
-  shortcut from the launcher, the app killed while a post is queued, a photo shared from another
-  app (a test-only sender, like newspaperss's `epubsink`).
+  shortcut from the launcher, the app killed while a post is queued.
 - [ ] More of the device live check (`LiveOnTheDeviceTest`): a photo, an edit and a delete
   from the screens, and an edit conflict made by the workflow committing while the post is open.
-- [ ] The first run of the laptop checks ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)): a session in the
-  desktop app on madCode's laptop, since a cloud session has no emulator or browser sign-ins.
+- [ ] Only connect through a VPN on CI's emulator: the WireGuard app with a Proton config, once
+  the `PROTON_WG_CONF` secret is set.
+- [ ] Sign in with GitHub and a TalkBack listen, by a person, now and then
+  ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)).
 
 
 ## Later
