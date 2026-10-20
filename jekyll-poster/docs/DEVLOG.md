@@ -29,6 +29,19 @@ Times are when each cycle landed, Pacific.
 
 ## Tue 20 Oct
 
+### Cycle 41: by the day alone, the commit is dated by the day too
+- **Asked for:** madCode's answer to the audit's question (morning page).
+- **Changed:** with *Date posts by the day only* and the no-reply address both on (as Set up
+  for writing anonymously leaves them), commits are dated at midnight UTC, author and committer:
+  one adding a post by the post's own day, others (edits, deletes, the site's time zone) by the
+  day they go out. Without the no-reply address GitHub dates them to the second, since it takes
+  a date only with an author.
+- **The review caught:** dating by the UTC day of sending, beside the post's site-zone day, gave
+  away a 7-hour window whenever the two differed; the time zone commit wasn't dated; and the
+  live test checked the moment but not the stored offset. All fixed.
+- **Checked live:** the device live check's most-private test now asserts the real commit says
+  midnight UTC, for the committer too.
+
 ### Cycle 39: what GitHub knows about the writer (audit)
 - **Asked for:** the several-blogs audit, and madCode's question of how much GitHub knows about
   the sender with privacy at its most.

@@ -314,7 +314,11 @@ blog's switches, whichever blog is open when it goes.
   the login, never the profile's name, which may be a real one.
 - **Date posts by the day only**, off: new posts get the minute and an offset. On, they get
   `date: 2026-10-04`, so the post's date says neither the time it went out nor the writer's
-  time zone. (The commit that adds it still carries the time on GitHub.)
+  time zone. With the no-reply address on too, commits are dated by the day as well, at
+  midnight UTC: one adding a post by the post's own day (another day beside it would narrow
+  down the hour), others by the day they go out. Without the no-reply address GitHub dates the
+  commit to the second, since it takes a date only with an author. GitHub's own logs keep the
+  real moment either way.
   - The day is the site's (UTC without a site zone), where Jekyll builds, for a note's own date
     too: a post is never in its future, hidden until that day.
   - Fixed on the first try, like the file name: a retry writes the same date. A site zone set

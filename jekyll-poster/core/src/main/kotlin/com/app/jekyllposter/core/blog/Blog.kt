@@ -1,5 +1,6 @@
 package com.app.jekyllposter.core.blog
 
+import java.time.Instant
 import com.app.jekyllposter.core.github.CommitAuthor
 import com.app.jekyllposter.core.github.FileChange
 import com.app.jekyllposter.core.github.GitHubClient
@@ -68,8 +69,8 @@ class Blog(
     suspend fun read(path: String): String? = client.text(owner, name, branch, path)
 
     /** Writes the changes as one commit, returning its sha. */
-    suspend fun commit(message: String, changes: List<FileChange>, expect: Map<String, String?> = emptyMap(), author: CommitAuthor? = null): String =
-        client.commit(owner, name, branch, message, changes, expect, author)
+    suspend fun commit(message: String, changes: List<FileChange>, expect: Map<String, String?> = emptyMap(), author: CommitAuthor? = null, date: Instant? = null): String =
+        client.commit(owner, name, branch, message, changes, expect, author, date)
 
     /** The signed-in account, for the commit author it would be under its no-reply address. */
     suspend fun user() = client.user()

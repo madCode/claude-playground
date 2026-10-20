@@ -257,5 +257,12 @@ class LiveOnTheDeviceTest {
         assertTrue(text, Regex("""(?m)^date: \d{4}-\d{2}-\d{2}$""").containsMatchIn(text))
         assertFalse(text, text.contains("utm_") || text.contains("fbclid"))
         assertTrue(text, text.contains("example.com/read?id=7"))
+        // By the day alone with the no-reply address, the commit is dated by the post's day too:
+        // midnight UTC, which GitHub gives the committer as well. The API shows dates in UTC
+        // whatever Git keeps, so the stored offset is read from the patch.
+        val day = Regex("""(?m)^date: (\d{4}-\d{2}-\d{2})$""").find(text)!!.groupValues[1]
+        assertEquals("${day}T00:00:00Z", author["date"]!!.jsonPrimitive.content)
+        assertEquals(author["date"]!!.jsonPrimitive.content, committer["date"]!!.jsonPrimitive.content)
+        assertTrue(patchDate.orEmpty(), patchDate.orEmpty().endsWith("00:00:00 +0000"))
     }
 }
