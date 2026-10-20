@@ -26,6 +26,20 @@ Times are when each cycle landed, Pacific.
 
 ## Tue 20 Oct
 
+### Cycle 33: front matter the app can't follow is left alone
+- **Asked for:** the Later item "keys like `c#:` read right, but other exotic YAML keys may still
+  not".
+- **Found:** a harness ran 38 front matter shapes through the real edit. Most were kept exactly,
+  including odd ones (`c#:`, quoted keys, anchors, merge keys, `og:image`, comments). Two kinds
+  lost keys: a `?` key, and front matter written as one `{…}`. The line editor doesn't see
+  them, and an edit wrote around them.
+- **Changed:** before opening a post, the app tries the edit; if any key it doesn't edit would
+  read differently after it, Home says why and the post isn't opened. Update checks the same
+  before it commits, for an edit opened earlier. A full YAML editor isn't needed for this.
+- **The review caught:** the check refused any change to "more front matter" (the writer's own
+  keys); a `!!binary` value was refused; a post with an alias inside itself crashed the app on
+  opening; and one message served both opening and publishing. All fixed, with tests.
+
 ### Cycle 32: the Compose-test hang, found; the preview flake, counted and fixed
 - **Asked for:** two Next items: find the Compose-test "Room hang" (cycles 1, 11, 18), and
   count the `PreviewScreenTest` flake before fixing it.

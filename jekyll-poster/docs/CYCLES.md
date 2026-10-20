@@ -3,6 +3,12 @@
 For the next cycle: what to do differently, newest first. What each cycle built is in
 [DEVLOG.md](DEVLOG.md). Keep the last ten or so.
 
+### Cycle 33 — build: front matter the line editor can't see
+
+- A harness that ran 38 front matter shapes through the real `PostWriter.edit` found what reading
+  the parser hadn't: a `?` key, or front matter written as one `{…}`, lost keys on an edit. Its
+  shapes are now the table in `EditKeepsTheRestTest`; add to it rather than reasoning about YAML.
+
 ### Cycle 32 — build: the Compose-test hang, found, and the preview flake, counted
 
 - The "Room hang" of cycles 1, 11 and 18 was the main looper. Robolectric runs the test on the
