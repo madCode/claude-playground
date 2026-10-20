@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.app.jekyllposter.core.github.DeviceFlow
+import java.io.IOException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import androidx.datastore.preferences.preferencesDataStore
@@ -109,7 +110,7 @@ class AccountStore(
             dao.watch(key).map { it?.let(::read) }
                 // Removing the open blog moves the key first, but Room can report the row gone
                 // before the new key reaches this flow. That null isn't "signed out": the next blog follows.
-                .filter { it != null || store.data.first()[CURRENT] == key }
+                .filter { it != null || stillOpen(key) }
         }
     }
 
@@ -133,6 +134,13 @@ class AccountStore(
     private val lock = Mutex()
 
     suspend fun currentKey(): String? = currentKey.first()
+
+    /** Whether [key] is still the open blog; on a store that can't be read, taken as yes. */
+    private suspend fun stillOpen(key: String): Boolean = try {
+        store.data.first()[CURRENT] == key
+    } catch (e: IOException) {
+        true
+    }
 
     /**
      * The open blog's account, its token renewed first if it expires within five minutes. If

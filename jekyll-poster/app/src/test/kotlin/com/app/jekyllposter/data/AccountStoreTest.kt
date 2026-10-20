@@ -173,8 +173,7 @@ class AccountStoreTest {
     }
 
     @Test fun removingTheOpenBlogsSignInNeverReadsAsSignedOutWhenTheNewKeyIsSlow() = runBlocking {
-        // The open blog's key reaches the flow late, as it sometimes did in full test runs: the
-        // removed blog's row is gone first.
+        // The new open blog's key reaches the flow after the removed blog's row is gone.
         val slow = object : DataStore<Preferences> {
             override val data = this@AccountStoreTest.data.data.onEach { delay(300) }
             override suspend fun updateData(transform: suspend (Preferences) -> Preferences) = this@AccountStoreTest.data.updateData(transform)
