@@ -20,10 +20,23 @@ Times are when each cycle landed, Pacific.
 - **Several blogs:** all three cycles are built: blogs under several accounts, a switcher from
   the title, Remove, and privacy per blog (cycle 3 in its PR). Next, the audits: a log of a real
   run's requests per account, and a UX pass on the switcher.
-- **Waiting on you:** the Android SDK in the environment's setup script. The GitHub App is
-  registered.
+- **Waiting on you:** nothing. The Android SDK is now in the cloud environment, at
+  `/opt/android-sdk` (cycle 30 built and tested with it; `ANDROID_HOME` isn't set, so a session
+  writes `sdk.dir` into `local.properties`).
 
-## Sat 17 Oct
+## Tue 20 Oct
+
+### Cycle 30: the same account signed in twice is one sign-in
+- **Asked for:** cycle 28 left it: signing in again as an account the app already had, to add
+  another of its blogs, listed that account twice in Your blogs.
+- **Changed:** signing in with GitHub again as the same account adds the blog to its existing
+  sign-in, with the newer token; so does pasting the same token again. A different pasted token
+  for the same account stays a sign-in of its own: each fine-grained token reaches only the
+  repositories it was made for, so one can't stand in for the other. Updating merges the
+  doubled "Sign in with GitHub" sign-ins already on the phone into the newest (database
+  version 9).
+- **Also:** the several sign-ins and blogs item is done (cycles 27–29), and taken off Next.
+
 
 ### Cycle 29: privacy per blog (several blogs, 3 of 3)
 - **Asked for:** build cycle 3 of [#137](https://github.com/madCode/claude-playground/issues/137).
