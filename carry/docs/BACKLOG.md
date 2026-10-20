@@ -251,17 +251,31 @@ These are the open paths to one, hardest first.
   must stay: the work would stop surviving reboots without them *(found by
   checking the built APK rather than the source manifest; reworded in
   cycle 72)*
-- [ ] **Read the class from the phone's own calendar** — BLOCKED, and its
-  stated benefit is void. It justified itself as freeing the coach from its
-  own calendar config; that config works, demonstrated 2026-10-16 when the
-  laptop's trigger read the calendar and correctly reported no class. So
-  there is nothing to free. This only becomes work if the brain moves to
-  the phone, which is its own entry under *Feature proposals* with its own
-  preconditions — do not pick this up before that *(design:
+- [ ] **Read the class from the phone's own calendar** — *your call*.
+  Looked at again 2026-10-20, when you asked for it if possible. Nothing
+  useful can be built in Carry alone yet:
+  - The session file already carries the class and its start
+    (`starts_at`), from the coach's own calendar read. Carry reading the
+    phone's calendar would show nothing new.
+  - What it was for, the coach not needing its own calendar config, needs
+    the phone's answer to reach the coach before its trigger fires. That
+    is a new file in the synced folder, and gym-coach owns the schema, so
+    gym-coach changes first. And that config works (shown 2026-10-16), so
+    this pays off only once the brain moves to the phone.
+  - **The smallest real version**, about two cycles, one per repo:
+    gym-coach reads a `classes-<date>.json` (date, class tag, start time;
+    never event titles) when it's there, falling back to its ICS config.
+    Carry asks for `READ_CALENDAR`, reads today and the next two days for
+    events with the class tag, and writes that file. The test fixture has
+    a timed event and an all-day one, since the coach's own query once
+    found only all-day events. `READ_CALENDAR` would be the most invasive
+    permission Carry holds.
+  - **Something Carry could do alone**, if you want it: say on the Before
+    tab when the calendar has a class today and no sheet has arrived an
+    hour before it. That catches the coach's trigger not firing. It needs
+    `READ_CALENDAR` too.
+  Which, if either? *(design:
   [read-class-from-calendar](designs/read-class-from-calendar.md))*
-
-
-
 - [ ] **Say what to type when one row stands for several rounds**
   *(you asked, 2026-10-18; needs gym-coach's half first)*. A board that
   prescribes `8 / 6 / 4` is three sets of one movement, and Carry gives it
