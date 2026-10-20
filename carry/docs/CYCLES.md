@@ -5,6 +5,21 @@ differently. Newest first; read the top before starting. What was built is
 in [DEVLOG.md](DEVLOG.md). Kept to the last ten or so cycles; older lessons
 that hold become rules in CLAUDE.md or the cycles skill.
 
+## 2026-10-20 (cloud session)
+
+### Cycle 70 — build: updates, part one (debug-only installer, its checks)
+
+- **AGP 9 makes unit tests for debug only.** There is no
+  `testReleaseUnitTest`, so code moved to `src/debug` can still be tested
+  from `src/test`; tests for it go in `src/testDebug` anyway, so a later
+  release unit test task can't break on them.
+- **This container's memory is shared with other agents' builds, and the
+  OOM killer takes the biggest JVM: the Gradle daemon.** "Daemon
+  disappeared" is that. `--max-workers=1 -Dorg.gradle.jvmargs="-Xmx2g
+  -XX:+UseSerialGC" -Pkotlin.compiler.execution.strategy=in-process`
+  compiled, and `-Xmx1g` ran the tests. A baseline built while the source was being
+  edited measured nothing: build it from a separate worktree first.
+
 ## 2026-10-18 (cloud session)
 
 ### Cycle 69 — fix: Add takes you to the new row, and mod stays put

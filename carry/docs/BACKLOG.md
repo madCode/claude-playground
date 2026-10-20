@@ -299,12 +299,12 @@ These are the open paths to one, hardest first.
     Wi-Fi and installs it while the app is closed and nothing is running.
   - **It only checks on a return to the app.** newspaperss also checks in
     the background, every six hours.
-  - **It leaves the file checks to Android.** newspaperss checks the
-    package, a higher version code and the signing key itself, and gives
-    up on a build after three failed installs.
-  - **The installer and `REQUEST_INSTALL_PACKAGES` ship in every build.**
-    newspaperss keeps both in the debug source set, and `check` fails if a
-    release's merged manifest asks to install apps.
+  - [x] ~~**It leaves the file checks to Android.**~~ Done in cycle 70:
+    Carry checks the package, the signing key and a higher version code
+    itself, and gives up on a build after three failed installs.
+  - [x] ~~**The installer and `REQUEST_INSTALL_PACKAGES` ship in every
+    build.**~~ Done in cycle 70: both, and `INTERNET`, are debug-only, and
+    `check` fails if a release's merged manifest asks for them.
   Keep Carry's own rule: never install over unsaved typing on the After
   tab, so a background install waits for no draft and no save in progress.
   A device check is owed with it, since the install itself happens in

@@ -28,6 +28,31 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-20 — cycle 70: updates, part one: debug-only, and checked
+
+The first half of bringing updates up to newspaperss's (you approved,
+#148).
+
+- **A release build can no longer install apps or reach the network.**
+  The installer, its result receiver, `REQUEST_INSTALL_PACKAGES` and
+  `INTERNET` moved to the debug source set. `aapt2 dump permissions` on
+  the built APKs: debug keeps the same seven; release went from seven to
+  five, and its code has no installer in it. `check` now fails if a
+  release build's merged manifest asks for either permission.
+- **Carry checks the download itself** before Android sees it: the same
+  app, signed with the same key, a newer build. Before, it checked the
+  package and version and left the key to Android, which only refuses
+  after asking you.
+- **It gives up on a build after three failed installs**, or at once when
+  the file fails the app or key check, or Android says it can never
+  install. The notice's tap then opens the download in a browser, the old
+  way. A newer build is tried again. Saying no to Android's question, or
+  a failed download, isn't counted.
+- Nothing you see changed. Still owed on a phone: the key check reading a
+  real APK, and a real install. Neither can be shown without a device.
+- Left for part two: the download on Wi-Fi, the install while Carry is
+  closed, and the check every six hours.
+
 ## 2026-10-18 — cycle 69: Add takes you to the new row, and mod stays put
 
 madCode reported both from the phone and approved the fixes.
