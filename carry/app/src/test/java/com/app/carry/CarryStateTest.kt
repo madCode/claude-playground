@@ -675,6 +675,18 @@ class CarryStateTest {
     }
 
     @Test
+    fun `a sheet being finished that the provider won't hand over is unreadable, not the newest`() {
+        // Listed, but the read comes back with nothing: a provider part way
+        // through a sync. The newest here would put another day's form
+        // under the owner's typing.
+        val refused = FakeFolder(files = twoSheets.files, contents = mapOf("new" to VALID))
+        assertEquals(
+            CarryState.Unreadable("session-2026-10-10-2G.json", CarryState.Unreadable.Why.DAMAGED),
+            carryState(refused, finishing = "2026-10-10:2G"),
+        )
+    }
+
+    @Test
     fun `a back-filled day is never opened as a form`() {
         val backfilled = FakeFolder(
             files = twoSheets.files,

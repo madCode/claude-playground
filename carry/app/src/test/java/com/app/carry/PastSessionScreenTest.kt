@@ -456,6 +456,21 @@ class PastSessionScreenTest {
         assertTrue("the way back was taken once, got $back", back == 1)
     }
 
+    @Test
+    fun `with typing unsaved, the strip offers no way back and says why`() {
+        // Going back to the newest would put another sheet under typing
+        // that isn't saved, so the button isn't there to tap.
+        var back = 0
+        val older = readyFor(SampleSession.today).copy(older = true)
+        compose.setContent {
+            CarryApp(older, onChooseFolder = {}, log = binding(unsaved = true, onBackToNewest = { back++; true }))
+        }
+        compose.onNodeWithText("Save or discard what's typed to go back to the newest", substring = true)
+            .assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back to the newest session").assertDoesNotExist()
+        assertTrue("nothing was asked, got $back", back == 0)
+    }
+
     private fun shoot(name: String) {
         compose.waitForIdle()
         val shot = compose.onRoot().captureToImage().asAndroidBitmap()
