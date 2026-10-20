@@ -41,6 +41,8 @@ class LiveUpdatesTest {
     private val committed = mutableListOf<Pair<Int, Int>>()
     private val abandoned = mutableListOf<Int>()
     private var canInstall = true
+    private var clock = 1_000_000_000L
+    private var stageCalls = 0
 
     @Before fun setUp() {
         UpdateInstaller.finish()
@@ -54,10 +56,11 @@ class LiveUpdatesTest {
         download = { it.writeText(serving()) },
         inspect = { apks[it.readText()] },
         installed = { installed },
-        stage = { stageFails?.let { e -> throw e }; staged += 7; 7 },
+        stage = { stageCalls++; stageFails?.let { e -> throw e }; staged += 7; 7 },
         commit = { id, build -> committed += id to build },
         abandon = { abandoned += it },
         canInstallNow = { canInstall },
+        now = { clock },
     )
 
     private fun LiveUpdates.tap(build: Int = 140, unsaved: () -> Boolean = { false }) = runBlocking { install(build, unsaved) }
@@ -180,30 +183,72 @@ class LiveUpdatesTest {
     }
 
     @Test
-    fun `Android's question is asked again on each return until answered, and dropped over new typing`() {
+    fun `Android's question held for a return is asked once, and dropped over new typing`() {
         val confirm = Intent("android.content.pm.action.CONFIRM_INSTALL")
         // A real session, so the check for one Android dropped finds it still waiting.
         val session = app.packageManager.packageInstaller.createSession(
             PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL),
         )
-        assertTrue(UpdateInstaller.start())
-        UpdateInstaller.committed = session
-        UpdateInstaller.inFront = false
-        answer(session, PackageInstaller.STATUS_PENDING_USER_ACTION, confirm)
+        fun held() {
+            assertTrue(UpdateInstaller.start())
+            UpdateInstaller.committed = session
+            UpdateInstaller.committedAt = clock
+            UpdateInstaller.inFront = false
+            answer(session, PackageInstaller.STATUS_PENDING_USER_ACTION, confirm)
+        }
         val activity = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
+        val started = { org.robolectric.Shadows.shadowOf(activity).nextStartedActivity?.action }
         val updates = updates()
 
+        held()
         updates.resumed(activity, unsaved = false)
-        assertEquals("android.content.pm.action.CONFIRM_INSTALL", org.robolectric.Shadows.shadowOf(activity).nextStartedActivity?.action)
-        // Left with Home: no answer came, so the next return asks again.
+        assertEquals("android.content.pm.action.CONFIRM_INSTALL", started())
+        // Answered with Update and still installing: not asked a second time.
         updates.resumed(activity, unsaved = false)
-        assertEquals("android.content.pm.action.CONFIRM_INSTALL", org.robolectric.Shadows.shadowOf(activity).nextStartedActivity?.action)
+        assertNull(started())
+        assertTrue(UpdateInstaller.installing.value)
 
+        UpdateInstaller.finish()
+        held()
         updates.resumed(activity, unsaved = true)
-        assertNull("not asked over typing", org.robolectric.Shadows.shadowOf(activity).nextStartedActivity)
+        assertNull("not asked over typing", started())
         assertEquals("the waiting session is dropped", listOf(session), abandoned)
         assertFalse(UpdateInstaller.installing.value)
         UpdateInstaller.inFront = false
+    }
+
+    @Test
+    fun `a question left unanswered with Home doesn't hold the notice for good`() {
+        val session = app.packageManager.packageInstaller.createSession(
+            PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL),
+        )
+        assertTrue(UpdateInstaller.start())
+        UpdateInstaller.committed = session
+        UpdateInstaller.committedAt = clock
+        val activity = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
+        val updates = updates()
+        clock += LiveUpdates.UNANSWERED_MILLIS
+        updates.resumed(activity, unsaved = false)
+        assertTrue("an approved install may still be finishing", UpdateInstaller.installing.value)
+        clock += 1
+        updates.resumed(activity, unsaved = false)
+        assertEquals(listOf(session), abandoned)
+        assertFalse("the notice can be tapped again", UpdateInstaller.installing.value)
+        UpdateInstaller.inFront = false
+    }
+
+    @Test
+    fun `while the newest file lags, a build given up on isn't downloaded and tried again`() {
+        apks["apk-135"] = ApkFacts(app.packageName, 135, ourKey)
+        serving = { "apk-135" }
+        stageFails = IOException("No space left on device")
+        val updates = updates()
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES) { updates.tap(140) }
+        assertEquals(LiveUpdates.MAX_INSTALL_FAILURES, stageCalls)
+        val problem = updates.tap(140)!!
+        assertTrue(problem.offerLink)
+        assertTrue(problem.why.startsWith("Carry gave up on build 135"))
+        assertEquals("not staged again", LiveUpdates.MAX_INSTALL_FAILURES, stageCalls)
     }
 
     @Test

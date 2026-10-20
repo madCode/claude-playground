@@ -32,6 +32,7 @@ internal class LiveUpdates(
     private val commit: (Int, Int) -> Unit = { id, build -> UpdateInstaller.commit(context, id, build) },
     private val abandon: (Int) -> Unit = { UpdateInstaller.abandon(context, it) },
     private val canInstallNow: () -> Boolean = { UpdateInstaller.canInstall(context) },
+    private val now: () -> Long = System::currentTimeMillis,
 ) : SelfUpdater {
     override val installing: StateFlow<Boolean> = UpdateInstaller.installing
 
@@ -66,8 +67,11 @@ internal class LiveUpdates(
                 }
                 is Verdict.Stale ->
                     UpdateProblem("The download isn't the newer build yet. Try again in a few minutes.", offerLink = false)
-                Verdict.Good -> {
-                    counted = facts!!.versionCode.toInt()
+                Verdict.Good -> if (facts!!.versionCode <= prefs.getInt(REJECTED, 0)) {
+                    // The newest build's file isn't up yet, and the one there was given up on.
+                    UpdateProblem("Carry gave up on build ${facts.versionCode}; the newer one isn't up yet.", offerLink = true)
+                } else {
+                    counted = facts.versionCode.toInt()
                     val id = try {
                         withContext(Dispatchers.IO) { stage(apk) }
                     } catch (e: IOException) {
@@ -111,15 +115,25 @@ internal class LiveUpdates(
     override fun resumed(activity: Activity, unsaved: Boolean) {
         UpdateInstaller.inFront = true
         runCatching { UpdateInstaller.forgetIfGone(activity) }
-        // Android's question, still unanswered: it arrived while Carry was behind another app, or
-        // was left with Home. Typed since the tap, it's dropped rather than asked over the typing.
+        // Android's question, which arrived while Carry was behind another app: shown once. Typed
+        // since the tap, it's dropped rather than asked over the typing.
         UpdateInstaller.awaitingConfirm?.let { confirm ->
+            UpdateInstaller.awaitingConfirm = null
             if (unsaved) {
                 UpdateInstaller.committed?.let { abandon(it) }
                 UpdateInstaller.finish()
             } else {
                 runCatching { activity.startActivity(confirm) }.onFailure { UpdateInstaller.finish() }
             }
+            return
+        }
+        // Still no answer long after the hand-off: the question was left with Home, which sends
+        // none. Asking again can't tell that from an approved install still finishing, so the
+        // session is dropped instead and the notice can be tapped again.
+        val id = UpdateInstaller.committed ?: return
+        if (now() - UpdateInstaller.committedAt > UNANSWERED_MILLIS) {
+            abandon(id)
+            UpdateInstaller.finish()
         }
     }
 
@@ -134,6 +148,8 @@ internal class LiveUpdates(
     companion object {
         /** Each of these is one try; Android then says "can't install" for the same reasons. */
         const val MAX_INSTALL_FAILURES = 3
+        /** An approved install is over in well under this; one still unanswered was left. */
+        val UNANSWERED_MILLIS = java.util.concurrent.TimeUnit.MINUTES.toMillis(5)
         internal const val REJECTED = "rejected"
         private const val FAILING = "failing"
         private const val FAILURES = "failures"

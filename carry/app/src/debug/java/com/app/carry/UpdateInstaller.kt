@@ -32,9 +32,8 @@ object UpdateInstaller {
      *  open the confirmation over another app. */
     @Volatile var inFront = false
 
-    /** The installer's confirmation, held until Android answers: shown on each return to Carry
-     *  while the session waits, since it arrives when Carry may not be in front and Home leaves
-     *  it unanswered. */
+    /** The installer's confirmation, held when it arrived while Carry wasn't in front; shown on
+     *  the next return, once. */
     @Volatile var awaitingConfirm: Intent? = null
 
     fun canInstall(context: Context): Boolean =
@@ -87,6 +86,7 @@ object UpdateInstaller {
 
     /** The session id of an attempt handed to Android and not yet answered. */
     @Volatile var committed: Int? = null
+    @Volatile var committedAt = 0L
 
     /**
      * Writes [apk] into a new installer session and returns its id, without committing: the
@@ -128,6 +128,7 @@ object UpdateInstaller {
                 val answer = Intent(context, Result::class.java).putExtra(EXTRA_BUILD, build)
                 val reply = PendingIntent.getBroadcast(context, id, answer, flags)
                 committed = id
+                committedAt = System.currentTimeMillis()
                 session.commit(reply.intentSender)
             }
         } catch (e: Exception) {
@@ -170,8 +171,9 @@ object UpdateInstaller {
                     val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
                         ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) ?: return finish()
                     if (id != -1 && id != committed) return
-                    awaitingConfirm = confirm
-                    if (inFront) runCatching { context.startActivity(confirm) }
+                    if (!inFront || runCatching { context.startActivity(confirm) }.isFailure) {
+                        awaitingConfirm = confirm
+                    }
                 }
                 PackageInstaller.STATUS_SUCCESS -> finish()
                 // The owner backing out of the confirmation is not an error worth a toast, nor
