@@ -355,6 +355,24 @@ blog's switches, whichever blog is open when it goes.
 - The app's version, with the build's CI run and commit in a debug build. A tap or long press
   copies it, for a bug report.
 
+## The request record (debug builds)
+
+For auditing what each sign-in sends. Release builds don't have it.
+
+- Off until a session turns it on, since debug builds are also used for real. Then every
+  request the app sends (to GitHub, and the preview's photos) is one JSON line in the app's
+  private files, as it went on the wire: when, which blog or what else it was for, method,
+  address, headers, body, and GitHub's answer code. `RequestRecord.kt` says how to turn it on
+  and read it with adb.
+- No secret is written. `Authorization` is `(hidden)`, with a fingerprint of its token so two
+  sign-ins' requests can be told apart; the device flow's codes and a link's `?token=` (a
+  private file's photo) are hidden; anything shaped like a GitHub token is hidden wherever it is.
+- Only what reached the network is there: not a request the VPN switch refused, a name lookup,
+  or a preview photo served from the cache.
+- Writing it never fails a request: an entry that can't be written is dropped.
+- Photo uploads and other large bodies are recorded by size only. The file starts again past
+  4 MB, keeping one older file. It's left out of backups.
+
 ## Not yet
 
 See the [backlog](BACKLOG.md).
