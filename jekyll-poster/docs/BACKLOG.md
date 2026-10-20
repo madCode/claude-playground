@@ -26,6 +26,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 42: the laptop's device checks on CI's emulator; the editor's picker and dialogs survive rotation
 - [x] Cycle 41: by the day alone, the commit is dated by the day too (madCode chose it, 2026-10-20)
 - [x] Cycle 39: what GitHub knows about the writer, read from the device live check's records
 - [x] Cycle 40: the laptop checks written down, with `tools/emulator-check.sh`

@@ -23,11 +23,28 @@ Times are when each cycle landed, Pacific.
 - **Watching:** `EditFlowTest.tappingAPostOnTheBlogOpensItsTextToEdit` failed once with "addObserver
   must be called on the main thread" (Compose composing off the main thread), in 1 of 9 full runs
   with cycle 34's change and none of 40 before it. Count it before blaming the change.
-- **Waiting on you:** nothing. The tester account is set up
+- **Waiting on you:** the `PROTON_WG_CONF` secret, a WireGuard config from the tester's Proton
+  account, for the VPN check on CI's emulator. The tester account is set up
   ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)), and the live check posts to its three blogs nightly.
   The Android SDK is in the cloud environment, at `/opt/android-sdk`.
 
 ## Tue 20 Oct
+
+### Cycle 42: the laptop's device checks, on CI's emulator
+- **Asked for:** madCode: move the laptop checks into Actions; Sign in with GitHub and a TalkBack
+  listen stay with a person, now and then, not on a schedule.
+- **Changed (tests and CI):** five checks run on CI's emulator on every PR
+  ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)): a photo and a note shared from `:sender`, a second app
+  made for it; a photo from the emulator's camera app; rotation; the largest text in the dark,
+  through Android's accessibility checks, with pictures kept.
+- **Found a bug:** turning the phone closed the tag picker, losing its search, and closed the
+  delete confirmations. They survive now.
+- **Got in the way:** the shell that starts `:sender` splits its command at spaces with no
+  quoting, so a note's text goes as Base64; a new draft at the top of Home pushes the blog's posts
+  out of view at twice the text size.
+- **The review caught:** the camera check claimed the location was stripped, but CI's camera
+  has none to strip (the shared photo checks it); the rotation test didn't wait for the screen to
+  be made again; settings a crashed test left behind would carry into the next.
 
 ### Cycle 41: by the day alone, the commit is dated by the day too
 - **Asked for:** madCode's answer to the audit's question (morning page).
