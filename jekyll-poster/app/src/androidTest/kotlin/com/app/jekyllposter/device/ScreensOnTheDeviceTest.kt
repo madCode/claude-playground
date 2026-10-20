@@ -45,15 +45,21 @@ class ScreensOnTheDeviceTest {
     private val device = UiDevice.getInstance(instrumentation)
 
     @Before fun signIn() {
+        // As well as after: an @After a crash skipped would leave the next tests large and dark.
+        resetDevice()
         runBlocking { app.container.accounts.save(Account("sample", github.token, "sample", "sample-blog", "main")) }
     }
 
     @After fun close() {
+        resetDevice()
+        device.pressHome()
+        github.close()
+    }
+
+    private fun resetDevice() {
         device.setOrientationNatural()
         shell("settings put system font_scale 1.0")
         shell("cmd uimode night no")
-        device.pressHome()
-        github.close()
     }
 
     private fun shell(command: String): String =
@@ -71,22 +77,32 @@ class ScreensOnTheDeviceTest {
         TestStorage().openOutputFile("screens/$name.png").use { out -> shot.inputStream().use { it.copyTo(out) } }
     }
 
-    private fun openEditor() {
-        ActivityScenario.launch(MainActivity::class.java)
+    private fun openEditor(): ActivityScenario<MainActivity> {
+        val scenario = ActivityScenario.launch(MainActivity::class.java)
         waitFor("Welcome to the notebook")
         compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
         waitForTag("title")
+        return scenario
+    }
+
+    private fun ActivityScenario<MainActivity>.activity(): MainActivity {
+        var current: MainActivity? = null
+        onActivity { current = it }
+        return current!!
     }
 
     @Test fun turningThePhoneKeepsWhatWasTypedAndOpen() {
-        openEditor()
+        val scenario = openEditor()
         compose.onNodeWithTag("title").performTextInput("Turning around")
         compose.onNodeWithTag("body").performTextInput("Typed before turning.")
         compose.onNodeWithContentDescription("Add tag").performClick()
         waitForTag("termQuery")
         compose.onNodeWithTag("termQuery").performTextInput("sideways")
 
+        val before = scenario.activity()
         device.setOrientationLeft()
+        // Only the screen made again proves anything was kept.
+        compose.waitUntil(20_000) { scenario.activity() !== before }
         waitForTag("termQuery")
         compose.onNodeWithTag("termQuery").assertTextContains("sideways")
         keep("editor-sideways")

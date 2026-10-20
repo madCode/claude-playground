@@ -13,16 +13,20 @@ app installed beside it, so photos and notes arrive from another process with a 
 |---|---|---|
 | A photo from another app | `FromOtherAppsTest` | It's added with its alt text, and the copy on GitHub has no location and doesn't say what made it |
 | A note from Obsidian | `FromOtherAppsTest` | The post takes the note's name as its title, `[[links]]` to the blog's posts become `post_url` links, `%%comments%%` are gone |
-| The camera | `FromOtherAppsTest` | A photo from the emulator's own camera app is added without its location, and the original is deleted from the app's cache |
+| The camera | `FromOtherAppsTest` | A photo from the emulator's own camera app is added, and the original is deleted from the app's cache |
 | Rotation | `ScreensOnTheDeviceTest` | Text typed, the tag picker and its search survive turning the phone, and the post isn't made twice |
 | Large text and dark theme | `ScreensOnTheDeviceTest` | Home, the editor and Blog & privacy at twice the text size, in the dark, pass Android's accessibility checks (labels, touch targets, contrast). Their pictures are kept in the run's report, under `screens/` |
 
 "Jekyll Poster device live check" runs nightly against the tester's real blogs
 ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)).
 
-What CI can't show: the camera's real lens, a share from Obsidian itself (`:sender` shares a note
-the way Obsidian does), and a vault folder for a note's embedded photos (Android's folder picker).
-The JVM tests cover the vault's photos.
+What CI can't show:
+
+- The camera's real lens, and a location in its photos. The shared photo's location is checked
+  instead.
+- A share from Obsidian itself. `:sender` shares a note the way Obsidian does.
+- A vault folder for a note's embedded photos, chosen in Android's folder picker. The JVM tests
+  cover the vault's photos.
 
 ## Now and then, by a person
 
