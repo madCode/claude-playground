@@ -3,6 +3,35 @@
 For the next cycle: what to do differently, newest first. What each cycle built is in
 [DEVLOG.md](DEVLOG.md). Keep the last ten or so.
 
+### Cycle 32 — build: the Compose-test hang, found, and the preview flake, counted
+
+- The "Room hang" of cycles 1, 11 and 18 was the main looper. Robolectric runs the test on the
+  main thread, and Compose's `waitUntil` turns the looper only when its condition reads the
+  screen. A wait on the database, GitHub or a view model's state uses `waitUntilLooped`
+  (`testutil/Idle.kt`); a thread dump showed Room's threads idle, not stuck. `runBlocking` on a
+  view model's suspend function hangs the same way: call it as the screen does.
+- Count a flake in full runs, not in its class alone: 40 runs of the class in one JVM never
+  failed, and 20 full runs failed it twice.
+- This container is shared. Exit 137 (out of memory) and another agent's `gradlew --stop` are
+  not test results: read "What went wrong" first. Run Gradle with `--max-workers=2`, one build
+  at a time, from this worktree only.
+- `git checkout -- .` to undo a falsification break also undid uncommitted docs, as cycle 27
+  warned about code. Commit everything, docs too, before a break.
+
+### Cycle 31 — audit: a UX pass on the blog switcher
+
+- Rendered with `ScreenshotTest` (21 to 28) and read as a writer with two blogs. Nothing needed
+  changing; the request-log half of the audit needs a real run's log, which a cloud session
+  can't make (a question for madCode on the morning page).
+
+### Cycle 30 — build: the same account signed in twice
+
+- No subagent tool again: the review ran through `code-review`, and its second look still found
+  a real gap (a "Sign in with GitHub" without a refresh token stored as a pasted token). Ask the
+  reviewer how each value is inferred, not only how it's used.
+- `pkill -f` with a pattern from your own command line kills your own shell (exit 144). Kill by
+  PID.
+
 ### Cycle 29 — build: privacy per blog
 
 - Two tests passed under their break because the test's own steps re-did the fix's work: turning

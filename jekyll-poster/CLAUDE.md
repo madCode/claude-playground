@@ -15,7 +15,9 @@ claude-playground repository; run commands from this folder. The rules every pro
   MockWebServer serving a repository (or more, with `addRepository`), and `FakeVpn`; the app's tests use both.
 - `:app`: Android, Jetpack Compose, Room, WorkManager, DataStore. Manual DI through
   `AppContainer`. Test with Robolectric against `TestApp` (fake GitHub and VPN, a database file
-  of its own, publishing at once); `TestApp.signIn()` signs in.
+  of its own, publishing at once); `TestApp.signIn()` signs in. A Compose test that waits on
+  anything but the screen (the database, GitHub, a view model's state) uses `waitUntilLooped`:
+  Compose's own `waitUntil` doesn't turn the main looper, so that work never finishes.
 - `sample-blog/`: a small Jekyll blog with every front matter shape the app reads. It is the
   tests' fixture and the blog to try the app on.
 
