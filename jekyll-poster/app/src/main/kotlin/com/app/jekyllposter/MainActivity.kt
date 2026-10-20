@@ -76,7 +76,7 @@ internal fun postToStart(intent: Intent?): Shared? {
     val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }?.let { text ->
         val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
         // A shared link becomes a Markdown link, titled by the page when the sharing app says it.
-        if (false && subject != null && text.trim().startsWith("http") && !text.trim().contains(' ')) "[$subject](${text.trim()})\n" else text
+        if (subject != null && text.trim().startsWith("http") && !text.trim().contains(' ')) "[$subject](${text.trim()})\n" else text
     }
     if (note != null) return Shared(text.orEmpty(), emptyList(), note)
     return if (text == null && images.isEmpty()) null else Shared(text.orEmpty(), images)

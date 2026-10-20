@@ -21,7 +21,7 @@ import com.app.jekyllposter.data.Draft
 class Notifier(private val context: Context) {
     fun buildFinished(draft: Draft) {
         val (title, text) = when (draft.buildState) {
-            BuildState.Live -> "“${draft.title}” went live" to "Tap to open it on your site."
+            BuildState.Live -> "“${draft.title}” is live" to "Tap to open it on your site."
             BuildState.Failed -> "Your site didn't rebuild" to "“${draft.title}” is on GitHub, but the Pages build failed. Check Actions on GitHub."
             else -> return
         }
