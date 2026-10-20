@@ -3,6 +3,12 @@
 For the next cycle: what to do differently, newest first. What each cycle built is in
 [DEVLOG.md](DEVLOG.md). Keep the last ten or so.
 
+### Cycle 34 — build: the open blog never reads as signed out while its sign-in goes
+
+- A race seen once in 20 full runs, and never in 200 runs of its own test, became certain with a
+  fixture: a DataStore whose `data` is 300 ms slow. When a timing failure won't repeat, slow down
+  one side on purpose rather than counting more runs.
+
 ### Cycle 33 — build: front matter the line editor can't see
 
 - A harness that ran 38 front matter shapes through the real `PostWriter.edit` found what reading

@@ -9,10 +9,6 @@ and moves it to Done.
   against a log of a real run's requests (not the code). Needs that log: how to get it is a
   question for madCode (morning page).
 
-- [ ] A race to fix: `AccountStoreTest.removingTheOpenBlogsSignInNeverReadsAsSignedOut` failed
-  once in 20 full runs in cycle 32. The open blog read as signed out for a moment while its
-  sign-in was removed, which the screens take as "go to sign-in". Reproduce it with a delay in
-  `AccountStore.remove`, then fix.
 
 ## Later
 
@@ -25,6 +21,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 34: removing the open blog's sign-in never reads as signed out
 - [x] Cycle 33: exotic YAML keys, checked: an edit that would change keys the app doesn't edit
   isn't made
 - [x] Cycle 32: the Compose-test hang found (the main looper, not Room), and the preview flake
