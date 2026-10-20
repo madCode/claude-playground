@@ -227,7 +227,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
             return null
         }
         if (!PostWriter.canEdit(doc)) {
-            status.update { it.copy(error = PostWriter.CANT_EDIT) }
+            status.update { it.copy(error = PostWriter.CANT_OPEN) }
             return null
         }
         // One clock reading for both: a draft whose times still agree was never changed.

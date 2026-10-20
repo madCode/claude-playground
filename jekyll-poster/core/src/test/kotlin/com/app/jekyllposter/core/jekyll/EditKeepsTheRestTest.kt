@@ -70,9 +70,17 @@ class EditKeepsTheRestTest {
         assertEquals("/b.png", FrontMatterDocument.parse(edited.render()).string("image"))
     }
 
+    @Test fun withMoreFrontMatterChangedTheDateMustStillStay() {
+        // The `?` lines go with the title above them, so the edit would lose the date.
+        val existing = doc("title: Old\n? date\n: 2020-01-01\nimage: /a.png\n")
+        val content = PostContent("New", "Body", extra = "image: /b.png")
+        assertFalse(PostWriter.keepsTheRest(existing, PostWriter.edit(existing, content), content))
+    }
+
     @Test fun binaryValuesAndSelfReferencesNeitherRefuseNorCrash() {
         assertTrue(PostWriter.canEdit(doc("title: Old\nicon: !!binary aGVsbG8=\n")))
         assertFalse(PostWriter.canEdit(doc("title: Old\nr: &r [*r]\n")))
+        assertFalse(PostWriter.canEdit(doc("title: &r [[*r]]\n")))
     }
 
     @Test fun oddButSafeFrontMatterCanStillBeEdited() {

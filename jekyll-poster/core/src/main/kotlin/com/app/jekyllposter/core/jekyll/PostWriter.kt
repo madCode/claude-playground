@@ -94,32 +94,32 @@ object PostWriter {
     private fun extraChanged(existing: FrontMatterDocument, content: PostContent) =
         content.extra != null && content.extra.trim() != existing.others(MANAGED).trim()
 
-    /** What a post whose front matter [canEdit] refuses says, on opening it or publishing an edit. */
-    const val CANT_EDIT = "The app can't change this post without changing front matter it doesn't edit, " +
-        "written with a `?` key, `{…}` around all of it, or an anchor its title, categories or tags share. " +
-        "Edit it on GitHub: copy your text first, then discard this edit."
+    /** Why a post [canEdit] refuses isn't opened. */
+    const val CANT_OPEN = "The app can't change this post without changing front matter it doesn't edit: " +
+        "it's written in a way the app can't follow, like a `?` key or `{…}` around all of it. Edit it on GitHub instead."
+
+    /** Why an edit [keepsTheRest] refuses isn't published. */
+    const val CANT_EDIT = "Publishing this would change front matter the app doesn't edit, which the app can't " +
+        "follow (a `?` key, `{…}` around all of it, or an alias). Copy your text, discard this edit, and change the post on GitHub."
 
     /** The keys [edit] writes; every other key must read the same after it. */
     private val EDITED = setOf("title", "category", "categories", "tag", "tags")
 
+    /** What must still read the same when the writer's "more front matter" replaced the rest. */
+    private val KEPT_WHEN_EXTRA_CHANGES = MANAGED - EDITED
+
     /**
-     * Whether [edited], made by [edit] from [existing], keeps every key it doesn't write as YAML
-     * reads it. The line editor doesn't see some YAML (a `?` key, front matter written as one
-     * `{…}` map), and writing around it can drop or change keys.
+     * Whether [edited], made by [edit] from [existing], keeps what it should as YAML reads it:
+     * every key it doesn't write or, when the writer changed the "more front matter" (theirs to
+     * change), `layout` and `date`. The line editor doesn't see some YAML (a `?` key, front
+     * matter written as one `{…}` map), and writing around it can drop or change keys.
      */
-    fun keepsTheRest(existing: FrontMatterDocument, edited: FrontMatterDocument, content: PostContent): Boolean {
+    fun keepsTheRest(existing: FrontMatterDocument, edited: FrontMatterDocument, content: PostContent): Boolean = notCyclic {
         val after = FrontMatterDocument.parse(edited.render())
-        if (!after.readable) return false
-        // Changed "more front matter" replaces the other keys, the writer's to change: then only
-        // the managed keys the editor doesn't write (`layout`, `date`) must stay.
+        if (!after.readable) return@notCyclic false
         val kept: (String) -> Boolean =
-            if (extraChanged(existing, content)) { k -> k in MANAGED && k !in EDITED } else { k -> k !in EDITED }
-        return try {
-            same(after.values().filterKeys(kept), existing.values().filterKeys(kept))
-        } catch (e: StackOverflowError) {
-            // An alias that holds itself (`r: &r [*r]`) can't be compared: not editable.
-            false
-        }
+            if (extraChanged(existing, content)) { k -> k in KEPT_WHEN_EXTRA_CHANGES } else { k -> k !in EDITED }
+        same(after.values().filterKeys(kept), existing.values().filterKeys(kept))
     }
 
     /** Equal as YAML reads them; `!!binary` values are byte arrays, compared by content. */
@@ -127,14 +127,23 @@ object PostWriter {
         a is ByteArray && b is ByteArray -> a.contentEquals(b)
         a is Map<*, *> && b is Map<*, *> -> a.keys == b.keys && a.keys.all { same(a[it], b[it]) }
         a is List<*> && b is List<*> -> a.size == b.size && a.indices.all { same(a[it], b[it]) }
-        a is Set<*> && b is Set<*> -> a == b
         else -> a == b
     }
 
     /** Whether the app can edit [doc]'s post and leave what it doesn't edit as it is. */
-    fun canEdit(doc: FrontMatterDocument): Boolean {
+    fun canEdit(doc: FrontMatterDocument): Boolean = notCyclic {
         val probe = PostContent("Edited: ${doc.string("title").orEmpty()}", doc.text, doc.terms("category", "categories"), doc.terms("tag", "tags"))
-        return keepsTheRest(doc, edit(doc, probe), probe)
+        keepsTheRest(doc, edit(doc, probe), probe)
+    }
+
+    /**
+     * [check], or false when the front matter holds an alias inside itself (`r: &r [[*r]]`): reading
+     * or comparing it never ends, and the post can't be edited.
+     */
+    private inline fun notCyclic(check: () -> Boolean): Boolean = try {
+        check()
+    } catch (e: StackOverflowError) {
+        false
     }
 
     private fun create(content: PostContent, config: SiteConfig, date: String?): FrontMatterDocument {

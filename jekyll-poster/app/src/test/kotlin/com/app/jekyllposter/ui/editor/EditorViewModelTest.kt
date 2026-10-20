@@ -69,7 +69,7 @@ class EditorViewModelTest {
         var opened: Long? = null
         home.edit(post) { opened = it }
         idleUntil { state.value.error != null }
-        assertEquals(PostWriter.CANT_EDIT, state.value.error)
+        assertEquals(PostWriter.CANT_OPEN, state.value.error)
         assertNull(opened)
         assertTrue(runBlocking { c.drafts.list() }.none { it.editingPath == post.path })
     }
