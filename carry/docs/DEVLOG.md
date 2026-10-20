@@ -46,8 +46,8 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   - a sheet being finished that won't load, and the strip over unsaved
     typing;
   - the folder picker's answer, and asking for notifications once.
-- Branch coverage went from 73.4% to 75.3% (Kover, CI). `MainActivity` went from
-  untested to 72% of its instructions run.
+- Branch coverage went from 72.9% to 74.5% (Kover, on CI). `MainActivity`
+  went from untested to 73% of its instructions run.
 - Backlog: the check that the folder grant survives a reinstall is now
   part of *Updates on a phone*, since an update is that reinstall.
 

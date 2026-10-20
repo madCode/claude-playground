@@ -472,13 +472,13 @@ means the After tab, which is a form built for afterwards. Unsketched.
   provider (junk rows, a file over 1 MB, a trickling stream, a read-only
   grant, re-picking), finishing a sheet the provider won't hand over, the
   finishing strip over unsaved typing, and the Activity's picker and
-  notification ask. Branch coverage went from 73.4% to 75.3% overall (it
-  was 67% when this was filed): `SessionFolder` 45 to 61 of 72 branches,
-  `CarryAppKt` 150 to 160 of 178, `MainActivity` from no instructions run
-  to 72% of them. The Activity test found the whole-phone refusal being
-  wiped by the resume after the picker; fixed. What only a device shows (a
-  grant surviving a reinstall, the real picker) stays under *Owed on a
-  device* *(audit: CI health)*
+  notification ask. Branch coverage went from 72.9% to 74.5% overall (CI,
+  main against the PR): `SessionFolder` 45 to 61 of 72 branches,
+  `CarryAppKt` 150 to 159 of 178, `MainActivity` from 0 to 11 of 30, and
+  from almost no instructions run to 73% of them. The Activity test found
+  the whole-phone refusal being wiped by the resume after the picker;
+  fixed. What only a device shows (a grant surviving a reinstall, the real
+  picker) stays under *Owed on a device* *(audit: CI health)*
 - [x] **Bring updates up to newspaperss's** *(you approved, 2026-10-19)*.
   Cycle 71 (#158): the installer, `REQUEST_INSTALL_PACKAGES` and
   `INTERNET` are debug-only, `check` guards the release manifest, and
