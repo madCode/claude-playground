@@ -9,11 +9,26 @@ and moves it to Done.
   request the app sends to GitHub, per sign-in, written where a session can collect it from the
   emulator. The `Authorization` header is always written as `(hidden)`, with a test that a
   token never reaches the record. Release builds have none of it.
+- [ ] The tester account (madCode, agreed 2026-10-20): a GitHub account and organisation for
+  testing, three copies of the sample blog, a token each in Actions secrets.
+  [TESTER_ACCOUNT.md](TESTER_ACCOUNT.md) has the steps. The live checks below wait on it.
+- [ ] A device suite on every PR: the real app on an emulator in Actions (newspaperss's
+  `device-tests.yml`), against `FakeGitHub` served on the device. Shares from a test-only
+  sender app, the New post shortcut, WorkManager for real, the app killed while a post is
+  queued, the "it's live" notification read with UiAutomator.
+- [ ] A device live check, nightly and by hand: the same emulator, signed in through the
+  screens with the tester's tokens, against the real test blogs. Publish with a photo, wait for
+  Pages and the notification, edit, delete; two blogs under two sign-ins; an edit conflict made
+  by the workflow committing while the post is open. Uploads screenshots, logcat and the
+  request record. A cloud session starts it and reads its artifacts through the GitHub tools.
+- [ ] `:core:liveCheck` against all three test blogs, the organisation one included.
 - [ ] Audit for several blogs: a security/privacy read of the requests each account makes,
-  against the record of a real run (not the code). The run: madCode's laptop session, on the
-  emulator, signed in with two fine-grained tokens from a GitHub account made for Claude's
-  testing, each token limited to its own test copy of the sample blog. Waits on the record
-  above and on madCode making that account (morning page).
+  against the request record from a device live check run (not the code). A cloud session can
+  do it from that run's artifacts.
+- [ ] Laptop emulator checks, in `docs/DEVICE-CHECKS.md` and `tools/emulator-check.sh`: what
+  Actions can't do. Sign in with GitHub (the device code entered in the desktop app's browser,
+  signed in as the tester), sharing from the real Obsidian app, the gallery and the camera,
+  the VPN switch with the Proton VPN app (madCode agreed 2026-10-20), rotation, TalkBack, large text and dark theme.
 
 
 ## Later

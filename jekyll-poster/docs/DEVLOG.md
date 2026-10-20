@@ -23,8 +23,9 @@ Times are when each cycle landed, Pacific.
 - **Watching:** `EditFlowTest.tappingAPostOnTheBlogOpensItsTextToEdit` failed once with "addObserver
   must be called on the main thread" (Compose composing off the main thread), in 1 of 9 full runs
   with cycle 34's change and none of 40 before it. Count it before blaming the change.
-- **Waiting on you:** how to get a real run's request log, for the last audit (morning page).
-  The Android SDK is in the cloud environment now, at `/opt/android-sdk`.
+- **Waiting on you:** the tester account ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)). Its blogs
+  are where the nightly device live check posts, and that run's request record is what the
+  several-blogs audit reads. The Android SDK is in the cloud environment now, at `/opt/android-sdk`.
 
 ## Tue 20 Oct
 
