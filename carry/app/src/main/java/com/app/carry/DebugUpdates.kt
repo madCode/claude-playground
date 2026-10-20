@@ -53,6 +53,10 @@ class DebugUpdates(
 
     companion object {
         val INTERVAL_MILLIS = TimeUnit.HOURS.toMillis(3)
+
+        /** Shared by the check on opening Carry and the debug build's background check. */
+        fun prefsOf(context: android.content.Context): SharedPreferences =
+            context.getSharedPreferences("debug-updates", android.content.Context.MODE_PRIVATE)
         const val RELEASE_API = "https://api.github.com/repos/madCode/claude-playground/releases/tags/carry-debug"
         const val DOWNLOAD = "https://github.com/madCode/claude-playground/releases/download/carry-debug/carry-debug.apk"
         private const val CHECKED = "checked"

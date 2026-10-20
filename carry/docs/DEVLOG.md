@@ -6,7 +6,8 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** the bars beside each family's heaviest gone, the number kept
+- **Lately:** a debug build that updates itself on Wi-Fi while Carry is
+  closed, and checks the file itself (cycles 71–72); the bars beside each family's heaviest gone, the number kept
   (#116); a timed hold keeping its done chip whatever its duration says
   (#115); a newer debug build named at the top of the Since tab
   (#108) and installed from inside the app (#109); the sheet's notice timed
@@ -15,6 +16,7 @@
   its band from the sheet on screen (#113). Older entries are below.
 - **Watching:** typing in the few seconds after an update is handed to
   Android, while it installs, can be lost: the After tab stays editable.
+  That holds for a background install too, if Carry is opened right then.
   Making it read-only while an install is under way would close it
   (review of cycle 71; older than that). a session logged entirely by hand is still not listed on the
   Since tab at all — it moves the screen's aggregates, so it is its own
@@ -30,6 +32,76 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-20 — cycle 72: updates, part two: on Wi-Fi, while Carry is closed
+
+The second half of bringing updates up to newspaperss's, which closes the
+item.
+
+- **A new debug build arrives on its own.** Carry asks GitHub every six
+  hours, not only when you open it. It downloads a newer build on Wi-Fi,
+  checks it, and installs it once Carry is closed and nothing is unsaved.
+- **Unsaved typing still comes first.** Carry now keeps a small mark on
+  disk from your first keystroke until you save or discard. While it's
+  set, or Carry is on screen, the install waits and tries again later.
+- **No dialog out of nowhere.** If Android wants you to confirm, the
+  background attempt stops there, and a tap on the notice installs the
+  downloaded build without downloading it again.
+- **Permissions unchanged:** `aapt2 dump permissions` on the built APKs
+  lists the same seven for debug and five for release as cycle 71. The
+  Wi-Fi wait needs `ACCESS_NETWORK_STATE`, so the backlog question about
+  stripping WorkManager's permissions now asks about `FOREGROUND_SERVICE`
+  alone.
+- The review found four gaps, fixed here. A save still writing counted
+  as nothing unsaved. A tap during a background install did nothing
+  without saying why. A tapped download stayed in the cache. A build
+  already given up on could be downloaded again while the newest file
+  lagged.
+- Left: opening Carry and typing in the few seconds while a background
+  install finishes can lose that typing, as with a tapped install (see
+  *Watching*).
+- Nothing you see changed.
+
+**Checks only a phone or an emulator can do**, about 30 minutes on an
+emulator: API 34, Google APIs, x86_64. Android 12+ is what allows an
+install with no dialog, and the emulator's network counts as Wi-Fi.
+
+1. From a checkout of main with both PRs merged, build a debug APK that
+   calls itself build 1: `GITHUB_RUN_NUMBER=1 ./gradlew assembleDebug`.
+   The newest CI build on the `carry-debug` release is newer, and signed
+   with the same committed debug key.
+2. `adb install -r app/build/outputs/apk/debug/app-debug.apk`. Put a
+   made-up sheet for today in the device's Download folder, as
+   `session-<today>-2G.json` holding the `sheet` from
+   `CarryViewModelTest`, with the date changed to today. Open Carry, pick
+   that folder, and allow "install unknown apps" for Carry when asked.
+3. **The tap, and the signing check on a real file.** The Since tab says
+   "Build N is out — install it". Tap it. Pass: Android asks "Update this
+   app?" (the first in-app update always does), and after Update the Since
+   tab shows build N. A refusal here ("isn't a Carry this phone can
+   trust") means the key check misread a real APK.
+4. **The background attempt, without a dialog.** Reinstall build 1 with
+   adb, open Carry once, type nothing, and go Home. Find the jobs with
+   `adb shell dumpsys jobscheduler | grep -B2 -A2 com.app.carry.debug`, and
+   run each with `adb shell cmd jobscheduler run -f com.app.carry.debug
+   <id>`: the check, then the download, then the install. adb is now the
+   installer of record, so Android wants a yes. Pass: no dialog appears
+   and it's still build 1. Then a tap on the notice asks at once, with no
+   "Downloading…" wait, because the file is already there.
+5. **Not over typing.** Reinstall build 1, open Carry, type a weight on the
+   After tab without saving, go Home, and run the jobs again. Pass: still
+   build 1, and the weight is there when Carry opens again. Then save, go
+   Home, run the install job: now it installs.
+6. **A release build can't install.** `./gradlew assembleRelease`, then
+   `aapt2 dump permissions app/build/outputs/apk/release/app-release-unsigned.apk`.
+   Pass: neither `REQUEST_INSTALL_PACKAGES` nor `INTERNET` is listed.
+7. Shut the emulator down: `adb emu kill`, then `adb devices` should list
+   nothing.
+
+The silent background install itself needs Carry to have installed the
+build before, and a newer CI build after that. That only happens over
+days, so it's a phone check: after a merge to main, the phone should be on
+the new build by the next morning without having asked.
 
 ## 2026-10-20 — cycle 71: updates, part one: debug-only, and checked
 
