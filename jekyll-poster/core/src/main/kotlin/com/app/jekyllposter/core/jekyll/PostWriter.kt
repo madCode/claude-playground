@@ -87,13 +87,17 @@ object PostWriter {
             doc.set("tags", content.tags)
         }
         // Only when the writer changed it: untouched, the other keys stay byte for byte.
-        if (content.extra != null && content.extra.trim() != doc.others(MANAGED).trim()) doc.replaceOthers(content.extra, MANAGED)
+        if (extraChanged(existing, content)) doc.replaceOthers(content.extra!!, MANAGED)
         return doc
     }
 
+    private fun extraChanged(existing: FrontMatterDocument, content: PostContent) =
+        content.extra != null && content.extra.trim() != existing.others(MANAGED).trim()
+
     /** What a post whose front matter [canEdit] refuses says, on opening it or publishing an edit. */
-    const val CANT_EDIT = "This post's front matter is written in a way the app can't edit without changing it, " +
-        "like a `?` key or all of it inside `{…}`. Edit it on GitHub instead."
+    const val CANT_EDIT = "The app can't change this post without changing front matter it doesn't edit, " +
+        "written with a `?` key, `{…}` around all of it, or an anchor its title, categories or tags share. " +
+        "Edit it on GitHub: copy your text first, then discard this edit."
 
     /** The keys [edit] writes; every other key must read the same after it. */
     private val EDITED = setOf("title", "category", "categories", "tag", "tags")
@@ -106,9 +110,25 @@ object PostWriter {
     fun keepsTheRest(existing: FrontMatterDocument, edited: FrontMatterDocument, content: PostContent): Boolean {
         val after = FrontMatterDocument.parse(edited.render())
         if (!after.readable) return false
-        // The writer's own "more front matter" replaces the other keys: theirs to change.
-        val others = if (content.extra != null && content.extra.trim() != existing.others(MANAGED).trim()) MANAGED else EDITED
-        return after.values().filterKeys { it !in others } == existing.values().filterKeys { it !in others }
+        // Changed "more front matter" replaces the other keys, the writer's to change: then only
+        // the managed keys the editor doesn't write (`layout`, `date`) must stay.
+        val kept: (String) -> Boolean =
+            if (extraChanged(existing, content)) { k -> k in MANAGED && k !in EDITED } else { k -> k !in EDITED }
+        return try {
+            same(after.values().filterKeys(kept), existing.values().filterKeys(kept))
+        } catch (e: StackOverflowError) {
+            // An alias that holds itself (`r: &r [*r]`) can't be compared: not editable.
+            false
+        }
+    }
+
+    /** Equal as YAML reads them; `!!binary` values are byte arrays, compared by content. */
+    private fun same(a: Any?, b: Any?): Boolean = when {
+        a is ByteArray && b is ByteArray -> a.contentEquals(b)
+        a is Map<*, *> && b is Map<*, *> -> a.keys == b.keys && a.keys.all { same(a[it], b[it]) }
+        a is List<*> && b is List<*> -> a.size == b.size && a.indices.all { same(a[it], b[it]) }
+        a is Set<*> && b is Set<*> -> a == b
+        else -> a == b
     }
 
     /** Whether the app can edit [doc]'s post and leave what it doesn't edit as it is. */

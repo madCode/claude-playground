@@ -62,6 +62,19 @@ class EditKeepsTheRestTest {
         assertFalse(PostWriter.canEdit(doc("{title: Old, image: a.png}\n")))
     }
 
+    @Test fun aChangeToMoreFrontMatterIsTheWritersOwn() {
+        val existing = doc("layout: post\ntitle: Old\ndate: 2025-01-02\nimage: /a.png\n")
+        val content = PostContent("Old", "Body", extra = "image: /b.png\nexcerpt: hi")
+        val edited = PostWriter.edit(existing, content)
+        assertTrue(PostWriter.keepsTheRest(existing, edited, content))
+        assertEquals("/b.png", FrontMatterDocument.parse(edited.render()).string("image"))
+    }
+
+    @Test fun binaryValuesAndSelfReferencesNeitherRefuseNorCrash() {
+        assertTrue(PostWriter.canEdit(doc("title: Old\nicon: !!binary aGVsbG8=\n")))
+        assertFalse(PostWriter.canEdit(doc("title: Old\nr: &r [*r]\n")))
+    }
+
     @Test fun oddButSafeFrontMatterCanStillBeEdited() {
         val editable = shapes.filter { PostWriter.canEdit(doc(it)) }
         // Only the two shapes above, and the block `?` key, are refused.
