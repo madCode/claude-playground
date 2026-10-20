@@ -656,7 +656,12 @@ The notice reads "Downloading build N…" and can't be tapped again until
 Android's installer has answered, so a second tap can't start a second
 download. If that answer is a confirmation while Carry is behind another
 app, Android won't let it open there; it's shown when the owner comes
-back.
+back, and again on each return until Android has an answer (Home leaves
+it unanswered). If there's unsaved typing by then, the waiting install is
+dropped instead, and the notice can be tapped again. An answer about an
+older session, from before a restart, doesn't end the attempt under way.
+Failures count against the build in the file, which can lag behind the
+newest one listed, so a newer build is never given up on untried.
 
 The session files still leave only through the share sheet.
 
