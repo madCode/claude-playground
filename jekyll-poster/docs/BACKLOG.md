@@ -5,9 +5,6 @@ and moves it to Done.
 
 ## Next
 
-- [ ] The tester account (madCode, agreed 2026-10-20): a GitHub account and organisation for
-  testing, three copies of the sample blog, a token each in Actions secrets.
-  [TESTER_ACCOUNT.md](TESTER_ACCOUNT.md) has the steps. The live checks below wait on it.
 - [ ] More device tests on the suite cycle 36 started (`OnTheDeviceTest`): the New post
   shortcut from the launcher, the app killed while a post is queued, a photo shared from another
   app (a test-only sender, like newspaperss's `epubsink`).
@@ -36,6 +33,8 @@ and moves it to Done.
 
 ## Done
 
+- [x] The tester account, its three blogs and tokens, the GitHub App on them, and a Proton VPN
+  account (madCode, 2026-10-20)
 - [x] Cycle 37: the live check posts to the tester's three blogs, nightly and by hand
 - [x] Cycle 36: device tests on an emulator, on every PR
 - [x] Cycle 35: a request record in debug builds, for the several-blogs audit

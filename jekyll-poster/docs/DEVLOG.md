@@ -23,11 +23,20 @@ Times are when each cycle landed, Pacific.
 - **Watching:** `EditFlowTest.tappingAPostOnTheBlogOpensItsTextToEdit` failed once with "addObserver
   must be called on the main thread" (Compose composing off the main thread), in 1 of 9 full runs
   with cycle 34's change and none of 40 before it. Count it before blaming the change.
-- **Waiting on you:** the tester account ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)). Its blogs
-  are where the nightly device live check posts, and that run's request record is what the
-  several-blogs audit reads. The Android SDK is in the cloud environment now, at `/opt/android-sdk`.
+- **Waiting on you:** nothing. The tester account is set up
+  ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)), and the live check posts to its three blogs nightly.
+  The Android SDK is in the cloud environment, at `/opt/android-sdk`.
 
 ## Tue 20 Oct
+
+### Cycle 37: the live check on the tester's three blogs
+- **Asked for:** the Next item, now that madCode has made the tester account.
+- **Changed (CI only):** the live check runs nightly (03:37 Pacific) and by hand against the
+  tester's two blogs and its organisation's one, each with its own token; a missing variable or
+  secret is named in the run. By hand, it still takes one blog's `owner/name` with
+  `SAMPLE_BLOG_TOKEN`.
+- **Seen live:** the first run, from this cycle's branch, published, saw live and deleted a post
+  on all three, the organisation's included. Commits are attributed to the tester's account.
 
 ### Cycle 36: device tests on an emulator, on every PR
 - **Asked for:** the Next item after the request record: the real app on an emulator in CI,
