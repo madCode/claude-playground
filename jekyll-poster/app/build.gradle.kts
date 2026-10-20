@@ -156,7 +156,8 @@ val sampleBlogZip = tasks.register<Zip>("sampleBlogZip") {
     destinationDirectory.set(sampleBlogAssets)
 }
 android.sourceSets.getByName("androidTest").assets.srcDir(sampleBlogAssets)
-tasks.matching { it.name.endsWith("AndroidTestAssets") || it.name.startsWith("lint") }.configureEach { dependsOn(sampleBlogZip) }
+// Every task of the device tests reads the folder (assets, lint models), not only the merge.
+tasks.matching { it.name.contains("AndroidTest") }.configureEach { dependsOn(sampleBlogZip) }
 
 
 androidComponents {
