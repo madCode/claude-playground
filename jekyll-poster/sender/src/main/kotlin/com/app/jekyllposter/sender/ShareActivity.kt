@@ -6,13 +6,15 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Base64
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
 import java.io.File
 
 /**
  * Shares one thing into [EXTRA_TO]'s app, as another app's share sheet does: `photo`, a JPEG
- * with a GPS location in its EXIF, or `note`, an Obsidian-style Markdown file.
+ * with a GPS location in its EXIF, or `note`, an Obsidian-style Markdown file
+ * holding [EXTRA_TEXT], Base64 so it survives the shell.
  */
 class ShareActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,7 +23,7 @@ class ShareActivity : Activity() {
         val dir = File(filesDir, "shared").apply { mkdirs() }
         val (file, type) = when (intent.getStringExtra(EXTRA_WHAT)) {
             "photo" -> photo(File(dir, "harbour.jpg")) to "image/jpeg"
-            "note" -> File(dir, "$NOTE_NAME.md").apply { writeText(intent.getStringExtra(EXTRA_TEXT).orEmpty()) } to "text/markdown"
+            "note" -> File(dir, "$NOTE_NAME.md").apply { writeBytes(Base64.decode(intent.getStringExtra(EXTRA_TEXT).orEmpty(), Base64.DEFAULT)) } to "text/markdown"
             else -> return finish()
         }
         val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
@@ -49,7 +51,7 @@ class ShareActivity : Activity() {
     companion object {
         const val EXTRA_TO = "to"
         const val EXTRA_WHAT = "what"
-        const val EXTRA_TEXT = "text"
+        const val EXTRA_TEXT = "text64"
         const val NOTE_NAME = "Lunch at the market"
     }
 }

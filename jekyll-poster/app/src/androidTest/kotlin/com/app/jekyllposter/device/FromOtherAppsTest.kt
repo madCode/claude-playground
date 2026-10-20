@@ -1,6 +1,7 @@
 package com.app.jekyllposter.device
 
 import android.os.ParcelFileDescriptor
+import android.util.Base64
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -85,9 +86,12 @@ class FromOtherAppsTest {
     private fun shell(command: String): String =
         ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command)).use { it.readBytes().decodeToString() }
 
-    /** Has `:sender` share [what] into the app, through the system, as a share sheet would. */
-    private fun share(what: String, vararg extras: Pair<String, String>) {
-        val more = extras.joinToString(" ") { (k, v) -> "--es $k '${v.replace("'", "'\\''")}'" }
+    /**
+     * Has `:sender` share [what] into the app, through the system, as a share sheet would. A note's
+     * [text] goes as Base64: the shell command is split at spaces, with no quoting.
+     */
+    private fun share(what: String, text: String? = null) {
+        val more = text?.let { "--es text64 " + Base64.encodeToString(it.toByteArray(), Base64.NO_WRAP) }.orEmpty()
         val started = shell("am start -W -n com.app.jekyllposter.sender/.ShareActivity --es to ${app.packageName} --es what $what $more")
         assertTrue(started, started.contains("Status: ok"))
     }
@@ -125,7 +129,7 @@ class FromOtherAppsTest {
         // As a writer who has opened their blog before: `[[links]]` are found among its posts.
         ActivityScenario.launch(MainActivity::class.java)
         waitFor("Welcome to the notebook")
-        share("note", "text" to "---\ntags: [lunch]\n---\nSoup, then [[What I read in April]]. %%ask about the bread%%\n")
+        share("note", "---\ntags: [lunch]\n---\nSoup, then [[What I read in April]]. %%ask about the bread%%\n")
         waitForTag("title")
         waitFor("post_url 2025-04-20-reading-list")
         // The title is the note's file name, as Obsidian shows it.
@@ -147,7 +151,7 @@ class FromOtherAppsTest {
         listOf("CAMERA", "RECORD_AUDIO").forEach { shell("pm grant $camera android.permission.$it") }
         listOf("ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION").forEach { shell("pm revoke $camera android.permission.$it") }
 
-        share("note", "text" to "Taken just now.\n")
+        share("note", "Taken just now.\n")
         waitForTag("title")
         compose.onNodeWithContentDescription("Add a photo").performClick()
         compose.onNodeWithText("Take a photo").performClick()
