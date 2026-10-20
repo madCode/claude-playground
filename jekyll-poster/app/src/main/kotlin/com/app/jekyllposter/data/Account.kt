@@ -152,10 +152,18 @@ class AccountStore(
         }
     }
 
-    /** A fresh sign-in to [account]'s blog, which becomes the open one. */
+    /**
+     * A fresh sign-in to [account]'s blog, which becomes the open one. An account already signed
+     * in the same way keeps its one sign-in, with the new tokens: any "Sign in with GitHub" token
+     * reaches what the app was given, but a pasted token reaches only the repositories it was made
+     * for, so only the same token is the same sign-in.
+     */
     suspend fun save(account: Account) = lock.withLock {
         imported()
-        dao.signInTo(sealed(account), account.savedBlog())
+        val signIn = sealed(account)
+        val same = dao.signInsFor(account.login, signIn.kind)
+            .lastOrNull { signIn.kind == SignInKind.GitHubApp || unseal(it.sealedToken) == account.token }
+        dao.signInTo(signIn, account.savedBlog(), reuse = same?.id)
         store.edit { it[CURRENT] = account.blogKey }
         Unit
     }

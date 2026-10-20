@@ -341,10 +341,18 @@ abstract class AccountDao {
     @Query("UPDATE drafts SET blog = :key WHERE blog IS NULL")
     abstract suspend fun adoptDrafts(key: String)
 
-    /** [signIn] posting to [blog], replacing any sign-in [blog] had; the sign-in's id. */
+    /** Sign-ins of [kind] made for [login], however GitHub cased it. */
+    @Query("SELECT * FROM sign_ins WHERE login = :login COLLATE NOCASE AND kind = :kind ORDER BY id")
+    abstract suspend fun signInsFor(login: String, kind: SignInKind): List<SignIn>
+
+    /**
+     * [signIn] posting to [blog], replacing any sign-in [blog] had; the sign-in's id. With [reuse],
+     * that sign-in takes [signIn]'s tokens instead of a new one being made, so one account isn't
+     * listed twice.
+     */
     @Transaction
-    open suspend fun signInTo(signIn: SignIn, blog: SavedBlog): Long {
-        val id = insert(signIn)
+    open suspend fun signInTo(signIn: SignIn, blog: SavedBlog, reuse: Long? = null): Long {
+        val id = reuse?.takeIf { update(signIn.copy(id = it)) == 1 } ?: insert(signIn)
         upsert(blog.copy(signInId = id, title = blog(blog.blogKey)?.title))
         deleteUnused()
         return id
@@ -391,7 +399,7 @@ class Converters {
     @TypeConverter fun toImages(json: String): List<DraftImage> = Json.decodeFromString(json)
 }
 
-@Database(entities = [Draft::class, CachedPost::class, SignIn::class, SavedBlog::class, BlogPrivacy::class], version = 8)
+@Database(entities = [Draft::class, CachedPost::class, SignIn::class, SavedBlog::class, BlogPrivacy::class], version = 9)
 @TypeConverters(Converters::class)
 abstract class PosterDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
@@ -402,7 +410,7 @@ abstract class PosterDatabase : RoomDatabase() {
     companion object {
         /** The app's database, brought up to date from any version a debug build has shipped. */
         fun create(context: Context): PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build()
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9).build()
     }
 }
 
@@ -489,5 +497,21 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
                 "`plainCommitMessages` INTEGER NOT NULL, `datesByDayOnly` INTEGER NOT NULL, `removeTrackingCodes` INTEGER NOT NULL, " +
                 "`isNew` INTEGER NOT NULL, PRIMARY KEY(`blogKey`))",
         )
+    }
+}
+
+/**
+ * One "Sign in with GitHub" sign-in per account: an account signed in to twice had two, listed
+ * twice. Its blogs move to the newest, and the others go. Pasted tokens stay apart, since two
+ * tokens for one account can each reach different repositories.
+ */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        val newest = "SELECT MAX(n.id) FROM sign_ins n WHERE n.kind = 'GitHubApp' AND n.login = s.login COLLATE NOCASE"
+        db.execSQL(
+            "UPDATE blogs SET signInId = (SELECT ($newest) FROM sign_ins s WHERE s.id = blogs.signInId) " +
+                "WHERE signInId IN (SELECT id FROM sign_ins WHERE kind = 'GitHubApp')",
+        )
+        db.execSQL("DELETE FROM sign_ins WHERE kind = 'GitHubApp' AND id < (${newest.replace("s.login", "sign_ins.login")})")
     }
 }
