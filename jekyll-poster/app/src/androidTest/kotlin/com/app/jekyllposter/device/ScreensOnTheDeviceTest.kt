@@ -28,6 +28,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
 import org.junit.runner.RunWith
 
 /**
@@ -44,6 +46,13 @@ class ScreensOnTheDeviceTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val device = UiDevice.getInstance(instrumentation)
 
+    // A failure keeps what was on screen; @After, which runs first, leaves the app open for it.
+    @get:Rule val onFailure = object : TestWatcher() {
+        override fun failed(e: Throwable, description: Description) {
+            runCatching { keep("failed-${description.methodName}", settled = false) }
+        }
+    }
+
     @Before fun signIn() {
         // As well as after: an @After a crash skipped would leave the next tests large and dark.
         resetDevice()
@@ -52,7 +61,6 @@ class ScreensOnTheDeviceTest {
 
     @After fun close() {
         resetDevice()
-        device.pressHome()
         github.close()
     }
 
@@ -70,8 +78,8 @@ class ScreensOnTheDeviceTest {
 
     private fun waitForTag(tag: String) = compose.waitUntil(20_000) { compose.onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty() }
 
-    private fun keep(name: String) {
-        compose.waitForIdle()
+    private fun keep(name: String, settled: Boolean = true) {
+        if (settled) compose.waitForIdle()
         val shot = File(app.cacheDir, "$name.png")
         check(device.takeScreenshot(shot)) { "No screenshot of $name" }
         TestStorage().openOutputFile("screens/$name.png").use { out -> shot.inputStream().use { it.copyTo(out) } }
@@ -132,7 +140,8 @@ class ScreensOnTheDeviceTest {
 
         // The editor's own Back: the system's would only close the keyboard.
         compose.onNodeWithContentDescription("Back").performClick()
-        waitFor("Welcome to the notebook")
+        // The new draft heads the list; at this size it pushes the blog's posts out of view.
+        waitFor("Big and dark")
         compose.onNodeWithContentDescription("More").performClick()
         compose.onNodeWithText("Settings").performClick()
         waitFor("Blog & privacy")
