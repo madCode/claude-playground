@@ -36,6 +36,9 @@ jobs:
       TOKEN_A: ${{ secrets.TEST_BLOG_A_TOKEN }}
       REPO_B: ${{ vars.TEST_BLOG_ORG }}
       TOKEN_B: ${{ secrets.TEST_BLOG_ORG_TOKEN }}
+      # A WireGuard config from the tester's Proton account, for Only connect through a VPN.
+      # Without it that test is skipped.
+      WG_CONF: ${{ secrets.PROTON_WG_CONF }}
     steps:
       - name: Check the tester's blogs are configured
         run: |
@@ -58,6 +61,12 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Build the app and its device tests
         run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Fetch the WireGuard app
+        if: env.WG_CONF != ''
+        run: |
+          apk=$(curl -fsSL https://download.wireguard.com/android-client/ | grep -o 'com\.wireguard\.android-[0-9.]*\.apk' | sort -uV | tail -1)
+          curl -fsSL -o "$RUNNER_TEMP/wireguard.apk" "https://download.wireguard.com/android-client/$apk"
+          echo "$apk: $(sha256sum "$RUNNER_TEMP/wireguard.apk" | cut -d' ' -f1)"
       - name: Publish to two blogs from the emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
@@ -71,7 +80,8 @@ jobs:
           script: |
             adb shell svc power stayon true
             adb logcat -c
-            ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.app.jekyllposter.device.LiveOnTheDeviceTest "-Pandroid.testInstrumentationRunnerArguments.liveRepoA=$REPO_A" "-Pandroid.testInstrumentationRunnerArguments.liveTokenA=$TOKEN_A" "-Pandroid.testInstrumentationRunnerArguments.liveRepoB=$REPO_B" "-Pandroid.testInstrumentationRunnerArguments.liveTokenB=$TOKEN_B" || { adb logcat -d > app/build/device-logcat.txt; adb logcat -d -b crash; exit 1; }
+            if [ -n "$WG_CONF" ]; then tools/wireguard-on-emulator.sh "$RUNNER_TEMP/wireguard.apk"; fi
+            ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.app.jekyllposter.device.LiveOnTheDeviceTest "-Pandroid.testInstrumentationRunnerArguments.vpnTunnel=${WG_CONF:+proton}" "-Pandroid.testInstrumentationRunnerArguments.liveRepoA=$REPO_A" "-Pandroid.testInstrumentationRunnerArguments.liveTokenA=$TOKEN_A" "-Pandroid.testInstrumentationRunnerArguments.liveRepoB=$REPO_B" "-Pandroid.testInstrumentationRunnerArguments.liveTokenB=$TOKEN_B" || { adb logcat -d > app/build/device-logcat.txt; adb logcat -d -b crash; exit 1; }
       # The kept files (request records, the privacy report) go into a public artifact: refuse
       # them all if either token is anywhere in them.
       - name: Check the kept files hold no token
