@@ -531,16 +531,17 @@ rows, an in-flight save — with it. Landing on a particular tab is not
 worth losing numbers for, so the intent is `SINGLE_TOP` and the folder is
 re-read on resume as it always was.
 
-**The app holds seven Android permissions, and this feature brought five
-of them.** `aapt2 dump permissions` on the built APK is the only honest
+**A debug build holds seven Android permissions, and this feature brought
+five of them; a release build holds five.** `aapt2 dump permissions` on the built APK is the only honest
 source for this, because a library brings its own. It also lists
 `<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which
 androidx.core defines for the app's own receivers; it grants nothing
 outside the app.
 
 Three are ours: `POST_NOTIFICATIONS`, required on API 33+ to post
-anything, and `INTERNET` and `REQUEST_INSTALL_PACKAGES`, for the update
-below. The other four arrive with
+anything, and, in a debug build only, `INTERNET` and
+`REQUEST_INSTALL_PACKAGES`, for the update below. `check` fails if a
+release build's merged manifest asks for either. The other four arrive with
 `androidx.work`, and the app can't opt out of them while using it:
 
 | permission | why WorkManager wants it |
@@ -589,8 +590,9 @@ seen and was silently never announced.
 
 The app's only network use. The owner chose it on 2026-10-16
 ([#107](https://github.com/madCode/claude-playground/issues/107)) over
-routing the build number through the synced folder, so Carry declares
-`INTERNET` for this alone. `DebugUpdates` works like newspaperss's:
+routing the build number through the synced folder, so a debug build
+declares `INTERNET` for this alone, and a release build doesn't declare it.
+`DebugUpdates` works like newspaperss's:
 
 - **Only a CI debug build asks.** The installed build number comes from the
   version name (`0.1.0-debug.131+…`); a local or release build has none and
@@ -613,7 +615,9 @@ routing the build number through the synced folder, so Carry declares
   installed PR build is offered the next main build, which may not contain
   that PR.
 
-A tap installs it from inside the app (`UpdateInstaller`), in this order:
+A tap installs it from inside the app, in this order. The code
+(`LiveUpdates`, `UpdateInstaller`) and the permission to install apps are in
+the debug source set only; a release build has neither.
 
 1. **Not over unsaved typing.** Installing replaces the running app, and
    nothing promises its saved state survives that, so the draft could be
@@ -627,16 +631,26 @@ A tap installs it from inside the app (`UpdateInstaller`), in this order:
 3. **Downloads the fixed link** into the app's cache, following GitHub's
    redirect, with a 200 MB cap and five minutes in all. A partial file is
    never kept.
-4. **Checks the file** is this app at a higher version code, then hands it
-   to Android's `PackageInstaller`. The first in-app update always asks
-   "Update this app?". On Android 12 and later, once Carry has installed
-   itself, later ones may skip that, which is why it asks to. Android also
-   refuses an APK signed with another key, which every CI build shares. A
+4. **Checks the file itself**: the same package, signed with the same key
+   as the running app (every CI build shares the debug key), and a higher
+   version code. Android would refuse another key too, but only after
+   asking the owner. A file that fails the package or key check is given
+   up on at once. One that is only not newer yet isn't: CI uploads the
+   fixed-name file a moment after the numbered one, so a tap a few minutes
+   later can find it.
+5. **Hands it to Android's `PackageInstaller`.** The first in-app update
+   always asks "Update this app?". On Android 12 and later, once Carry has
+   installed itself, later ones may skip that, which is why it asks to. A
    session that fails before it's committed is abandoned, so nothing is
    left staged.
-5. **Failures are said.** A download or hand-off that fails says why in a
-   toast and opens the download link in a browser, so the old way still
-   works. A failure Android reports after the hand-off is a toast only.
+6. **Failures are said, and counted.** A download or hand-off that fails
+   says why in a toast and opens the download link in a browser, so the
+   old way still works. A failure Android reports after the hand-off is a
+   toast only. Three failed installs of one build, or one Android says can
+   never install (invalid, incompatible, a conflict), and Carry gives up on
+   that build: the notice's tap then opens the download in a browser
+   instead. A newer build is tried again. A failed download, or the owner
+   saying no to Android's question, isn't counted.
 
 The notice reads "Downloading build N…" and can't be tapped again until
 Android's installer has answered, so a second tap can't start a second

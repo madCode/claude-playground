@@ -142,9 +142,10 @@ class MainActivity : ComponentActivity() {
      * with no way to install, falls back to the download link.
      */
     private fun getBuild() {
-        when (UpdateInstaller.next(model.unsaved, UpdateInstaller.canInstall(this))) {
-            UpdateInstaller.Step.SaveFirst -> say("Save the After tab first, then tap the notice again. Updating restarts Carry.")
-            UpdateInstaller.Step.AllowInstalls -> {
+        val build = model.updates.newer.value ?: return
+        when (model.updater.next(build, model.unsaved, model.updater.canInstall())) {
+            SelfUpdater.Step.SaveFirst -> say("Save the After tab first, then tap the notice again. Updating restarts Carry.")
+            SelfUpdater.Step.AllowInstalls -> {
                 val settings = android.content.Intent(
                     android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                     Uri.parse("package:$packageName"),
@@ -155,7 +156,8 @@ class MainActivity : ComponentActivity() {
                     openDownload()
                 }
             }
-            UpdateInstaller.Step.Install -> model.installUpdate()
+            SelfUpdater.Step.Install -> model.installUpdate(build)
+            SelfUpdater.Step.Browser -> openDownload()
         }
     }
 
@@ -176,18 +178,12 @@ class MainActivity : ComponentActivity() {
      *  app is backgrounded, so the folder is re-read on every resume. */
     override fun onPause() {
         super.onPause()
-        UpdateInstaller.inFront = false
+        model.updater.paused()
     }
 
     override fun onResume() {
         super.onResume()
-        UpdateInstaller.inFront = true
-        runCatching { UpdateInstaller.forgetIfGone(this) }
-        // An installer confirmation that arrived while Carry was behind another app.
-        UpdateInstaller.awaitingConfirm?.let { confirm ->
-            UpdateInstaller.awaitingConfirm = null
-            runCatching { startActivity(confirm) }.onFailure { UpdateInstaller.finish() }
-        }
+        model.updater.resumed(this)
         model.refresh()
         model.checkForUpdate()
         maybeAskToNotify()

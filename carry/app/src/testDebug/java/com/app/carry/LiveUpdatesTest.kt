@@ -1,0 +1,239 @@
+package com.app.carry
+
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageInstaller
+import android.content.pm.PackageManager
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.runBlocking
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import org.junit.runner.RunWith
+import java.io.File
+import java.io.IOException
+
+@RunWith(AndroidJUnit4::class)
+class LiveUpdatesTest {
+    @get:Rule val tmp = TemporaryFolder()
+
+    private val app = ApplicationProvider.getApplicationContext<Context>()
+    private val prefs = LiveUpdates.prefsOf(app).apply { edit().clear().commit() }
+
+    private val ourKey = setOf("our-key")
+    private val installed = ApkFacts(app.packageName, 130, ourKey)
+
+    /** What each downloaded file, by its text, says about itself; anything else isn't an APK. */
+    private val apks = mutableMapOf<String, ApkFacts>()
+    private var serving: () -> String = { "apk-140" }
+    private var stageFails: Exception? = null
+    private val staged = mutableListOf<Int>()
+    private val committed = mutableListOf<Pair<Int, Int>>()
+    private val abandoned = mutableListOf<Int>()
+    private var canInstall = true
+
+    @Before fun setUp() {
+        UpdateInstaller.finish()
+        apks["apk-140"] = ApkFacts(app.packageName, 140, ourKey)
+    }
+
+    @After fun tearDown() = UpdateInstaller.finish()
+
+    private fun updates() = LiveUpdates(
+        app, installedBuild = 130, prefs = prefs, dir = tmp.newFolder(),
+        download = { it.writeText(serving()) },
+        inspect = { apks[it.readText()] },
+        installed = { installed },
+        stage = { stageFails?.let { e -> throw e }; staged += 7; 7 },
+        commit = { id, build -> committed += id to build },
+        abandon = { abandoned += it },
+        canInstallNow = { canInstall },
+    )
+
+    private fun LiveUpdates.tap(build: Int = 140, unsaved: () -> Boolean = { false }) = runBlocking { install(build, unsaved) }
+
+    @Test
+    fun `a newer build of this app with its key is handed to Android`() {
+        assertNull(updates().tap())
+        assertEquals(listOf(7 to 140), committed)
+        assertTrue("installing until Android answers", UpdateInstaller.installing.value)
+    }
+
+    @Test
+    fun `a file of another app, another key or no app at all is refused and given up on`() {
+        for ((text, facts) in listOf(
+            "another app" to ApkFacts("com.example.other", 140, ourKey),
+            "another key" to ApkFacts(app.packageName, 140, setOf("someone-else")),
+            "no key read" to ApkFacts(app.packageName, 140, emptySet()),
+            "<html>rate limited</html>" to null,
+        )) {
+            prefs.edit().clear().commit()
+            facts?.let { apks[text] = it }
+            serving = { text }
+            val updates = updates()
+            val problem = updates.tap()!!
+            assertTrue(text, problem.offerLink)
+            assertTrue(text, problem.why.startsWith("The download isn't a Carry this phone can trust"))
+            assertEquals("never staged: $text", emptyList<Int>(), staged)
+            assertFalse("the notice must be tappable again", UpdateInstaller.installing.value)
+            assertEquals("$text: the next tap opens the browser", SelfUpdater.Step.Browser, updates.next(140, unsaved = false, canInstall = true))
+        }
+        assertEquals("a newer build is tried again", SelfUpdater.Step.Install, updates().next(141, unsaved = false, canInstall = true))
+    }
+
+    @Test
+    fun `a file that isn't newer yet is not installed, and not given up on`() {
+        apks["apk-130"] = installed
+        serving = { "apk-130" }
+        val updates = updates()
+        val problem = updates.tap()!!
+        assertFalse(problem.offerLink)
+        assertEquals(emptyList<Int>(), staged)
+        assertEquals("CI's fixed-name file lags: tapping again may find it", SelfUpdater.Step.Install, updates.next(140, false, true))
+    }
+
+    @Test
+    fun `typing while the build is copied to the installer abandons it rather than installing`() {
+        // Nothing typed at the tap; something typed by the time the copy is done.
+        val problem = updates().tap { staged.isNotEmpty() }!!
+        assertEquals(emptyList<Pair<Int, Int>>(), committed)
+        assertEquals("the staged session must not be left behind", listOf(7), abandoned)
+        assertFalse(problem.offerLink)
+        assertFalse(UpdateInstaller.installing.value)
+    }
+
+    @Test
+    fun `three failed hand-offs give up on the build`() {
+        stageFails = IOException("No space left on device")
+        val updates = updates()
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES - 1) {
+            assertEquals("Android couldn't take the update: No space left on device.", updates.tap()!!.why)
+            assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
+        }
+        assertTrue(updates.tap()!!.why.endsWith("Carry won't try this build again."))
+        assertEquals(SelfUpdater.Step.Browser, updates.next(140, false, true))
+        assertFalse(UpdateInstaller.installing.value)
+    }
+
+    @Test
+    fun `Android's own failures count, and one that can't ever install gives up at once`() {
+        fun answer(build: Int, status: Int) = UpdateInstaller.Result().onReceive(
+            app,
+            Intent(app, UpdateInstaller.Result::class.java)
+                .putExtra(UpdateInstaller.EXTRA_BUILD, build)
+                .putExtra(PackageInstaller.EXTRA_STATUS, status),
+        )
+        val updates = updates()
+        answer(140, PackageInstaller.STATUS_FAILURE_ABORTED)
+        answer(140, PackageInstaller.STATUS_FAILURE_ABORTED)
+        answer(140, PackageInstaller.STATUS_FAILURE_ABORTED)
+        assertEquals("the owner saying no isn't a failure", SelfUpdater.Step.Install, updates.next(140, false, true))
+        answer(140, PackageInstaller.STATUS_FAILURE_STORAGE)
+        answer(140, PackageInstaller.STATUS_FAILURE_STORAGE)
+        assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
+        answer(140, PackageInstaller.STATUS_FAILURE_STORAGE)
+        assertEquals(SelfUpdater.Step.Browser, updates.next(140, false, true))
+
+        answer(141, PackageInstaller.STATUS_FAILURE_CONFLICT)
+        assertEquals(SelfUpdater.Step.Browser, updates.next(141, false, true))
+    }
+
+    @Test
+    fun `typing comes first, then the permission, then the install`() {
+        val updates = updates()
+        assertEquals(SelfUpdater.Step.SaveFirst, updates.next(140, unsaved = true, canInstall = false))
+        assertEquals(SelfUpdater.Step.AllowInstalls, updates.next(140, unsaved = false, canInstall = false))
+        assertEquals(SelfUpdater.Step.Install, updates.next(140, unsaved = false, canInstall = true))
+    }
+
+    @Test
+    fun `a failed download offers the link, isn't counted, and lets the owner try again`() {
+        val updates = LiveUpdates(app, 130, prefs = prefs, dir = tmp.newFolder(), download = { throw IOException("the download answered 404") })
+        assertEquals(UpdateProblem("Couldn't download the update: the download answered 404.", offerLink = true), updates.tap())
+        assertFalse(UpdateInstaller.installing.value)
+        repeat(3) { updates.tap() }
+        assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
+    }
+}
+
+/** The APK download, against a local server standing in for GitHub and its file host. */
+@RunWith(AndroidJUnit4::class)
+class UpdateDownloadTest {
+    private val server = MockWebServer().apply { start() }
+    private val dir = java.nio.file.Files.createTempDirectory("carry-update").toFile()
+    private val dest = File(dir, "carry-debug.apk")
+
+    @After fun stop() { server.close(); dir.deleteRecursively() }
+
+    @Test
+    fun `the file is downloaded through GitHub's redirect`() {
+        server.enqueue(MockResponse.Builder().code(302).addHeader("Location", server.url("/file").toString()).build())
+        server.enqueue(MockResponse.Builder().body("apk bytes").build())
+        UpdateInstaller.download(server.url("/release").toString(), dest)
+        assertEquals("apk bytes", dest.readText())
+    }
+
+    @Test
+    fun `a refusal is an error, not a file`() {
+        server.enqueue(MockResponse.Builder().code(404).build())
+        assertThrows(IOException::class.java) { UpdateInstaller.download(server.url("/x").toString(), dest) }
+        assertEquals(emptyList<String>(), dir.list()!!.toList())
+    }
+
+    @Test
+    fun `a file larger than any build is abandoned, part and all`() {
+        server.enqueue(MockResponse.Builder().body("x".repeat(200 * 1024)).build())
+        assertThrows(IOException::class.java) {
+            UpdateInstaller.download(server.url("/x").toString(), dest, maxBytes = 100 * 1024)
+        }
+        assertEquals(emptyList<String>(), dir.list()!!.toList())
+    }
+}
+
+/** The debug build carries the installer; the release build's merged manifest is checked by `check`. */
+@RunWith(AndroidJUnit4::class)
+class LiveBuildManifestTest {
+    @Test
+    fun `the debug build can install its updates, and its answer can only come from Android`() {
+        val app = ApplicationProvider.getApplicationContext<Context>()
+        @Suppress("DEPRECATION")
+        val info = app.packageManager.getPackageInfo(app.packageName, PackageManager.GET_PERMISSIONS or PackageManager.GET_RECEIVERS)
+        assertTrue(info.requestedPermissions.orEmpty().contains("android.permission.REQUEST_INSTALL_PACKAGES"))
+        assertTrue(info.receivers.orEmpty().any { it.name == UpdateInstaller.Result::class.java.name && !it.exported })
+    }
+}
+
+/** What the archive check reads from a file, as far as Robolectric can parse one. */
+@RunWith(AndroidJUnit4::class)
+class ApkCheckTest {
+    @get:Rule val tmp = TemporaryFolder()
+
+    private val installed = ApkFacts("com.app.carry.debug", 130, setOf("our-key"))
+
+    @Test
+    fun `only a newer build of this app with its key passes`() {
+        val newer = installed.copy(versionCode = 140)
+        assertEquals(Verdict.Good, verdict(newer, installed))
+        assertTrue("another app", verdict(newer.copy(packageName = "com.app.carry"), installed) is Verdict.Bad)
+        assertTrue("another key beside ours", verdict(newer.copy(signers = setOf("our-key", "x")), installed) is Verdict.Bad)
+        assertTrue("an older build with another key", verdict(installed.copy(versionCode = 120, signers = setOf("x")), installed) is Verdict.Bad)
+        assertTrue("the same build", verdict(installed, installed) is Verdict.Stale)
+        assertTrue("no key read on either side", verdict(newer.copy(signers = emptySet()), installed.copy(signers = emptySet())) is Verdict.Bad)
+    }
+
+    @Test
+    fun `a file that isn't an APK has no facts`() {
+        val junk = tmp.newFile("carry-debug.apk").apply { writeText("<html>Rate limited</html>") }
+        assertNull(ApplicationProvider.getApplicationContext<Context>().packageManager.apkFacts(junk))
+    }
+}

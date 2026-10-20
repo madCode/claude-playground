@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A CI debug build installs newer builds of itself (LiveUpdates), at the owner's choice
+  (claude-playground #107). Debug only: app stores refuse an app that can install apps.
+
+  - INTERNET, for one thing: asking GitHub whether a newer debug build is out (DebugUpdates)
+    and downloading it. The request carries nothing of the owner's; session files still never
+    leave except through the share sheet.
+  - REQUEST_INSTALL_PACKAGES, to hand that build to Android's installer. Android still asks the
+    owner to allow it once, and to confirm each install unless it lets the app update itself.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <application>
+        <receiver
+            android:name=".UpdateInstaller$Result"
+            android:exported="false" />
+    </application>
+</manifest>
