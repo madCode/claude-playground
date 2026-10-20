@@ -28,7 +28,7 @@ and moves it to Done.
 - [ ] Laptop emulator checks, in `docs/DEVICE-CHECKS.md` and `tools/emulator-check.sh`: what
   Actions can't do. Sign in with GitHub (the device code entered in the desktop app's browser,
   signed in as the tester), sharing from the real Obsidian app, the gallery and the camera,
-  rotation, TalkBack, large text and dark theme.
+  the VPN switch with the Proton VPN app (madCode agreed 2026-10-20), rotation, TalkBack, large text and dark theme.
 
 
 ## Later

@@ -2,7 +2,7 @@
 
 The live checks post to real blogs on GitHub. They use a GitHub account made only for testing,
 so a leaked CI token can reach sample blogs and nothing else. Only madCode can make it. About 30
-minutes.
+minutes, plus five for the VPN.
 
 ## 1. The account
 
@@ -62,6 +62,15 @@ Never paste a token into a chat, an issue or a commit. They go into these secret
    its blogs. The app's page: `github.com/apps/<slug>` (see [GITHUB_APP.md](GITHUB_APP.md)).
 2. In the Claude desktop app's built-in browser, sign in to GitHub as the tester once. The
    sign-in stays there, so Claude can enter a device code on the emulator's behalf.
+
+## 6. A VPN (for the laptop checks)
+
+The "only connect through a VPN" switch needs a real VPN to check: a post waits while it's off
+and goes out once it's on.
+
+1. Make a free [Proton](https://proton.me/vpn) account for the tester, with another `+` alias.
+2. Sign in to it once in the desktop app's built-in browser, as for GitHub. Claude installs
+   the Proton VPN app on the emulator and signs in there.
 
 Then tell Claude it's done. The first cycle after that runs the live check against all three
 blogs to show the tokens work.
