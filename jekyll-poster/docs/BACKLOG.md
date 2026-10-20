@@ -5,9 +5,6 @@ and moves it to Done.
 
 ## Next
 
-- [ ] The tester account (madCode, agreed 2026-10-20): a GitHub account and organisation for
-  testing, three copies of the sample blog, a token each in Actions secrets.
-  [TESTER_ACCOUNT.md](TESTER_ACCOUNT.md) has the steps. The live checks below wait on it.
 - [ ] More device tests on the suite cycle 36 started (`OnTheDeviceTest`): the New post
   shortcut from the launcher, the app killed while a post is queued, a photo shared from another
   app (a test-only sender, like newspaperss's `epubsink`).
@@ -16,7 +13,6 @@ and moves it to Done.
   Pages and the notification, edit, delete; two blogs under two sign-ins; an edit conflict made
   by the workflow committing while the post is open. Uploads screenshots, logcat and the
   request record. A cloud session starts it and reads its artifacts through the GitHub tools.
-- [ ] `:core:liveCheck` against all three test blogs, the organisation one included.
 - [ ] Audit for several blogs: a security/privacy read of the requests each account makes,
   against the request record from a device live check run (not the code). A cloud session can
   do it from that run's artifacts.
@@ -37,6 +33,9 @@ and moves it to Done.
 
 ## Done
 
+- [x] The tester account, its three blogs and tokens, the GitHub App on them, and a Proton VPN
+  account (madCode, 2026-10-20)
+- [x] Cycle 37: the live check posts to the tester's three blogs, nightly and by hand
 - [x] Cycle 36: device tests on an emulator, on every PR
 - [x] Cycle 35: a request record in debug builds, for the several-blogs audit
 - [x] Cycle 34: removing the open blog's sign-in never reads as signed out
