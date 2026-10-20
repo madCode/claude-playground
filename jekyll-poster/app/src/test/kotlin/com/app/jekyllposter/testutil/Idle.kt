@@ -19,7 +19,8 @@ fun idleUntil(timeoutMs: Long = 5_000, condition: () -> Boolean) {
  * Compose's `waitUntil`, turning the main looper as it waits. On Robolectric the test runs on the
  * main thread, and Compose's wait turns the looper only when the condition reads the screen: a
  * condition on the database, GitHub or a view model's state waits on work posted to the main
- * thread (`viewModelScope`, Room handing back a result) that never runs, and times out.
+ * thread (`viewModelScope`, Room handing back a result) that never runs, and times out. Work
+ * behind a `delay` still doesn't run: Robolectric's clock only moves when a test moves it.
  */
 fun ComposeContentTestRule.waitUntilLooped(timeoutMs: Long = 5_000, condition: () -> Boolean) =
     waitUntil(timeoutMs) {
