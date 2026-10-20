@@ -53,32 +53,41 @@ item.
   alone.
 - Nothing you see changed.
 
-**Checks only a phone or an emulator can do.** About 25 minutes on an
-emulator. Use an API 34 image with Google APIs (x86_64); Android 12+ is
-what allows an install with no dialog.
+**Checks only a phone or an emulator can do**, about 30 minutes on an
+emulator: API 34, Google APIs, x86_64. Android 12+ is what allows an
+install with no dialog, and the emulator's network counts as Wi-Fi.
 
-1. Build two debug APKs with different build numbers, from a checkout of
-   main: `GITHUB_RUN_NUMBER=1001 ./gradlew assembleDebug`, copy
-   `app/build/outputs/apk/debug/app-debug.apk` to `old.apk`, then
-   `GITHUB_RUN_NUMBER=1002 ./gradlew assembleDebug` for `new.apk`.
-2. `adb install old.apk`. Open Carry, pick a folder, allow "install
-   unknown apps" for Carry in Settings.
-3. **The signing check on a real file.** With `new.apk` staged in place of
-   the download (or with the real release once a newer build is out), tap
-   the notice. Pass: "Update this app?" appears, or on Android 12+ it
-   installs straight away, and the Since tab shows build 1002.
-4. **Background install.** Install 1001 again. Open Carry, then close it.
-   Run `adb shell cmd jobscheduler run -f com.app.carry.debug <job id>` for
-   the download and install work (`adb shell dumpsys jobscheduler | grep
-   carry` lists them), or wait. Pass: build 1002 is installed with Carry
-   never on screen.
-5. **Not over typing.** Install 1001 again. Type a weight on the After tab
-   without saving, go Home, and run the jobs again. Pass: still 1001, and
-   the typed weight is there when you reopen Carry.
-6. **Release has no installer.** `./gradlew assembleRelease`, then
-   `aapt2 dump permissions` on it. Pass: no `REQUEST_INSTALL_PACKAGES`, no
-   `INTERNET`.
-7. Shut down: `adb emu kill`, then `adb devices` should list nothing.
+1. From a checkout of main with both PRs merged, build a debug APK that
+   calls itself build 1: `GITHUB_RUN_NUMBER=1 ./gradlew assembleDebug`.
+   The newest CI build on the `carry-debug` release is newer, and signed
+   with the same committed debug key.
+2. `adb install -r app/build/outputs/apk/debug/app-debug.apk`. Put a
+   made-up sheet for today in the device's Download folder, as
+   `session-<today>-2G.json` holding the `sheet` from
+   `CarryViewModelTest`, with the date changed to today. Open Carry, pick
+   that folder, and allow "install unknown apps" for Carry when asked.
+3. **The tap, and the signing check on a real file.** The Since tab says
+   "Build N is out — install it". Tap it. Pass: Android asks "Update this
+   app?" (the first in-app update always does), and after Update the Since
+   tab shows build N. A refusal here ("isn't a Carry this phone can
+   trust") means the key check misread a real APK.
+4. **The background install.** Reinstall build 1 (step 2), open Carry
+   once, type nothing, and go Home. Find the jobs with `adb shell dumpsys
+   jobscheduler | grep -B2 -A2 com.app.carry.debug`, and run each with
+   `adb shell cmd jobscheduler run -f com.app.carry.debug <id>`: the
+   check, then the download, then the install. Pass: `adb shell dumpsys
+   package com.app.carry.debug | grep versionCode` shows N, with no
+   dialog. Android 12+ installs silently only after Carry has installed
+   itself once, which step 3 did.
+5. **Not over typing.** Reinstall build 1, open Carry, type a weight on the
+   After tab without saving, go Home, and run the jobs again. Pass: still
+   build 1, and the weight is there when Carry opens again. Then save, go
+   Home, run the install job: now it installs.
+6. **A release build can't install.** `./gradlew assembleRelease`, then
+   `aapt2 dump permissions app/build/outputs/apk/release/app-release-unsigned.apk`.
+   Pass: neither `REQUEST_INSTALL_PACKAGES` nor `INTERNET` is listed.
+7. Shut the emulator down: `adb emu kill`, then `adb devices` should list
+   nothing.
 
 ## 2026-10-20 — cycle 71: updates, part one: debug-only, and checked
 
