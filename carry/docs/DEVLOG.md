@@ -13,7 +13,10 @@
   to the class (#110); each debug build numbered (#106); an icon of its own
   (#105); the Since tab counting a file it couldn't read (#112) and taking
   its band from the sheet on screen (#113). Older entries are below.
-- **Watching:** a session logged entirely by hand is still not listed on the
+- **Watching:** typing in the few seconds after an update is handed to
+  Android, while it installs, can be lost: the After tab stays editable.
+  Making it read-only while an install is under way would close it
+  (review of cycle 71; older than that). a session logged entirely by hand is still not listed on the
   Since tab at all — it moves the screen's aggregates, so it is its own
   decision rather than a bug fix. A session logged only with markers *is*
   listed now (#77); that one was a wrong answer rather than a missing
@@ -54,7 +57,8 @@ The first half of bringing updates up to newspaperss's (you approved,
   waiting install is dropped instead. A late answer about an older install
   no longer ends the one under way.
 - Left as it was: typing in the few seconds after the hand-off, while
-  Android installs, can still be lost. In the backlog.
+  Android installs, can still be lost. Under *Watching* above, with the
+  fix it would take.
 - Nothing you see changed. Still owed on a phone: the key check reading a
   real APK, and a real install. Neither can be shown without a device.
 - Left for part two: the download on Wi-Fi, the install while Carry is
