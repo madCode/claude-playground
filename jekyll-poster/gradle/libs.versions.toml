@@ -67,6 +67,7 @@ espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref =
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
 androidx-test-orchestrator = { module = "androidx.test:orchestrator", version.ref = "orchestrator" }
 androidx-test-services = { module = "androidx.test.services:test-services", version.ref = "testServices" }
+androidx-test-storage = { module = "androidx.test.services:storage", version.ref = "testServices" }
 uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
 
 [plugins]
