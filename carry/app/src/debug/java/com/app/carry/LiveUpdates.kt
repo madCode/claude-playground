@@ -7,18 +7,24 @@ import android.content.pm.PackageInstaller
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import androidx.work.WorkManager
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
 /**
- * The CI debug build installing a newer build of itself when the owner taps the notice: download
- * it, check it is this app, signed with this app's key and newer, and hand it to Android.
+ * The CI debug build keeping itself current. A newer build is downloaded on Wi-Fi in the
+ * background, checked (this app, this app's key, newer), and installed once Carry is closed with
+ * no unsaved typing ([UnsavedMark]). A tap on the notice installs it at once, downloading first if
+ * the background hasn't.
  *
- * A build that fails those checks, or fails to install [MAX_INSTALL_FAILURES] times, is given up
- * on ([REJECTED], kept in [prefs] so a restart remembers): the notice then opens the download in
- * a browser instead, rather than fetching a file that won't install again and again.
+ * What it knows lives in [prefs], so a process that dies part way picks up where it was. A build
+ * that fails the checks, can't be downloaded, or fails to install [MAX_INSTALL_FAILURES] times is
+ * given up on ([REJECTED]): only a newer one is fetched again, and the notice's tap opens the
+ * download in a browser instead.
  */
 internal class LiveUpdates(
     private val context: Context,
@@ -29,14 +35,31 @@ internal class LiveUpdates(
     private val inspect: (File) -> ApkFacts? = { context.packageManager.apkFacts(it) },
     private val installed: () -> ApkFacts = { context.packageManager.installedFacts(context.packageName) },
     private val stage: (File) -> Int = { UpdateInstaller.stage(context, it) },
-    private val commit: (Int, Int) -> Unit = { id, build -> UpdateInstaller.commit(context, id, build) },
+    private val commit: (id: Int, build: Int, background: Boolean) -> Unit =
+        { id, build, background -> UpdateInstaller.commit(context, id, build, background) },
     private val abandon: (Int) -> Unit = { UpdateInstaller.abandon(context, it) },
     private val canInstallNow: () -> Boolean = { UpdateInstaller.canInstall(context) },
     private val now: () -> Long = System::currentTimeMillis,
+    /** Why a background install must wait: Carry on screen, or typing not saved. */
+    private val busy: () -> Boolean = { UpdateInstaller.inFront || UnsavedMark(context).isSet },
+    private val work: () -> WorkManager = { WorkManager.getInstance(context) },
 ) : SelfUpdater {
     override val installing: StateFlow<Boolean> = UpdateInstaller.installing
 
     override fun canInstall() = canInstallNow()
+
+    override fun start() {
+        // The update that brought this build in has done its job.
+        if (prefs.getInt(READY, 0) in 1..installedBuild) clearUp()
+        LiveCheckWorker.schedule(work())
+    }
+
+    override fun newerBuild(build: Int) {
+        if (build <= installedBuild || build <= prefs.getInt(REJECTED, 0)) return
+        if (readyApk(build) != null) LiveInstallWorker.enqueue(work())
+        // Kept, not replaced, if one is waiting for Wi-Fi: it fetches the newest build anyway.
+        else LiveDownloadWorker.enqueue(work(), build)
+    }
 
     override fun next(build: Int, unsaved: Boolean, canInstall: Boolean): SelfUpdater.Step = when {
         build <= prefs.getInt(REJECTED, 0) -> SelfUpdater.Step.Browser
@@ -51,8 +74,9 @@ internal class LiveUpdates(
         // Failures count against the build in the file once it passed its checks: the fixed-name
         // download can lag behind the newest build, which mustn't be given up on untried.
         var counted = build
-        val problem = try {
-            val apk = withContext(Dispatchers.IO) {
+        val problem = try { files.withLock {
+            // Downloaded in the background already, or now.
+            val apk = readyApk(build) ?: withContext(Dispatchers.IO) {
                 dir.mkdirs()
                 File(dir, "carry-debug.apk").apply { delete(); download(this) }
             }
@@ -83,13 +107,13 @@ internal class LiveUpdates(
                         abandon(id)
                         UpdateProblem("Save the After tab first, then tap the notice again. Updating restarts Carry.", offerLink = false)
                     } else {
-                        commit(id, counted)
+                        commit(id, counted, false)
                         handedOver = true
                         null
                     }
                 }
             }
-        } catch (e: CancellationException) {
+        } } catch (e: CancellationException) {
             // Once committed, Android's answer still comes; only an attempt that never got there
             // is over.
             if (!handedOver) UpdateInstaller.finish()
@@ -141,7 +165,127 @@ internal class LiveUpdates(
         UpdateInstaller.inFront = false
     }
 
+    /**
+     * Fetches and checks the newest build, which [target] is or something newer. Every run counts
+     * as a try, whether it fails, is stopped (Wi-Fi lost, WorkManager's 10-minute limit) or dies
+     * with the process: after [DOWNLOAD_TRIES] the build is given up on.
+     */
+    suspend fun fetch(target: Int): Outcome = files.withLock {
+        withContext(Dispatchers.IO) {
+            if (target <= installedBuild || target <= prefs.getInt(REJECTED, 0)) return@withContext Outcome.Done
+            if (readyApk(target) != null) {
+                LiveInstallWorker.enqueue(work())
+                return@withContext Outcome.Done
+            }
+            val tries = (if (prefs.getInt(DOWNLOADING, 0) == target) prefs.getInt(TRIES, 0) else 0) + 1
+            prefs.edit().putInt(DOWNLOADING, target).putInt(TRIES, tries).commit()
+            fun again() = if (tries < DOWNLOAD_TRIES) Outcome.Retry else Outcome.Failed.also {
+                log("Build $target: given up after $DOWNLOAD_TRIES tries")
+                reject(target)
+            }
+            if (tries > DOWNLOAD_TRIES) return@withContext again()
+            dir.mkdirs()
+            val part = File(dir, "download.part")
+            try {
+                download(part)
+            } catch (e: IOException) {
+                log("Build $target didn't download: ${e.message}")
+                return@withContext again()
+            }
+            val facts = inspect(part)
+            when (val verdict = verdict(facts, installed())) {
+                is Verdict.Bad -> {
+                    part.delete()
+                    log("Build $target was refused: ${verdict.why}")
+                    reject(target)
+                    return@withContext Outcome.Failed
+                }
+                is Verdict.Stale -> {
+                    part.delete()
+                    return@withContext again()
+                }
+                Verdict.Good -> {}
+            }
+            val build = facts!!.versionCode.toInt()
+            val apk = apkOf(build)
+            if (!part.renameTo(apk)) {
+                part.delete()
+                return@withContext again()
+            }
+            dir.listFiles()?.filter { it != apk }?.forEach { it.delete() }
+            prefs.edit().putInt(READY, build).remove(ASKED).remove(DOWNLOADING).remove(TRIES).commit()
+            LiveInstallWorker.enqueue(work())
+            Outcome.Done
+        }
+    }
+
+    /**
+     * Installs the downloaded build while Carry is closed with nothing unsaved. If Android wants
+     * the owner to confirm, it waits for their tap on the notice instead ([needsConfirming]).
+     */
+    suspend fun installInBackground(): Outcome = files.withLock {
+        withContext(Dispatchers.IO) {
+            val ready = prefs.getInt(READY, 0)
+            if (ready == 0) return@withContext Outcome.Done
+            if (ready <= installedBuild) {
+                clearUp()
+                return@withContext Outcome.Done
+            }
+            val apk = apkOf(ready)
+            if (!apk.isFile) {
+                // Android clears caches when space runs low: fetched again on the next check.
+                prefs.edit().remove(READY).remove(ASKED).commit()
+                return@withContext Outcome.Done
+            }
+            if (ready <= prefs.getInt(REJECTED, 0) || prefs.getInt(ASKED, 0) == ready || !canInstallNow()) {
+                return@withContext Outcome.Done
+            }
+            if (busy()) return@withContext Outcome.Busy
+            // Checked again: a file in the cache could have changed since it was fetched.
+            if (verdict(inspect(apk), installed()) != Verdict.Good) {
+                reject(ready)
+                clearUp()
+                return@withContext Outcome.Done
+            }
+            // A tap's attempt is under way.
+            if (!UpdateInstaller.start()) return@withContext Outcome.Busy
+            var handedOver = false
+            try {
+                val id = stage(apk)
+                // Asked again just before Android takes it: the copy takes a while, and the owner
+                // may have opened Carry and typed meanwhile.
+                if (busy()) {
+                    abandon(id)
+                    return@withContext Outcome.Busy
+                }
+                commit(id, ready, true)
+                handedOver = true
+                Outcome.Started
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log("Build $ready couldn't be handed to Android: ${e.javaClass.simpleName} ${e.message}")
+                if (failed(prefs, ready)) Outcome.Failed else Outcome.Retry
+            } finally {
+                if (!handedOver) UpdateInstaller.finish()
+            }
+        }
+    }
+
+    private fun readyApk(atLeast: Int): File? =
+        prefs.getInt(READY, 0).takeIf { it >= atLeast && it > installedBuild }?.let(::apkOf)?.takeIf { it.isFile }
+
+    private fun apkOf(build: Int) = File(dir, "build-$build.apk")
+
+    private fun clearUp() {
+        dir.listFiles()?.forEach { it.delete() }
+        prefs.edit().remove(READY).remove(ASKED).commit()
+    }
+
     private fun reject(build: Int) = reject(prefs, build)
+
+    /** How a background step went, for its worker. */
+    enum class Outcome { Done, Started, Busy, Retry, Failed }
 
     private class InstallFailed(cause: Throwable) : Exception(cause)
 
@@ -150,7 +294,25 @@ internal class LiveUpdates(
         const val MAX_INSTALL_FAILURES = 3
         /** An approved install is over in well under this; one still unanswered was left. */
         val UNANSWERED_MILLIS = java.util.concurrent.TimeUnit.MINUTES.toMillis(5)
+        /** With the backoff, about a quarter of an hour of a bad connection. */
+        const val DOWNLOAD_TRIES = 5
         internal const val REJECTED = "rejected"
+        internal const val READY = "ready"
+        private const val ASKED = "asked"
+        private const val DOWNLOADING = "downloading"
+        private const val TRIES = "tries"
+
+        /** One step at a time: a tap and a background run share the files in the cache. */
+        private val files = Mutex()
+
+        /** The running build's own updater, for its workers; null for a build made locally. */
+        fun of(context: Context): LiveUpdates? =
+            DebugUpdates.buildOf(BuildConfig.VERSION_NAME)?.let { LiveUpdates(context.applicationContext, it) }
+
+        /** A background install of [build] needs the owner's yes: it waits for their tap. */
+        fun needsConfirming(context: Context, build: Int) {
+            if (build > 0) prefsOf(context).edit().putInt(ASKED, build).commit()
+        }
         private const val FAILING = "failing"
         private const val FAILURES = "failures"
 

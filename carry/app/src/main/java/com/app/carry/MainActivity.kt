@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
         // KEEP, so this is safe on every launch: it will not restart the
         // period and leave the check never actually running.
         SessionWatchWorker.schedule(this)
+        model.updater.start()
 
         setContent {
             val pick = androidx.activity.compose.rememberLauncherForActivityResult(

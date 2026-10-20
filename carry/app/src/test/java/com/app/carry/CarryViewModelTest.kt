@@ -1008,6 +1008,37 @@ class CarryViewModelTest {
     }
 
     @Test
+    fun `unsaved typing is marked on disk for a background install, and cleared by a save or discard`() = runTest(dispatcher) {
+        val mark = UnsavedMark(app)
+        val handle = SavedStateHandle()
+        val model = viewModel(handle)
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        assertFalse(mark.isSet)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        assertTrue("typed, not saved", mark.isSet)
+
+        // The process dies with the typing; the activity is restored with its draft.
+        val restored = viewModel(SavedStateHandle(mapOf(CarryViewModel.DRAFT to handle.get<String>(CarryViewModel.DRAFT))))
+        assertTrue("a restored draft is still unsaved", mark.isSet)
+        restored.read = { ready() }
+        restored.refresh(); settled(restored)
+        restored.discardEdits()
+        assertFalse(mark.isSet)
+
+        model.edit(0, SessionPatch.Entry(weight = 100.0, reps = 8))
+        assertTrue(mark.isSet)
+        saved(model)
+        advanceUntilIdle(); settled(model)
+        assertFalse("saved", mark.isSet)
+
+        model.edit(0, SessionPatch.Entry(weight = 105.0, reps = 8))
+        // Swiped away: the draft went with the process, so a fresh start has nothing to protect.
+        viewModel()
+        assertFalse(mark.isSet)
+    }
+
+    @Test
     fun `a draft left from another session does not hold back an update`() = runTest(dispatcher) {
         val handle = SavedStateHandle()
         val model = viewModel(handle)
