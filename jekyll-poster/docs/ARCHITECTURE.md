@@ -77,6 +77,9 @@
     `PosterNavHost` picks the first screen once the stored account has loaded, and starts a
     shared (`HomeViewModel.startShared`, through `ObsidianNote`) or New post once (a saved flag:
     Home's effects run again each time it returns).
+  - `debug/RequestRecord` (debug source set; the release one records nothing): a network
+    interceptor on each client `AppContainer` makes, labelled with its blog, `sign-in`,
+    `renewal for <blog>` or `preview`.
   - `MainActivity`: `postToStart` turns its intent (a share, a Markdown file opened, the
     launcher's New post shortcut) into the post to start; the shortcut is a dynamic one it adds.
   - `AppContainer`: manual DI. Every web client goes through a `VpnGate`: one per blog, gated by its switch, and one for signing in, gated if any blog asks. A share's photos and

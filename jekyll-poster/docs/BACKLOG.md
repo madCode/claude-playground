@@ -5,10 +5,6 @@ and moves it to Done.
 
 ## Next
 
-- [ ] A request record in debug builds, for the audit below (madCode chose it, 2026-10-20): every
-  request the app sends to GitHub, per sign-in, written where a session can collect it from the
-  emulator. The `Authorization` header is always written as `(hidden)`, with a test that a
-  token never reaches the record. Release builds have none of it.
 - [ ] The tester account (madCode, agreed 2026-10-20): a GitHub account and organisation for
   testing, three copies of the sample blog, a token each in Actions secrets.
   [TESTER_ACCOUNT.md](TESTER_ACCOUNT.md) has the steps. The live checks below wait on it.
@@ -42,6 +38,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 35: a request record in debug builds, for the several-blogs audit
 - [x] Cycle 34: removing the open blog's sign-in never reads as signed out
 - [x] Cycle 33: exotic YAML keys, checked: an edit that would change keys the app doesn't edit
   isn't made
