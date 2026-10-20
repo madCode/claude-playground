@@ -13,11 +13,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import androidx.work.Configuration
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
-import kotlinx.coroutines.job
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -90,20 +88,26 @@ class MainActivityTest {
     private fun waitFor(text: String) =
         compose.waitUntil(10_000) { compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty() }
 
-    /** Until the resume's folder read has landed: it runs on IO, which the
-     *  Compose clock doesn't wait for, so a screen seen before it proves
-     *  nothing about what the read leaves there. */
-    private fun readsLanded() {
+    /**
+     * Counts the ViewModel's folder reads. A screen seen before the
+     * resume's read has landed proves nothing about what that read leaves
+     * there, and the read runs on IO, which Compose's clock doesn't wait for.
+     */
+    private fun countReads(): () -> Int {
         val model = ViewModelProvider(compose.activity)[CarryViewModel::class.java]
-        compose.waitUntil(10_000) { model.viewModelScope.coroutineContext.job.children.none { it.isActive } }
-        compose.waitForIdle()
+        val real = model.read
+        val reads = java.util.concurrent.atomic.AtomicInteger()
+        model.read = { real().also { reads.incrementAndGet() } }
+        return reads::get
     }
 
     @Test
     fun `a whole volume picked by mistake is refused, said, and not held`() {
         compose.onNodeWithText("Pick your folder").assertExists()
+        val reads = countReads()
         pick(wholePhone)
-        readsLanded()
+        compose.waitUntil(10_000) { reads() >= 1 }
+        compose.waitForIdle()
         compose.onNodeWithText("That's your whole phone").assertExists()
         assertTrue("a whole-phone grant must not be taken: $grants", grants.isEmpty())
         assertNull(SessionFolder(context).uri)
