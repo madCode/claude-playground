@@ -87,12 +87,12 @@ import com.app.jekyllposter.ui.theme.InkButton
 fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val text = viewModel.text
-    var picker by remember { mutableStateOf<TermKind?>(null) }
+    var picker by rememberSaveable { mutableStateOf<TermKind?>(null) }
     // The toolbar formats the body, so it only works while the body has the focus.
     var bodyFocused by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
-    var confirmDeleteFromBlog by remember { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var confirmDeleteFromBlog by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.closed) { if (state.closed) onClose() }
     BackHandler(onBack = viewModel::close)
     val editable = state.editable

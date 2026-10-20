@@ -1,54 +1,50 @@
-# Checks on the laptop's emulator
+# Device checks
 
-What CI's emulator can't do: real other apps, the device-flow sign-in in a browser, a real VPN,
-and looking at the screens. A session in the Claude desktop app on madCode's laptop runs these,
-with `tools/emulator-check.sh` for the adb steps. Run them when a change touches the path, and
-every few weeks otherwise. About 40 minutes.
+Most of what used to need the laptop's emulator runs on CI's, on every PR and on main. Two checks
+still need a person: run them now and then, when a change touches their path. Neither is on a
+schedule.
 
-The tester account's sign-ins live in the desktop app's built-in browser (GitHub and Proton, see
-[TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)). Post only to the tester's blogs, and delete what you post.
+## On CI's emulator
 
-## Before
+"Jekyll Poster device tests" runs these on every PR that touches the app. `:sender` is a second
+app installed beside it, so photos and notes arrive from another process with a real URI grant.
 
-1. Note free disk and load. An emulator already running may be madCode's: leave it and say so.
-2. An emulator with Google Play, API 33 or newer, built for the laptop's processor (arm64).
-   `tools/emulator-check.sh start <avd>` boots it behind a 45-minute watchdog.
-3. `tools/emulator-check.sh install`: the newest CI build from main. It has Sign in with GitHub.
-4. `tools/emulator-check.sh record on`, so the run leaves a request record.
-
-## The checks
-
-| Check | Do this | It worked if |
+| Check | Test | It proves |
 |---|---|---|
-| **Sign in with GitHub** | In the app, Sign in with GitHub. Enter the code at github.com/login/device in the built-in browser (signed in as the tester), and authorise | The tester's blogs are listed; pick `jekyll-test-blog-a` and its posts load |
-| **A note from Obsidian** | Install Obsidian from Play. Make a vault with a note holding a `[[link]]` to another note, a `%%comment%%` and an embedded photo. Share the note to Jekyll Poster | A post opens with the note's title and body, the comment gone, the link as a `post_url`, and the photo in place |
-| **A photo from the gallery** | `adb push` a JPEG with a GPS location to `/sdcard/Pictures`, open it in Photos and share it | The editor has the photo; once published, the file on GitHub has no location (`exiftool` on the downloaded file) |
-| **The camera** | In the editor, take a photo with the emulator's camera | It's in the post, and nothing is left in the app's `cache/camera` |
-| **Only through a VPN** | Install Proton VPN from Play and sign in as the tester. Blog & privacy: turn on Only connect through a VPN, with Proton off. Publish | The post shows "Waiting for your VPN…" and isn't on GitHub. Turn Proton on: it goes out within a minute. If Proton's app asks for a password the browser's sign-in can't give it, this check waits for madCode |
-| **Rotation** | Rotate (`tools/emulator-check.sh rotate on`) with text typed, a dialog open, and the term picker open | Nothing typed is lost; no dialog or post appears twice |
-| **Large text and dark theme** | `big-text on`, then `dark on`; look at Home, the editor and Blog & privacy | Nothing clipped or overlapping; text readable on the zine colours |
-| **TalkBack** | Turn TalkBack on; go through New post and Publish | Every button says what it does; the blog switcher names the open blog |
+| A photo from another app | `FromOtherAppsTest` | It's added with its alt text, and the copy on GitHub has no location and doesn't say what made it |
+| A note from Obsidian | `FromOtherAppsTest` | The post takes the note's name as its title, `[[links]]` to the blog's posts become `post_url` links, `%%comments%%` are gone |
+| The camera | `FromOtherAppsTest` | A photo from the emulator's own camera app is added, and the original is deleted from the app's cache |
+| Rotation | `ScreensOnTheDeviceTest` | Text typed, the tag picker and its search survive turning the phone, and the post isn't made twice |
+| Large text and dark theme | `ScreensOnTheDeviceTest` | Home, the editor and Blog & privacy at twice the text size, in the dark, pass Android's accessibility checks (labels, touch targets, contrast). Their pictures are kept in the run's report, under `screens/` |
 
-## After
+"Jekyll Poster device live check" runs nightly against the tester's real blogs
+([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)).
 
-1. `tools/emulator-check.sh record pull`: `requests.jsonl` holds every request the run made. It
-   should hold no token: `grep -E 'gh[pousr]_|github_pat_' requests.jsonl` finds nothing. Give it
-   to the several-blogs audit if one is due.
-2. Delete the posts the run made, from the app or on GitHub.
-3. `big-text off`, `dark off`, `rotate off`, then `tools/emulator-check.sh stop`. It fails if an
-   emulator is left.
-4. Free disk and load as they were. Write what passed, what didn't and the date in the cycle's
-   DEVLOG.md entry, and update "Last checked" below.
+What CI can't show:
 
-## Last checked
+- The camera's real lens, and a location in its photos. The shared photo's location is checked
+  instead.
+- A share from Obsidian itself. `:sender` shares a note the way Obsidian does.
+- A vault folder for a note's embedded photos, chosen in Android's folder picker. The JVM tests
+  cover the vault's photos.
+
+## Now and then, by a person
+
+On a phone or the laptop's emulator with the newest debug build (`tools/emulator-check.sh install`
+puts it on an emulator). Post only to the tester's blogs, and delete what you post.
+
+| Check | When | Do this | It worked if |
+|---|---|---|---|
+| **Sign in with GitHub** | A change to sign-in, or the GitHub App | Sign in with GitHub; enter the code at github.com/login/device signed in as the tester, and authorise | The tester's blogs are listed; pick `jekyll-test-blog-a` and its posts load |
+| **A TalkBack listen** | A new screen, or a change to one's layout | Turn TalkBack on; go through New post and Publish | Every button says what it does; the blog switcher names the open blog |
+
+The first needs a browser signed in as the tester, whose password and 2FA stay out of CI. The
+second needs someone listening: CI's accessibility checks find missing labels, not labels that
+make no sense.
+
+## Last checked by a person
 
 | Check | When |
 |---|---|
 | Sign in with GitHub | Not yet |
-| A note from Obsidian | Not yet |
-| A photo from the gallery | Not yet |
-| The camera | Not yet |
-| Only through a VPN | Not yet |
-| Rotation | Not yet |
-| Large text and dark theme | Not yet |
-| TalkBack | Not yet |
+| A TalkBack listen | Not yet |
