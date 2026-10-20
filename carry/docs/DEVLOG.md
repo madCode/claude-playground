@@ -16,6 +16,7 @@
   its band from the sheet on screen (#113). Older entries are below.
 - **Watching:** typing in the few seconds after an update is handed to
   Android, while it installs, can be lost: the After tab stays editable.
+  That holds for a background install too, if Carry is opened right then.
   Making it read-only while an install is under way would close it
   (review of cycle 71; older than that). a session logged entirely by hand is still not listed on the
   Since tab at all — it moves the screen's aggregates, so it is its own
@@ -51,6 +52,14 @@ item.
   Wi-Fi wait needs `ACCESS_NETWORK_STATE`, so the backlog question about
   stripping WorkManager's permissions now asks about `FOREGROUND_SERVICE`
   alone.
+- The review found four gaps, fixed here. A save still writing counted
+  as nothing unsaved. A tap during a background install did nothing
+  without saying why. A tapped download stayed in the cache. A build
+  already given up on could be downloaded again while the newest file
+  lagged.
+- Left: opening Carry and typing in the few seconds while a background
+  install finishes can lose that typing, as with a tapped install (see
+  *Watching*).
 - Nothing you see changed.
 
 **Checks only a phone or an emulator can do**, about 30 minutes on an

@@ -682,7 +682,7 @@ without a tap (`LiveUpdates`, `LiveWorkers`):
 - **The install waits for Carry to be closed with nothing unsaved.** The
   draft lives in saved instance state, which an install throws away, so
   the ViewModel keeps a mark on disk (`UnsavedMark`) from the first
-  keystroke until a save or a discard. A fresh start with no draft
+  keystroke until a save or a discard, and while any save is writing. A fresh start with no draft
   restored clears it, since that typing is already gone. While Carry is
   on screen or the mark is set, the install is tried again later, 30
   minutes further apart each time. Both are checked again after the copy
