@@ -35,6 +35,11 @@ data class Account(
     /** From "Sign in with GitHub": renews [token] before it expires at [expiresAt] (epoch ms). */
     val refreshToken: String? = null,
     val expiresAt: Long? = null,
+    /**
+     * Made with "Sign in with GitHub", not a pasted token. Its tokens may not expire, and then come
+     * with no [refreshToken].
+     */
+    val withGitHub: Boolean = refreshToken != null,
 ) {
     val repoName: String get() = "$owner/$repo"
 
@@ -152,10 +157,18 @@ class AccountStore(
         }
     }
 
-    /** A fresh sign-in to [account]'s blog, which becomes the open one. */
+    /**
+     * A fresh sign-in to [account]'s blog, which becomes the open one. An account already signed
+     * in the same way keeps its one sign-in, with the new tokens: any "Sign in with GitHub" token
+     * reaches what the app was given, but a pasted token reaches only the repositories it was made
+     * for, so only the same token is the same sign-in.
+     */
     suspend fun save(account: Account) = lock.withLock {
         imported()
-        dao.signInTo(sealed(account), account.savedBlog())
+        val signIn = sealed(account)
+        val same = dao.signInsFor(account.login, signIn.kind)
+            .lastOrNull { signIn.kind == SignInKind.GitHubApp || unseal(it.sealedToken) == account.token }
+        dao.signInTo(signIn, account.savedBlog(), reuse = same?.id)
         store.edit { it[CURRENT] = account.blogKey }
         Unit
     }
@@ -224,8 +237,7 @@ class AccountStore(
 
     private fun sealed(account: Account) = SignIn(
         login = account.login,
-        // Only "Sign in with GitHub" gives a refresh token.
-        kind = if (account.refreshToken != null) SignInKind.GitHubApp else SignInKind.Token,
+        kind = if (account.withGitHub) SignInKind.GitHubApp else SignInKind.Token,
         sealedToken = seal(account.token),
         sealedRefreshToken = account.refreshToken?.let(::seal),
         expiresAt = account.expiresAt,
@@ -245,6 +257,7 @@ class AccountStore(
             siteUrl = blog.siteUrl,
             refreshToken = signIn.sealedRefreshToken?.let(::unseal),
             expiresAt = signIn.expiresAt,
+            withGitHub = signIn.kind == SignInKind.GitHubApp,
         )
     }
 
@@ -311,4 +324,5 @@ fun Account.withTokens(tokens: DeviceFlow.Tokens, now: Long) = copy(
     token = tokens.accessToken,
     refreshToken = tokens.refreshToken ?: refreshToken,
     expiresAt = tokens.expiresIn?.let { now + it * 1000 },
+    withGitHub = true,
 )

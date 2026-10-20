@@ -40,6 +40,10 @@ doesn't want to open a laptop and make a commit for every post.
 - **Add a blog** lists a sign-in's repositories (with several sign-ins, the writer picks which
   first). **Add a sign-in** is the sign-in screen again, for another account or an organisation
   a token can't cover. Either opens the blog added.
+- **The same account twice** is one sign-in. Signing in with GitHub again as an account the app
+  has adds the blog to that sign-in, with the newer token; so does pasting the same token again.
+  A different pasted token for the same account stays a sign-in of its own, since each token
+  reaches only the repositories it was made for.
 - **Settings → Your blogs** is the same list, with **Remove** on each sign-in. Removing forgets
   it and its blogs and keeps their drafts; if the open blog went, another opens, and with none
   left the app returns to the sign-in screen. Remove is refused while a post is still waiting

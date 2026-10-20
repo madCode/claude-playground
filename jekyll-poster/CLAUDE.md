@@ -30,8 +30,10 @@ To try a change against a real blog, run the "Jekyll Poster live check" workflow
 it publishes a post to the sample blog, waits for Pages, then deletes it. Run it from Actions, not
 from a cloud session: the session's GitHub proxy refuses the commit calls the app makes.
 
-JDK 21 and the Android SDK (compileSdk 37) are required; `tools/install-android-sdk.sh` installs
-the SDK for a cloud session. CI publishes main's debug APK to the `jekyll-poster-debug` release.
+JDK 21 and the Android SDK (compileSdk 37) are required. The cloud environment has the SDK at
+`/opt/android-sdk`: write `sdk.dir=/opt/android-sdk` into the gitignored `local.properties`;
+`tools/install-android-sdk.sh` installs it where it's missing. CI publishes main's debug APK to
+the `jekyll-poster-debug` release.
 
 Debug builds are installed and in use, so changing a Room entity means bumping the database
 version, adding a Migration with a `MigrationTest` case, and committing the new schema JSON in

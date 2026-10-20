@@ -65,6 +65,16 @@ class AccountStoreTest {
         assertNull(store.current())
     }
 
+    @Test fun signingInWithGitHubAgainWithTokensThatDontExpireKeepsOneSignIn() = runBlocking {
+        // A GitHub App can give tokens that never expire: no refresh token, and a new token each time.
+        val store = store()
+        store.save(account.copy(token = "ghu_first", withGitHub = true))
+        store.save(account.copy(token = "ghu_second", repo = "notes", withGitHub = true))
+        assertEquals(signInOf(account.blogKey), signInOf("writer/notes@main"))
+        assertEquals("ghu_second", store.forBlog(account.blogKey)!!.token)
+        assertTrue(store.forBlog(account.blogKey)!!.withGitHub)
+    }
+
     @Test fun anExpiringTokenIsRenewedBeforeUse() = runBlocking {
         var now = 1_000_000L
         val renewals = mutableListOf<String>()
