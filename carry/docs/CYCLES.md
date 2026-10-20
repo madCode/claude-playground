@@ -7,7 +7,7 @@ that hold become rules in CLAUDE.md or the cycles skill.
 
 ## 2026-10-20 (cloud session, second Carry agent, later)
 
-### Cycle 72 — build: tests for the guards, and `MainActivity`
+### Cycle 73 — build: tests for the guards, and `MainActivity`
 
 - **Results from a script on a shared path are unproven** (cycle 71's
   note on the scratchpad): rerun every falsification it touched.
@@ -25,6 +25,17 @@ that hold become rules in CLAUDE.md or the cycles skill.
   before guessing at it.
 
 ## 2026-10-20 (cloud session, first Carry agent)
+
+### Cycle 72 — build: updates, part two (Wi-Fi download, background install)
+
+- **A review's fix can bring back a dialog the owner already answered.**
+  Re-asking Android's install question on every return looked like the fix
+  for one left with Home; the second look showed it would also re-ask
+  after Update, while the install finishes. Before keeping a held intent
+  around, ask what state the other side is in when you next see it.
+- **A test's counter can't see a call that throws first.** `staged`
+  counted only stagings that got past the injected failure, so "not staged
+  again" passed by construction. Count the call itself.
 
 ### Cycle 71 — build: updates, part one (debug-only installer, its checks)
 

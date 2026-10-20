@@ -94,6 +94,9 @@ object UpdateInstaller {
      */
     fun stage(context: Context, apk: File): Int {
         val installer = context.packageManager.packageInstaller
+        // A session left by a process that died before committing would keep its copy of the
+        // APK for days. One committed and waiting on Android stays.
+        installer.mySessions.filter { it.sessionId != committed }.forEach { runCatching { installer.abandonSession(it.sessionId) } }
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(context.packageName)
             // Android 12 and later may skip the confirmation once Carry has installed itself
@@ -117,15 +120,20 @@ object UpdateInstaller {
         return id
     }
 
-    /** Hands the staged session of [build] to Android. The answer arrives at [Result]. */
-    fun commit(context: Context, id: Int, build: Int) {
+    /**
+     * Hands the staged session of [build] to Android. The answer arrives at [Result].
+     *
+     * @param background started while Carry was closed, not by a tap: if Android wants the owner
+     *   to confirm, it isn't asked out of nowhere; the notice's tap installs it instead.
+     */
+    fun commit(context: Context, id: Int, build: Int, background: Boolean = false) {
         try {
             context.packageManager.packageInstaller.openSession(id).use { session ->
                 // Mutable: the installer fills in the status and, when it needs the owner, the
                 // confirmation intent. Explicit, so nothing else can receive it.
                 val flags = PendingIntent.FLAG_UPDATE_CURRENT or
                     (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
-                val answer = Intent(context, Result::class.java).putExtra(EXTRA_BUILD, build)
+                val answer = Intent(context, Result::class.java).putExtra(EXTRA_BUILD, build).putExtra(EXTRA_BACKGROUND, background)
                 val reply = PendingIntent.getBroadcast(context, id, answer, flags)
                 committed = id
                 committedAt = System.currentTimeMillis()
@@ -165,8 +173,16 @@ object UpdateInstaller {
             // under way now, so it mustn't end it; a failure still counts against its build.
             val id = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1)
             fun finish() { if (id == -1 || id == committed) UpdateInstaller.finish() }
+            val build = intent.getIntExtra(EXTRA_BUILD, 0)
+            val background = intent.getBooleanExtra(EXTRA_BACKGROUND, false)
             when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
-                PackageInstaller.STATUS_PENDING_USER_ACTION -> {
+                PackageInstaller.STATUS_PENDING_USER_ACTION -> if (background) {
+                    // Android wants a yes. A dialog appearing on its own, perhaps as the owner
+                    // glances at the sheet in the lobby, is worse than waiting for their tap.
+                    intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1).takeIf { it >= 0 }?.let { abandon(context, it) }
+                    LiveUpdates.needsConfirming(context, build)
+                    finish()
+                } else {
                     @Suppress("DEPRECATION")
                     val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
                         ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) ?: return finish()
@@ -182,13 +198,15 @@ object UpdateInstaller {
                 else -> {
                     finish()
                     val why = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "status $status"
-                    val gaveUp = LiveUpdates.installFailed(context, intent.getIntExtra(EXTRA_BUILD, 0), status)
+                    val gaveUp = LiveUpdates.installFailed(context, build, status)
                     val next = if (gaveUp) ". Carry won't try this build again; tap the notice for the download." else ""
-                    Toast.makeText(context, "The update didn't install: $why$next", Toast.LENGTH_LONG).show()
+                    // Nobody asked for a background attempt, so nobody is told it failed.
+                    if (!background) Toast.makeText(context, "The update didn't install: $why$next", Toast.LENGTH_LONG).show()
                 }
             }
         }
     }
 
     const val EXTRA_BUILD = "com.app.carry.BUILD"
+    const val EXTRA_BACKGROUND = "com.app.carry.BACKGROUND"
 }

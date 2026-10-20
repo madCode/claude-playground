@@ -551,7 +551,7 @@ release build's merged manifest asks for either. The other four arrive with
 |---|---|
 | `WAKE_LOCK` | hold the device awake long enough to finish a check |
 | `RECEIVE_BOOT_COMPLETED` | re-register the periodic work after a reboot |
-| `ACCESS_NETWORK_STATE` | read connectivity, for network constraints |
+| `ACCESS_NETWORK_STATE` | read connectivity, for network constraints: the debug build's update check and Wi-Fi download use them |
 | `FOREGROUND_SERVICE` | run expedited work |
 
 `ACCESS_NETWORK_STATE` permits *reading whether a network exists*, not
@@ -668,6 +668,33 @@ session, from before a restart, doesn't end the attempt under way.
 Failures count against the build in the file, which can lag behind the
 newest one listed, so a newer build is never given up on untried, and a
 file already given up on isn't tried again.
+
+**In the background**, a debug build from CI also keeps itself current
+without a tap (`LiveUpdates`, `LiveWorkers`):
+
+- **A check every six hours**, on any connection, so a build arrives
+  without Carry being opened. The three-hour limit above still applies,
+  shared with the check on opening Carry.
+- **The download waits for Wi-Fi** (an unmetered network) and enough free
+  storage. It is checked like a tapped one, kept in the app's cache, and
+  given up on after five failed tries. A tap on the notice then installs
+  that file without downloading again.
+- **The install waits for Carry to be closed with nothing unsaved.** The
+  draft lives in saved instance state, which an install throws away, so
+  the ViewModel keeps a mark on disk (`UnsavedMark`) from the first
+  keystroke until a save or a discard, and while any save is writing. A fresh start with no draft
+  restored clears it, since that typing is already gone. While Carry is
+  on screen or the mark is set, the install is tried again later, 30
+  minutes further apart each time. Both are checked again after the copy
+  into Android's installer, just before the hand-off.
+- **No question out of nowhere.** If Android wants the owner to confirm
+  (the first in-app update, or below Android 12), the background attempt
+  is dropped and the notice's tap installs it instead. A dialog appearing
+  on its own, perhaps while the owner glances at the sheet in the lobby,
+  would be worse than waiting. A failure in the background isn't toasted,
+  but it is counted toward giving up.
+- Without "install unknown apps" allowed, nothing happens in the
+  background; the tap asks for it as before.
 
 The session files still leave only through the share sheet.
 

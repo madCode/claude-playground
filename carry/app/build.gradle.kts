@@ -148,4 +148,5 @@ dependencies {
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.espresso.core)
     testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.work.testing)
 }

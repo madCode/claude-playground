@@ -16,6 +16,13 @@ interface SelfUpdater {
     /** What a tap on "Build [build] is out" does next. */
     fun next(build: Int, unsaved: Boolean, canInstall: Boolean): Step
 
+    /** At app start: the check every six hours, and clearing up after the update that just
+     *  installed this build. */
+    fun start()
+
+    /** [DebugUpdates] knows of [build], newer than this one: fetch it on Wi-Fi. */
+    fun newerBuild(build: Int)
+
     /** Android's "Install unknown apps" switch for this app. */
     fun canInstall(): Boolean
 
@@ -43,6 +50,8 @@ interface SelfUpdater {
     companion object {
         val NONE: SelfUpdater = object : SelfUpdater {
             override val installing: StateFlow<Boolean> = MutableStateFlow(false)
+            override fun start() {}
+            override fun newerBuild(build: Int) {}
             override fun next(build: Int, unsaved: Boolean, canInstall: Boolean) = Step.Browser
             override fun canInstall() = false
             override suspend fun install(build: Int, unsaved: () -> Boolean): UpdateProblem? = null
