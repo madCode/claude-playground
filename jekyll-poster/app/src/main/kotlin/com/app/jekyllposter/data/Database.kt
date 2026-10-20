@@ -502,16 +502,19 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
 
 /**
  * One "Sign in with GitHub" sign-in per account: an account signed in to twice had two, listed
- * twice. Its blogs move to the newest, and the others go. Pasted tokens stay apart, since two
- * tokens for one account can each reach different repositories.
+ * twice. Its blogs move to the one renewed last (the latest expiry), whose refresh token is the
+ * likeliest to work, and the others go. Pasted tokens stay apart, since two tokens for one account
+ * can each reach different repositories.
  */
 val MIGRATION_8_9 = object : Migration(8, 9) {
     override fun migrate(db: SupportSQLiteDatabase) {
-        val newest = "SELECT MAX(n.id) FROM sign_ins n WHERE n.kind = 'GitHubApp' AND n.login = s.login COLLATE NOCASE"
         db.execSQL(
-            "UPDATE blogs SET signInId = (SELECT ($newest) FROM sign_ins s WHERE s.id = blogs.signInId) " +
-                "WHERE signInId IN (SELECT id FROM sign_ins WHERE kind = 'GitHubApp')",
+            "CREATE TEMP TABLE sign_in_keep AS SELECT s.id AS id, (SELECT n.id FROM sign_ins n WHERE n.kind = 'GitHubApp' " +
+                "AND n.login = s.login COLLATE NOCASE ORDER BY n.expiresAt DESC, n.id DESC LIMIT 1) AS keeper " +
+                "FROM sign_ins s WHERE s.kind = 'GitHubApp'",
         )
-        db.execSQL("DELETE FROM sign_ins WHERE kind = 'GitHubApp' AND id < (${newest.replace("s.login", "sign_ins.login")})")
+        db.execSQL("UPDATE blogs SET signInId = (SELECT keeper FROM sign_in_keep k WHERE k.id = blogs.signInId) WHERE signInId IN (SELECT id FROM sign_in_keep)")
+        db.execSQL("DELETE FROM sign_ins WHERE id IN (SELECT id FROM sign_in_keep WHERE id != keeper)")
+        db.execSQL("DROP TABLE sign_in_keep")
     }
 }

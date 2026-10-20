@@ -33,10 +33,14 @@ Times are when each cycle landed, Pacific.
   sign-in, with the newer token; so does pasting the same token again. A different pasted token
   for the same account stays a sign-in of its own: each fine-grained token reaches only the
   repositories it was made for, so one can't stand in for the other. Updating merges the
-  doubled "Sign in with GitHub" sign-ins already on the phone into the newest (database
-  version 9).
+  doubled "Sign in with GitHub" sign-ins already on the phone into the one renewed last
+  (database version 9). A "Sign in with GitHub" whose tokens don't expire is now known as one,
+  so it merges too.
+- **Kept, as for Add a blog:** two blogs under one sign-in share its token renewal, which goes
+  through the VPN if either blog asks for it.
 - **Also:** the several sign-ins and blogs item is done (cycles 27–29), and taken off Next.
 
+## Sat 17 Oct
 
 ### Cycle 29: privacy per blog (several blogs, 3 of 3)
 - **Asked for:** build cycle 3 of [#137](https://github.com/madCode/claude-playground/issues/137).

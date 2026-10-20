@@ -135,9 +135,9 @@ class MigrationTest {
 
     @Test fun version8AccountsSignedInWithGitHubTwiceKeepOneSignIn() {
         helper.createDatabase(DB, 8).use { db ->
-            db.execSQL("INSERT INTO sign_ins (id, login, kind, sealedToken) VALUES (1, 'writer', 'GitHubApp', 'old')")
+            db.execSQL("INSERT INTO sign_ins (id, login, kind, sealedToken, expiresAt) VALUES (1, 'writer', 'GitHubApp', 'renewed-last', 5000)")
             db.execSQL("INSERT INTO sign_ins (id, login, kind, sealedToken) VALUES (2, 'other', 'GitHubApp', 'other')")
-            db.execSQL("INSERT INTO sign_ins (id, login, kind, sealedToken) VALUES (3, 'Writer', 'GitHubApp', 'new')")
+            db.execSQL("INSERT INTO sign_ins (id, login, kind, sealedToken, expiresAt) VALUES (3, 'Writer', 'GitHubApp', 'made-last', 4000)")
             db.execSQL("INSERT INTO sign_ins (id, login, kind, sealedToken) VALUES (4, 'writer', 'Token', 'pasted')")
             db.execSQL("INSERT INTO sign_ins (id, login, kind, sealedToken) VALUES (5, 'writer', 'Token', 'pasted-too')")
             listOf("a" to 1, "b" to 3, "c" to 2, "d" to 4, "e" to 5).forEach { (repo, id) ->
@@ -146,12 +146,12 @@ class MigrationTest {
         }
         helper.runMigrationsAndValidate(DB, 9, true, MIGRATION_8_9).use { db ->
             db.query("SELECT id FROM sign_ins ORDER BY id").use { c ->
-                assertEquals(listOf(2L, 3L, 4L, 5L), generateSequence { if (c.moveToNext()) c.getLong(0) else null }.toList())
+                assertEquals(listOf(1L, 2L, 4L, 5L), generateSequence { if (c.moveToNext()) c.getLong(0) else null }.toList())
             }
             db.query("SELECT repo, signInId FROM blogs ORDER BY repo").use { c ->
                 val rows = generateSequence { if (c.moveToNext()) c.getString(0) to c.getLong(1) else null }.toList()
-                // The newest sign-in takes the older one's blog; pasted tokens stay apart.
-                assertEquals(listOf("a" to 3L, "b" to 3L, "c" to 2L, "d" to 4L, "e" to 5L), rows)
+                // The sign-in renewed last takes the other's blog; pasted tokens stay apart.
+                assertEquals(listOf("a" to 1L, "b" to 1L, "c" to 2L, "d" to 4L, "e" to 5L), rows)
             }
         }
     }

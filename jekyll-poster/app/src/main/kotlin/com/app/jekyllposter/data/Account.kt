@@ -35,6 +35,11 @@ data class Account(
     /** From "Sign in with GitHub": renews [token] before it expires at [expiresAt] (epoch ms). */
     val refreshToken: String? = null,
     val expiresAt: Long? = null,
+    /**
+     * Made with "Sign in with GitHub", not a pasted token. Its tokens may not expire, and then come
+     * with no [refreshToken].
+     */
+    val withGitHub: Boolean = refreshToken != null,
 ) {
     val repoName: String get() = "$owner/$repo"
 
@@ -232,8 +237,7 @@ class AccountStore(
 
     private fun sealed(account: Account) = SignIn(
         login = account.login,
-        // Only "Sign in with GitHub" gives a refresh token.
-        kind = if (account.refreshToken != null) SignInKind.GitHubApp else SignInKind.Token,
+        kind = if (account.withGitHub) SignInKind.GitHubApp else SignInKind.Token,
         sealedToken = seal(account.token),
         sealedRefreshToken = account.refreshToken?.let(::seal),
         expiresAt = account.expiresAt,
@@ -253,6 +257,7 @@ class AccountStore(
             siteUrl = blog.siteUrl,
             refreshToken = signIn.sealedRefreshToken?.let(::unseal),
             expiresAt = signIn.expiresAt,
+            withGitHub = signIn.kind == SignInKind.GitHubApp,
         )
     }
 
@@ -319,4 +324,5 @@ fun Account.withTokens(tokens: DeviceFlow.Tokens, now: Long) = copy(
     token = tokens.accessToken,
     refreshToken = tokens.refreshToken ?: refreshToken,
     expiresAt = tokens.expiresIn?.let { now + it * 1000 },
+    withGitHub = true,
 )
