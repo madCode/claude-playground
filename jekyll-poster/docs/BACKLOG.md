@@ -9,6 +9,11 @@ and moves it to Done.
   against a log of a real run's requests (not the code). Needs that log: how to get it is a
   question for madCode (morning page).
 
+- [ ] A race to fix: `AccountStoreTest.removingTheOpenBlogsSignInNeverReadsAsSignedOut` failed
+  once in 20 full runs in cycle 32. The open blog read as signed out for a moment while its
+  sign-in was removed, which the screens take as "go to sign-in". Reproduce it with a delay in
+  `AccountStore.remove`, then fix.
+
 ## Later
 
 - [ ] Per-blog templates: front matter a new post starts with

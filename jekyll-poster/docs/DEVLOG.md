@@ -18,13 +18,40 @@ Times are when each cycle landed, Pacific.
   workflow publishes and deletes one there through the app's own GitHub client.
 - **Used for real:** madCode has published to their own blog from the phone.
 - **Several blogs:** all three cycles are built: blogs under several accounts, a switcher from
-  the title, Remove, and privacy per blog (cycle 3 in its PR). Next, the audits: a log of a real
-  run's requests per account, and a UX pass on the switcher.
+  the title, Remove, and privacy per blog. The switcher's UX pass found nothing to change; the
+  request-log audit waits on how to get a real run's log (morning page).
 - **Waiting on you:** nothing. The Android SDK is now in the cloud environment, at
   `/opt/android-sdk` (cycle 30 built and tested with it; `ANDROID_HOME` isn't set, so a session
   writes `sdk.dir` into `local.properties`).
 
 ## Tue 20 Oct
+
+### Cycle 32: the Compose-test hang, found; the preview flake, counted and fixed
+- **Asked for:** two Next items: find the Compose-test "Room hang" (cycles 1, 11, 18), and
+  count the `PreviewScreenTest` flake before fixing it.
+- **Found:** it wasn't Room. Robolectric runs a test on the main thread, and Compose's
+  `waitUntil` turns the main looper only when its condition reads the screen. A wait on the
+  database, GitHub or a view model's state waited on work posted to the main thread that never
+  ran. A thread dump showed Room's threads idle. The preview flake was the same thing: its wait
+  read the view model's state.
+- **Changed (tests only):** `waitUntilLooped` turns the looper as it waits, used by the five
+  waits that don't read the screen. The edit flow cycle 1 couldn't test now has a test: open a
+  post on the blog, change it on the screen, Update, and the blog has it. `SharedPhotosTest`
+  waited for the text but not the screen's state, which failed once in the count.
+- **Counted:** full `:app:testDebugUnitTest` runs. Before, on main: PreviewScreenTest failed in
+  2 of 20 (runs 11 and 18, both at its wait), SharedPhotosTest in 1, ObsidianShareFlowTest in
+  1. After, with this change: PreviewScreenTest failed in 0 of 20; one run failed
+  `AccountStoreTest.removingTheOpenBlogsSignInNeverReadsAsSignedOut` (a separate race, now in
+  BACKLOG). Run on the class alone, 40 times in one JVM, it never failed.
+
+### Cycle 31: a UX pass on the blog switcher (audit)
+- **Asked for:** the UX half of the several-blogs audit.
+- **Found:** read from the rendered screens (Home with two blogs, the switcher, Your blogs,
+  Remove refused, the editor's "To", Settings, Add a sign-in): nothing needs changing. Each
+  blog shows its sign-in, posts waiting and switches; the open one is ticked and named for
+  TalkBack.
+- **Left:** the request-log half needs a log of a real run's requests per account, which a
+  cloud session can't make. How to get one is on the morning page.
 
 ### Cycle 30: the same account signed in twice is one sign-in
 - **Asked for:** cycle 28 left it: signing in again as an account the app already had, to add
