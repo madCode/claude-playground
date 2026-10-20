@@ -81,8 +81,10 @@ item.
 - Nothing you see changed.
 
 **Checks only a phone or an emulator can do**, about 30 minutes on an
-emulator: API 34, Google APIs, x86_64. Android 12+ is what allows an
-install with no dialog, and the emulator's network counts as Wi-Fi.
+emulator: any Google APIs image from API 33 up, built for the computer's
+own processor (arm64 on the laptop, where `np36` is API 36). Android 12+
+is what allows an install with no dialog, API 33+ is what asks for
+notifications, and the emulator's network counts as Wi-Fi.
 
 1. From a checkout of main with both PRs merged, build a debug APK that
    calls itself build 1: `GITHUB_RUN_NUMBER=1 ./gradlew assembleDebug`.
