@@ -17,6 +17,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -102,7 +103,14 @@ class AccountStore(
 
     /** The open blog and its sign-in. */
     val account: Flow<Account?> = currentKey.flatMapLatest { key ->
-        if (key == null) flowOf(null) else dao.watch(key).map { it?.let(::read) }
+        if (key == null) {
+            flowOf(null)
+        } else {
+            dao.watch(key).map { it?.let(::read) }
+                // Removing the open blog moves the key first, but Room can report the row gone
+                // before the new key reaches this flow. That null isn't "signed out": the next blog follows.
+                .filter { it != null || store.data.first()[CURRENT] == key }
+        }
     }
 
     /** Every blog, grouped by the sign-in it posts with. */

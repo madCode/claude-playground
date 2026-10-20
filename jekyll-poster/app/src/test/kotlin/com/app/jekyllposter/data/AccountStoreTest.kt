@@ -17,7 +17,9 @@ import javax.crypto.spec.SecretKeySpec
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -167,6 +169,26 @@ class AccountStoreTest {
         idleUntilTrue { seen.lastOrNull()?.blogKey == account.blogKey }
         watching.cancel()
         // The screens read a null as signed out, and would leave for the sign-in screen.
+        assertTrue(seen.toString(), seen.none { it == null })
+    }
+
+    @Test fun removingTheOpenBlogsSignInNeverReadsAsSignedOutWhenTheNewKeyIsSlow() = runBlocking {
+        // The open blog's key reaches the flow late, as it sometimes did in full test runs: the
+        // removed blog's row is gone first.
+        val slow = object : DataStore<Preferences> {
+            override val data = this@AccountStoreTest.data.data.onEach { delay(300) }
+            override suspend fun updateData(transform: suspend (Preferences) -> Preferences) = this@AccountStoreTest.data.updateData(transform)
+        }
+        val store = AccountStore(slow, db.accounts(), testCipher())
+        store.save(account)
+        val inkwell = account.copy(login = "inkwell", token = "github_pat_inkwell", owner = "inkwell", repo = "night-notes")
+        store.save(inkwell)
+        val seen = java.util.concurrent.CopyOnWriteArrayList<Account?>()
+        val watching = launch(Dispatchers.IO) { store.account.collect { seen += it } }
+        idleUntilTrue { seen.lastOrNull()?.blogKey == inkwell.blogKey }
+        store.remove(signInOf(inkwell.blogKey))
+        idleUntilTrue { seen.lastOrNull()?.blogKey == account.blogKey }
+        watching.cancel()
         assertTrue(seen.toString(), seen.none { it == null })
     }
 
