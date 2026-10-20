@@ -2,6 +2,7 @@ package com.app.jekyllposter.core.github
 
 import java.io.IOException
 import java.net.URLEncoder
+import java.time.Instant
 import java.util.Base64
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -123,6 +124,8 @@ class GitHubClient(
          */
         expect: Map<String, String?> = emptyMap(),
         author: CommitAuthor? = null,
+        /** When the commit says it was made, author's and committer's alike; GitHub's now if null. Needs [author]. */
+        date: Instant? = null,
         attempts: Int = 3,
     ): String {
         val blobs = changes.associate { change ->
@@ -160,7 +163,7 @@ class GitHubClient(
                 put("message", message)
                 put("tree", tree.sha)
                 // The committer follows the author when only the author is given.
-                author?.let { putJsonObject("author") { put("name", it.name); put("email", it.email) } }
+                author?.let { putJsonObject("author") { put("name", it.name); put("email", it.email); date?.let { d -> put("date", d.toString()) } } }
                 put("parents", buildJsonArray { add(kotlinx.serialization.json.JsonPrimitive(head.obj.sha)) })
             })
             try {

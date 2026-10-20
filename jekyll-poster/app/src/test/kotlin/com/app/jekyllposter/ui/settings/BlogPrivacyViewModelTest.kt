@@ -6,7 +6,9 @@ import com.app.jekyllposter.core.github.CommitAuthor
 import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.idleUntil
+import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -107,6 +109,17 @@ class BlogPrivacyViewModelTest {
         assertEquals(before.replace("timezone: America/Los_Angeles", "timezone: Asia/Tokyo"), after)
         assertEquals("Set the site's time zone", app.github.commits.getValue(app.github.head).message)
         assertTrue(vm.state.value.message!!.startsWith("The site's time zone is now Asia/Tokyo"))
+    }
+
+    @Test fun byTheDayAloneTheZonesCommitIsDatedByTheDay() {
+        runBlocking {
+            c.privacy.update(SAMPLE_BLOG) { it.copy(datesByDayOnly = true) }
+            c.privacy.setCommitAsNoReply(SAMPLE_BLOG, "sample", CommitAuthor("sample", "1001+sample@users.noreply.github.com"))
+        }
+        val vm = BlogPrivacyViewModel(c) { ZoneId.of("Asia/Tokyo") }
+        vm.useZone("Asia/Tokyo")
+        idleUntil(10_000) { vm.state.value.siteZone == "Asia/Tokyo" && !vm.state.value.settingZone }
+        assertEquals("${LocalDate.now(ZoneOffset.UTC)}T00:00:00Z", app.github.commits.getValue(app.github.head).authorDate)
     }
 
     @Test fun aConfigChangedMeanwhileIsNotOverwritten() {

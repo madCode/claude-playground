@@ -55,7 +55,8 @@ Checked in the at-most-privacy run, from what GitHub returned afterwards:
 - **The moment the post went out, to the second.** The commit is dated when it was made:
   `Tue, 20 Oct 2026 13:36:50 -0700`, author and committer alike. The random time moves that
   moment away from when the writer pressed Publish, but the commit still carries it, and it's
-  public in the history. *Dates by the day only* covers the post's front matter, not the commit.
+  public in the history. Since this audit, *Dates by the day only* with the no-reply address
+  dates the commit by the post's day too (midnight UTC); without the no-reply address it can't.
 - **A time zone offset on that commit, which isn't the writer's.** The app sends no date with the
   commit (the request record shows none), so GitHub filled in both the time and the `-0700`. It
   says nothing about where the writer is, but it is the same for every commit the app makes.
@@ -77,7 +78,7 @@ Checked in the at-most-privacy run, from what GitHub returned afterwards:
 - Nothing found reaches GitHub that the design doesn't intend, and every switch did what it says.
 - One switch could do more: with *dates by the day only* on, the commit could carry the post's day
   (midnight UTC) as its date too, so the public history shows neither the time it went out nor
-  any time zone. GitHub would still know the real moment from its own logs. A decision for
-  madCode: BACKLOG.md, *Your call*.
+  any time zone. madCode chose it; it's built (cycle 41). GitHub still knows the real moment
+  from its own logs.
 - Reading the blog on opening is what keeps the posts and categories current; reading less often
   would be stale for the writer and still say when they use the app. Left as is.

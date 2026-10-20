@@ -99,6 +99,23 @@ class PublisherTest {
         assertEquals("sample", github.commits.getValue(github.head).authorName)
     }
 
+    @Test fun byTheDayAloneTheCommitIsDatedByTheDayToo() = runBlocking {
+        c.privacy.update(SAMPLE_BLOG) { it.copy(datesByDayOnly = true) }
+        // Without the no-reply address there's no author to date: GitHub's own moment stays.
+        publisher.publish(queue(Draft(title = "Day only", body = "x")))
+        assertNull(github.commits.getValue(github.head).authorDate)
+        c.privacy.setCommitAsNoReply(SAMPLE_BLOG, "sample", CommitAuthor("sample", "1001+sample@users.noreply.github.com"))
+        publisher.publish(queue(Draft(title = "Day and no-reply", body = "x")))
+        // Sunday 22:15 in Los Angeles, already Monday in UTC: the post's own Sunday, not the UTC
+        // Monday, whose difference would say it went out late in the evening.
+        assertTrue(github.text("_posts/2026-10-04-day-and-no-reply.md")!!.contains("date: 2026-10-04\n"))
+        assertEquals("2026-10-04T00:00:00Z", github.commits.getValue(github.head).authorDate)
+        // A moment again once the switch is off.
+        c.privacy.update(SAMPLE_BLOG) { it.copy(datesByDayOnly = false) }
+        publisher.publish(queue(Draft(title = "To the minute", body = "x")))
+        assertNull(github.commits.getValue(github.head).authorDate)
+    }
+
     @Test fun plainCommitMessagesNameNoPost() = runBlocking {
         c.privacy.update(SAMPLE_BLOG) { it.copy(plainCommitMessages = true) }
         publisher.publish(queue(Draft(title = "Something personal", body = "x")))

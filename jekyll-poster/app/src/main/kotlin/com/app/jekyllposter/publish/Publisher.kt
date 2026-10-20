@@ -24,6 +24,7 @@ import com.app.jekyllposter.data.Privacy
 import com.app.jekyllposter.data.key
 import java.io.File
 import java.io.IOException
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
@@ -97,9 +98,15 @@ class Publisher(
             } catch (e: Privacy.NoAddress) {
                 return fail(draft, "GitHub didn't give your account's no-reply address. Turn it off in Blog & privacy to publish.")
             }
+            val switches = privacy.get(account.blogKey)
             // The title stays in the history after the post is deleted; a plain message names nothing.
-            val message = if (privacy.get(account.blogKey).plainCommitMessages) "Update blog" else plan.message
-            val sha = blog.commit(message, plan.changes, plan.expect, author)
+            val message = if (switches.plainCommitMessages) "Update blog" else plan.message
+            // By the day alone, the commit too, at midnight UTC: the post's own day when it adds or
+            // moves one (a different UTC day beside it would narrow down the hour it went out), else
+            // the day it goes out. GitHub only takes a date with an author: the no-reply address.
+            val day = plan.date?.let { plan.draft.publishDate }?.takeIf { dayOnly(plan.draft) }?.let { LocalDate.parse(it) }
+            val date = if (switches.datesByDayOnly && author != null) dayInUtc(day ?: now().withZoneSameInstant(ZoneOffset.UTC).toLocalDate()) else null
+            val sha = blog.commit(message, plan.changes, plan.expect, author, date)
             if (draft.destination == Destination.Delete) return deleted(draft, plan.path, blog)
             published(drafts.get(id) ?: draft, plan.path, sha, plan.date?.let { postUrl(index, plan.path, it, plan.draft) }, blog)
         } catch (e: GitHubException) {
@@ -375,5 +382,8 @@ private fun fixedDate(draft: Draft, index: SiteIndex): ZonedDateTime =
     if (dayOnly(draft)) LocalDate.parse(draft.publishDate).atStartOfDay(index.config.timezone ?: ZoneOffset.UTC)
     else ZonedDateTime.parse(draft.publishDate)
 
+
+/** Midnight UTC of [day]: a commit date that says the day and nothing of the hour. */
+fun dayInUtc(day: LocalDate): Instant = day.atStartOfDay(ZoneOffset.UTC).toInstant()
 
 fun Draft.content() = PostContent(title.trim(), body, categories, tags, extraFrontMatter)

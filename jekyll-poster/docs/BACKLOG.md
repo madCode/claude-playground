@@ -14,13 +14,6 @@ and moves it to Done.
   desktop app on madCode's laptop, since a cloud session has no emulator or browser sign-ins.
 
 
-## Your call
-
-- [ ] With *Dates by the day only* on, date the commit itself by the post's day too (midnight
-  UTC, author and committer), so the public history shows neither when the post went out nor a
-  time zone. GitHub keeps the real moment in its own logs either way.
-  [What GitHub knows](research/what-github-knows.md) has the run behind it.
-
 ## Later
 
 - [ ] Per-blog templates: front matter a new post starts with
@@ -32,6 +25,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 41: by the day alone, the commit is dated by the day too (madCode chose it, 2026-10-20)
 - [x] Cycle 39: what GitHub knows about the writer, read from the device live check's records
 - [x] Cycle 40: the laptop checks written down, with `tools/emulator-check.sh`
 - [x] Cycle 38: a nightly device live check on two of the tester's blogs, keeping the request record
