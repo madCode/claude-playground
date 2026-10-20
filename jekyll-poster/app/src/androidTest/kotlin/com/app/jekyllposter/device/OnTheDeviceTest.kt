@@ -87,7 +87,7 @@ class OnTheDeviceTest {
         // WorkManager's own worker sends it, once the network is there.
         waitUntil("the post on GitHub") { postFile("on-the-device") != null }
         assertTrue(github.text(postFile("on-the-device")!!)!!.endsWith("Written on an emulator.\n"))
-        github.runs[github.head] = "completed" to "success"
+        synchronized(github) { github.runs[github.head] = "completed" to "success" }
 
         // The build watch starts 20 s after the commit; the notification is what the writer sees.
         device.openNotification()

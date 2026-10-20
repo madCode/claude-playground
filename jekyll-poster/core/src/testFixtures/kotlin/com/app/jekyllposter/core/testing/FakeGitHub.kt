@@ -100,10 +100,11 @@ class FakeGitHub(
 
     val apiBase get() = server.url("/")
 
-    val head: String get() = refs.getValue(branch)
+    // Under the server's lock: a device test reads these while a publish is landing.
+    val head: String get() = synchronized(this) { refs.getValue(branch) }
 
     /** The files on the branch now. */
-    fun files(): Map<String, ByteArray> = trees.getValue(commits.getValue(head).tree).mapValues { blobs.getValue(it.value) }
+    fun files(): Map<String, ByteArray> = synchronized(this) { trees.getValue(commits.getValue(head).tree).mapValues { blobs.getValue(it.value) } }
 
     fun text(path: String): String? = files()[path]?.toString(Charsets.UTF_8)
 

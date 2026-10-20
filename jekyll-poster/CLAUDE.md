@@ -18,6 +18,10 @@ claude-playground repository; run commands from this folder. The rules every pro
   of its own, publishing at once); `TestApp.signIn()` signs in. A Compose test that waits on
   anything but the screen (the database, GitHub, a view model's state) uses `waitUntilLooped`:
   Compose's own `waitUntil` doesn't turn the main looper, so that work never finishes.
+- `app/src/androidTest`: device tests, on an emulator in CI ("Jekyll Poster device tests"; a cloud
+  session has no KVM for one). `DeviceTestRunner` swaps in `DeviceTestApp`: the real app, with
+  `FakeGitHub` serving the sample blog on the device itself, over plain HTTP to localhost, which
+  only debug builds allow. Each test runs in a process of its own with the app's data cleared.
 - `sample-blog/`: a small Jekyll blog with every front matter shape the app reads. It is the
   tests' fixture and the blog to try the app on.
 
@@ -27,6 +31,7 @@ claude-playground repository; run commands from this folder. The rules every pro
     ./gradlew :app:testDebugUnitTest     # Robolectric tests
     ./gradlew build koverVerify          # everything CI runs (fails below 85% line coverage)
     ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest'   # PNGs in app/build/screenshots
+    ./gradlew :app:connectedDebugAndroidTest   # device tests, on a running emulator
 
 To try a change against a real blog, run the "Jekyll Poster live check" workflow on its branch:
 it publishes a post to the sample blog, waits for Pages, then deletes it. Run it from Actions, not
