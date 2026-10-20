@@ -953,10 +953,8 @@ class CarryViewModelTest {
         assertFalse(model.unsaved)
         model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
         assertTrue(model.unsaved)
-        assertEquals(UpdateInstaller.Step.SaveFirst, UpdateInstaller.next(model.unsaved, canInstall = true))
         model.discardEdits()
         assertFalse(model.unsaved)
-        assertEquals(UpdateInstaller.Step.Install, UpdateInstaller.next(model.unsaved, canInstall = true))
     }
 
     private suspend fun kotlinx.coroutines.test.TestScope.until(what: () -> Boolean) =
@@ -964,58 +962,49 @@ class CarryViewModelTest {
             withTimeout(5_000) { while (!what()) delay(5) }
         }
 
-    @Test
-    fun `a failed download says why, offers the link, and lets the owner try again`() = runTest(dispatcher) {
-        UpdateInstaller.finish()
-        val model = viewModel()
-        model.download = { _, _ -> throw java.io.IOException("the download answered 404") }
-        model.installUpdate()
-        until { model.updateProblem.value != null }
-        assertEquals(UpdateProblem("Couldn't download the update: the download answered 404.", offerLink = true),
-            model.updateProblem.value)
-        assertFalse("the notice must be tappable again", model.installing.value)
+    /** Asks whether there's unsaved typing only once [typed] lets it, as the real one does after
+     *  the download; the debug build's own tests cover the rest (LiveUpdatesTest). */
+    private class GatedUpdater(val typed: kotlinx.coroutines.CompletableDeferred<Unit>) : SelfUpdater by SelfUpdater.NONE {
+        val asked = kotlinx.coroutines.CompletableDeferred<Unit>()
+        var handedOver = false
+        override suspend fun install(build: Int, unsaved: () -> Boolean): UpdateProblem? {
+            asked.complete(Unit)
+            withContext(Dispatchers.Default) { typed.await() }
+            if (unsaved()) return UpdateProblem("save first", offerLink = false)
+            handedOver = true
+            return null
+        }
     }
 
     @Test
     fun `typing during the download stops the install, and the typing stays`() = runTest(dispatcher) {
         // The tap found nothing typed; the owner then typed while the build downloaded. Handing
         // it to Android now would replace the app under those numbers.
-        UpdateInstaller.finish()
         val model = viewModel()
         model.read = { ready() }
         model.refresh(); settled(model)
-        val downloading = kotlinx.coroutines.CompletableDeferred<Unit>()
         val typed = kotlinx.coroutines.CompletableDeferred<Unit>()
-        var handedOver = false
-        model.download = { _, f -> f.writeText("apk"); downloading.complete(Unit); kotlinx.coroutines.runBlocking { typed.await() } }
-        model.isNewer = { true }
-        model.stage = { 7 }
-        model.commit = { handedOver = true }
-        model.abandon = {}
-        model.installUpdate()
-        until { downloading.isCompleted }
+        val updater = GatedUpdater(typed)
+        model.updater = updater
+        model.installUpdate(140)
+        until { updater.asked.isCompleted }
         model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
         typed.complete(Unit)
         until { model.updateProblem.value != null }
-        assertFalse("nothing may be installed over typing", handedOver)
-        assertFalse(model.updateProblem.value!!.offerLink)
+        assertFalse("nothing may be installed over typing", updater.handedOver)
         assertTrue("the typing must still be there", model.unsaved)
-        assertFalse(model.installing.value)
     }
 
     @Test
-    fun `with nothing typed the build is handed to Android`() = runTest(dispatcher) {
-        UpdateInstaller.finish()
+    fun `with nothing typed the build is handed over and nothing is said`() = runTest(dispatcher) {
         val model = viewModel()
-        var handedOver = false
-        model.download = { _, f -> f.writeText("apk") }
-        model.isNewer = { true }
-        model.stage = { 7 }
-        model.commit = { handedOver = true }
-        model.installUpdate()
-        until { handedOver }
-        assertTrue("still installing until Android answers", model.installing.value)
-        UpdateInstaller.finish()
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        val updater = GatedUpdater(kotlinx.coroutines.CompletableDeferred(Unit))
+        model.updater = updater
+        model.installUpdate(140)
+        until { updater.handedOver }
+        assertEquals(null, model.updateProblem.value)
     }
 
     @Test
@@ -1029,44 +1018,6 @@ class CarryViewModelTest {
         handle[CarryViewModel.DRAFT] = draft.replace(Regex("\"sheetId\":\\s*\"[^\"]*\""), "\"sheetId\": \"another-day\"")
         assertTrue("the draft must now name another session", handle.get<String>(CarryViewModel.DRAFT)!!.contains("another-day"))
         assertFalse(model.unsaved)
-    }
-
-    @Test
-    fun `typing while the build is copied to the installer abandons it rather than installing`() = runTest(dispatcher) {
-        UpdateInstaller.finish()
-        val model = viewModel()
-        model.read = { ready() }
-        model.refresh(); settled(model)
-        val copying = kotlinx.coroutines.CompletableDeferred<Unit>()
-        val typed = kotlinx.coroutines.CompletableDeferred<Unit>()
-        var committed = false
-        var abandoned: Int? = null
-        model.download = { _, f -> f.writeText("apk") }
-        model.isNewer = { true }
-        model.stage = { copying.complete(Unit); kotlinx.coroutines.runBlocking { typed.await() }; 7 }
-        model.commit = { committed = true }
-        model.abandon = { abandoned = it }
-        model.installUpdate()
-        until { copying.isCompleted }
-        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
-        typed.complete(Unit)
-        until { model.updateProblem.value != null }
-        assertFalse("nothing may be committed over typing", committed)
-        assertEquals("the staged session must not be left behind", 7, abandoned)
-        assertTrue(model.unsaved)
-    }
-
-    @Test
-    fun `a failure writing to the installer is not called a failed download`() = runTest(dispatcher) {
-        UpdateInstaller.finish()
-        val model = viewModel()
-        model.download = { _, f -> f.writeText("apk") }
-        model.isNewer = { true }
-        model.stage = { throw java.io.IOException("No space left on device") }
-        model.installUpdate()
-        until { model.updateProblem.value != null }
-        assertEquals("Android couldn't take the update: No space left on device.", model.updateProblem.value!!.why)
-        assertFalse(model.installing.value)
     }
 
     private fun sheetOn(date: String) = """

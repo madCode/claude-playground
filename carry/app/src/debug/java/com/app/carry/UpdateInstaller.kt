@@ -13,10 +13,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Installs a newer debug build from inside the app (claude-playground #107): download the APK,
- * check it is this app and newer, and hand it to Android's own installer, which asks the owner
- * to confirm. Installing replaces the running app, so it never starts over typing that isn't
- * saved yet: losing typed numbers is the one failure this app exists to avoid.
+ * Android's side of installing a newer debug build ([LiveUpdates] decides when): the download,
+ * the installer session and its answer. Installing replaces the running app, so it never starts
+ * over typing that isn't saved yet: losing typed numbers is the one failure this app exists to
+ * avoid.
  */
 object UpdateInstaller {
     private val _installing = kotlinx.coroutines.flow.MutableStateFlow(false)
@@ -26,7 +26,7 @@ object UpdateInstaller {
 
     /** False when an attempt is already under way. */
     fun start(): Boolean = _installing.compareAndSet(expect = false, update = true)
-    fun finish() { committed = null; _installing.value = false }
+    fun finish() { committed = null; awaitingConfirm = null; _installing.value = false }
 
     /** Whether Carry's window is in front, kept by MainActivity: Android won't let a receiver
      *  open the confirmation over another app. */
@@ -35,15 +35,6 @@ object UpdateInstaller {
     /** The installer's confirmation, held when it arrived while Carry wasn't in front; shown on
      *  the next return, once. */
     @Volatile var awaitingConfirm: Intent? = null
-
-    /** What a tap on "Build N is out" does next. */
-    enum class Step { SaveFirst, AllowInstalls, Install }
-
-    fun next(unsaved: Boolean, canInstall: Boolean): Step = when {
-        unsaved -> Step.SaveFirst
-        !canInstall -> Step.AllowInstalls
-        else -> Step.Install
-    }
 
     fun canInstall(context: Context): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls()
@@ -93,16 +84,9 @@ object UpdateInstaller {
         }
     }
 
-    /** True when [apk] is this app at a higher version than [installed]. */
-    fun isNewerSelf(context: Context, apk: File, installed: Long): Boolean {
-        val info = context.packageManager.getPackageArchiveInfo(apk.path, 0) ?: return false
-        val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) info.longVersionCode
-        else @Suppress("DEPRECATION") info.versionCode.toLong()
-        return info.packageName == context.packageName && code > installed
-    }
-
     /** The session id of an attempt handed to Android and not yet answered. */
     @Volatile var committed: Int? = null
+    @Volatile var committedAt = 0L
 
     /**
      * Writes [apk] into a new installer session and returns its id, without committing: the
@@ -133,16 +117,18 @@ object UpdateInstaller {
         return id
     }
 
-    /** Hands the staged session to Android. The answer arrives at [Result]. */
-    fun commit(context: Context, id: Int) {
+    /** Hands the staged session of [build] to Android. The answer arrives at [Result]. */
+    fun commit(context: Context, id: Int, build: Int) {
         try {
             context.packageManager.packageInstaller.openSession(id).use { session ->
                 // Mutable: the installer fills in the status and, when it needs the owner, the
-                // confirmation intent.
+                // confirmation intent. Explicit, so nothing else can receive it.
                 val flags = PendingIntent.FLAG_UPDATE_CURRENT or
                     (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
-                val reply = PendingIntent.getBroadcast(context, id, Intent(context, Result::class.java), flags)
+                val answer = Intent(context, Result::class.java).putExtra(EXTRA_BUILD, build)
+                val reply = PendingIntent.getBroadcast(context, id, answer, flags)
                 committed = id
+                committedAt = System.currentTimeMillis()
                 session.commit(reply.intentSender)
             }
         } catch (e: Exception) {
@@ -175,24 +161,34 @@ object UpdateInstaller {
     /** The installer's answer: show its confirmation when it asks, say so when it fails. */
     class Result : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            // An answer about a session from before a restart says nothing about the attempt
+            // under way now, so it mustn't end it; a failure still counts against its build.
+            val id = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1)
+            fun finish() { if (id == -1 || id == committed) UpdateInstaller.finish() }
             when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
                 PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                     @Suppress("DEPRECATION")
                     val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
                         ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) ?: return finish()
+                    if (id != -1 && id != committed) return
                     if (!inFront || runCatching { context.startActivity(confirm) }.isFailure) {
                         awaitingConfirm = confirm
                     }
                 }
                 PackageInstaller.STATUS_SUCCESS -> finish()
-                // The owner backing out of the confirmation is not an error worth a toast.
+                // The owner backing out of the confirmation is not an error worth a toast, nor
+                // a failure counted toward giving up on the build.
                 PackageInstaller.STATUS_FAILURE_ABORTED -> finish()
                 else -> {
                     finish()
                     val why = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "status $status"
-                    Toast.makeText(context, "The update didn't install: $why", Toast.LENGTH_LONG).show()
+                    val gaveUp = LiveUpdates.installFailed(context, intent.getIntExtra(EXTRA_BUILD, 0), status)
+                    val next = if (gaveUp) ". Carry won't try this build again; tap the notice for the download." else ""
+                    Toast.makeText(context, "The update didn't install: $why$next", Toast.LENGTH_LONG).show()
                 }
             }
         }
     }
+
+    const val EXTRA_BUILD = "com.app.carry.BUILD"
 }
