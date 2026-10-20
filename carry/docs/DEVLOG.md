@@ -6,7 +6,8 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** the bars beside each family's heaviest gone, the number kept
+- **Lately:** a debug build that updates itself on Wi-Fi while Carry is
+  closed, and checks the file itself (cycles 71–72); the bars beside each family's heaviest gone, the number kept
   (#116); a timed hold keeping its done chip whatever its duration says
   (#115); a newer debug build named at the top of the Since tab
   (#108) and installed from inside the app (#109); the sheet's notice timed
@@ -30,6 +31,54 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-20 — cycle 72: updates, part two: on Wi-Fi, while Carry is closed
+
+The second half of bringing updates up to newspaperss's, which closes the
+item.
+
+- **A new debug build arrives on its own.** Carry asks GitHub every six
+  hours, not only when you open it. It downloads a newer build on Wi-Fi,
+  checks it, and installs it once Carry is closed and nothing is unsaved.
+- **Unsaved typing still comes first.** Carry now keeps a small mark on
+  disk from your first keystroke until you save or discard. While it's
+  set, or Carry is on screen, the install waits and tries again later.
+- **No dialog out of nowhere.** If Android wants you to confirm, the
+  background attempt stops there, and a tap on the notice installs the
+  downloaded build without downloading it again.
+- **Permissions unchanged:** `aapt2 dump permissions` on the built APKs
+  lists the same seven for debug and five for release as cycle 71. The
+  Wi-Fi wait needs `ACCESS_NETWORK_STATE`, so the backlog question about
+  stripping WorkManager's permissions now asks about `FOREGROUND_SERVICE`
+  alone.
+- Nothing you see changed.
+
+**Checks only a phone or an emulator can do.** About 25 minutes on an
+emulator. Use an API 34 image with Google APIs (x86_64); Android 12+ is
+what allows an install with no dialog.
+
+1. Build two debug APKs with different build numbers, from a checkout of
+   main: `GITHUB_RUN_NUMBER=1001 ./gradlew assembleDebug`, copy
+   `app/build/outputs/apk/debug/app-debug.apk` to `old.apk`, then
+   `GITHUB_RUN_NUMBER=1002 ./gradlew assembleDebug` for `new.apk`.
+2. `adb install old.apk`. Open Carry, pick a folder, allow "install
+   unknown apps" for Carry in Settings.
+3. **The signing check on a real file.** With `new.apk` staged in place of
+   the download (or with the real release once a newer build is out), tap
+   the notice. Pass: "Update this app?" appears, or on Android 12+ it
+   installs straight away, and the Since tab shows build 1002.
+4. **Background install.** Install 1001 again. Open Carry, then close it.
+   Run `adb shell cmd jobscheduler run -f com.app.carry.debug <job id>` for
+   the download and install work (`adb shell dumpsys jobscheduler | grep
+   carry` lists them), or wait. Pass: build 1002 is installed with Carry
+   never on screen.
+5. **Not over typing.** Install 1001 again. Type a weight on the After tab
+   without saving, go Home, and run the jobs again. Pass: still 1001, and
+   the typed weight is there when you reopen Carry.
+6. **Release has no installer.** `./gradlew assembleRelease`, then
+   `aapt2 dump permissions` on it. Pass: no `REQUEST_INSTALL_PACKAGES`, no
+   `INTERNET`.
+7. Shut down: `adb emu kill`, then `adb devices` should list nothing.
 
 ## 2026-10-20 — cycle 71: updates, part one: debug-only, and checked
 

@@ -235,17 +235,22 @@ These are the open paths to one, hardest first.
   `aapt2 dump permissions` on the built APK said otherwise. `DESIGN.md`
   carries the table *(design:
   [new-session-notification](designs/new-session-notification.md))*
-- [ ] **Can two of WorkManager's four permissions be stripped?**
-  `ACCESS_NETWORK_STATE` and `FOREGROUND_SERVICE` are for features this app
-  does not use — no network constraint, no expedited work — so
-  `tools:node="remove"` in the manifest should drop them, leaving a set
-  that is entirely explicable. NOT done blind: removing a permission a
-  library expects fails at runtime, in a background worker, silently, which
-  is the worst failure shape this app has. Needs an install on a device and
-  a confirmed check actually running after a reboot before it is believed.
-  `WAKE_LOCK` and `RECEIVE_BOOT_COMPLETED` must stay — the work would stop
-  surviving reboots without them *(found by checking the built APK rather
-  than the source manifest)*
+- [ ] **Can WorkManager's `FOREGROUND_SERVICE` be stripped?** It is
+  for expedited or foreground work, and Carry has none: no
+  `setExpedited`, no `setForeground`. The built APK still lists it, with
+  WorkManager's `SystemForegroundService`, so `tools:node="remove"` should
+  drop it. `ACCESS_NETWORK_STATE` is no longer a candidate: the debug
+  build's update download waits for Wi-Fi (an unmetered constraint) and
+  its six-hourly check for any connection, and WorkManager needs it to
+  see either. Checked with `aapt2 dump permissions` on the built APKs
+  (cycle 72): debug and release both list it. NOT done blind: removing a
+  permission a library expects fails at runtime, in a background worker,
+  silently, which is the worst failure shape this app has. Needs an
+  install on a device and a session check confirmed running after a
+  reboot before it is believed. `WAKE_LOCK` and `RECEIVE_BOOT_COMPLETED`
+  must stay: the work would stop surviving reboots without them *(found by
+  checking the built APK rather than the source manifest; reworded in
+  cycle 72)*
 - [ ] **Read the class from the phone's own calendar** — BLOCKED, and its
   stated benefit is void. It justified itself as freeing the coach from its
   own calendar config; that config works, demonstrated 2026-10-16 when the
@@ -292,23 +297,6 @@ These are the open paths to one, hardest first.
   alone leaves the other half unexplained *(you asked)*
 
 ### Health and tidying
-- [ ] **Bring updates up to newspaperss's.** Carry's in-app update
-  (`DebugUpdates`, `UpdateInstaller`) is as safe as newspaperss's
-  (`SelfUpdate`) but needs more from the owner. Four gaps:
-  - **It waits for a tap.** newspaperss downloads a new test build on
-    Wi-Fi and installs it while the app is closed and nothing is running.
-  - **It only checks on a return to the app.** newspaperss also checks in
-    the background, every six hours.
-  - [x] ~~**It leaves the file checks to Android.**~~ Done in cycle 71:
-    Carry checks the package, the signing key and a higher version code
-    itself, and gives up on a build after three failed installs.
-  - [x] ~~**The installer and `REQUEST_INSTALL_PACKAGES` ship in every
-    build.**~~ Done in cycle 71: both, and `INTERNET`, are debug-only, and
-    `check` fails if a release's merged manifest asks for them.
-  Keep Carry's own rule: never install over unsaved typing on the After
-  tab, so a background install waits for no draft and no save in progress.
-  A device check is owed with it, since the install itself happens in
-  Android's hands *(you approved, 2026-10-19)*
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on
   instructions.** The gate is real but it is counting the wrong thing for
   a codebase this full of fail-closed guards — a third of branches have
@@ -353,6 +341,12 @@ Only a real phone can answer these.
   the fix holds; empty boxes mean the activity was rebuilt, which for this
   app is the cardinal failure *(device)*
 - [ ] Bottom-edge insets against the navigation bar with a long session *(device)*
+- [ ] **Updates on a phone** *(due with cycles 71 and 72)*. Only a device
+  can show: the signing check reading a real downloaded APK; a background
+  install while Carry is closed (no dialog on Android 12+, once Carry has
+  installed itself); no install while the After tab holds unsaved typing;
+  a release build with no "install unknown apps" entry. The steps are in
+  DEVLOG.md, cycle 72.
 - [x] ~~The round trip through Syncthing, end to end~~ **Confirmed on the
   owner's own phone, 2026-10-16.** A blank, labelled session file placed in
   the synced folder on the laptop reached the phone, parsed, appeared on the
@@ -467,6 +461,15 @@ Nothing exists for "the sheet is wrong and I know it now". Adding a row currentl
 means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
+
+- [x] **Bring updates up to newspaperss's** *(you approved, 2026-10-19)*.
+  Cycle 71 (#158): the installer, `REQUEST_INSTALL_PACKAGES` and
+  `INTERNET` are debug-only, `check` guards the release manifest, and
+  Carry checks the package, signing key and version itself and gives up
+  on a build after three failed installs. Cycle 72: a newer build
+  downloads on Wi-Fi and installs while Carry is closed with nothing
+  unsaved, and a check runs every six hours. Device checks owed: under
+  *Owed on a device*.
 
 - [x] **Carry and gym-coach agree about an old *hard*-only row.** Carry
   moved to gym-coach's reading: its importer turns a row whose only
