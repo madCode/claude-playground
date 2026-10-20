@@ -48,6 +48,13 @@ The first half of bringing updates up to newspaperss's (you approved,
   install. The notice's tap then opens the download in a browser, the old
   way. A newer build is tried again. Saying no to Android's question, or
   a failed download, isn't counted.
+- The review found three older gaps, fixed here. Android's "Update this
+  app?" left with Home is asked again on your next return, rather than the
+  notice staying stuck on "Downloading…". If you typed since tapping, that
+  waiting install is dropped instead. A late answer about an older install
+  no longer ends the one under way.
+- Left as it was: typing in the few seconds after the hand-off, while
+  Android installs, can still be lost. In the backlog.
 - Nothing you see changed. Still owed on a phone: the key check reading a
   real APK, and a real install. Neither can be shown without a device.
 - Left for part two: the download on Wi-Fi, the install while Carry is
