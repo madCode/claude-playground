@@ -20,10 +20,8 @@ and moves it to Done.
 - [ ] Audit for several blogs: a security/privacy read of the requests each account makes,
   against the request record from a device live check run (not the code). A cloud session can
   do it from that run's artifacts.
-- [ ] Laptop emulator checks, in `docs/DEVICE-CHECKS.md` and `tools/emulator-check.sh`: what
-  Actions can't do. Sign in with GitHub (the device code entered in the desktop app's browser,
-  signed in as the tester), sharing from the real Obsidian app, the gallery and the camera,
-  the VPN switch with the Proton VPN app (madCode agreed 2026-10-20), rotation, TalkBack, large text and dark theme.
+- [ ] The first run of the laptop checks ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)): a session in the
+  desktop app on madCode's laptop, since a cloud session has no emulator or browser sign-ins.
 
 
 ## Later
@@ -37,6 +35,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 40: the laptop checks written down, with `tools/emulator-check.sh`
 - [x] Cycle 36: device tests on an emulator, on every PR
 - [x] Cycle 35: a request record in debug builds, for the several-blogs audit
 - [x] Cycle 34: removing the open blog's sign-in never reads as signed out
