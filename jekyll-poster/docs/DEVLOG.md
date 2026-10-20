@@ -19,12 +19,13 @@ Times are when each cycle landed, Pacific.
 - **Used for real:** madCode has published to their own blog from the phone.
 - **Several blogs:** all three cycles are built: blogs under several accounts, a switcher from
   the title, Remove, and privacy per blog. The switcher's UX pass found nothing to change; the
-  request-log audit waits on how to get a real run's log (morning page).
+  request-log audit reads the request record (cycle 35) from a run on the tester's blogs.
 - **Watching:** `EditFlowTest.tappingAPostOnTheBlogOpensItsTextToEdit` failed once with "addObserver
   must be called on the main thread" (Compose composing off the main thread), in 1 of 9 full runs
   with cycle 34's change and none of 40 before it. Count it before blaming the change.
-- **Waiting on you:** how to get a real run's request log, for the last audit (morning page).
-  The Android SDK is in the cloud environment now, at `/opt/android-sdk`.
+- **Waiting on you:** the tester account ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)). Its blogs
+  are where the nightly device live check posts, and that run's request record is what the
+  several-blogs audit reads. The Android SDK is in the cloud environment now, at `/opt/android-sdk`.
 
 ## Tue 20 Oct
 
