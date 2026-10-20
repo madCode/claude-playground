@@ -341,7 +341,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
             // The original keeps its EXIF, location included; only the prepared copy stays. In the
             // app's scope, so the delete still happens if the editor closes mid-import.
             val importing = photoJob
-            container.appScope.launch { importing?.join(); file.delete() }
+            container.appScope.launch { importing?.join() }
         }
     }
 

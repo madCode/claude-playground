@@ -140,7 +140,7 @@ fun HomeScreen(
                         IconButton(onClick = viewModel::stopSearch) { Icon(Icons.Default.Close, "Stop searching") }
                         return@TopAppBar
                     }
-                    IconButton(onClick = viewModel::startSearch) { Icon(Icons.Default.Search, "Search your posts") }
+                    IconButton(onClick = viewModel::startSearch) { Icon(Icons.Default.Search, null) }
                     IconButton(onClick = viewModel::refresh) { Icon(Icons.Default.Refresh, "Read the blog again") }
                     IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {

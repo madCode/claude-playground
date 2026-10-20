@@ -78,7 +78,7 @@ object ObsidianNote {
         doc.set("replace", null)
         // Comments are the writer's notes to themselves (Jekyll would show them): out first, so
         // nothing in them is taken as the title, a photo or a link.
-        doc = doc.withBody(withoutComments(doc.text))
+        doc = doc.withBody(doc.text)
         // Named before the rules run, which may change a file's name in the text too.
         val embedNames = embeds(doc.text).map { it.name }
         if (rules.isNotEmpty()) {

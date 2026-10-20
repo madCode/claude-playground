@@ -61,7 +61,7 @@ class ImageImporter(private val resolver: ContentResolver, private val dir: File
         // PNGs (screenshots, diagrams) stay lossless; everything else becomes a JPEG.
         val png = type == "image/png"
         val out = File(dir, "${UUID.randomUUID()}.${if (png) "png" else "jpg"}")
-        out.outputStream().use { upright.compress(if (png) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG, 85, it) }
+        out.outputStream().use { o -> resolver.openInputStream(uri)!!.use { it.copyTo(o) } }
         Prepared(out, if (png) "png" else "jpg")
     }
 }
