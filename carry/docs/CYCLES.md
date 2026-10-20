@@ -16,9 +16,13 @@ that hold become rules in CLAUDE.md or the cycles skill.
   .nextStartedActivityForResult` and `receiveResult`, then
   `scenario.moveToState` for the resume. Before asserting a screen, wait
   for the one read it depends on (wrap the ViewModel's `read` seam and
-  count): the read runs on IO, which Compose's clock doesn't wait for.
-  Waiting for every `viewModelScope` child timed out on CI only, as the
-  first test of a cold class.
+  count).
+- **`compose.waitUntil` in an Activity test runs on `runTest`'s virtual
+  time**, the same trap CLAUDE.md names for `withTimeoutOrNull`: it timed
+  out with its condition already true, about one run in five, and on CI.
+  Wait on the real clock and call `compose.waitForIdle()` each pass
+  (`MainActivityTest.until`). A dump on timeout showed it: catch the flake
+  before guessing at it.
 
 ## 2026-10-20 (cloud session, first Carry agent)
 

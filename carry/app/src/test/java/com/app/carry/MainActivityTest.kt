@@ -85,8 +85,24 @@ class MainActivityTest {
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
     }
 
+    /**
+     * Waits on the real clock. Compose's `waitUntil` here runs under
+     * `runTest`'s virtual time, which can call the wait over while the
+     * folder read is still working on an IO thread. Idling each pass runs
+     * the main looper, where the read's result lands.
+     */
+    private fun until(what: String, condition: () -> Boolean) {
+        val deadline = System.nanoTime() + 30_000_000_000L
+        while (true) {
+            compose.waitForIdle()
+            if (condition()) return
+            check(System.nanoTime() < deadline) { "still waiting for $what" }
+            Thread.sleep(10)
+        }
+    }
+
     private fun waitFor(text: String) =
-        compose.waitUntil(10_000) { compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty() }
+        until(text) { compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty() }
 
     /**
      * Counts the ViewModel's folder reads. A screen seen before the
@@ -106,7 +122,7 @@ class MainActivityTest {
         compose.onNodeWithText("Pick your folder").assertExists()
         val reads = countReads()
         pick(wholePhone)
-        compose.waitUntil(10_000) { reads() >= 1 }
+        until("the resume's folder read") { reads() >= 1 }
         compose.waitForIdle()
         compose.onNodeWithText("That's your whole phone").assertExists()
         assertTrue("a whole-phone grant must not be taken: $grants", grants.isEmpty())
