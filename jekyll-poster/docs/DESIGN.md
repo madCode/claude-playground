@@ -246,7 +246,10 @@ doesn't want to open a laptop and make a commit for every post.
 
 - Tapping a post opens the blog's copy as it is on GitHub now. Closed without a change, it's
   dropped: it isn't listed under On this phone as well as on the blog. Front matter that isn't valid
-  YAML isn't opened: the app would write over what it couldn't read.
+  YAML isn't opened: the app would write over what it couldn't read. Nor is front matter the app
+  can't edit without changing other keys: a `?` key, or all of it inside one `{…}`. The app tries
+  the edit first, and opens the post only if every other key reads the same after it; Update
+  checks again before it commits.
 - Update rewrites title, categories, tags and body, and the other front matter only if it was
   changed. Every other key, comment and quote stays as written; a post that spells it
   `category:` keeps that key.

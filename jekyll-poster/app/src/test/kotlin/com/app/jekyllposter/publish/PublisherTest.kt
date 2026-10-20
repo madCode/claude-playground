@@ -6,6 +6,7 @@ import com.app.jekyllposter.core.github.CommitAuthor
 import com.app.jekyllposter.core.jekyll.parseJekyllDate
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Destination
+import com.app.jekyllposter.core.jekyll.PostWriter
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.DraftImage
 import com.app.jekyllposter.data.PostState
@@ -235,6 +236,19 @@ class PublisherTest {
         assertEquals(Publisher.Outcome.Done, publisher.publish(id))
         assertEquals(PostState.Published, c.drafts.get(id)!!.state)
         assertEquals(head, github.head)
+    }
+
+    @Test fun anEditThatWouldChangeKeysTheAppDoesntEditIsntSent() = runBlocking {
+        // Opened before the app checked, say: a `?` key the line editor doesn't see.
+        val path = "_posts/2025-05-05-odd-keys.md"
+        github.push("Laptop", mapOf(path to "---\ntitle: Odd keys\n? complex key\n: kept\n---\n\nText.\n"))
+        c.blogs.refresh()
+        val before = github.text(path)
+        val sha = c.database.posts().snapshot(SAMPLE_BLOG).first { it.path == path }.sha
+        val id = queue(Draft(title = "Odd keys, edited", body = "New words.", editingPath = path, baseSha = sha))
+        assertEquals(Publisher.Outcome.Failed(PostWriter.CANT_EDIT), publisher.publish(id))
+        assertEquals(before, github.text(path))
+        assertEquals(PostState.Failed, c.drafts.get(id)!!.state)
     }
 
     @Test fun twoPostsWithTheSameTitleBothLand() = runBlocking {

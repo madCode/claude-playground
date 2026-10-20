@@ -19,14 +19,14 @@ and moves it to Done.
 - [ ] Per-blog templates: front matter a new post starts with
 - [ ] Unpublish (`published: false`), keeping the file
 - [ ] Collections other than posts; `collections_dir`
-- [ ] Keys like `c#:` read right, but other exotic YAML keys may still not; a full YAML
-  round-trip editor would close the gap
 - [ ] Hugo, or other static site generators on GitHub
 - [ ] A "keep private" word list per blog, checked before every publish (obyde's find/replace,
   for posts not from Obsidian)
 
 ## Done
 
+- [x] Cycle 33: exotic YAML keys, checked: an edit that would change keys the app doesn't edit
+  isn't made
 - [x] Cycle 32: the Compose-test hang found (the main looper, not Room), and the preview flake
   counted and fixed
 - [x] Cycle 31: a UX pass on the blog switcher (nothing to change)
