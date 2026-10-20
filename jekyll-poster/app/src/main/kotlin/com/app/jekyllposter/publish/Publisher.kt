@@ -140,7 +140,9 @@ class Publisher(
         // The same clock as a new post's date, so a photo lands in the year folder its post would.
         val year = (index.config.timezone?.let { now().withZoneSameInstant(it) } ?: now()).year
         val (ready, photos) = photos(draft, index, ours = emptySet(), PostPath(path).slug, year) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
-        val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content())
+        val existing = FrontMatterDocument.parse(current.text)
+        val doc = PostWriter.edit(existing, ready.content())
+        if (!PostWriter.keepsTheRest(existing, doc, ready.content())) return Plan.Finished(fail(ready, PostWriter.CANT_EDIT))
         val date = doc.string("date")?.let { parseJekyllDate(it, siteZone(index)) }
             ?: PostPath(path).date?.atStartOfDay(siteZone(index))
         val kind = if (PostPath(path).isDraft) "draft" else "post"
@@ -207,7 +209,9 @@ class Publisher(
         val target = fixed.targetPath!!
         // Named once the post's own name is known.
         val (ready, photos) = photos(fixed, index, ours = emptySet(), PostPath(target).slug, date.year) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
-        val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content())
+        val existing = FrontMatterDocument.parse(current.text)
+        val doc = PostWriter.edit(existing, ready.content())
+        if (!PostWriter.keepsTheRest(existing, doc, ready.content())) return Plan.Finished(fail(ready, PostWriter.CANT_EDIT))
         doc.setRaw("date", PostWriter.date(date, dayOnly(fixed)))
         drafts.update(ready.copy(sentShas = (ready.sentShas + gitBlobSha(doc.render())).distinct()))
         return Plan.Commit(

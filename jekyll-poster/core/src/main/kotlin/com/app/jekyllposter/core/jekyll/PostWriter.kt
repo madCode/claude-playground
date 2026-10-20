@@ -91,6 +91,32 @@ object PostWriter {
         return doc
     }
 
+    /** What a post whose front matter [canEdit] refuses says, on opening it or publishing an edit. */
+    const val CANT_EDIT = "This post's front matter is written in a way the app can't edit without changing it, " +
+        "like a `?` key or all of it inside `{…}`. Edit it on GitHub instead."
+
+    /** The keys [edit] writes; every other key must read the same after it. */
+    private val EDITED = setOf("title", "category", "categories", "tag", "tags")
+
+    /**
+     * Whether [edited], made by [edit] from [existing], keeps every key it doesn't write as YAML
+     * reads it. The line editor doesn't see some YAML (a `?` key, front matter written as one
+     * `{…}` map), and writing around it can drop or change keys.
+     */
+    fun keepsTheRest(existing: FrontMatterDocument, edited: FrontMatterDocument, content: PostContent): Boolean {
+        val after = FrontMatterDocument.parse(edited.render())
+        if (!after.readable) return false
+        // The writer's own "more front matter" replaces the other keys: theirs to change.
+        val others = if (content.extra != null && content.extra.trim() != existing.others(MANAGED).trim()) MANAGED else EDITED
+        return after.values().filterKeys { it !in others } == existing.values().filterKeys { it !in others }
+    }
+
+    /** Whether the app can edit [doc]'s post and leave what it doesn't edit as it is. */
+    fun canEdit(doc: FrontMatterDocument): Boolean {
+        val probe = PostContent("Edited: ${doc.string("title").orEmpty()}", doc.text, doc.terms("category", "categories"), doc.terms("tag", "tags"))
+        return keepsTheRest(doc, edit(doc, probe), probe)
+    }
+
     private fun create(content: PostContent, config: SiteConfig, date: String?): FrontMatterDocument {
         val doc = FrontMatterDocument.empty(body = "\n" + content.body)
         // Themes without a posts default (minima's own starter has none) render a bare page otherwise.

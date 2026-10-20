@@ -226,6 +226,10 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
             status.update { it.copy(error = "This post's front matter isn't valid YAML, so the app can't edit it safely. Fix it on GitHub first.") }
             return null
         }
+        if (!PostWriter.canEdit(doc)) {
+            status.update { it.copy(error = PostWriter.CANT_EDIT) }
+            return null
+        }
         // One clock reading for both: a draft whose times still agree was never changed.
         val now = System.currentTimeMillis()
         return container.drafts.insert(
