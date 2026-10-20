@@ -425,7 +425,8 @@ class LiveUpdatesTest {
         stageFails = IOException("No space left on device")
         val updates = updates()
         repeat(LiveUpdates.MAX_INSTALL_FAILURES) { updates.tap(135) }
-        assertEquals(LiveUpdates.Outcome.Retry, updates.fetched(140))
+        repeat(LiveUpdates.DOWNLOAD_TRIES + 1) { assertEquals(LiveUpdates.Outcome.Retry, updates.fetched(140)) }
+        assertEquals("140 is never given up on untried", SelfUpdater.Step.Install, updates.next(140, false, true))
         assertEquals(emptyList<String>(), dir.list()!!.filter { it.startsWith("build-") })
         assertEquals(emptyList<WorkInfo>(), infos(LiveInstallWorker.UNIQUE))
     }

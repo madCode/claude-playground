@@ -602,7 +602,10 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                     if (_saving.value == SaveState.Saved) rereadHistory()
                 }
             }
-        }.invokeOnCompletion { unsavedMark.set(handle.contains(DRAFT)) }
+        }.invokeOnCompletion {
+            // Unless another save has started meanwhile: its own end clears the mark.
+            if (_saving.value != SaveState.Saving) unsavedMark.set(handle.contains(DRAFT))
+        }
     }
 
     /**

@@ -210,9 +210,11 @@ internal class LiveUpdates(
                     return@withContext again()
                 }
                 // The newest build's file isn't up yet, and the one there was given up on.
+                // Not counted as a try: the newer build hasn't been seen yet.
                 Verdict.Good -> if (facts!!.versionCode <= prefs.getInt(REJECTED, 0)) {
                     part.delete()
-                    return@withContext again()
+                    prefs.edit().putInt(TRIES, tries - 1).commit()
+                    return@withContext Outcome.Retry
                 }
             }
             val build = facts!!.versionCode.toInt()
