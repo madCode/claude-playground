@@ -5,6 +5,19 @@ differently. Newest first; read the top before starting. What was built is
 in [DEVLOG.md](DEVLOG.md). Kept to the last ten or so cycles; older lessons
 that hold become rules in CLAUDE.md or the cycles skill.
 
+## 2026-10-20 (cloud session, second Carry agent)
+
+### Cycle 70 — build: an old *hard*-only row counts
+
+- **A "the other side is changing to match" note in DESIGN.md is a claim
+  to check.** #133 said gym-coach would stop counting `hard`; gym-coach
+  then chose to keep it. Read the other repo's code before trusting it.
+- **The machine is shared and loaded.** A full `testDebugUnitTest` took
+  23 minutes and a Compose idle timeout flaked under a load of 39; the
+  first build's daemon was killed for memory. Run the touched classes
+  with `--tests`, and take the baseline from main's CI artifact
+  (`carry-reports`), which is the number CI gates on.
+
 ## 2026-10-18 (cloud session)
 
 ### Cycle 69 — fix: Add takes you to the new row, and mod stays put

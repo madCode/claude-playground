@@ -47,8 +47,8 @@ class GrowthTest {
     @Test
     fun `a row an older file marked only hard is a session, as gym-coach counts it`() {
         // gym-coach's importer turns a hard-only row into a history entry
-        // (session_file._answered), so leaving the day out here had the
-        // Since tab and the coach disagree about which classes happened.
+        // (session_file._answered), so the Since tab must count the day
+        // for the two to agree about which classes happened.
         val day = file("2026-10-11", sets = set(0, "sit-up", "core", hard = true) + "," + set(1, "squat", "legs"))
         val since = Growth.of(listOf(day))
         assertEquals(1, since.sessions)

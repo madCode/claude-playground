@@ -94,8 +94,8 @@ object Growth {
          *  offers them, so the two screens read the same way round. */
         val marks: List<String> get() = buildList {
             if (easy) add("easy")
-            // Only an older file says `hard`; it is shown because it was
-            // tapped, though nothing reads it any more.
+            // Only an older file says `hard`. Shown because [answered]
+            // counts it, so a row it alone answered says why.
             if (hard) add("hard")
             if (easier) add("mod")
             if (done) add("done")

@@ -28,6 +28,24 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-20 — cycle 70: an old *hard*-only row counts, as the coach counts it
+
+- A row whose only record is an old file's `hard` now counts as answered
+  on the Since tab, so its day is listed and counted. gym-coach's importer
+  has always turned that row into a set in history; Carry left the day
+  out, so the two disagreed about which classes happened.
+- A past session shows the row with a *hard* mark, so a row only it
+  answered says why it isn't blank. The sample past session's goblet
+  squat shows the mark too.
+- Checked with gym-coach's own `to_history` on such a file: one entry for
+  the hard row, none for an untouched one.
+- Left as is: the After tab has no *hard* chip, so finishing such a day
+  shows the row untouched there, and tapping *easy* clears the old mark.
+  Only files from before 2026-10-16 can say `hard`.
+- Backlog: the resume-over-typing item moved under *The brain moves to the
+  phone*, which it already said it waits for; a device check's TalkBack
+  wording now matches the code ("empty, prescribed 10").
+
 ## 2026-10-18 — cycle 69: Add takes you to the new row, and mod stays put
 
 madCode reported both from the phone and approved the fixes.
