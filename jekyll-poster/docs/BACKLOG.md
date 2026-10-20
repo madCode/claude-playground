@@ -8,10 +8,9 @@ and moves it to Done.
 - [ ] The tester account (madCode, agreed 2026-10-20): a GitHub account and organisation for
   testing, three copies of the sample blog, a token each in Actions secrets.
   [TESTER_ACCOUNT.md](TESTER_ACCOUNT.md) has the steps. The live checks below wait on it.
-- [ ] A device suite on every PR: the real app on an emulator in Actions (newspaperss's
-  `device-tests.yml`), against `FakeGitHub` served on the device. Shares from a test-only
-  sender app, the New post shortcut, WorkManager for real, the app killed while a post is
-  queued, the "it's live" notification read with UiAutomator.
+- [ ] More device tests on the suite cycle 36 started (`OnTheDeviceTest`): the New post
+  shortcut from the launcher, the app killed while a post is queued, a photo shared from another
+  app (a test-only sender, like newspaperss's `epubsink`).
 - [ ] A device live check, nightly and by hand: the same emulator, signed in through the
   screens with the tester's tokens, against the real test blogs. Publish with a photo, wait for
   Pages and the notification, edit, delete; two blogs under two sign-ins; an edit conflict made
@@ -38,6 +37,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 36: device tests on an emulator, on every PR
 - [x] Cycle 35: a request record in debug builds, for the several-blogs audit
 - [x] Cycle 34: removing the open blog's sign-in never reads as signed out
 - [x] Cycle 33: exotic YAML keys, checked: an edit that would change keys the app doesn't edit

@@ -29,6 +29,22 @@ Times are when each cycle landed, Pacific.
 
 ## Tue 20 Oct
 
+### Cycle 36: device tests on an emulator, on every PR
+- **Asked for:** the Next item after the request record: the real app on an emulator in CI,
+  for what Robolectric only imitates.
+- **Changed (tests and CI only):** a "Jekyll Poster device tests" workflow runs the app on an
+  API 36 emulator on every PR. The fake GitHub runs on the device, serving the sample blog. Two
+  tests: sign in through the screens, write and publish with WorkManager's own worker, then read
+  the "is live" notification from the shade; and a link shared from outside the app (`am start`
+  from the shell) starts a post that publishes. Each test runs in a process of its own with the
+  app's data cleared. Debug builds allow plain HTTP to 127.0.0.1, where the fake GitHub listens.
+- **Getting it green:** two CI runs crashed the app at start with no stack trace; the workflow
+  now prints the crash and keeps logcat. It was the fake GitHub looking up "localhost", which
+  Android's resolver refused; it now listens on 127.0.0.1 by number.
+- **The review caught:** the emulator's default screen is small enough to hide the rows and
+  buttons the tests tap (now a Pixel 6); its screen could lock while Gradle built (now built
+  first, and kept awake); the test read the fake GitHub's maps without its lock (now taken).
+
 ### Cycle 35: a request record in debug builds
 - **Asked for:** the first Next item, chosen by madCode for the several-blogs audit: what the
   app sends to GitHub, per sign-in, collectable from an emulator, with no token in it.
