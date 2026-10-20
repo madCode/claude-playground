@@ -27,6 +27,7 @@ import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
+import com.app.jekyllposter.testutil.waitUntilLooped
 import com.app.jekyllposter.ui.theme.PosterTheme
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -80,7 +81,7 @@ class FlowTest {
         compose.onNodeWithText("Publish").performClick()
 
         compose.waitFor("A Sample Notebook")
-        compose.waitUntil(5_000) { github.files().keys.any { it.endsWith("-from-the-bus.md") } }
+        compose.waitUntilLooped { github.files().keys.any { it.endsWith("-from-the-bus.md") } }
         val text = github.files().entries.first { it.key.endsWith("-from-the-bus.md") }.value.toString(Charsets.UTF_8)
         assertTrue(text, Regex("""(?s)---\ntitle: From the bus\ndate: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{4}\ncategories: \[writing, commute]\n---\n\nShort one, written on the way home.\n""").matches(text))
     }
@@ -130,7 +131,7 @@ class FlowTest {
         compose.waitForTag("title")
         compose.onNodeWithContentDescription("Back").performClick()
         compose.waitFor("A Sample Notebook")
-        compose.waitUntil(3_000) { runBlocking { app.container.database.drafts().snapshotCount() } == 0 }
+        compose.waitUntilLooped(3_000) { runBlocking { app.container.database.drafts().snapshotCount() } == 0 }
     }
 
     @Test fun aSharedLinkMakesOnePostEvenAfterGoingBack() {
@@ -155,7 +156,7 @@ class FlowTest {
         start()
         compose.waitFor("Half an idea")
         compose.onNodeWithText("Untitled").assertDoesNotExist()
-        compose.waitUntil(5_000) { runBlocking { app.container.drafts.get(stale) } == null }
+        compose.waitUntilLooped { runBlocking { app.container.drafts.get(stale) } == null }
         assertTrue(runBlocking { app.container.drafts.get(recent) } != null)
     }
 

@@ -5,12 +5,14 @@ and moves it to Done.
 
 ## Next
 
-- [ ] Audits for several blogs: a security/privacy read of the requests each account makes,
-  against a log of a real run's requests (not the code); a UX pass on the switcher.
-- [ ] A flake to count: `PreviewScreenTest.theEyeButtonShowsThePreview` failed once in a full
-  run in cycle 29 and passed in every run after; reproduce and count before fixing.
-- [ ] Find the Compose-test Room hang (DEVLOG, cycles 1 and 11: likely Compose's main
-  dispatcher bound to the first test's looper)
+- [ ] Audit for several blogs: a security/privacy read of the requests each account makes,
+  against a log of a real run's requests (not the code). Needs that log: how to get it is a
+  question for madCode (morning page).
+
+- [ ] A race to fix: `AccountStoreTest.removingTheOpenBlogsSignInNeverReadsAsSignedOut` failed
+  once in 20 full runs in cycle 32. The open blog read as signed out for a moment while its
+  sign-in was removed, which the screens take as "go to sign-in". Reproduce it with a delay in
+  `AccountStore.remove`, then fix.
 
 ## Later
 
@@ -25,6 +27,9 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 32: the Compose-test hang found (the main looper, not Room), and the preview flake
+  counted and fixed
+- [x] Cycle 31: a UX pass on the blog switcher (nothing to change)
 - [x] Cycle 30: the same account signed in twice is one sign-in
 - [x] Several sign-ins and blogs, in three build cycles
   ([#137](https://github.com/madCode/claude-playground/issues/137)): cycles 27–29
