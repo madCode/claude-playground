@@ -183,7 +183,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        model.updater.resumed(this)
+        model.updater.resumed(this, model.unsaved)
         model.refresh()
         model.checkForUpdate()
         maybeAskToNotify()

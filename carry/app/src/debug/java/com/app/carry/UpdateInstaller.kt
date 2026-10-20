@@ -26,14 +26,15 @@ object UpdateInstaller {
 
     /** False when an attempt is already under way. */
     fun start(): Boolean = _installing.compareAndSet(expect = false, update = true)
-    fun finish() { committed = null; _installing.value = false }
+    fun finish() { committed = null; awaitingConfirm = null; _installing.value = false }
 
     /** Whether Carry's window is in front, kept by MainActivity: Android won't let a receiver
      *  open the confirmation over another app. */
     @Volatile var inFront = false
 
-    /** The installer's confirmation, held when it arrived while Carry wasn't in front; shown on
-     *  the next return, once. */
+    /** The installer's confirmation, held until Android answers: shown on each return to Carry
+     *  while the session waits, since it arrives when Carry may not be in front and Home leaves
+     *  it unanswered. */
     @Volatile var awaitingConfirm: Intent? = null
 
     fun canInstall(context: Context): Boolean =
@@ -159,14 +160,18 @@ object UpdateInstaller {
     /** The installer's answer: show its confirmation when it asks, say so when it fails. */
     class Result : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            // An answer about a session from before a restart says nothing about the attempt
+            // under way now, so it mustn't end it; a failure still counts against its build.
+            val id = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1)
+            fun finish() { if (id == -1 || id == committed) UpdateInstaller.finish() }
             when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
                 PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                     @Suppress("DEPRECATION")
                     val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
                         ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) ?: return finish()
-                    if (!inFront || runCatching { context.startActivity(confirm) }.isFailure) {
-                        awaitingConfirm = confirm
-                    }
+                    if (id != -1 && id != committed) return
+                    awaitingConfirm = confirm
+                    if (inFront) runCatching { context.startActivity(confirm) }
                 }
                 PackageInstaller.STATUS_SUCCESS -> finish()
                 // The owner backing out of the confirmation is not an error worth a toast, nor

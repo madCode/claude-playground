@@ -47,12 +47,16 @@ internal class LiveUpdates(
     override suspend fun install(build: Int, unsaved: () -> Boolean): UpdateProblem? {
         if (build <= installedBuild || !UpdateInstaller.start()) return null
         var handedOver = false
+        // Failures count against the build in the file once it passed its checks: the fixed-name
+        // download can lag behind the newest build, which mustn't be given up on untried.
+        var counted = build
         val problem = try {
             val apk = withContext(Dispatchers.IO) {
                 dir.mkdirs()
                 File(dir, "carry-debug.apk").apply { delete(); download(this) }
             }
-            when (val verdict = withContext(Dispatchers.IO) { verdict(inspect(apk), installed()) }) {
+            val facts = withContext(Dispatchers.IO) { inspect(apk) }
+            when (val verdict = withContext(Dispatchers.IO) { verdict(facts, installed()) }) {
                 is Verdict.Bad -> {
                     log("Build $build was refused: ${verdict.why}")
                     // The build asked for, not the one the file claims: a file that failed its
@@ -63,6 +67,7 @@ internal class LiveUpdates(
                 is Verdict.Stale ->
                     UpdateProblem("The download isn't the newer build yet. Try again in a few minutes.", offerLink = false)
                 Verdict.Good -> {
+                    counted = facts!!.versionCode.toInt()
                     val id = try {
                         withContext(Dispatchers.IO) { stage(apk) }
                     } catch (e: IOException) {
@@ -74,7 +79,7 @@ internal class LiveUpdates(
                         abandon(id)
                         UpdateProblem("Save the After tab first, then tap the notice again. Updating restarts Carry.", offerLink = false)
                     } else {
-                        commit(id, build)
+                        commit(id, counted)
                         handedOver = true
                         null
                     }
@@ -86,13 +91,13 @@ internal class LiveUpdates(
             if (!handedOver) UpdateInstaller.finish()
             throw e
         } catch (e: InstallFailed) {
-            failure(build, "Android couldn't take the update: ${e.cause?.message ?: "no room?"}.")
+            failure(counted, "Android couldn't take the update: ${e.cause?.message ?: "no room?"}.")
         } catch (e: IOException) {
             UpdateProblem("Couldn't download the update: ${e.message ?: "no connection"}.", offerLink = true)
         } catch (e: Exception) {
             // Anything Android's installer or an archive parser throws: said, never a crash,
             // because a crash takes unsaved typing with it.
-            failure(build, "Android wouldn't take the update: ${e.message ?: e.javaClass.simpleName}.")
+            failure(counted, "Android wouldn't take the update: ${e.message ?: e.javaClass.simpleName}.")
         }
         if (problem != null) UpdateInstaller.finish()
         return problem
@@ -103,13 +108,18 @@ internal class LiveUpdates(
         if (failed(prefs, build)) UpdateProblem("$why Carry won't try this build again.", offerLink = true)
         else UpdateProblem(why, offerLink = true)
 
-    override fun resumed(activity: Activity) {
+    override fun resumed(activity: Activity, unsaved: Boolean) {
         UpdateInstaller.inFront = true
         runCatching { UpdateInstaller.forgetIfGone(activity) }
-        // An installer confirmation that arrived while Carry was behind another app.
+        // Android's question, still unanswered: it arrived while Carry was behind another app, or
+        // was left with Home. Typed since the tap, it's dropped rather than asked over the typing.
         UpdateInstaller.awaitingConfirm?.let { confirm ->
-            UpdateInstaller.awaitingConfirm = null
-            runCatching { activity.startActivity(confirm) }.onFailure { UpdateInstaller.finish() }
+            if (unsaved) {
+                UpdateInstaller.committed?.let { abandon(it) }
+                UpdateInstaller.finish()
+            } else {
+                runCatching { activity.startActivity(confirm) }.onFailure { UpdateInstaller.finish() }
+            }
         }
     }
 

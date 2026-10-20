@@ -27,8 +27,8 @@ interface SelfUpdater {
     suspend fun install(build: Int, unsaved: () -> Boolean): UpdateProblem?
 
     /** Carry's window came to the front, or left it: Android only lets the installer's
-     *  confirmation open over Carry itself. */
-    fun resumed(activity: Activity)
+     *  confirmation open over Carry itself. [unsaved] typing drops a confirmation still waiting. */
+    fun resumed(activity: Activity, unsaved: Boolean)
     fun paused()
 
     enum class Step {
@@ -46,7 +46,7 @@ interface SelfUpdater {
             override fun next(build: Int, unsaved: Boolean, canInstall: Boolean) = Step.Browser
             override fun canInstall() = false
             override suspend fun install(build: Int, unsaved: () -> Boolean): UpdateProblem? = null
-            override fun resumed(activity: Activity) {}
+            override fun resumed(activity: Activity, unsaved: Boolean) {}
             override fun paused() {}
         }
     }

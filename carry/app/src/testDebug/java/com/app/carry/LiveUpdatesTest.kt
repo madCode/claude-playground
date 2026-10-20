@@ -149,6 +149,64 @@ class LiveUpdatesTest {
     }
 
     @Test
+    fun `failures count against the build in the file, so a newer one isn't given up on untried`() {
+        // The fixed-name file still holds 135 while GitHub already lists 140.
+        apks["apk-135"] = ApkFacts(app.packageName, 135, ourKey)
+        serving = { "apk-135" }
+        stageFails = IOException("No space left on device")
+        val updates = updates()
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES) { updates.tap(140) }
+        assertEquals(SelfUpdater.Step.Browser, updates.next(135, false, true))
+        assertEquals("140 was never tried", SelfUpdater.Step.Install, updates.next(140, false, true))
+    }
+
+    private fun answer(session: Int, status: Int, confirm: Intent? = null) = UpdateInstaller.Result().onReceive(
+        app,
+        Intent(app, UpdateInstaller.Result::class.java)
+            .putExtra(UpdateInstaller.EXTRA_BUILD, 140)
+            .putExtra(PackageInstaller.EXTRA_SESSION_ID, session)
+            .putExtra(PackageInstaller.EXTRA_STATUS, status)
+            .apply { confirm?.let { putExtra(Intent.EXTRA_INTENT, it) } },
+    )
+
+    @Test
+    fun `an answer about an older session doesn't end the attempt under way`() {
+        assertTrue(UpdateInstaller.start())
+        UpdateInstaller.committed = 5
+        answer(9, PackageInstaller.STATUS_FAILURE_ABORTED)
+        assertTrue("still installing", UpdateInstaller.installing.value)
+        answer(5, PackageInstaller.STATUS_FAILURE_ABORTED)
+        assertFalse(UpdateInstaller.installing.value)
+    }
+
+    @Test
+    fun `Android's question is asked again on each return until answered, and dropped over new typing`() {
+        val confirm = Intent("android.content.pm.action.CONFIRM_INSTALL")
+        // A real session, so the check for one Android dropped finds it still waiting.
+        val session = app.packageManager.packageInstaller.createSession(
+            PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL),
+        )
+        assertTrue(UpdateInstaller.start())
+        UpdateInstaller.committed = session
+        UpdateInstaller.inFront = false
+        answer(session, PackageInstaller.STATUS_PENDING_USER_ACTION, confirm)
+        val activity = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
+        val updates = updates()
+
+        updates.resumed(activity, unsaved = false)
+        assertEquals("android.content.pm.action.CONFIRM_INSTALL", org.robolectric.Shadows.shadowOf(activity).nextStartedActivity?.action)
+        // Left with Home: no answer came, so the next return asks again.
+        updates.resumed(activity, unsaved = false)
+        assertEquals("android.content.pm.action.CONFIRM_INSTALL", org.robolectric.Shadows.shadowOf(activity).nextStartedActivity?.action)
+
+        updates.resumed(activity, unsaved = true)
+        assertNull("not asked over typing", org.robolectric.Shadows.shadowOf(activity).nextStartedActivity)
+        assertEquals("the waiting session is dropped", listOf(session), abandoned)
+        assertFalse(UpdateInstaller.installing.value)
+        UpdateInstaller.inFront = false
+    }
+
+    @Test
     fun `typing comes first, then the permission, then the install`() {
         val updates = updates()
         assertEquals(SelfUpdater.Step.SaveFirst, updates.next(140, unsaved = true, canInstall = false))
