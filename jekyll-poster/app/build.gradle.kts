@@ -19,6 +19,10 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "com.app.jekyllposter.device.DeviceTestRunner"
+        // Each device test in a process of its own, with the app's data cleared: the app's
+        // DataStores are process-wide, and a sign-in would carry into the next test.
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
         // A GitHub App's client ID turns on "Sign in with GitHub" (device flow). Not a secret: the
         // device flow needs no client secret. Empty hides the button and leaves token sign-in.
         buildConfigField("String", "GITHUB_CLIENT_ID", "\"${providers.gradleProperty("githubClientId").getOrElse("")}\"")
@@ -60,6 +64,7 @@ android {
     sourceSets { getByName("debug").assets.srcDir("$projectDir/schemas") }
 
     testOptions {
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
@@ -128,7 +133,31 @@ dependencies {
     testImplementation(libs.compose.ui.test.junit4)
     // Compose UI test pulls an older Espresso that crashes on API 37.
     testImplementation(libs.espresso.core)
+
+    androidTestImplementation(testFixtures(project(":core")))
+    androidTestImplementation(libs.okhttp.mockwebserver)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.uiautomator)
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.espresso.core)
+    androidTestUtil(libs.androidx.test.orchestrator)
+    androidTestUtil(libs.androidx.test.services)
 }
+
+// The sample blog, zipped into the device tests' assets: the fake GitHub on the device serves it.
+// Zipped, because the asset packager leaves out folders starting with "_", like _posts.
+val sampleBlogAssets = layout.buildDirectory.dir("generated/sampleBlogAssets").get().asFile
+val sampleBlogZip = tasks.register<Zip>("sampleBlogZip") {
+    from(rootProject.file("sample-blog"))
+    archiveFileName.set("sample-blog.zip")
+    destinationDirectory.set(sampleBlogAssets)
+}
+android.sourceSets.getByName("androidTest").assets.srcDir(sampleBlogAssets)
+tasks.matching { it.name.endsWith("AndroidTestAssets") || it.name.startsWith("lint") }.configureEach { dependsOn(sampleBlogZip) }
+
 
 androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->

@@ -1,0 +1,114 @@
+package com.app.jekyllposter.device
+
+import android.Manifest
+import android.os.ParcelFileDescriptor
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
+import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
+import com.app.jekyllposter.MainActivity
+import com.app.jekyllposter.data.Account
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/**
+ * The app as installed, on an emulator: its own WorkManager, Keystore and notifications, and
+ * intents from outside its process. Only GitHub is fake, on the device itself.
+ */
+@RunWith(AndroidJUnit4::class)
+class OnTheDeviceTest {
+    @get:Rule val compose = createEmptyComposeRule()
+
+    private val app = ApplicationProvider.getApplicationContext<DeviceTestApp>()
+    private val github get() = app.github
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private val device = UiDevice.getInstance(instrumentation)
+
+    @Before fun allowNotifications() {
+        instrumentation.uiAutomation.grantRuntimePermission(app.packageName, Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    @After fun close() {
+        device.pressHome()
+        github.close()
+    }
+
+    private fun waitFor(text: String, timeoutMs: Long = 20_000) =
+        compose.waitUntil(timeoutMs) { compose.onAllNodes(hasText(text, substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+
+    private fun waitForTag(tag: String) =
+        compose.waitUntil(20_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty() }
+
+    /** Waits for [condition] off the screen: on the fake GitHub or the database. */
+    private fun waitUntil(what: String, timeoutMs: Long = 60_000, condition: () -> Boolean) {
+        val end = System.currentTimeMillis() + timeoutMs
+        while (!condition()) {
+            check(System.currentTimeMillis() < end) { "Timed out waiting for $what" }
+            Thread.sleep(200)
+        }
+    }
+
+    /** Runs [command] as the shell does, from outside the app's process. */
+    private fun shell(command: String): String =
+        ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command)).use { it.readBytes().decodeToString() }
+
+    private fun postFile(slug: String) = github.files().keys.firstOrNull { it.endsWith("-$slug.md") }
+
+    @Test fun signInWritePublishAndHearItIsLive() {
+        ActivityScenario.launch(MainActivity::class.java)
+        waitFor("Connect with a token")
+        compose.onNodeWithText("Token").performTextInput(github.token)
+        compose.onNodeWithText("Continue").performClick()
+        waitFor("sample/sample-blog")
+        compose.onNodeWithText("sample/sample-blog").performClick()
+        waitFor("Welcome to the notebook")
+
+        compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
+        waitForTag("title")
+        compose.onNodeWithTag("title").performTextInput("On the device")
+        compose.onNodeWithTag("body").performTextInput("Written on an emulator.")
+        compose.onNodeWithText("Publish").performClick()
+
+        // WorkManager's own worker sends it, once the network is there.
+        waitUntil("the post on GitHub") { postFile("on-the-device") != null }
+        assertTrue(github.text(postFile("on-the-device")!!)!!.endsWith("Written on an emulator.\n"))
+        github.runs[github.head] = "completed" to "success"
+
+        // The build watch starts 20 s after the commit; the notification is what the writer sees.
+        device.openNotification()
+        assertTrue("No “is live” notification", device.wait(Until.hasObject(By.textContains("“On the device” is live")), 90_000))
+    }
+
+    @Test fun aLinkSharedFromAnotherAppStartsAPost() {
+        runBlocking { app.container.accounts.save(Account("sample", github.token, "sample", "sample-blog", "main")) }
+        // Through the system, as another app's share sheet sends it: an implicit intent, not a call.
+        val started = shell(
+            "am start -W -a android.intent.action.SEND -t text/plain -p ${app.packageName} " +
+                "--es android.intent.extra.TEXT https://example.com/read --es android.intent.extra.SUBJECT Good",
+        )
+        assertTrue(started, started.contains("Status: ok"))
+        waitForTag("title")
+        waitFor("[Good](https://example.com/read)")
+        compose.onNodeWithTag("title").performTextInput("A good read")
+        compose.onNodeWithText("Publish").performClick()
+
+        waitUntil("the shared post on GitHub") { postFile("a-good-read") != null }
+        assertTrue(github.text(postFile("a-good-read")!!)!!.contains("[Good](https://example.com/read)"))
+        assertEquals(1, runBlocking { app.container.database.drafts().snapshotCount() })
+    }
+}
