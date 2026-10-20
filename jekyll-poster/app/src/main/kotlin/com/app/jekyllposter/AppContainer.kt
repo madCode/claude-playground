@@ -27,6 +27,7 @@ import com.app.jekyllposter.data.VaultImages
 import com.app.jekyllposter.data.accountDataStore
 import com.app.jekyllposter.data.listVault
 import com.app.jekyllposter.data.settingsDataStore
+import com.app.jekyllposter.debug.recordedAs
 import com.app.jekyllposter.publish.BuildWatcher
 import com.app.jekyllposter.publish.Notifier
 import com.app.jekyllposter.publish.PublishQueue
@@ -95,13 +96,13 @@ class AppContainer(
      */
     private val blogCalls = ConcurrentHashMap<String, GatedCalls>()
 
-    private fun callsFor(key: String) = blogCalls.getOrPut(key) { GatedCalls(base, VpnGate(vpn) { runBlocking { privacy.get(key).onlyThroughVpn } }) }
+    private fun callsFor(key: String) = blogCalls.getOrPut(key) { GatedCalls(base.recordedAs(context, key), VpnGate(vpn) { runBlocking { privacy.get(key).onlyThroughVpn } }) }
 
     /**
      * Signing in, listing a sign-in's repositories and renewing its token aren't for one blog: they
      * go through the VPN if any blog asks for it, since the app can't know which blog they're for.
      */
-    private val signInCalls = GatedCalls(base, VpnGate(vpn) { runBlocking { privacy.anyOnlyThroughVpn() } })
+    private val signInCalls = GatedCalls(base.recordedAs(context, "sign-in"), VpnGate(vpn) { runBlocking { privacy.anyOnlyThroughVpn() } })
 
     /** For a sign-in that isn't one blog's yet: see [signInCalls]. */
     fun client(token: String) = GitHubClient(signInCalls, token, apiBase)
@@ -127,7 +128,7 @@ class AppContainer(
 
     private val renewal: (suspend (String, String) -> DeviceFlow.Tokens)? = deviceFlow?.let { _ ->
         { key, refreshToken ->
-            val calls = renewalCalls.getOrPut(key) { GatedCalls(base, VpnGate(vpn) { runBlocking { privacy.signInAsksForVpn(key) } }) }
+            val calls = renewalCalls.getOrPut(key) { GatedCalls(base.recordedAs(context, "renewal for $key"), VpnGate(vpn) { runBlocking { privacy.signInAsksForVpn(key) } }) }
             DeviceFlow(calls, githubClientId, githubWeb).refresh(refreshToken)
         }
     }
@@ -138,7 +139,7 @@ class AppContainer(
      */
     private val previewClient = lazy {
         val cache = Cache(File(context.cacheDir, "preview"), 20L * 1024 * 1024)
-        GatedCalls(OkHttpClient.Builder().cache(cache).build(), VpnGate(vpn) { runBlocking { privacy.get(accounts.currentKey()).onlyThroughVpn } })
+        GatedCalls(OkHttpClient.Builder().cache(cache).build().recordedAs(context, "preview"), VpnGate(vpn) { runBlocking { privacy.get(accounts.currentKey()).onlyThroughVpn } })
     }
     val previewFetcher by lazy { PreviewFetcher(previewClient.value) }
 

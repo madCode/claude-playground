@@ -28,6 +28,22 @@ Times are when each cycle landed, Pacific.
 
 ## Tue 20 Oct
 
+### Cycle 35: a request record in debug builds
+- **Asked for:** the first Next item, chosen by madCode for the several-blogs audit: what the
+  app sends to GitHub, per sign-in, collectable from an emulator, with no token in it.
+- **Changed:** debug builds can record every request as it goes on the wire, one JSON line each
+  in the app's private files: which blog (or sign-in, renewal, preview) it was for, the method,
+  address, headers, body and GitHub's answer code. It's off until a session turns it on over
+  adb, since debug builds are used for real. `Authorization` is `(hidden)`, named by a
+  fingerprint of its token so two sign-ins can be told apart; the device flow's codes, a
+  link's `?token=` and anything shaped like a GitHub token are hidden too. Release builds have
+  none of it. DESIGN.md says what it leaves out.
+- **The review caught:** a record that couldn't be written (a full disk) failed the request
+  after GitHub had answered, which could lose a renewal's new tokens for good; it's dropped
+  now. A preview photo from a private file had its `?token=` recorded. The renewal test passed
+  without its own rule (the token-shape backstop hid it); it now uses a refresh token of
+  another shape. All fixed, with tests.
+
 ### Cycle 34: removing the open blog's sign-in never reads as signed out
 - **Asked for:** cycle 32's count found it: removing the open blog's sign-in could, for a moment,
   read as signed out, which sends the app to the sign-in screen.

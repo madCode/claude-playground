@@ -5,10 +5,6 @@ and moves it to Done.
 
 ## Next
 
-- [ ] A request record in debug builds, for the audit below (madCode chose it, 2026-10-20): every
-  request the app sends to GitHub, per sign-in, written where a session can collect it from the
-  emulator. The `Authorization` header is always written as `(hidden)`, with a test that a
-  token never reaches the record. Release builds have none of it.
 - [ ] Audit for several blogs: a security/privacy read of the requests each account makes,
   against the record of a real run (not the code). The run: madCode's laptop session, on the
   emulator, signed in with two fine-grained tokens from a GitHub account made for Claude's
@@ -27,6 +23,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 35: a request record in debug builds, for the several-blogs audit
 - [x] Cycle 34: removing the open blog's sign-in never reads as signed out
 - [x] Cycle 33: exotic YAML keys, checked: an edit that would change keys the app doesn't edit
   isn't made

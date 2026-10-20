@@ -3,6 +3,14 @@
 For the next cycle: what to do differently, newest first. What each cycle built is in
 [DEVLOG.md](DEVLOG.md). Keep the last ten or so.
 
+### Cycle 35 — build: a request record in debug builds
+
+- Android lint crashed (`Unexpected owner function: null`, in `ExperimentalDetector`) on a class
+  whose constructor declared `val dir: File`; a plain parameter assigned to a property passed.
+  When `lintAnalyzeDebug` crashes on a new file, try that before disabling a detector.
+- Two hiding rules over the same secret (a form field and a token shape) make each test pass
+  without its own rule. Give the test a secret only its rule can catch, then falsify each rule.
+
 ### Cycle 34 — build: the open blog never reads as signed out while its sign-in goes
 
 - A race seen once in 20 full runs, and never in 200 runs of its own test, became certain with a
