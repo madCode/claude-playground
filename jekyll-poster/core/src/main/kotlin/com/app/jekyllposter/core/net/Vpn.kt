@@ -121,7 +121,9 @@ class GatedCalls(private val base: OkHttpClient, private val gate: VpnGate) : Ca
     fun renew() {
         val old = client
         client = make()
-        // The idle ones close now. Busy ones finish what they started, then idle out unused.
-        old.connectionPool.evictAll()
+        // The idle ones close now, on OkHttp's own threads: closing a TLS connection writes to it,
+        // which Android refuses on the main thread, where switches and blogs change. Busy ones
+        // finish what they started, then idle out unused; none is reused, as its address differs.
+        old.dispatcher.executorService.execute { old.connectionPool.evictAll() }
     }
 }
