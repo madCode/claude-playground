@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "jekyll-poster"
-include(":app", ":core")
+include(":app", ":core", ":sender")
