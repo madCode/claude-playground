@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.testutil.TestApp
+import com.app.jekyllposter.testutil.waitUntilLooped
 import com.app.jekyllposter.testutil.idleUntil
 import com.app.jekyllposter.ui.theme.PosterTheme
 import kotlinx.coroutines.runBlocking
@@ -31,7 +32,7 @@ class PreviewScreenTest {
         idleUntil { vm.text != null }
         compose.setContent { PosterTheme { EditorScreen(vm) {} } }
         compose.onNodeWithContentDescription("Preview").performClick()
-        compose.waitUntil(5_000) { vm.state.value.previewing }
+        compose.waitUntilLooped { vm.state.value.previewing }
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Preview of the post").assertExists()
     }
