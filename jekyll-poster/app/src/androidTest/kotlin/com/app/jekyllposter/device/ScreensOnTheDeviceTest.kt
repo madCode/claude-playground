@@ -93,7 +93,6 @@ class ScreensOnTheDeviceTest {
         device.setOrientationNatural()
         waitForTag("termQuery")
 
-        device.pressBack()
         waitFor("Turning around")
         waitFor("Typed before turning.")
         assertEquals("One post, however many times the editor was made again", 1, runBlocking { app.container.database.drafts().snapshotCount() })
@@ -115,7 +114,8 @@ class ScreensOnTheDeviceTest {
         compose.onRoot().tryPerformAccessibilityChecks()
         keep("editor-large-dark")
 
-        device.pressBack()
+        // The editor's own Back: the system's would only close the keyboard.
+        compose.onNodeWithContentDescription("Back").performClick()
         waitFor("Welcome to the notebook")
         compose.onNodeWithContentDescription("More").performClick()
         compose.onNodeWithText("Settings").performClick()
