@@ -72,20 +72,21 @@ jobs:
             adb shell svc power stayon true
             adb logcat -c
             ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.app.jekyllposter.device.LiveOnTheDeviceTest "-Pandroid.testInstrumentationRunnerArguments.liveRepoA=$REPO_A" "-Pandroid.testInstrumentationRunnerArguments.liveTokenA=$TOKEN_A" "-Pandroid.testInstrumentationRunnerArguments.liveRepoB=$REPO_B" "-Pandroid.testInstrumentationRunnerArguments.liveTokenB=$TOKEN_B" || { adb logcat -d > app/build/device-logcat.txt; adb logcat -d -b crash; exit 1; }
-      # The record goes into a public artifact: refuse it if either token is anywhere in it.
-      - name: Check the request record holds no token
+      # The kept files (request records, the privacy report) go into a public artifact: refuse
+      # them all if either token is anywhere in them.
+      - name: Check the kept files hold no token
         id: scan
         if: always()
         run: |
-          record=$(find app/build/outputs -name requests.jsonl | head -1)
-          if [ -z "$record" ]; then echo "::warning::No request record came back."; exit 0; fi
-          if grep -qF -e "$TOKEN_A" -e "$TOKEN_B" "$record"; then
-            rm -f "$record"
-            echo "::error::A token reached the request record; it was deleted, not uploaded."
+          kept=$(find app/build/outputs -path '*additional_output*' -type f \( -name '*.jsonl' -o -name '*.json' \))
+          if [ -z "$kept" ]; then echo "::warning::No request record or report came back."; exit 0; fi
+          if grep -qF -e "$TOKEN_A" -e "$TOKEN_B" $kept; then
+            rm -f $kept
+            echo "::error::A token reached a kept file; they were deleted, not uploaded."
             exit 1
           fi
-          mkdir -p app/build/request-record && cp "$record" app/build/request-record/
-          echo "$(wc -l < "$record") requests recorded, no token in them."
+          mkdir -p app/build/request-record && cp $kept app/build/request-record/
+          wc -l $kept
       - name: Keep the request record and the report
         if: always() && steps.scan.outcome == 'success'
         uses: actions/upload-artifact@v6
