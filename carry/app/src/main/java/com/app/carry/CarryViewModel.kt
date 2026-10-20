@@ -140,9 +140,11 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         return draft.sheetId == showing
     }
 
-    /** True from the tap until Android's installer has answered. Process-wide, because the
-     *  answer arrives at a receiver, not here. */
-    val installing: kotlinx.coroutines.flow.StateFlow<Boolean> = UpdateInstaller.installing
+    /** Installs a newer CI build; does nothing in a release build. Replaced in tests. */
+    internal var updater: SelfUpdater = selfUpdater(app)
+
+    /** True from the tap until Android's installer has answered. */
+    val installing: kotlinx.coroutines.flow.StateFlow<Boolean> get() = updater.installing
 
     /** Why the last attempt didn't install, for the screen to say once; [UpdateProblem.offerLink]
      *  when the download link in a browser would still help. */
@@ -150,70 +152,16 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     val updateProblem: State<UpdateProblem?> = _updateProblem
     fun updateProblemShown() { _updateProblem.value = null }
 
-    // Seams for the tests: the network, the archive check and the hand-off to Android.
-    internal var download: (String, java.io.File) -> Unit = { url, dest -> UpdateInstaller.download(url, dest) }
-    internal var isNewer: (java.io.File) -> Boolean =
-        { UpdateInstaller.isNewerSelf(getApplication(), it, BuildConfig.VERSION_CODE.toLong()) }
-    internal var stage: (java.io.File) -> Int = { UpdateInstaller.stage(getApplication(), it) }
-    internal var commit: (Int) -> Unit = { UpdateInstaller.commit(getApplication(), it) }
-    internal var abandon: (Int) -> Unit = { UpdateInstaller.abandon(getApplication(), it) }
-
     /**
-     * Downloads the newest build and hands it to Android's installer. The owner can type while
-     * it downloads, so unsaved typing is checked again on the main thread just before the
-     * hand-off, not only at the tap: an install started over it would lose it.
+     * Downloads [build] and hands it to Android's installer. The owner can type while it
+     * downloads, so [unsaved] is asked again on the main thread just before the hand-off, not
+     * only at the tap: an install started over it would lose it.
      */
-    fun installUpdate() {
-        if (!UpdateInstaller.start()) return
-        val app = getApplication<Application>()
-        var handedOver = false
+    fun installUpdate(build: Int) {
         viewModelScope.launch {
-            val problem = try {
-                val apk = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    val dir = java.io.File(app.cacheDir, "updates").apply { mkdirs() }
-                    java.io.File(dir, "carry-debug.apk").apply { delete(); download(DebugUpdates.DOWNLOAD, this) }
-                }
-                if (!withContext(kotlinx.coroutines.Dispatchers.IO) { isNewer(apk) }) {
-                    UpdateProblem("The download isn't a newer Carry, so it wasn't installed.", offerLink = false)
-                } else {
-                    val id = try {
-                        withContext(kotlinx.coroutines.Dispatchers.IO) { stage(apk) }
-                    } catch (e: java.io.IOException) {
-                        throw InstallFailed(e)
-                    }
-                    // Checked here, on the main thread, after the slow parts and immediately
-                    // before the commit, so nothing typed during them can be installed over.
-                    if (unsaved) {
-                        abandon(id)
-                        UpdateProblem("Save the After tab first, then tap the notice again. Updating restarts Carry.", offerLink = false)
-                    } else {
-                        commit(id)
-                        handedOver = true
-                        null
-                    }
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                // Once committed, Android's answer still comes; only an attempt that never got
-                // there is over.
-                if (!handedOver) UpdateInstaller.finish()
-                throw e
-            } catch (e: InstallFailed) {
-                UpdateProblem("Android couldn't take the update: ${e.cause?.message ?: "no room?"}.", offerLink = true)
-            } catch (e: java.io.IOException) {
-                UpdateProblem("Couldn't download the update: ${e.message ?: "no connection"}.", offerLink = true)
-            } catch (e: Exception) {
-                // Anything Android's installer or an archive parser throws: said, never a crash,
-                // because a crash takes unsaved typing with it.
-                UpdateProblem("Android wouldn't take the update: ${e.message ?: e.javaClass.simpleName}.", offerLink = true)
-            }
-            if (problem != null) {
-                UpdateInstaller.finish()
-                _updateProblem.value = problem
-            }
+            updater.install(build) { unsaved }?.let { _updateProblem.value = it }
         }
     }
-
-    private class InstallFailed(cause: Throwable) : Exception(cause)
 
     /** How the folder is read. Replaced in tests so the stall path and the
      *  keep-last-good path can be exercised without a real provider; there

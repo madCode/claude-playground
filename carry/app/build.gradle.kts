@@ -91,6 +91,38 @@ androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
         ciRun?.let { run -> variant.outputs.forEach { it.versionCode.set(run) } }
     }
+    onVariants { variant ->
+        val name = variant.name.replaceFirstChar { it.uppercase() }
+        val manifestCheck = tasks.register<SelfUpdateManifestCheck>("check${name}SelfUpdateManifest") {
+            manifest.set(variant.artifacts.get(com.android.build.api.artifact.SingleArtifact.MERGED_MANIFEST))
+            selfUpdates.set(variant.buildType == "debug")
+        }
+        tasks.named("check") { dependsOn(manifestCheck) }
+    }
+}
+
+/**
+ * Fails when a variant's merged manifest disagrees about updating itself: the debug build installs
+ * newer CI builds (src/debug), and a release must not be able to install apps or reach the network.
+ * Checking debug as well keeps the release check from passing on a manifest it misread.
+ */
+abstract class SelfUpdateManifestCheck : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val manifest: RegularFileProperty
+
+    @get:Input
+    abstract val selfUpdates: Property<Boolean>
+
+    @TaskAction
+    fun check() {
+        val text = manifest.get().asFile.readText()
+        for (name in listOf("android.permission.REQUEST_INSTALL_PACKAGES", "android.permission.INTERNET", "UpdateInstaller\$Result")) {
+            if ((name in text) != selfUpdates.get()) {
+                throw GradleException("${manifest.get().asFile}: $name should " + if (selfUpdates.get()) "be there" else "not be there")
+            }
+        }
+    }
 }
 
 dependencies {

@@ -13,7 +13,10 @@
   to the class (#110); each debug build numbered (#106); an icon of its own
   (#105); the Since tab counting a file it couldn't read (#112) and taking
   its band from the sheet on screen (#113). Older entries are below.
-- **Watching:** a session logged entirely by hand is still not listed on the
+- **Watching:** typing in the few seconds after an update is handed to
+  Android, while it installs, can be lost: the After tab stays editable.
+  Making it read-only while an install is under way would close it
+  (review of cycle 71; older than that). a session logged entirely by hand is still not listed on the
   Since tab at all — it moves the screen's aggregates, so it is its own
   decision rather than a bug fix. A session logged only with markers *is*
   listed now (#77); that one was a wrong answer rather than a missing
@@ -28,6 +31,40 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-20 — cycle 71: updates, part one: debug-only, and checked
+
+The first half of bringing updates up to newspaperss's (you approved,
+#148).
+
+- **A release build can no longer install apps or reach the network.**
+  The installer, its result receiver, `REQUEST_INSTALL_PACKAGES` and
+  `INTERNET` moved to the debug source set. `aapt2 dump permissions` on
+  the built APKs: debug keeps the same seven; release went from seven to
+  five, and its code has no installer in it. `check` now fails if a
+  release build's merged manifest asks for either permission.
+- **Carry checks the download itself** before Android sees it: the same
+  app, signed with the same key, a newer build. Before, it checked the
+  package and version and left the key to Android, which only refuses
+  after asking you.
+- **It gives up on a build after three failed installs**, or at once when
+  the file fails the app or key check, or Android says it can never
+  install. The notice's tap then opens the download in a browser, the old
+  way. A newer build is tried again. Saying no to Android's question, or
+  a failed download, isn't counted.
+- The review found three older gaps, fixed here. Android's "Update this
+  app?" left with Home no longer leaves the notice stuck on
+  "Downloading…": five minutes on, your next return drops it and the
+  notice can be tapped again. A question that arrived while you were in
+  another app is shown when you come back, unless you've typed since,
+  when it's dropped. A late answer about an older install no longer ends
+  the one under way.
+- Left as it was: typing in the few seconds after the hand-off, while
+  Android installs, can still be lost. Under *Watching* above, with the
+  fix it would take.
+- Nothing you see changed. Still owed on a phone: the key check reading a
+  real APK, and a real install. Neither can be shown without a device.
+- Left for part two: the download on Wi-Fi, the install while Carry is
+  closed, and the check every six hours.
 ## 2026-10-20 — cycle 70: an old *hard*-only row counts, as the coach counts it
 
 - A row whose only record is an old file's `hard` now counts as answered
