@@ -1,5 +1,6 @@
 package com.app.jekyllposter.device
 
+import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
 import com.app.jekyllposter.AppContainer
 import com.app.jekyllposter.PosterApp
@@ -18,7 +19,13 @@ class DeviceTestApp : PosterApp() {
 
     override fun createContainer(): AppContainer {
         // Off the main thread, where Android refuses network sockets, the server's own included.
-        github = runBlocking(Dispatchers.IO) { FakeGitHub(sampleBlogFiles()) }
+        // Logged in full: a crash here reaches CI's log without its stack trace.
+        github = try {
+            runBlocking(Dispatchers.IO) { FakeGitHub(sampleBlogFiles()) }
+        } catch (e: Exception) {
+            Log.e("DeviceTestApp", "Couldn't start the fake GitHub", e)
+            throw e
+        }
         return AppContainer(this, apiBase = github.apiBase, githubWeb = github.apiBase, githubClientId = "Iv1.test", githubAppSlug = "jekyll-poster-test")
     }
 
