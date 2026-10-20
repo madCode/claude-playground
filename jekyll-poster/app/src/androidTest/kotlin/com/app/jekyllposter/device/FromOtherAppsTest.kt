@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.exifinterface.media.ExifInterface
+import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -18,6 +19,7 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
+import com.app.jekyllposter.MainActivity
 import com.app.jekyllposter.data.Account
 import java.io.File
 import kotlinx.coroutines.runBlocking
@@ -63,10 +65,8 @@ class FromOtherAppsTest {
         runBlocking { app.container.accounts.save(Account("sample", github.token, "sample", "sample-blog", "main")) }
     }
 
-    @After fun close() {
-        device.pressHome()
-        github.close()
-    }
+    // No pressHome here: @After runs before the failure rule, whose picture should show the failure.
+    @After fun close() = github.close()
 
     private fun waitFor(text: String, timeoutMs: Long = 20_000) =
         compose.waitUntil(timeoutMs) { compose.onAllNodes(hasText(text, substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
@@ -122,6 +122,9 @@ class FromOtherAppsTest {
     }
 
     @Test fun aNoteSharedFromObsidianArrivesReadyForTheBlog() {
+        // As a writer who has opened their blog before: `[[links]]` are found among its posts.
+        ActivityScenario.launch(MainActivity::class.java)
+        waitFor("Welcome to the notebook")
         share("note", "text" to "---\ntags: [lunch]\n---\nSoup, then [[What I read in April]]. %%ask about the bread%%\n")
         waitForTag("title")
         waitFor("post_url 2025-04-20-reading-list")
