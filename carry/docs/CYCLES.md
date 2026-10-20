@@ -5,6 +5,21 @@ differently. Newest first; read the top before starting. What was built is
 in [DEVLOG.md](DEVLOG.md). Kept to the last ten or so cycles; older lessons
 that hold become rules in CLAUDE.md or the cycles skill.
 
+## 2026-10-20 (cloud session, second Carry agent, later)
+
+### Cycle 72 — build: tests for the guards, and `MainActivity`
+
+- **Results from a script on a shared path are unproven** (cycle 71's
+  note on the scratchpad): rerun every falsification it touched.
+- **Drive the real Activity in Robolectric** with
+  `createAndroidComposeRule<MainActivity>()`, `shadowOf(activity)
+  .nextStartedActivityForResult` and `receiveResult`, then
+  `scenario.moveToState` for the resume. Before asserting a screen, wait
+  for the one read it depends on (wrap the ViewModel's `read` seam and
+  count): the read runs on IO, which Compose's clock doesn't wait for.
+  Waiting for every `viewModelScope` child timed out on CI only, as the
+  first test of a cold class.
+
 ## 2026-10-20 (cloud session, first Carry agent)
 
 ### Cycle 71 — build: updates, part one (debug-only installer, its checks)

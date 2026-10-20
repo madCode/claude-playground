@@ -309,17 +309,6 @@ These are the open paths to one, hardest first.
   tab, so a background install waits for no draft and no save in progress.
   A device check is owed with it, since the install itself happens in
   Android's hands *(you approved, 2026-10-19)*
-- [ ] **Branch coverage is 67% while the Kover floor is 85% on
-  instructions.** The gate is real but it is counting the wrong thing for
-  a codebase this full of fail-closed guards — a third of branches have
-  never been taken. Not a demand for a second gate (a test written only to
-  lift a number is worse than the number), but worth one pass over the
-  classes with the widest gap: `SessionFolder` 78%, `CarryAppKt` 77%
-  *(audit: CI health)*
-- [ ] `MainActivity` is at **0%** and `LogBinding` at 0%. The first is the
-  SAF plumbing the emulator is honest about and unit tests are not, so it
-  is the one place a device check earns its keep; the second is a plain
-  data holder *(audit: CI health)*
 ### Owed on a device
 
 Only a real phone can answer these.
@@ -467,6 +456,19 @@ Nothing exists for "the sheet is wrong and I know it now". Adding a row currentl
 means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
+
+- [x] **One pass of tests over the fail-closed guards, and `MainActivity`
+  off 0%.** Real behaviour tests, each falsified: the folder against a
+  provider (junk rows, a file over 1 MB, a trickling stream, a read-only
+  grant, re-picking), finishing a sheet the provider won't hand over, the
+  finishing strip over unsaved typing, and the Activity's picker and
+  notification ask. Branch coverage went from 73.4% to 75.3% overall (it
+  was 67% when this was filed): `SessionFolder` 45 to 61 of 72 branches,
+  `CarryAppKt` 150 to 160 of 178, `MainActivity` from no instructions run
+  to 72% of them. The Activity test found the whole-phone refusal being
+  wiped by the resume after the picker; fixed. What only a device shows (a
+  grant surviving a reinstall, the real picker) stays under *Owed on a
+  device* *(audit: CI health)*
 
 - [x] **Carry and gym-coach agree about an old *hard*-only row.** Carry
   moved to gym-coach's reading: its importer turns a row whose only

@@ -31,6 +31,22 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-20 — cycle 72: tests for the guards, and the whole-phone refusal stays
+
+- Picking **Internal storage** instead of a folder now leaves *That's your
+  whole phone* on screen. It used to flash and give way to *Pick your
+  folder* at once, because Carry re-reads the folder every time it comes
+  back from the picker. Found by the first test of the Activity itself.
+- New tests for what the app refuses or holds back. Each was broken on
+  purpose to watch it go red:
+  - junk from the folder's provider, a file over 1 MB, a read-only grant;
+  - a re-pick handing back the old grant;
+  - a sheet being finished that won't load, and the strip over unsaved
+    typing;
+  - the folder picker's answer, and asking for notifications once.
+- Branch coverage went from 73.4% to 75.3% (Kover, CI). `MainActivity` went from
+  untested to 72% of its instructions run.
+
 ## 2026-10-20 — cycle 71: updates, part one: debug-only, and checked
 
 The first half of bringing updates up to newspaperss's (you approved,
