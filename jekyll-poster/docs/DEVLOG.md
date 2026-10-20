@@ -29,6 +29,28 @@ Times are when each cycle landed, Pacific.
 
 ## Tue 20 Oct
 
+### Cycle 39: what GitHub knows about the writer (audit)
+- **Asked for:** the several-blogs audit, and madCode's question of how much GitHub knows about
+  the sender with privacy at its most.
+- **Found:** written up in [What GitHub knows](research/what-github-knows.md), from the device
+  live check's records, not the code. Each request carries one sign-in's token, to its own
+  blogs only, and nothing about the phone (`User-Agent: okhttp/5.5.0`). Every switch did what it
+  says. What's left: the account, the address requests come from (the VPN switch's job), the
+  moment the commit was made with GitHub's own `-0700`, when the app is open, and that two
+  accounts on one phone came from one address at once.
+- **Waiting on you:** whether *Dates by the day only* should date the commit by the day too
+  (BACKLOG.md, *Your call*).
+
+### Cycle 38: a nightly device live check on the tester's blogs
+- **Asked for:** the plan's device live check, and the request record for the audit.
+- **Changed (tests and CI):** every night the app runs on an emulator against the real GitHub:
+  blog A signed in to and published from the screens, the organisation's blog added with its own
+  token, both heard live; then everything switched on for writing anonymously but the VPN, a
+  shared link published, and what GitHub kept read back into a report. The records and report
+  are an artifact, refused if a token is in any of them.
+- **Found on its first run:** choosing a blog failed on a phone (the fix above). Then the
+  workflow's own token scan let a `grep` error pass as clean; it now fails closed.
+
 ### Fix: choosing a blog, or turning the VPN switch, failed on a phone
 - **Found by** the device live check (cycle 38), on its first run against the real GitHub: picking
   the blog after signing in with a token threw `NetworkOnMainThreadException`, so the blog was

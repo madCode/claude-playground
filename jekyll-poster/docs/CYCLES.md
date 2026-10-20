@@ -3,6 +3,19 @@
 For the next cycle: what to do differently, newest first. What each cycle built is in
 [DEVLOG.md](DEVLOG.md). Keep the last ten or so.
 
+### Cycle 39 — audit: what GitHub knows about the writer
+
+- Read the run's records, not the code: the commit's `-0700` and the blog read three times on
+  opening only show up there. Next audits start from the latest nightly artifact
+  (`jekyll-poster-device-live`), which a cloud session downloads with `actions_get`.
+
+### Cycle 38 — build: the device live check on the tester's blogs
+
+- The real GitHub found what the fake couldn't (TLS closed on the main thread). A change to
+  connections or threads wants the device live check run on its PR, not only the fake suite.
+- A scan that guards a public artifact must fail closed: test it against the failure (a missing
+  file, a name with spaces) as well as the leak.
+
 ### Cycle 36 — build: device tests on an emulator, on every PR
 
 - A cloud session can't run an emulator (no KVM): the PR's own CI is the only run. Make the

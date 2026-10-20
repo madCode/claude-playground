@@ -10,12 +10,16 @@ and moves it to Done.
   app (a test-only sender, like newspaperss's `epubsink`).
 - [ ] More of the device live check (`LiveOnTheDeviceTest`): a photo, an edit and a delete
   from the screens, and an edit conflict made by the workflow committing while the post is open.
-- [ ] Audit for several blogs: a security/privacy read of the requests each account makes,
-  against the request record from a device live check run (not the code). A cloud session can
-  do it from that run's artifacts.
 - [ ] The first run of the laptop checks ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)): a session in the
   desktop app on madCode's laptop, since a cloud session has no emulator or browser sign-ins.
 
+
+## Your call
+
+- [ ] With *Dates by the day only* on, date the commit itself by the post's day too (midnight
+  UTC, author and committer), so the public history shows neither when the post went out nor a
+  time zone. GitHub keeps the real moment in its own logs either way.
+  [What GitHub knows](research/what-github-knows.md) has the run behind it.
 
 ## Later
 
@@ -28,6 +32,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 39: what GitHub knows about the writer, read from the device live check's records
 - [x] Cycle 40: the laptop checks written down, with `tools/emulator-check.sh`
 - [x] Cycle 38: a nightly device live check on two of the tester's blogs, keeping the request record
 - [x] The tester account, its three blogs and tokens, the GitHub App on them, and a Proton VPN
