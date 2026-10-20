@@ -111,9 +111,11 @@ and an untouched row, become nothing.
   Any edit to such a row clears the flag, so a row is never skipped and
   weighted at once.
 - ***hard*.** The coach treats a completed set as completed however it
-  felt (madCode's decision, 2026-10-16; gym-coach is changing to match).
-  An older file's `hard` still reads and is written back as it was. A
-  row only it answers reads as blank, and tapping *easy* clears it.
+  felt (madCode's decision, 2026-10-16). An older file's `hard` still
+  reads and is written back as it was. On this page a row only it
+  answers reads as blank, and tapping *easy* clears it. gym-coach's
+  importer still counts that row as a set, though, so a past session
+  shows it with a *hard* mark and the Since tab counts its day.
 - **A ✓ on every row** (mockups v2 and v3). Each row's own fields already
   say it, and tap-to-fill keeps a bodyweight row at one tap.
 - ***done* as a chip.** It moved into the timed row's reps slot.
@@ -375,8 +377,9 @@ day is the whole session.
 
 A row with nothing on it at all reads as blank; a row carrying only a feel
 marker, or only *done*, does not, because for the movements that carry no
-weight the marker is the whole record. The same test decides whether the
-session appears on that screen at all.
+weight the marker is the whole record. An older file's *hard* is one of
+those markers here, since gym-coach's importer counts it. The same test
+decides whether the session appears on that screen at all.
 
 It is a **record, not a form**, and says so. There is nothing on it to type
 into, because two ways to write one file is how a wrong number gets in. A

@@ -77,10 +77,11 @@ object Growth {
          * A row with none of this is blank, and is shown blank.
          */
         val answered: Boolean get() =
-            // Not `hard`: it is no longer shown, and a row it alone
-            // answered would read as done with nothing to show why.
+            // `hard` counts, as it does in gym-coach's importer: an older
+            // file's hard-only row is a set in the owner's history, so it
+            // is a session here too, and [marks] shows it.
             weight != null || reps != null || skipped ||
-                easy || easier || done || hurt || !note.isNullOrBlank() ||
+                easy || hard || easier || done || hurt || !note.isNullOrBlank() ||
                 // An ADDED row's name is itself the answer: the sheet never
                 // listed it, so typing "ybell deadlift" and nothing else is
                 // a record that it happened. A sheet row's name is the
@@ -93,6 +94,9 @@ object Growth {
          *  offers them, so the two screens read the same way round. */
         val marks: List<String> get() = buildList {
             if (easy) add("easy")
+            // Only an older file says `hard`. Shown because [answered]
+            // counts it, so a row it alone answered says why.
+            if (hard) add("hard")
             if (easier) add("mod")
             if (done) add("done")
             if (hurt) add("hurt")
