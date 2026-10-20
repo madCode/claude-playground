@@ -52,10 +52,12 @@ The first half of bringing updates up to newspaperss's (you approved,
   way. A newer build is tried again. Saying no to Android's question, or
   a failed download, isn't counted.
 - The review found three older gaps, fixed here. Android's "Update this
-  app?" left with Home is asked again on your next return, rather than the
-  notice staying stuck on "Downloading…". If you typed since tapping, that
-  waiting install is dropped instead. A late answer about an older install
-  no longer ends the one under way.
+  app?" left with Home no longer leaves the notice stuck on
+  "Downloading…": five minutes on, your next return drops it and the
+  notice can be tapped again. A question that arrived while you were in
+  another app is shown when you come back, unless you've typed since,
+  when it's dropped. A late answer about an older install no longer ends
+  the one under way.
 - Left as it was: typing in the few seconds after the hand-off, while
   Android installs, can still be lost. Under *Watching* above, with the
   fix it would take.
