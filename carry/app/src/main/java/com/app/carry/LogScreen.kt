@@ -288,8 +288,9 @@ private fun LazyListState.fullyShows(index: Int): Boolean {
  *
  * Not *hurt*: tapping it while deciding not to do a movement is the
  * commonest reason to tap it. Not an old file's `hard` or `skipped`
- * either; neither is shown any more. gym-coach's importer counts each of
- * these rows as a completed set, and an untouched row as nothing.
+ * either: this page has no chip for them, so a row only they answer
+ * looks untouched here. gym-coach's importer still counts a `hard` row
+ * as a set, which is why a past session on Since shows and counts it.
  */
 internal fun SessionPatch.Entry.noted(): Boolean =
     weight != null || reps != null || fractionalReps != null || done || easy || easier

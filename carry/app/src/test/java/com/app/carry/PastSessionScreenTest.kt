@@ -95,19 +95,31 @@ class PastSessionScreenTest {
     }
 
     @Test
-    fun `an older file's hard mark reads without error and isn't shown`() {
+    fun `an older file's hard mark is shown back, as it was tapped`() {
         // The sample past file marks its goblet squat `"hard": true`, as
-        // files written before the chip went do. It still reads, the row
-        // and its numbers are there, and the mark Carry no longer offers
-        // isn't shown back.
+        // files written before the chip went do. gym-coach still counts it,
+        // so the record shows it: without the mark, a row only `hard`
+        // answered would read as done with nothing to say why.
         assertTrue("the fixture must carry a hard mark", "\"hard\": true" in SampleSession.pastFile)
         val read = Growth.of(listOf(SampleSession.pastFile)).days.single()
         compose.setContent { PastSession(read, onBack = {}) }
-        compose.onNodeWithText("goblet squat", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("hard", useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText("hard", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithContentDescription(
-            "goblet squat · harder, 25 pounds, 8 reps, last two were ugly", substring = true,
+            "goblet squat · harder, 25 pounds, 8 reps, hard, last two were ugly", substring = true,
         ).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a row only hard answered reads as answered, not blank`() {
+        val hardOnly = SampleSession.pastFile.replace(
+            "\"weight\": 25, \"reps\": 8, \"hard\": true, \"note\": \"last two were ugly\"",
+            "\"hard\": true",
+        )
+        assertTrue("the edit must have landed", hardOnly != SampleSession.pastFile)
+        compose.setContent { PastSession(Growth.of(listOf(hardOnly)).days.single(), onBack = {}) }
+        compose.onNodeWithContentDescription("goblet squat · harder, hard", substring = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription("goblet squat · harder, not filled in", substring = true)
+            .assertDoesNotExist()
     }
 
     @Test
@@ -119,7 +131,7 @@ class PastSessionScreenTest {
         compose.onNodeWithContentDescription("bench press, 45 pounds, 10 reps, easy")
             .assertIsDisplayed()
         compose.onNodeWithContentDescription(
-            "goblet squat · harder, 25 pounds, 8 reps, last two were ugly"
+            "goblet squat · harder, 25 pounds, 8 reps, hard, last two were ugly"
         ).assertIsDisplayed()
         // "10 total" is 5 a side: the file's own wording is shown, never
         // the runner's working number.

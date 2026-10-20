@@ -299,30 +299,16 @@ These are the open paths to one, hardest first.
     Wi-Fi and installs it while the app is closed and nothing is running.
   - **It only checks on a return to the app.** newspaperss also checks in
     the background, every six hours.
-  - [x] ~~**It leaves the file checks to Android.**~~ Done in cycle 70:
+  - [x] ~~**It leaves the file checks to Android.**~~ Done in cycle 71:
     Carry checks the package, the signing key and a higher version code
     itself, and gives up on a build after three failed installs.
   - [x] ~~**The installer and `REQUEST_INSTALL_PACKAGES` ship in every
-    build.**~~ Done in cycle 70: both, and `INTERNET`, are debug-only, and
+    build.**~~ Done in cycle 71: both, and `INTERNET`, are debug-only, and
     `check` fails if a release's merged manifest asks for them.
   Keep Carry's own rule: never install over unsaved typing on the After
   tab, so a background install waits for no draft and no save in progress.
   A device check is owed with it, since the install itself happens in
   Android's hands *(you approved, 2026-10-19)*
-- [ ] **A resume can put another session on screen over pending
-  typing.** The refresh on every resume shows the newest session; the
-  draft for the old one is then hidden, and the next keystroke replaces
-  it. Left for the brain-on-the-phone move, since the session file goes
-  then. Finishing an older session (cycle 68) has the same exposure: a
-  sync that briefly drops the old file from the listing puts the newest
-  back under the typing, and the pin goes with it *(the simple save
-  refusal, #136 closed; review of cycle 68)*
-- [ ] **Carry and gym-coach disagree about an old *hard*-only row.** An
-  old session whose only record is `hard` on bodyweight rows reaches
-  gym-coach's history, which still counts `hard` as an answer. Carry's
-  `Row.answered` ignores `hard` (Growth.kt), so the Since tab leaves that
-  session out. One side should change to match the other *(review of
-  #136)*
 - [ ] **Branch coverage is 67% while the Kover floor is 85% on
   instructions.** The gate is real but it is counting the wrong thing for
   a codebase this full of fail-closed guards — a third of branches have
@@ -339,7 +325,8 @@ These are the open paths to one, hardest first.
 Only a real phone can answer these.
 - [ ] **The After page v4 on a phone.** Tap an empty reps box: it should
   fill with the faint count, selected, and typing should replace it. With
-  TalkBack, the box should say "empty, tap for 10" and then the number.
+  TalkBack, the box should say "empty, prescribed 10" and offer a
+  "Fill in 10" action, then say the number once filled.
   Check a timed row's *done* tag, and the page at the largest font size
   *(due with #127 v4)*
 - [ ] **TalkBack reads "You typed: …" when it appears after Save.** The
@@ -459,6 +446,16 @@ Without that there is no way to tell a faithful port from one that has
 quietly lost a third of the lines, because the only witness is the
 owner's own training record months later.
 
+**Waits for this move**, because the session file goes with it:
+
+- A resume can put another session on screen over pending typing. The
+  refresh on every resume shows the newest session; the draft for the old
+  one is then hidden, and the next keystroke replaces it. Finishing an
+  older session (cycle 68) has the same exposure: a sync that briefly
+  drops the old file from the listing puts the newest back under the
+  typing, and the pin goes with it *(the simple save refusal, #136
+  closed; review of cycle 68)*
+
 Two smaller things it would also need: the `INTERNET` permission and
 stored Reddit credentials, which is a much bigger change to this app's
 stated properties than the one notification permission; and the history
@@ -470,6 +467,14 @@ Nothing exists for "the sheet is wrong and I know it now". Adding a row currentl
 means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
+
+- [x] **Carry and gym-coach agree about an old *hard*-only row.** Carry
+  moved to gym-coach's reading: its importer turns a row whose only
+  record is `hard` into a set in history (its #50 kept that on purpose),
+  so the Since tab now counts that day too, and a past session shows the
+  row with a *hard* mark rather than as done with nothing to say why.
+  Checked with gym-coach's own `to_history` on such a file: one entry
+  for the hard row, none for the untouched one *(review of #136)*
 
 - [x] **Finish an older session.** Built 2026-10-18: a *Finish this
   session* button on a past day in Since puts that sheet on the After tab,
