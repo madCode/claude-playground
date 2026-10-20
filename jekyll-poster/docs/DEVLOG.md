@@ -29,6 +29,15 @@ Times are when each cycle landed, Pacific.
 
 ## Tue 20 Oct
 
+### Fix: choosing a blog, or turning the VPN switch, failed on a phone
+- **Found by** the device live check (cycle 38), on its first run against the real GitHub: picking
+  the blog after signing in with a token threw `NetworkOnMainThreadException`, so the blog was
+  never opened. Turning Only connect through a VPN on or off went the same way.
+- **Why:** both close the old connections, and closing a TLS connection writes to it, which
+  Android refuses on the main thread. The fake GitHub speaks plain HTTP, so no test saw it.
+- **Changed:** the old connections close on OkHttp's own threads. They were never reused anyway:
+  a connection only serves the client it was made for.
+
 ### Cycle 37: the live check on the tester's three blogs
 - **Asked for:** the Next item, now that madCode has made the tester account.
 - **Changed (CI only):** the live check runs nightly (03:37 Pacific) and by hand against the

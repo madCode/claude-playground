@@ -34,6 +34,7 @@ claude-playground repository; run commands from this folder. The rules every pro
     ./gradlew build koverVerify          # everything CI runs (fails below 85% line coverage)
     ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest'   # PNGs in app/build/screenshots
     ./gradlew :app:connectedDebugAndroidTest   # device tests, on a running emulator
+    tools/emulator-check.sh                    # the laptop's emulator checks: docs/DEVICE-CHECKS.md
 
 To try a change against a real blog, run the "Jekyll Poster live check" workflow on its branch:
 it publishes a post to each of the tester's three blogs, waits for Pages, then deletes it. It also
