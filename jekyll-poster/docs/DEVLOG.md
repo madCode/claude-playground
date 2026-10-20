@@ -20,11 +20,24 @@ Times are when each cycle landed, Pacific.
 - **Several blogs:** all three cycles are built: blogs under several accounts, a switcher from
   the title, Remove, and privacy per blog. The switcher's UX pass found nothing to change; the
   request-log audit waits on how to get a real run's log (morning page).
-- **Waiting on you:** nothing. The Android SDK is now in the cloud environment, at
-  `/opt/android-sdk` (cycle 30 built and tested with it; `ANDROID_HOME` isn't set, so a session
-  writes `sdk.dir` into `local.properties`).
+- **Watching:** `EditFlowTest.tappingAPostOnTheBlogOpensItsTextToEdit` failed once with "addObserver
+  must be called on the main thread" (Compose composing off the main thread), in 1 of 9 full runs
+  with cycle 34's change and none of 40 before it. Count it before blaming the change.
+- **Waiting on you:** how to get a real run's request log, for the last audit (morning page).
+  The Android SDK is in the cloud environment now, at `/opt/android-sdk`.
 
 ## Tue 20 Oct
+
+### Cycle 34: removing the open blog's sign-in never reads as signed out
+- **Asked for:** cycle 32's count found it: removing the open blog's sign-in could, for a moment,
+  read as signed out, which sends the app to the sign-in screen.
+- **Found:** Remove moves to the next blog first, then deletes the rows; but the database could
+  report the rows gone before the app heard about the move. With the store slowed down in a
+  test, it happened every time.
+- **Changed:** that moment's "nothing here" is ignored when another blog is already open; the
+  next blog follows. A real sign-out still reads as one.
+- **The review caught:** a store that can't be read at that moment would have crashed the app;
+  it now lets the sign-out through.
 
 ### Cycle 33: front matter the app can't follow is left alone
 - **Asked for:** the Later item "keys like `c#:` read right, but other exotic YAML keys may still
