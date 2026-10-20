@@ -5,9 +5,15 @@ and moves it to Done.
 
 ## Next
 
+- [ ] A request record in debug builds, for the audit below (madCode chose it, 2026-10-20): every
+  request the app sends to GitHub, per sign-in, written where a session can collect it from the
+  emulator. The `Authorization` header is always written as `(hidden)`, with a test that a
+  token never reaches the record. Release builds have none of it.
 - [ ] Audit for several blogs: a security/privacy read of the requests each account makes,
-  against a log of a real run's requests (not the code). Needs that log: how to get it is a
-  question for madCode (morning page).
+  against the record of a real run (not the code). The run: madCode's laptop session, on the
+  emulator, signed in with two fine-grained tokens from a GitHub account made for Claude's
+  testing, each token limited to its own test copy of the sample blog. Waits on the record
+  above and on madCode making that account (morning page).
 
 
 ## Later
