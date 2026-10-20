@@ -71,14 +71,14 @@ install with no dialog, and the emulator's network counts as Wi-Fi.
    app?" (the first in-app update always does), and after Update the Since
    tab shows build N. A refusal here ("isn't a Carry this phone can
    trust") means the key check misread a real APK.
-4. **The background install.** Reinstall build 1 (step 2), open Carry
-   once, type nothing, and go Home. Find the jobs with `adb shell dumpsys
-   jobscheduler | grep -B2 -A2 com.app.carry.debug`, and run each with
-   `adb shell cmd jobscheduler run -f com.app.carry.debug <id>`: the
-   check, then the download, then the install. Pass: `adb shell dumpsys
-   package com.app.carry.debug | grep versionCode` shows N, with no
-   dialog. Android 12+ installs silently only after Carry has installed
-   itself once, which step 3 did.
+4. **The background attempt, without a dialog.** Reinstall build 1 with
+   adb, open Carry once, type nothing, and go Home. Find the jobs with
+   `adb shell dumpsys jobscheduler | grep -B2 -A2 com.app.carry.debug`, and
+   run each with `adb shell cmd jobscheduler run -f com.app.carry.debug
+   <id>`: the check, then the download, then the install. adb is now the
+   installer of record, so Android wants a yes. Pass: no dialog appears
+   and it's still build 1. Then a tap on the notice asks at once, with no
+   "Downloading…" wait, because the file is already there.
 5. **Not over typing.** Reinstall build 1, open Carry, type a weight on the
    After tab without saving, go Home, and run the jobs again. Pass: still
    build 1, and the weight is there when Carry opens again. Then save, go
@@ -88,6 +88,11 @@ install with no dialog, and the emulator's network counts as Wi-Fi.
    Pass: neither `REQUEST_INSTALL_PACKAGES` nor `INTERNET` is listed.
 7. Shut the emulator down: `adb emu kill`, then `adb devices` should list
    nothing.
+
+The silent background install itself needs Carry to have installed the
+build before, and a newer CI build after that. That only happens over
+days, so it's a phone check: after a merge to main, the phone should be on
+the new build by the next morning without having asked.
 
 ## 2026-10-20 — cycle 71: updates, part one: debug-only, and checked
 
