@@ -1039,6 +1039,25 @@ class CarryViewModelTest {
     }
 
     @Test
+    fun `a save under way is marked unsaved for a background install until it ends`() = runTest(dispatcher) {
+        val mark = UnsavedMark(app)
+        val model = viewModel()
+        model.read = { ready() }
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        saved(model)
+        advanceUntilIdle(); settled(model)
+        assertFalse("saved: no draft left", mark.isSet)
+
+        // Nothing typed now, and a save still writes the file.
+        model.save()
+        assertEquals("the premise: a save is under way", SaveState.Saving, model.saving.value)
+        assertTrue("under way", mark.isSet)
+        advanceUntilIdle(); settled(model)
+        assertFalse("ended", mark.isSet)
+    }
+
+    @Test
     fun `a draft left from another session does not hold back an update`() = runTest(dispatcher) {
         val handle = SavedStateHandle()
         val model = viewModel(handle)

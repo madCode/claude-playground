@@ -51,6 +51,8 @@ internal class LiveUpdates(
     override fun start() {
         // The update that brought this build in has done its job.
         if (prefs.getInt(READY, 0) in 1..installedBuild) clearUp()
+        // A tap's download, kept only until it's handed over.
+        else if (!UpdateInstaller.installing.value) File(dir, "carry-debug.apk").delete()
         LiveCheckWorker.schedule(work())
     }
 
@@ -69,7 +71,10 @@ internal class LiveUpdates(
     }
 
     override suspend fun install(build: Int, unsaved: () -> Boolean): UpdateProblem? {
-        if (build <= installedBuild || !UpdateInstaller.start()) return null
+        if (build <= installedBuild) return null
+        // The background may be part way through installing it: said, rather than a tap that
+        // does nothing.
+        if (!UpdateInstaller.start()) return UpdateProblem("Carry is already installing an update. Give it a minute.", offerLink = false)
         var handedOver = false
         // Failures count against the build in the file once it passed its checks: the fixed-name
         // download can lag behind the newest build, which mustn't be given up on untried.
@@ -204,7 +209,11 @@ internal class LiveUpdates(
                     part.delete()
                     return@withContext again()
                 }
-                Verdict.Good -> {}
+                // The newest build's file isn't up yet, and the one there was given up on.
+                Verdict.Good -> if (facts!!.versionCode <= prefs.getInt(REJECTED, 0)) {
+                    part.delete()
+                    return@withContext again()
+                }
             }
             val build = facts!!.versionCode.toInt()
             val apk = apkOf(build)

@@ -402,6 +402,35 @@ class LiveUpdatesTest {
     }
 
     @Test
+    fun `a tap while the background is installing says so`() {
+        assertTrue("the background's attempt", UpdateInstaller.start())
+        val problem = updates().tap()!!
+        assertTrue(problem.why.startsWith("Carry is already installing an update"))
+        assertEquals(0, downloads)
+    }
+
+    @Test
+    fun `a tap's own download doesn't outlive the next start`() {
+        stageFails = IOException("No space left on device")
+        updates().tap()
+        assertEquals(listOf("carry-debug.apk"), dir.list()!!.toList())
+        updates().start()
+        assertEquals(emptyList<String>(), dir.list()!!.toList())
+    }
+
+    @Test
+    fun `while the newest file lags, a build given up on isn't kept as the one to install`() {
+        apks["apk-135"] = ApkFacts(app.packageName, 135, ourKey)
+        serving = { "apk-135" }
+        stageFails = IOException("No space left on device")
+        val updates = updates()
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES) { updates.tap(135) }
+        assertEquals(LiveUpdates.Outcome.Retry, updates.fetched(140))
+        assertEquals(emptyList<String>(), dir.list()!!.filter { it.startsWith("build-") })
+        assertEquals(emptyList<WorkInfo>(), infos(LiveInstallWorker.UNIQUE))
+    }
+
+    @Test
     fun `the build that installed clears its file away on the next start`() {
         updates().fetched()
         assertEquals(listOf("build-140.apk"), dir.list()!!.toList())

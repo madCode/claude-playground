@@ -473,6 +473,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
             ))
             return
         }
+        // A save under way counts as unsaved for a background install: killed mid-write,
+        // the file could be left damaged even with no draft. Cleared when the save ends.
+        unsavedMark.set(true)
         _saving.value = SaveState.Saving
         viewModelScope.launch {
             // Every row goes down, nameless ones included. This used to
@@ -599,7 +602,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                     if (_saving.value == SaveState.Saved) rereadHistory()
                 }
             }
-        }
+        }.invokeOnCompletion { unsavedMark.set(handle.contains(DRAFT)) }
     }
 
     /**
