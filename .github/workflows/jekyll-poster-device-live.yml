@@ -78,15 +78,23 @@ jobs:
         id: scan
         if: always()
         run: |
-          kept=$(find app/build/outputs -path '*additional_output*' -type f \( -name '*.jsonl' -o -name '*.json' \))
-          if [ -z "$kept" ]; then echo "::warning::No request record or report came back."; exit 0; fi
-          if grep -qF -e "$TOKEN_A" -e "$TOKEN_B" $kept; then
-            rm -f $kept
-            echo "::error::A token reached a kept file; they were deleted, not uploaded."
-            exit 1
-          fi
-          mkdir -p app/build/request-record && cp $kept app/build/request-record/
-          wc -l $kept
+          # File by file: the device's folder name has spaces. grep exits 1 for "not found";
+          # anything else (2: unreadable) fails the step rather than passing as clean.
+          mkdir -p app/build/request-record
+          found=0
+          while IFS= read -r -d '' file; do
+            found=1
+            set +e; grep -qF -e "$TOKEN_A" -e "$TOKEN_B" "$file"; status=$?; set -e
+            if [ "$status" -ne 1 ]; then
+              rm -rf app/build/request-record
+              find app/build/outputs -path '*additional_output*' -type f -delete
+              echo "::error::A kept file holds a token or couldn't be read ($status); none were uploaded."
+              exit 1
+            fi
+            cp "$file" app/build/request-record/
+            echo "$(basename "$file"): $(wc -l < "$file") lines, no token"
+          done < <(find app/build/outputs -path '*additional_output*' -type f \( -name '*.jsonl' -o -name '*.json' \) -print0)
+          [ "$found" = 1 ] || echo "::warning::No request record or report came back."
       - name: Keep the request record and the report
         if: always() && steps.scan.outcome == 'success'
         uses: actions/upload-artifact@v6
