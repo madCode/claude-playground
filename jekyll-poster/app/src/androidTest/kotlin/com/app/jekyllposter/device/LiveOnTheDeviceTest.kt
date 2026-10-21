@@ -106,7 +106,8 @@ class LiveOnTheDeviceTest {
         runBlocking {
             for (blog in listOf(a, b)) {
                 val github = GitHubClient(http, blog.token)
-                github.files(blog.owner, blog.name, blog.branch).filter { "device-check-$stamp" in it.path }.forEach { entry ->
+                // With an earlier run's post from the kill check, which the workflow only looks for.
+                github.files(blog.owner, blog.name, blog.branch).filter { "device-check-$stamp" in it.path || "device-check-run-" in it.path }.forEach { entry ->
                     val sent = github.file(blog.owner, blog.name, blog.branch, entry.path) ?: return@forEach
                     github.commit(blog.owner, blog.name, blog.branch, "Delete post: device check", listOf(FileChange.delete(entry.path)), expect = mapOf(entry.path to sent.sha))
                 }
@@ -321,12 +322,12 @@ class LiveOnTheDeviceTest {
         setTunnel(tunnel, up = false)
     }
 
-    // The two halves of one check, run by the workflow as separate steps with the app's process
-    // ended between them: a post queued, then the app killed, and the post goes out anyway.
+    // The first half of a check the workflow finishes: a post queued, the app's process ended,
+    // and the workflow looks on GitHub for it before anything starts the app again.
     private val killRun = args.getString("killRun").orEmpty()
     private val titleAfterKill = "Device check run $killRun, after the app was killed"
 
-    /** Step 1: queues a post for a minute from now, then ends, and the process with it. */
+    /** Queues a post for a minute from now, then ends, and the process with it. */
     @Test fun aPostWaitsWhileTheAppIsKilled() {
         assumeTrue("The workflow's first step only", args.getString("killStep") == "queue" && killRun.isNotBlank())
         testName = "killed-queue"
@@ -341,25 +342,6 @@ class LiveOnTheDeviceTest {
             app.container.publishQueue.enqueue(id, sendAfter)
         }
         assertFalse("Sent before its time", runBlocking { hasPost(a, "device-check-run-$killRun-after-the-app-was-killed") })
-    }
-
-    /** Step 2, a few minutes later: the app was started by Android alone, and the post went out. */
-    @Test fun thePostWentOutAfterTheAppWasKilled() {
-        assumeTrue("The workflow's last step only", args.getString("killStep") == "check" && killRun.isNotBlank())
-        testName = "killed-check"
-        val a = a!!
-        val slug = "device-check-run-$killRun-after-the-app-was-killed"
-        try {
-            waitUntil("the post queued before the app was killed", TimeUnit.MINUTES.toMillis(5)) { hasPost(a, slug) }
-        } finally {
-            runBlocking {
-                val github = GitHubClient(http, a.token)
-                github.files(a.owner, a.name, a.branch).filter { it.path.endsWith("-$slug.md") }.forEach { entry ->
-                    val sent = github.file(a.owner, a.name, a.branch, entry.path) ?: return@forEach
-                    github.commit(a.owner, a.name, a.branch, "Delete post: device check", listOf(FileChange.delete(entry.path)), expect = mapOf(entry.path to sent.sha))
-                }
-            }
-        }
     }
 
     /**

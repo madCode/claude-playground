@@ -175,9 +175,13 @@ class OnTheDeviceTest {
         assertTrue("The system has no New post shortcut", shell("dumpsys shortcut").contains("id=${MainActivity.NEW_POST_SHORTCUT}"))
 
         // As a person would: the app drawer, a long press on the icon, then New post.
+        // On a just-booted emulator the launcher may still be loading and swallow the first swipe.
         device.pressHome()
-        device.swipe(device.displayWidth / 2, device.displayHeight * 9 / 10, device.displayWidth / 2, device.displayHeight / 4, 20)
-        val icon = device.wait(Until.findObject(By.text("Jekyll Poster")), 10_000) ?: error("No Jekyll Poster in the app drawer")
+        check(device.wait(Until.hasObject(By.pkg(device.launcherPackageName)), 20_000)) { "The launcher never showed" }
+        val icon = (1..3).firstNotNullOfOrNull {
+            device.swipe(device.displayWidth / 2, device.displayHeight * 9 / 10, device.displayWidth / 2, device.displayHeight / 4, 20)
+            device.wait(Until.findObject(By.text("Jekyll Poster")), 5_000)
+        } ?: error("No Jekyll Poster in the app drawer")
         icon.longClick()
         val shortcut = device.wait(Until.findObject(By.text("New post")), 10_000) ?: error("No New post on the icon's long press")
         shortcut.click()
