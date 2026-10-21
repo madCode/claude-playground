@@ -300,6 +300,13 @@ class LiveOnTheDeviceTest {
             val waiting = runBlocking { app.container.drafts.get(id) }!!
             assertEquals(PostState.Queued, waiting.state)
             assertEquals("Held for a random time, not the VPN", null, waiting.sendAfter)
+            // Home read the blog meanwhile, and the worker may have tried: none of it may have got
+            // a connection. The record sees only requests that did, each with GitHub's answer.
+            val reached = File(record, "requests.jsonl").takeIf { it.exists() }?.readLines().orEmpty()
+                .map { Json.parseToJsonElement(it).jsonObject }
+                .filter { it["outcome"]!!.jsonPrimitive.content.matches(Regex("""\d{3}""")) }
+                .map { "${it["method"]!!.jsonPrimitive.content} ${it["url"]!!.jsonPrimitive.content}" }
+            assertEquals("Reached GitHub without the VPN", emptyList<String>(), reached)
 
             setTunnel(tunnel, up = true)
             val vpnAddress = publicAddress()
