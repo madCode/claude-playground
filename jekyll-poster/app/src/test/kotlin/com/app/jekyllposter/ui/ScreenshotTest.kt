@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.View
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasContentDescription
@@ -354,6 +355,21 @@ class ScreenshotTest {
         val vm = HomeViewModel(c)
         val blogs = BlogsViewModel(c)
         shoot("21-home-several-blogs", ready = { vm.state.value.onBlog.isNotEmpty() && !vm.state.value.refreshing && blogs.state.value.blogCount == 2 }) {
+            HomeScreen(vm, onOpenDraft = {}, onSettings = {}, blogs = blogs)
+        }
+    }
+
+    @Test fun switchedByANotification() {
+        twoBlogs()
+        runBlocking { c.drafts.insert(Draft(blog = "inkwell/night-notes@main", title = "Moths at the porch light", state = PostState.Failed, error = "The Pages build failed.")) }
+        val vm = HomeViewModel(c)
+        val blogs = BlogsViewModel(c)
+        shoot(
+            "30-switched-by-a-notification",
+            ready = { vm.state.value.siteTitle == "Night Notes" && vm.state.value.onBlog.isNotEmpty() && !vm.state.value.refreshing && blogs.state.value.blogCount == 2 },
+            act = { compose.mainClock.autoAdvance = false },
+        ) {
+            LaunchedEffect(Unit) { vm.openFromNotification("inkwell/night-notes@main") }
             HomeScreen(vm, onOpenDraft = {}, onSettings = {}, blogs = blogs)
         }
     }

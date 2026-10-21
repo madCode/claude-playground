@@ -53,6 +53,11 @@ doesn't want to open a laptop and make a commit for every post.
   post goes above its title: `To Night Notes · @inkwell`.
 - A post goes out under its own blog's sign-in, whichever blog is open. A sign-in whose blog
   isn't open makes no requests except for its own post going out and that post's build.
+- **Its notification names its blog** when another is open: "“Bus notes” is live on Night
+  Notes", "Night Notes didn't rebuild". A live post's tap opens it on the site. A tap that opens
+  the app (a failed build, a hidden post) opens it afresh on the post's blog, where Home lists
+  the post, and says "Switched to Night Notes"; if that blog has been removed since, it says so
+  instead. A locked phone shows neither the title nor the blog.
 - **Privacy is per blog.** Each blog has its own switches (Blog & privacy, below), and the
   switcher's rows show the ones that are on, so a pseudonymous blog looks different before it's
   picked. A blog added beside others starts with every switch off, not copied from the open

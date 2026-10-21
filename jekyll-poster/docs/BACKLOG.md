@@ -25,6 +25,7 @@ and moves it to Done.
 
 Cycles 40 on, newest first. Earlier cycles, and what madCode set up, are in [DEVLOG.md](DEVLOG.md).
 
+- [x] Cycle 55: a post's notification names its blog when another is open; a tap opens the app on that blog (#137)
 - [x] Cycle 54: a second documentation pass
 - [x] Cycle 53: a documentation pass
 - [x] Cycle 52: debug builds say when a newer one is out, and install it
