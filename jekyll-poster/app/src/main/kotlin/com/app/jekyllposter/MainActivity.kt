@@ -21,11 +21,26 @@ class MainActivity : ComponentActivity() {
         // A rotation passes it again; the nav host takes each share only once.
         val shared = postToStart(intent)
         addNewPostShortcut()
+        if (savedInstanceState == null && launchedFromLauncher(intent)) container.updates.holds.freshStart()
+        container.updates.start()
         setContent {
             PosterTheme {
-                PosterNavHost((application as PosterApp).container, shared)
+                PosterNavHost(container, shared)
             }
         }
+    }
+
+    private val container get() = (application as PosterApp).container
+
+    override fun onResume() {
+        super.onResume()
+        container.updates.resumed(this)
+        container.updates.checkIfDue()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        container.updates.paused()
     }
 
     /**
@@ -54,6 +69,14 @@ class MainActivity : ComponentActivity() {
         const val NEW_POST_SHORTCUT = "new-post"
     }
 }
+
+/**
+ * Opened from the launcher afresh, so no editor of this task waits to be restored. Not from
+ * recents ([Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY]), which restores one.
+ */
+internal fun launchedFromLauncher(intent: Intent?): Boolean =
+    intent != null && intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_LAUNCHER) &&
+        intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0
 
 /**
  * The post [intent] starts: empty for the launcher's New post, or what another app shared.

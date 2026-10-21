@@ -5,9 +5,6 @@ and moves it to Done.
 
 ## Next
 
-- [ ] Say when a newer debug build is out, and install it, as Carry and newspaperss do
-  (`practices/android.md`): a check when the app opens and every few hours, a download on Wi-Fi,
-  the installer.
 - [ ] Sign in with GitHub and a TalkBack listen, by a person, now and then
   ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)).
 
@@ -28,6 +25,7 @@ and moves it to Done.
 
 Cycles 40 on, newest first. Earlier cycles, and what madCode set up, are in [DEVLOG.md](DEVLOG.md).
 
+- [x] Cycle 52: debug builds say when a newer one is out, and install it
 - [x] Cycle 51: the debug release numbered, never cancelled mid-upload, its actions pinned; the README says how to update
 - [x] Cycle 49: the device live check also publishes a photo, edits and deletes from the screens, and meets an edit conflict
 - [x] Cycle 47: Hide from the site (`published: false`) and Show on the site again, from the editor's menu

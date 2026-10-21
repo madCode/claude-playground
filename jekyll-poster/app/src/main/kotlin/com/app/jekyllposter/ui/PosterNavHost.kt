@@ -46,6 +46,7 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
     val signedIn by produceState<Any?>(Loading) { value = container.accounts.account.first() != null }
     if (signedIn === Loading) return
     val nav = rememberNavController()
+    UpdateProblems(container.updates)
     // Home leaves the composition while the editor is open and its effects run again on the way
     // back, so a share is taken once, here, or every Back would start another post from it.
     var pending by rememberSaveable { mutableStateOf(shared != null) }
@@ -63,13 +64,16 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
     }
     NavHost(nav, startDestination = if (signedIn == true) "home" else "connect") {
         composable("connect") {
+            HoldUpdates(container)
             ConnectScreen(viewModel { ConnectViewModel(container) }) { connected(it) }
         }
         composable("add-sign-in") {
+            HoldUpdates(container)
             ConnectScreen(viewModel { ConnectViewModel(container) }, onCancel = { nav.popBackStack() }) { connected(it) }
         }
         composable("add-blog/{signIn}", arguments = listOf(navArgument("signIn") { type = NavType.LongType })) { entry ->
             val signIn = entry.arguments!!.getLong("signIn")
+            HoldUpdates(container)
             // Straight to the sign-in's repositories, with its token already in hand.
             ConnectScreen(viewModel { ConnectViewModel(container).also { it.addBlogTo(signIn) } }, onCancel = { nav.popBackStack() }) { connected(it) }
         }
@@ -116,10 +120,12 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
                 blogs = viewModel { BlogsViewModel(container) },
                 onAddBlog = { nav.navigate("add-blog/$it") },
                 onAddSignIn = { nav.navigate("add-sign-in") },
+                updateNotice = { UpdateNotice(container.updates) },
             )
         }
         composable("editor/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
             val id = entry.arguments!!.getLong("id")
+            HoldUpdates(container)
             EditorScreen(viewModel(key = "editor-$id") { EditorViewModel(container, id) }) { nav.popBackStack() }
         }
     }

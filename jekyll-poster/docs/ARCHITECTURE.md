@@ -80,7 +80,14 @@
     Home's effects run again each time it returns).
   - `debug/RequestRecord` (debug source set; the release one records nothing): a network
     interceptor on each client `AppContainer` makes, labelled with its blog, `sign-in`,
-    `renewal for <blog>` or `preview`.
+    `renewal for <blog>`, `preview` or `updates`.
+  - `update/`: a debug build's updates. `DebugUpdates` asks GitHub whether a newer CI build is
+    out; `AppUpdates` is what the screens use (Home's `UpdateNotice`).
+    `UpdateHolds` marks the editor and Connect open (`HoldUpdates` in `PosterNavHost`), so no
+    install ends the app under them. `SelfUpdater` installs it:
+    `LiveUpdates`, `UpdateInstaller`, `ApkCheck` and its workers are in the debug source set, and
+    a release gets `SelfUpdater.NONE`. Tests and device tests pass `installedBuild = null`, so
+    they never ask the real GitHub.
   - `MainActivity`: `postToStart` turns its intent (a share, a Markdown file opened, the
     launcher's New post shortcut) into the post to start; the shortcut is a dynamic one it adds.
   - `AppContainer`: manual DI. Every web client goes through a `VpnGate`: one per blog, gated by its switch, and one for signing in, gated if any blog asks. A share's photos and

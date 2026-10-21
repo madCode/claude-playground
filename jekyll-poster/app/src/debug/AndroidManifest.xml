@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  A CI debug build installs newer builds of itself (update/LiveUpdates). Debug only: app stores
+  refuse an app that can install apps.
+
+  - REQUEST_INSTALL_PACKAGES, to hand that build to Android's installer. Android still asks the
+    writer to allow it once, and to confirm each install unless it lets the app update itself.
+-->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:networkSecurityConfig="@xml/network_security_config" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <application android:networkSecurityConfig="@xml/network_security_config">
+        <receiver
+            android:name=".update.UpdateInstaller$Result"
+            android:exported="false" />
+    </application>
 </manifest>

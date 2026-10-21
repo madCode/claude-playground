@@ -13,13 +13,14 @@ import kotlinx.coroutines.runBlocking
  * The real app on a device, with GitHub swapped for a [FakeGitHub] serving the sample blog on
  * this phone. Everything else is the app's own: WorkManager, the Keystore, notifications. A live
  * run (the `liveRepoA` argument, see [LiveOnTheDeviceTest]) keeps the real GitHub instead.
+ * Neither asks for a newer debug build, which would replace the app under test.
  */
 class DeviceTestApp : PosterApp() {
     lateinit var github: FakeGitHub
         private set
 
     override fun createContainer(): AppContainer {
-        if (!InstrumentationRegistry.getArguments().getString("liveRepoA").isNullOrBlank()) return AppContainer(this)
+        if (!InstrumentationRegistry.getArguments().getString("liveRepoA").isNullOrBlank()) return AppContainer(this, installedBuild = null)
         // Off the main thread, where Android refuses network sockets, the server's own included.
         // Logged in full: a crash here reaches CI's log without its stack trace.
         github = try {
@@ -28,7 +29,7 @@ class DeviceTestApp : PosterApp() {
             Log.e("DeviceTestApp", "Couldn't start the fake GitHub", e)
             throw e
         }
-        return AppContainer(this, apiBase = github.apiBase, githubWeb = github.apiBase, githubClientId = "Iv1.test", githubAppSlug = "jekyll-poster-test")
+        return AppContainer(this, apiBase = github.apiBase, githubWeb = github.apiBase, githubClientId = "Iv1.test", githubAppSlug = "jekyll-poster-test", installedBuild = null)
     }
 
     /** The sample blog, from the test APK's assets (zipped by the build). */

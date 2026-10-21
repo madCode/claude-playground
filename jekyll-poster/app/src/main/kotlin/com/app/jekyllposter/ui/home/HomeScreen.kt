@@ -100,6 +100,8 @@ fun HomeScreen(
     blogs: BlogsViewModel? = null,
     onAddBlog: (Long) -> Unit = {},
     onAddSignIn: () -> Unit = {},
+    /** A newer debug build's line, at the top of the list. */
+    updateNotice: @Composable () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val blogState = blogs?.state?.collectAsStateWithLifecycle()?.value
@@ -173,6 +175,7 @@ fun HomeScreen(
         }
         PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = viewModel::refresh, modifier = Modifier.padding(padding).fillMaxSize()) {
             LazyColumn(Modifier.fillMaxSize()) {
+                item { updateNotice() }
                 if (state.onPhone.isNotEmpty()) {
                     item { SectionHeading("On this phone") }
                     items(state.onPhone, key = { "d${it.id}" }) { draft ->

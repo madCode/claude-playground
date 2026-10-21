@@ -141,6 +141,17 @@ class RequestRecordTest {
         assertFalse(record.file.readText().contains("GHSAT0AAAAAB4XYZ"))
     }
 
+    @Test fun anUpdateDownloadHidesTheJwtOfGitHubsRedirect() {
+        turnOn()
+        // The release's file host signs its link with a short-lived token in `jwt`.
+        val link = app.github.apiBase.resolve("release-assets/140?sp=r&jwt=eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjF9.c2lnbmF0dXJl")!!
+        runCatching { c.updateCalls.newCall(okhttp3.Request.Builder().url(link).build()).execute().close() }
+
+        val fetch = entries().single { it.text("via") == "updates" }
+        assertTrue(fetch.text("url")!!.endsWith("jwt=${RequestRecord.HIDDEN}"))
+        assertFalse(record.file.readText().contains("eyJhbGciOiJIUzI1NiJ9"))
+    }
+
     @Test fun aRecordThatCantBeWrittenDoesntStopAPublish() = runBlocking {
         turnOn()
         // Stands in for a full disk: the file can't be appended to.

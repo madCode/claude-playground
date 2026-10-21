@@ -126,6 +126,18 @@ class ScreenshotTest {
         }
     }
 
+    @Test fun homeWithANewerBuild() {
+        signIn()
+        val prefs = app.getSharedPreferences("screenshot-updates", android.content.Context.MODE_PRIVATE).apply { edit().clear().commit() }
+        val check = com.app.jekyllposter.update.DebugUpdates(prefs, 130, fetch = { "jekyll-poster-debug-140.apk" })
+        runBlocking { check.checkIfDue() }
+        val updates = c.updates.let { com.app.jekyllposter.update.AppUpdates(check, com.app.jekyllposter.update.SelfUpdater.NONE, kotlinx.coroutines.flow.MutableStateFlow(false), it.holds, { false }, c.appScope) }
+        val vm = HomeViewModel(c)
+        shoot("29-home-newer-build", ready = { vm.state.value.onBlog.isNotEmpty() && !vm.state.value.refreshing }) {
+            HomeScreen(vm, onOpenDraft = {}, onSettings = {}, updateNotice = { UpdateNotice(updates) })
+        }
+    }
+
     private fun editorWithDraft(): EditorViewModel {
         signIn()
         val id = runBlocking {
