@@ -16,6 +16,7 @@ photos and notes arrive from another process with a real URI grant.
 | A link from another app | `OnTheDeviceTest` | A link shared from outside the app starts one post with it as a Markdown link |
 | Front matter the app can't follow | `OnTheDeviceTest` | A post with a `?` key, pushed from elsewhere, isn't opened: Home says why, and nothing on GitHub changes |
 | Sign in with GitHub twice | `OnTheDeviceTest` | Signing in with GitHub again to add a second blog keeps one sign-in holding both (the pretend GitHub approves the code; entering it in a browser is the person's check below) |
+| New post from the launcher | `OnTheDeviceTest` | Long-pressing the app's icon on the home screen offers New post, which opens one empty post |
 | A photo from another app | `FromOtherAppsTest` | It's added with its alt text, and the copy on GitHub has no location and doesn't say what made it |
 | A note from Obsidian | `FromOtherAppsTest` | The post takes the note's name as its title, `[[links]]` to the blog's posts become `post_url` links, `%%comments%%` are gone |
 | The camera | `FromOtherAppsTest` | A photo from the emulator's own camera app is added, and the original is deleted from the app's cache |
@@ -32,6 +33,7 @@ deleted after, and its request record is kept for the privacy audit.
 |---|---|
 | Two blogs, two sign-ins | Blog A signed in to and published from the screens, the organisation's blog added as a second sign-in; both posts go live on Pages and their notifications show |
 | Privacy at its most | Every switch of Set up for writing anonymously but the VPN: the commit says "Update blog", names the no-reply address, and is dated by the day; tracking codes are gone; a random send time is set. What GitHub kept goes in `privacy-report.json` |
+| The app killed while a post waits | A post queued for a minute ahead, then the app's process ended: Android starts its background work alone, and the post goes out |
 | Only connect through a VPN | With the WireGuard app's Proton tunnel off, a post waits and no request reaches GitHub; with it on, the phone's public address changes and the post goes out |
 
 "Jekyll Poster live check", a separate workflow with no emulator, publishes to and deletes from

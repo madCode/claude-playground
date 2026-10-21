@@ -106,7 +106,8 @@ class LiveOnTheDeviceTest {
         runBlocking {
             for (blog in listOf(a, b)) {
                 val github = GitHubClient(http, blog.token)
-                github.files(blog.owner, blog.name, blog.branch).filter { "device-check-$stamp" in it.path }.forEach { entry ->
+                // With an earlier run's post from the kill check, which the workflow only looks for.
+                github.files(blog.owner, blog.name, blog.branch).filter { "device-check-$stamp" in it.path || "device-check-run-" in it.path }.forEach { entry ->
                     val sent = github.file(blog.owner, blog.name, blog.branch, entry.path) ?: return@forEach
                     github.commit(blog.owner, blog.name, blog.branch, "Delete post: device check", listOf(FileChange.delete(entry.path)), expect = mapOf(entry.path to sent.sha))
                 }
@@ -319,6 +320,28 @@ class LiveOnTheDeviceTest {
             throw e
         }
         setTunnel(tunnel, up = false)
+    }
+
+    // The first half of a check the workflow finishes: a post queued, the app's process ended,
+    // and the workflow looks on GitHub for it before anything starts the app again.
+    private val killRun = args.getString("killRun").orEmpty()
+    private val titleAfterKill = "Device check run $killRun, after the app was killed"
+
+    /** Queues a post for a minute from now, then ends, and the process with it. */
+    @Test fun aPostWaitsWhileTheAppIsKilled() {
+        assumeTrue("The workflow's first step only", args.getString("killStep") == "queue" && killRun.isNotBlank())
+        testName = "killed-queue"
+        val a = a!!
+        runBlocking {
+            val login = GitHubClient(http, a.token).user().login
+            app.container.accounts.save(Account(login, a.token, a.owner, a.name, a.branch))
+            val sendAfter = System.currentTimeMillis() + 60_000
+            val id = app.container.drafts.insert(
+                Draft(blog = "${a.fullName}@${a.branch}", title = titleAfterKill, body = "Queued, then the app was killed.", state = PostState.Queued, sendAfter = sendAfter),
+            )
+            app.container.publishQueue.enqueue(id, sendAfter)
+        }
+        assertFalse("Sent before its time", runBlocking { hasPost(a, "device-check-run-$killRun-after-the-app-was-killed") })
     }
 
     /**

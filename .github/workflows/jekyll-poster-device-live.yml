@@ -27,23 +27,28 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: jekyll-poster-device-live
-  cancel-in-progress: false
-
 defaults:
   run:
     working-directory: jekyll-poster
 
 jobs:
   device-live:
-    # A fork's PR gets no secrets: the check would only fail.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # A fork's PR, or Dependabot's, gets no secrets: the check would only fail.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+    # One run at a time on the tester's blogs. On the job, not the workflow, so a skipped run
+    # doesn't take the one waiting place and cancel a run that would have run.
+    concurrency:
+      group: jekyll-poster-device-live
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
       # A blog under the tester's account and one under its organisation: two owners, two tokens.
       REPO_A: ${{ vars.TEST_BLOG_A }}
+      # The kill check's post, named for this attempt: a re-run must not find the last one's.
+      KILL_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
       TOKEN_A: ${{ secrets.TEST_BLOG_A_TOKEN }}
       REPO_B: ${{ vars.TEST_BLOG_ORG }}
       TOKEN_B: ${{ secrets.TEST_BLOG_ORG_TOKEN }}
@@ -94,7 +99,17 @@ jobs:
             adb shell svc power stayon true
             adb logcat -c
             if [ -n "$WG_CONF" ] && [ -s "$RUNNER_TEMP/wireguard.apk" ]; then tools/wireguard-on-emulator.sh "$RUNNER_TEMP/wireguard.apk" && touch "$RUNNER_TEMP/wireguard-ready" || echo "::warning::WireGuard couldn't be set up, so the VPN test is skipped."; fi
+            # First, before the main run clears the app's data: a post queued for a minute ahead,
+            # and the app's process ended with the test. GitHub is then checked from here, before
+            # anything starts the app again, so only Android starting its work alone can have sent
+            # it. A failure is kept for the end, so the night's other checks still run.
+            ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.app.jekyllposter.device.LiveOnTheDeviceTest#aPostWaitsWhileTheAppIsKilled -Pandroid.testInstrumentationRunnerArguments.killStep=queue "-Pandroid.testInstrumentationRunnerArguments.killRun=$KILL_RUN" -Pandroid.testInstrumentationRunnerArguments.clearPackageData=false -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true "-Pandroid.testInstrumentationRunnerArguments.liveRepoA=$REPO_A" "-Pandroid.testInstrumentationRunnerArguments.liveTokenA=$TOKEN_A" "-Pandroid.testInstrumentationRunnerArguments.liveRepoB=$REPO_B" "-Pandroid.testInstrumentationRunnerArguments.liveTokenB=$TOKEN_B" > "$RUNNER_TEMP/killed-queue.log" 2>&1; s=$?; cat "$RUNNER_TEMP/killed-queue.log"; [ $s = 0 ] && grep -rq '<testcase' app/build/outputs/androidTest-results/connected && ! grep -rq '<skipped' app/build/outputs/androidTest-results/connected || { echo "::error::The kill check's queue step failed or was skipped."; touch "$RUNNER_TEMP/kill-failed"; }
+            adb shell pidof com.app.jekyllposter.debug || echo "The app isn't running."; adb shell dumpsys jobscheduler | grep -c "com.app.jekyllposter.debug" || echo "No job of the app's is scheduled."
+            [ -f "$RUNNER_TEMP/kill-failed" ] || { found=; sleep 90; for i in $(seq 1 24); do curl -fsS -H "Authorization: Bearer $TOKEN_A" "https://api.github.com/repos/$REPO_A/contents/_posts" | grep -q "device-check-run-$KILL_RUN-after-the-app-was-killed" && { found=1; break; }; sleep 15; done; [ -n "$found" ] && echo "The post went out with the app's process ended." || { echo "::error::The post queued before the app was killed never went out."; touch "$RUNNER_TEMP/kill-failed"; }; }
+            # Last, so the report and kept files are its own: each run clears the one before. Its
+            # cleanup also deletes the kill check's post.
             ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.app.jekyllposter.device.LiveOnTheDeviceTest $([ -f "$RUNNER_TEMP/wireguard-ready" ] && echo -Pandroid.testInstrumentationRunnerArguments.vpnTunnel=proton) "-Pandroid.testInstrumentationRunnerArguments.liveRepoA=$REPO_A" "-Pandroid.testInstrumentationRunnerArguments.liveTokenA=$TOKEN_A" "-Pandroid.testInstrumentationRunnerArguments.liveRepoB=$REPO_B" "-Pandroid.testInstrumentationRunnerArguments.liveTokenB=$TOKEN_B" || { adb logcat -d > app/build/device-logcat.txt; adb logcat -d -b crash; exit 1; }
+            [ ! -f "$RUNNER_TEMP/kill-failed" ] || exit 1
       # The kept files (request records, the privacy report, a failed run's logcat) go into a
       # public artifact: refuse them all if a token or the VPN's private key is anywhere in them.
       - name: Check the kept files hold no secret
