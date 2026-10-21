@@ -22,6 +22,11 @@ Times are when each cycle landed, Pacific.
 
 ## Wed 21 Oct
 
+### Android saying there's no room isn't held against a build
+- **Fixed:** a failed copy into Android's installer already wasn't counted, but Android's own
+  "storage" answer after the hand-off still was: three of them gave up on the build for good.
+  Now neither counts, as DESIGN already said. Carry and newspaperss made the same change.
+
 ### Cycle 54: a second documentation pass
 - **Fixed:** DESIGN's Updates section, cut to what a person needs and corrected (the background
   retries further apart each time; not every failure offers the browser). DEVICE-CHECKS counts

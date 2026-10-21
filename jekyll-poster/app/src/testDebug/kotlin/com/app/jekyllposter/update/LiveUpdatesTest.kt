@@ -224,9 +224,12 @@ class LiveUpdatesTest {
         val updates = updates()
         repeat(3) { answer(status = PackageInstaller.STATUS_FAILURE_ABORTED) }
         assertEquals("the writer saying no isn't a failure", SelfUpdater.Step.Install, updates.next(140, false, true))
-        repeat(2) { answer(status = PackageInstaller.STATUS_FAILURE_STORAGE) }
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES + 1) { answer(status = PackageInstaller.STATUS_FAILURE_STORAGE) }
+        assertEquals("a full phone isn't the build's failure", SelfUpdater.Step.Install, updates.next(140, false, true))
+        answer(status = PackageInstaller.STATUS_FAILURE)
+        answer(status = PackageInstaller.STATUS_FAILURE_BLOCKED)
         assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
-        answer(status = PackageInstaller.STATUS_FAILURE_STORAGE)
+        answer(status = PackageInstaller.STATUS_FAILURE_TIMEOUT)
         assertEquals(SelfUpdater.Step.Browser, updates.next(140, false, true))
 
         answer(141, PackageInstaller.STATUS_FAILURE_CONFLICT)
