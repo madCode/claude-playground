@@ -167,5 +167,23 @@ class OnTheDeviceTest {
         compose.onNodeWithText("Settings").performClick()
         waitFor("Your blogs")
     }
+
+    @Test fun newPostFromTheLaunchersShortcutOpensAnEmptyPost() {
+        runBlocking { app.container.accounts.save(Account("sample", github.token, "sample", "sample-blog", "main")) }
+        // Opened once, as after installing: that's when the app gives the launcher its shortcut.
+        ActivityScenario.launch(MainActivity::class.java).close()
+        assertTrue("The system has no New post shortcut", shell("dumpsys shortcut").contains("id=${MainActivity.NEW_POST_SHORTCUT}"))
+
+        // As a person would: the app drawer, a long press on the icon, then New post.
+        device.pressHome()
+        device.swipe(device.displayWidth / 2, device.displayHeight * 9 / 10, device.displayWidth / 2, device.displayHeight / 4, 20)
+        val icon = device.wait(Until.findObject(By.text("Jekyll Poster")), 10_000) ?: error("No Jekyll Poster in the app drawer")
+        icon.longClick()
+        val shortcut = device.wait(Until.findObject(By.text("New post")), 10_000) ?: error("No New post on the icon's long press")
+        shortcut.click()
+
+        waitForTag("title")
+        waitUntil("the new post in the database") { runBlocking { app.container.database.drafts().snapshotCount() } == 1 }
+    }
 }
 

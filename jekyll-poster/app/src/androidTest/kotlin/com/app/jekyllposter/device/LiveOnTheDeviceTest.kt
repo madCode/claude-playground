@@ -321,6 +321,47 @@ class LiveOnTheDeviceTest {
         setTunnel(tunnel, up = false)
     }
 
+    // The two halves of one check, run by the workflow as separate steps with the app's process
+    // ended between them: a post queued, then the app killed, and the post goes out anyway.
+    private val killRun = args.getString("killRun").orEmpty()
+    private val titleAfterKill = "Device check run $killRun, after the app was killed"
+
+    /** Step 1: queues a post for a minute from now, then ends, and the process with it. */
+    @Test fun aPostWaitsWhileTheAppIsKilled() {
+        assumeTrue("The workflow's first step only", args.getString("killStep") == "queue" && killRun.isNotBlank())
+        testName = "killed-queue"
+        val a = a!!
+        runBlocking {
+            val login = GitHubClient(http, a.token).user().login
+            app.container.accounts.save(Account(login, a.token, a.owner, a.name, a.branch))
+            val sendAfter = System.currentTimeMillis() + 60_000
+            val id = app.container.drafts.insert(
+                Draft(blog = "${a.fullName}@${a.branch}", title = titleAfterKill, body = "Queued, then the app was killed.", state = PostState.Queued, sendAfter = sendAfter),
+            )
+            app.container.publishQueue.enqueue(id, sendAfter)
+        }
+        assertFalse("Sent before its time", runBlocking { hasPost(a, "device-check-run-$killRun-after-the-app-was-killed") })
+    }
+
+    /** Step 2, a few minutes later: the app was started by Android alone, and the post went out. */
+    @Test fun thePostWentOutAfterTheAppWasKilled() {
+        assumeTrue("The workflow's last step only", args.getString("killStep") == "check" && killRun.isNotBlank())
+        testName = "killed-check"
+        val a = a!!
+        val slug = "device-check-run-$killRun-after-the-app-was-killed"
+        try {
+            waitUntil("the post queued before the app was killed", TimeUnit.MINUTES.toMillis(5)) { hasPost(a, slug) }
+        } finally {
+            runBlocking {
+                val github = GitHubClient(http, a.token)
+                github.files(a.owner, a.name, a.branch).filter { it.path.endsWith("-$slug.md") }.forEach { entry ->
+                    val sent = github.file(a.owner, a.name, a.branch, entry.path) ?: return@forEach
+                    github.commit(a.owner, a.name, a.branch, "Delete post: device check", listOf(FileChange.delete(entry.path)), expect = mapOf(entry.path to sent.sha))
+                }
+            }
+        }
+    }
+
     /**
      * The address the internet sees this phone at, through whatever network is up. Tried a few
      * times: just after Android says the tunnel is up, its first handshake may not be done.
