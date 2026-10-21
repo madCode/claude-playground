@@ -29,6 +29,14 @@ Times are when each cycle landed, Pacific.
 
 ## Wed 21 Oct
 
+### Cycle 51: the debug release, as Carry's
+- **Why:** cycle 50's comparison with Carry and newspaperss.
+- **Changed (CI and README):**
+  - The debug release also carries `jekyll-poster-debug-<build>.apk`, numbered.
+  - Its publish job waits its turn rather than cancelling the one before mid-upload.
+  - The build's actions are pinned to commits, and the Gradle wrapper is checked.
+  - The README says how to update.
+
 ### Cycle 44: front matter the app can't follow, and Sign in with GitHub twice, on the emulator
 - **Asked for:** madCode's morning-page questions: can the emulator do these two laptop checks?
 - **Changed (tests):** two device tests on every PR. A post with a `?` key isn't opened, Home
