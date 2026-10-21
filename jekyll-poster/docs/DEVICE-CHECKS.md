@@ -25,7 +25,7 @@ photos and notes arrive from another process with a real URI grant.
 ## On CI's emulator, nightly, against real GitHub
 
 "Jekyll Poster device live check" (`LiveOnTheDeviceTest`) runs these every night, and on a PR that
-changes it, on the tester's real blogs ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)). Its posts are
+changes it or the app's own code, on the tester's real blogs ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)). Its posts are
 deleted after, and its request record is kept for the privacy audit.
 
 | Check | It proves |
