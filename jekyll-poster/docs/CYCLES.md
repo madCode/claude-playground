@@ -9,6 +9,12 @@ waiting on madCode is done, or 7am Pacific (14:00 UTC), whichever comes first. A
 that the app's update system (the `jekyll-poster-debug` release) matches the other apps' (Carry,
 newspaperss), and puts any difference in BACKLOG.md.
 
+### Cycle 54 — audit: a second documentation pass
+
+- Run a docs pass again after a large feature lands: the self-update PR brought back a long,
+  partly wrong DESIGN section an hour after the first pass, and DEVLOG's Status had been stale
+  since day 1 without either pass flagging it until asked.
+
 ### Cycle 53 — audit: documentation pass
 
 - Have the auditor check claims against the code, not only read for style: most of what it
