@@ -3,6 +3,10 @@ package com.app.jekyllposter.device
 import android.Manifest
 import android.os.ParcelFileDescriptor
 import androidx.compose.ui.test.hasTestTag
+import androidx.exifinterface.media.ExifInterface
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -90,6 +94,8 @@ class LiveOnTheDeviceTest {
     private val titleB = "Device check $stamp, second blog"
     private val titlePrivate = "Device check $stamp, private"
     private val titleVpn = "Device check $stamp, through the VPN"
+    private val titlePhoto = "Device check $stamp, photo"
+    private val titleConflict = "Device check $stamp, conflict"
     private val record = File(app.filesDir, "requests")
 
     @Before fun setUp() {
@@ -108,8 +114,11 @@ class LiveOnTheDeviceTest {
                 val github = GitHubClient(http, blog.token)
                 // With an earlier run's post from the kill check, which the workflow only looks for.
                 github.files(blog.owner, blog.name, blog.branch).filter { "device-check-$stamp" in it.path || "device-check-run-" in it.path }.forEach { entry ->
-                    val sent = github.file(blog.owner, blog.name, blog.branch, entry.path) ?: return@forEach
-                    github.commit(blog.owner, blog.name, blog.branch, "Delete post: device check", listOf(FileChange.delete(entry.path)), expect = mapOf(entry.path to sent.sha))
+                    // One file refused doesn't leave the rest on the public blog.
+                    runCatching {
+                        val sent = github.file(blog.owner, blog.name, blog.branch, entry.path) ?: return@runCatching
+                        github.commit(blog.owner, blog.name, blog.branch, "Delete post: device check", listOf(FileChange.delete(entry.path)), expect = mapOf(entry.path to sent.sha))
+                    }
                 }
             }
         }
@@ -320,6 +329,97 @@ class LiveOnTheDeviceTest {
             throw e
         }
         setTunnel(tunnel, up = false)
+    }
+
+    private fun signInToA(): Blog {
+        val a = a!!
+        runBlocking { app.container.accounts.save(Account(GitHubClient(http, a.token).user().login, a.token, a.owner, a.name, a.branch)) }
+        return a
+    }
+
+    private fun postPath(blog: Blog, slug: String) =
+        runBlocking { GitHubClient(http, blog.token).files(blog.owner, blog.name, blog.branch).firstOrNull { it.path.endsWith("-$slug.md") }?.path }
+
+    private fun text(blog: Blog, path: String) = runBlocking { GitHubClient(http, blog.token).text(blog.owner, blog.name, blog.branch, path) }
+
+    /** A file's bytes as GitHub serves them, for a photo. */
+    private fun bytes(blog: Blog, path: String): ByteArray {
+        val request = Request.Builder().url("https://api.github.com/repos/${blog.fullName}/contents/$path?ref=${blog.branch}")
+            .header("Authorization", "Bearer ${blog.token}").header("Accept", "application/vnd.github.raw").build()
+        return http.newCall(request).execute().use { check(it.isSuccessful) { "No $path: ${it.code}" }; it.body.bytes() }
+    }
+
+    /**
+     * Opens the blog's copy of [title] from Home, the row after the phone's own rows for it, which
+     * come first and may show before the blog's list has loaded.
+     */
+    private fun openFromTheBlog(title: String) {
+        val rows = runBlocking { app.container.database.drafts().list() }.count { it.title == title } + 1
+        ActivityScenario.launch(MainActivity::class.java)
+        compose.waitUntil(TimeUnit.MINUTES.toMillis(2)) { compose.onAllNodes(hasText(title), useUnmergedTree = true).fetchSemanticsNodes().size >= rows }
+        compose.onAllNodes(hasText(title), useUnmergedTree = true)[rows - 1].performClick()
+        compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("body")).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    /**
+     * A photo shared in from `:sender` with a location in it, published, then edited and deleted
+     * from the screens: the copy on GitHub has no location, the edit lands, and the delete removes
+     * the post.
+     */
+    @Test fun aPhotoPostIsEditedThenDeletedFromTheScreens() {
+        testName = "photo-edit-delete"
+        val a = signInToA()
+        val started = shell("am start -W -n com.app.jekyllposter.sender/.ShareActivity --es to ${app.packageName} --es what photo")
+        assertTrue(started, started.contains("Status: ok"))
+        waitFor("Describe the photo")
+        compose.onNodeWithTag("altText").performTextInput("A teal square")
+        compose.onNodeWithText("Done").performClick()
+        compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("title")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("title").performTextInput(titlePhoto)
+        compose.onNodeWithText("Publish").performClick()
+        val slug = "device-check-$stamp-photo"
+        waitUntil("the photo post on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, slug) }
+        val path = postPath(a, slug)!!
+        val photo = Regex("""\{\{ '/([^']+)' \| relative_url \}\}""").find(text(a, path)!!)!!.groupValues[1]
+        val exif = bytes(a, photo).inputStream().use { ExifInterface(it) }
+        assertEquals("The photo on GitHub has a location", null, exif.latLong)
+
+        openFromTheBlog(titlePhoto)
+        compose.onNodeWithTag("body").performTextInput("Edited from the screens. ")
+        compose.onNodeWithText("Update").performClick()
+        waitUntil("the edit on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { text(a, path)?.contains("Edited from the screens.") == true }
+
+        openFromTheBlog(titlePhoto)
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Delete from the blog").performClick()
+        compose.onNode(hasText("Delete") and hasAnyAncestor(isDialog())).performClick()
+        waitUntil("the post gone from ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { !hasPost(a, slug) }
+    }
+
+    /**
+     * The post changes on GitHub while it's open on the phone, as from a laptop: Update refuses,
+     * and the laptop's version stays.
+     */
+    @Test fun anEditOfAPostThatChangedOnGitHubMeanwhileIsRefused() {
+        testName = "edit-conflict"
+        val a = signInToA()
+        val date = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
+        val path = "_posts/$date-device-check-$stamp-conflict.md"
+        val github = GitHubClient(http, a.token)
+        runBlocking { github.commit(a.owner, a.name, a.branch, "Add post: device check", listOf(FileChange.text(path, "---\ntitle: \"$titleConflict\"\n---\n\nFrom a laptop.\n")), expect = mapOf(path to null)) }
+
+        openFromTheBlog(titleConflict)
+        waitFor("From a laptop.")
+        compose.onNodeWithTag("body").performTextInput("From the phone. ")
+        val laptop = "---\ntitle: \"$titleConflict\"\n---\n\nFrom a laptop, changed again.\n"
+        runBlocking {
+            val sent = github.file(a.owner, a.name, a.branch, path)!!
+            github.commit(a.owner, a.name, a.branch, "Update post: device check", listOf(FileChange.text(path, laptop)), expect = mapOf(path to sent.sha))
+        }
+        compose.onNodeWithText("Update").performClick()
+
+        waitFor("changed on GitHub since you opened it", TimeUnit.MINUTES.toMillis(2))
+        assertEquals(laptop, text(a, path))
     }
 
     // The first half of a check the workflow finishes: a post queued, the app's process ended,
