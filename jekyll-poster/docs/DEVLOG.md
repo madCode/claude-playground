@@ -44,6 +44,14 @@ Times are when each cycle landed, Pacific.
 - **Changed (tests and CI):** on every PR, a test long-presses the app's icon on the emulator's
   home screen and taps New post. In the nightly live check, a post is queued a minute ahead and
   the app's process ended; a later step finds it on the tester's blog, sent by Android alone.
+### Cycle 51: the debug release, as Carry's
+- **Why:** cycle 50's comparison with Carry and newspaperss.
+- **Changed (CI and README):**
+  - The debug release also carries `jekyll-poster-debug-<build>.apk`, numbered.
+  - Its publish job waits its turn rather than cancelling the one before mid-upload.
+  - The build's actions are pinned to commits, and the Gradle wrapper is checked.
+  - The README says how to update.
+
 ### Cycle 47: Hide from the site
 - **Why:** taking a post off the site meant typing `published: false` into More front matter.
 - **Changed:** the editor's menu, while editing a post, has **Hide from the site** and, once
