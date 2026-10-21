@@ -21,6 +21,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.app.jekyllposter.core.jekyll.extraFrontMatterProblem
 import com.app.jekyllposter.core.jekyll.hidesPost
+import com.app.jekyllposter.core.jekyll.withPostHidden
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -113,7 +114,11 @@ data class Draft(
 ) {
     /** Why the "more front matter" can't be published, or null; only checked once it's changed. */
     val frontMatterProblem: String?
-        get() = extraFrontMatter?.takeIf { it != extraFrontMatterOpened }?.let { extraFrontMatterProblem(it) }
+        get() = extraFrontMatter
+            ?.takeIf { it != extraFrontMatterOpened }
+            // Hidden or shown and nothing else: the rest is as the blog has it, odd or not.
+            ?.takeIf { extraFrontMatterOpened == null || it != withPostHidden(extraFrontMatterOpened, hidesPost(it)) }
+            ?.let { extraFrontMatterProblem(it) }
 
     /** The post says `published: false`: Jekyll leaves it off the site, though its file stays. */
     val hidden: Boolean get() = hidesPost(extraFrontMatter)
@@ -202,6 +207,10 @@ interface DraftDao {
      */
     @Query("DELETE FROM drafts WHERE targetPath = :path AND blog = :blog AND state = 'Published'")
     suspend fun deletePublishedEditsOf(path: String, blog: String)
+
+    /** As [deletePublishedEditsOf], but for the records before [keep], the one just published. */
+    @Query("DELETE FROM drafts WHERE targetPath = :path AND blog = :blog AND state = 'Published' AND id != :keep")
+    suspend fun deleteEarlierPublishedEditsOf(path: String, blog: String, keep: Long)
 
     @Insert
     suspend fun insert(draft: Draft): Long

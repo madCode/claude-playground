@@ -198,7 +198,8 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                             }
                             // Needs the post's other keys, which an edit opened before the app kept them lacks.
                             if (editable && text?.editingPath != null && !jekyllDraft && text.extraFrontMatter != null) {
-                                val hidden = hidesPost(text.extraFrontMatter)
+                                // As the blog has it: a hide that didn't go out leaves the post on the site.
+                                val hidden = hidesPost(text.extraFrontMatterOpened ?: text.extraFrontMatter)
                                 DropdownMenuItem(
                                     text = {
                                         Column {

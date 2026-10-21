@@ -173,4 +173,23 @@ class MoreFrontMatterTest {
         assertFalse(hidesPost("published: \"false\""))
         assertFalse(hidesPost(null))
     }
+
+    @Test fun aPostIsHiddenTheWaysJekyllReadsIt() {
+        listOf("no", "off", "False", "FALSE", "", "~", "null").forEach { assertTrue(it, hidesPost("published: $it")) }
+        listOf("true", "yes", "\"false\"", "0", "n").forEach { assertFalse(it, hidesPost("published: $it")) }
+        // Jekyll's keys are case-sensitive, and a key under another isn't the post's.
+        assertFalse(hidesPost("Published: false"))
+        assertFalse(hidesPost("author:\n  published: false"))
+        assertFalse(PostSummary.of(PostPath("_posts/2025-01-01-a.md"), "sha", "---\ntitle: A\npublished: no\n---\n").published)
+    }
+
+    @Test fun hidingOrShowingAloneChangesOnlyThatLine() {
+        val text = "---\nlayout: post\ntitle: A\nimage: /a.png\ndate: 2025-01-01\ntags: [x]\n---\n\nBody\n"
+        val doc = FrontMatterDocument.parse(text)
+        val extra = doc.others(PostWriter.MANAGED)
+        val hidden = PostWriter.edit(doc, PostContent("A", "Body", listOf(), listOf("x"), withPostHidden(extra, true))).render()
+        assertEquals(text.replace("tags: [x]\n", "tags: [x]\npublished: false\n"), hidden)
+        val shown = PostWriter.edit(FrontMatterDocument.parse(hidden), PostContent("A", "Body", listOf(), listOf("x"), extra)).render()
+        assertEquals(text, shown)
+    }
 }

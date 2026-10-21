@@ -41,8 +41,16 @@ fun extraFrontMatterProblem(yaml: String): String? {
 }
 
 /** Whether [yaml], a post's "more front matter", keeps it off the site: `published: false`. */
-fun hidesPost(yaml: String?): Boolean =
-    yaml != null && FrontMatterDocument.parse("---\n$yaml\n---\n").values()["published"] == false
+fun hidesPost(yaml: String?): Boolean = yaml != null && hidesPost(FrontMatterDocument.parse("---\n$yaml\n---\n").values())
+
+/**
+ * Whether front matter [values] keep a post off the site. Jekyll reads YAML 1.1, where `no`, `off`
+ * and `False` are false too, and an empty `published:` is nil, which hides it as well.
+ */
+fun hidesPost(values: Map<String, Any?>): Boolean =
+    "published" in values && values["published"].let { it == null || it == false || it in YAML_1_1_FALSE_OR_NULL }
+
+private val YAML_1_1_FALSE_OR_NULL = setOf("no", "No", "NO", "off", "Off", "OFF", "False", "FALSE", "~", "Null", "NULL")
 
 /**
  * [yaml] with `published: false`, so Jekyll leaves the post out of the site while its file stays,
@@ -100,8 +108,16 @@ object PostWriter {
             doc.set("tag", null)
             doc.set("tags", content.tags)
         }
-        // Only when the writer changed it: untouched, the other keys stay byte for byte.
-        if (extraChanged(existing, content)) doc.replaceOthers(content.extra!!, MANAGED)
+        // Only when the writer changed it: untouched, the other keys stay byte for byte. Hiding or
+        // showing alone changes the one key in place, so the rest of the file doesn't move.
+        if (extraChanged(existing, content)) {
+            val hide = hidesPost(content.extra)
+            if (withPostHidden(existing.others(MANAGED), hide).trim() == content.extra!!.trim()) {
+                doc.set("published", if (hide) false else null)
+            } else {
+                doc.replaceOthers(content.extra, MANAGED)
+            }
+        }
         return doc
     }
 

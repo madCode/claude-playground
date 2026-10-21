@@ -9,6 +9,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
 import com.app.jekyllposter.testutil.waitUntilLooped
 import com.app.jekyllposter.ui.theme.PosterTheme
@@ -82,5 +83,45 @@ class EditFlowTest {
         compose.onNodeWithText("Show on the site again").performClick()
         compose.waitUntilLooped(15_000) { !post().contains("published") }
         assertEquals(before, post())
+    }
+
+    @Test fun aHideGoesOutAtOnceChangingOnlyItsLineEvenInFrontMatterTheEditorWouldRefuse() {
+        // Pushed from a laptop: a flow map over two lines, which the front matter field refuses.
+        val path = "_posts/2025-05-05-odd-map.md"
+        val odd = "---\ntitle: Odd map\nlinks: {a: 1,\nb: 2}\ndate: 2025-05-05\ntags: [x]\n---\n\nText.\n"
+        github.push("Laptop", mapOf(path to odd))
+        runBlocking {
+            app.signIn()
+            app.container.privacy.update(SAMPLE_BLOG) { it.copy(sendAtRandomTime = true) }
+        }
+        compose.setContent { PosterTheme { PosterNavHost(app.container) } }
+        compose.waitFor("Odd map")
+        compose.onNodeWithText("Odd map").performClick()
+        compose.waitFor("Text.")
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Hide from the site").performClick()
+
+        // Not held for a random time, and the one line added where Jekyll reads it, the rest in place.
+        compose.waitUntilLooped(15_000) { github.text(path)?.contains("published: false") == true }
+        assertEquals(odd.replace("tags: [x]\n", "tags: [x]\npublished: false\n"), github.text(path))
+    }
+
+    @Test fun anEarlierUpdateOfAHiddenPostNoLongerSaysItIsLive() {
+        runBlocking { app.signIn() }
+        compose.setContent { PosterTheme { PosterNavHost(app.container) } }
+        compose.waitFor("What I read in April")
+        compose.onNodeWithText("What I read in April").performClick()
+        compose.waitFor("A few books, a few essays.")
+        compose.onNodeWithTag("body").performTextInput("And one long poem. ")
+        compose.onNodeWithText("Update").performClick()
+        compose.waitUntilLooped(15_000) { github.text("_posts/2025-04-20-reading-list.md")?.contains("long poem") == true }
+
+        compose.onAllNodesWithText("What I read in April")[1].performClick()
+        compose.waitFor("And one long poem.")
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Hide from the site").performClick()
+        compose.waitUntilLooped(15_000) { github.text("_posts/2025-04-20-reading-list.md")?.contains("published: false") == true }
+        compose.waitUntilLooped(15_000) { runBlocking { app.container.database.drafts().list() }.size == 1 }
+        assertTrue(runBlocking { app.container.database.drafts().list() }.single().hidden)
     }
 }
