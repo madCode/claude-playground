@@ -694,12 +694,10 @@ without a tap (`LiveUpdates`, `LiveWorkers`):
   folder picked would arrive nowhere. `MainActivity` notes each answer it
   sends another app for (`AwaitedAnswers`, on disk) and crosses it off
   when the answer comes, so a turn of the phone or Android dropping the
-  process meanwhile doesn't let go of it. Only a start from the launcher
-  with nothing to restore clears one left behind: opened any other way,
-  the task with the picker may still come back. So a picker abandoned
-  and swiped away, with Carry only ever opened from the session notice
-  since, holds background installs back until the next launcher start;
-  the notice's tap still installs.
+  process meanwhile doesn't let go of it. Only a fresh start of Carry, in
+  a task of its own, clears one left behind: a start on top of an
+  existing task (a launcher tap after the session notice opened Carry
+  gets one) may have the picker below it.
 - **And not while storage is low**, since Android's copy of the build
   needs room as the download did.
 - **No question out of nowhere.** If Android wants the owner to confirm

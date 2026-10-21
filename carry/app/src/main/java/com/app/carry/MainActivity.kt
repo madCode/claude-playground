@@ -53,11 +53,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // Only a launcher start with nothing restored: anything else may still be waiting on a
-        // picker in a task Android will bring back.
-        if (savedInstanceState == null && intent?.action == Intent.ACTION_MAIN &&
-            intent?.hasCategory(Intent.CATEGORY_LAUNCHER) == true
-        ) {
+        // Only a fresh start at the root of its task has no picker below it left to answer. A start
+        // on top of an existing task, as a launcher tap gets after the session notice opened Carry,
+        // may have one.
+        if (savedInstanceState == null && isTaskRoot) {
             answers.forget()
         }
         // KEEP, so this is safe on every launch: it will not restart the

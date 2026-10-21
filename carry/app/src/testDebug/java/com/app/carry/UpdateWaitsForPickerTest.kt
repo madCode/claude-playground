@@ -1,6 +1,7 @@
 package com.app.carry
 
 import android.app.Activity
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -23,6 +24,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
@@ -123,18 +125,22 @@ class UpdateWaitsForPickerTest {
     }
 
     @Test
-    fun `a picker out when Carry went away still holds, until Carry starts afresh from the launcher`() {
+    fun `a picker out when Carry went away still holds, until Carry starts afresh`() {
         openPicker(launch())
         // Android dropped Carry's process: a later one knows only what's on disk.
         assertEquals(LiveUpdates.Outcome.Busy, inBackground())
 
-        // The session notice reopens Carry onto the task the picker is still part of.
-        val notice = Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        coveredBy(launch(notice))
-        assertEquals("the task may still bring the picker back", LiveUpdates.Outcome.Busy, inBackground())
+        // A launcher tap after the session notice opened Carry: Android starts a second instance
+        // on top of the task, with the picker still below it.
+        val onTop = Robolectric.buildActivity(MainActivity::class.java, Intent.makeMainActivity(ComponentName(app, MainActivity::class.java)))
+        shadowOf(onTop.get()).setIsTaskRoot(false)
+        onTop.setup().pause().stop()
+        UpdateInstaller.inFront = false
+        assertEquals("the picker below may still answer", LiveUpdates.Outcome.Busy, inBackground())
+        onTop.destroy()
 
-        // From the launcher with nothing to restore, no picker can answer any more.
-        coveredBy(launch())
+        // Started afresh, from anywhere: a task of its own, with no picker in it.
+        coveredBy(launch(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)))
         assertEquals(LiveUpdates.Outcome.Started, inBackground())
     }
 }
