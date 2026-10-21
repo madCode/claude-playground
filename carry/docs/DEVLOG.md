@@ -33,6 +33,21 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-21 — a full phone no longer counts against a build
+
+Ported from Jekyll Poster's review of the same updater (#187).
+
+- **No room isn't the build's fault.** Copying a build into Android's
+  installer on a full phone used to count as a failed install, and three
+  of them gave up on the build for good. Now a tap says to free some
+  space, and the background tries again later. Neither counts.
+- **The background install waits for free storage**, as the download
+  already did.
+- Two other findings from that review don't apply here. Carry decides
+  "closed" from its on-disk unsaved mark, not from a pause, so nothing
+  typed is lost under another app. And its hold isn't tied to a screen,
+  so a rotation can't drop it.
+
 ## 2026-10-20 — cycle 73: tests for the guards, and the whole-phone refusal stays
 
 - Picking **Internal storage** instead of a folder now leaves *That's your

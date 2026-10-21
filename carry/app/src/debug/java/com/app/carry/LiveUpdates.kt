@@ -104,7 +104,11 @@ internal class LiveUpdates(
                     val id = try {
                         withContext(Dispatchers.IO) { stage(apk) }
                     } catch (e: IOException) {
-                        throw InstallFailed(e)
+                        // Usually no room: the phone's, not the build's, so not counted against it.
+                        return@withLock UpdateProblem(
+                            "Android couldn't take the update: ${e.message ?: "no room?"}. Free some space, then tap again.",
+                            offerLink = false,
+                        )
                     }
                     // Back on the caller's thread, after the slow parts and immediately before
                     // the commit, so nothing typed during them can be installed over.
@@ -123,8 +127,6 @@ internal class LiveUpdates(
             // is over.
             if (!handedOver) UpdateInstaller.finish()
             throw e
-        } catch (e: InstallFailed) {
-            failure(counted, "Android couldn't take the update: ${e.cause?.message ?: "no room?"}.")
         } catch (e: IOException) {
             UpdateProblem("Couldn't download the update: ${e.message ?: "no connection"}.", offerLink = true)
         } catch (e: Exception) {
@@ -274,6 +276,10 @@ internal class LiveUpdates(
                 Outcome.Started
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: IOException) {
+                // Usually no room: tried again later, not counted against the build.
+                log("Build $ready couldn't be staged: ${e.message}")
+                Outcome.Retry
             } catch (e: Exception) {
                 log("Build $ready couldn't be handed to Android: ${e.javaClass.simpleName} ${e.message}")
                 if (failed(prefs, ready)) Outcome.Failed else Outcome.Retry
@@ -297,8 +303,6 @@ internal class LiveUpdates(
 
     /** How a background step went, for its worker. */
     enum class Outcome { Done, Started, Busy, Retry, Failed }
-
-    private class InstallFailed(cause: Throwable) : Exception(cause)
 
     companion object {
         /** Each of these is one try; Android then says "can't install" for the same reasons. */

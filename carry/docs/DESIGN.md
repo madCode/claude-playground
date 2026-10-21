@@ -652,8 +652,10 @@ the debug source set only; a release build has neither.
    toast only. Three failed installs of one build, or one Android says can
    never install (invalid, incompatible, a conflict), and Carry gives up on
    that build: the notice's tap then opens the download in a browser
-   instead. A newer build is tried again. A failed download, or the owner
-   saying no to Android's question, isn't counted.
+   instead. A newer build is tried again. A failed download, the owner
+   saying no to Android's question, or no room to copy the build into
+   Android's installer isn't counted: a full phone isn't the build's
+   fault. That last one says to free some space, without the link.
 
 The notice reads "Downloading build N…" and can't be tapped again until
 Android's installer has answered, so a second tap can't start a second
@@ -685,7 +687,9 @@ without a tap (`LiveUpdates`, `LiveWorkers`):
   keystroke until a save or a discard, and while any save is writing. A fresh start with no draft
   restored clears it, since that typing is already gone. While Carry is
   on screen or the mark is set, the install is tried again later, 30
-  minutes further apart each time. Both are checked again after the copy
+  minutes further apart each time. It also waits for enough free storage,
+  since Android's installer keeps its own copy of the build; a copy that
+  still runs out of room is tried again, not counted. Both are checked again after the copy
   into Android's installer, just before the hand-off.
 - **No question out of nowhere.** If Android wants the owner to confirm
   (the first in-app update, or below Android 12), the background attempt
