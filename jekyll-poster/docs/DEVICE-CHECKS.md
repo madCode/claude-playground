@@ -54,6 +54,7 @@ puts it on an emulator). Post only to the tester's blogs, and delete what you po
 |---|---|---|---|
 | **Sign in with GitHub** | A change to sign-in, or the GitHub App | Sign in with GitHub; enter the code at github.com/login/device signed in as the tester, and authorise | The tester's blogs are listed; pick `jekyll-test-blog-a` and its posts load |
 | **A TalkBack listen** | A new screen, or a change to one's layout | Turn TalkBack on; go through New post and Publish | Every button says what it does; the blog switcher names the open blog |
+| **Updating itself** | A change to `update/` | On a phone with an older CI debug build, open the app once a newer build is out; tap "Build N is out" | Android asks to allow installs, then to update; the app restarts on the newer build (Settings shows it), drafts intact |
 
 The first needs a browser signed in as the tester, whose password and 2FA stay out of CI. The
 second needs someone listening: CI's accessibility checks find missing labels, not labels that
@@ -65,3 +66,4 @@ make no sense.
 |---|---|
 | Sign in with GitHub | Not yet |
 | A TalkBack listen | Not yet |
+| Updating itself | Not yet |

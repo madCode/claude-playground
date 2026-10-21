@@ -359,6 +359,33 @@ blog's switches, whichever blog is open when it goes.
 - The app's version, with the build's CI run and commit in a debug build. A tap or long press
   copies it, for a bug report.
 
+## Updates (debug builds)
+
+A debug build from CI notices a newer one and installs it. Release builds, and builds made on a
+laptop, do neither; a release carries no installer and can't install apps (`check` fails if its
+manifest asks to).
+
+- **Asking:** when the app comes to the front, at most every three hours, and every six hours in
+  the background. A GET of the `jekyll-poster-debug` release's public JSON; the newest build is
+  the highest `jekyll-poster-debug-<run>.apk` on it. A body over 256 KB isn't read, and the whole
+  request has 30 seconds. Any answer counts as asked, so a rate limit isn't spent again; no
+  answer doesn't.
+- **Nothing of the writer's goes with it.** No token: its client has none on it. It goes through
+  the VPN when any blog asks for one, like signing in, since it isn't for one blog. With no VPN up
+  nothing is sent, and it asks again next time. The request record lists it as `updates`.
+- **Home says it:** "Build N is out", at the top of the list. A tap asks once for Android's
+  "Install unknown apps" switch, then downloads the fixed link, checks the file (this app,
+  signed with the same key, a higher build) and hands it to Android's installer.
+- **In the background**, a newer build downloads on Wi-Fi, and installs once the app has been
+  closed for ten seconds (the editor saves the last keystrokes just after) and no post is being
+  sent; it is tried again 30 minutes later otherwise. A tap also waits for a post going out. If
+  Android wants the writer to confirm, the background doesn't ask out of nowhere: the tap does.
+- **Failures:** a tap's failure says why and opens the download in a browser. A file that fails
+  its checks, five failed downloads or three failed installs of one build and the app gives up
+  on it: the tap opens the browser instead, and a newer build is tried again.
+
+The same as Carry's (`carry/docs/DESIGN.md`), which this was ported from.
+
 ## The request record (debug builds)
 
 For auditing what each sign-in sends. Release builds don't have it.

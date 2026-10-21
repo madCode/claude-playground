@@ -35,6 +35,8 @@ tells you when GitHub Pages has rebuilt the site.
 
 **Install:** the newest build from main is
 [jekyll-poster-debug.apk](https://github.com/madCode/claude-playground/releases/download/jekyll-poster-debug/jekyll-poster-debug.apk).
+**Update:** once installed, the app notices a newer build itself. Home says "Build N is out";
+a tap installs it, and on Wi-Fi it installs on its own while the app is closed.
 
 **Sign in:** make a fine-grained token for your blog's repository with Contents (read and
 write) and Actions (read); the app links to GitHub's form with these filled in. Or, once a

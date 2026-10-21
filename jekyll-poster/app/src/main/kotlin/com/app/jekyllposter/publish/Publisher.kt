@@ -62,6 +62,9 @@ class Publisher(
     /** Runs [block] between publishes, for another commit that a publish's plan relies on. */
     suspend fun <T> betweenPublishes(block: suspend () -> T): T = lock.withLock { block() }
 
+    /** Whether a post is being sent now: installing an update would end the app part way through. */
+    val publishing: Boolean get() = lock.isLocked
+
     suspend fun publish(id: Long): Outcome = lock.withLock {
         repeat(3) { attempt(id)?.let { return it } }
         Outcome.Retry

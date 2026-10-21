@@ -21,11 +21,25 @@ class MainActivity : ComponentActivity() {
         // A rotation passes it again; the nav host takes each share only once.
         val shared = postToStart(intent)
         addNewPostShortcut()
+        container.updates.start()
         setContent {
             PosterTheme {
-                PosterNavHost((application as PosterApp).container, shared)
+                PosterNavHost(container, shared)
             }
         }
+    }
+
+    private val container get() = (application as PosterApp).container
+
+    override fun onResume() {
+        super.onResume()
+        container.updates.resumed(this)
+        container.updates.checkIfDue()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        container.updates.paused()
     }
 
     /**

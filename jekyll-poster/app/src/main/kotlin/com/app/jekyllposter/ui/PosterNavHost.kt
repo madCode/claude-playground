@@ -46,6 +46,7 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
     val signedIn by produceState<Any?>(Loading) { value = container.accounts.account.first() != null }
     if (signedIn === Loading) return
     val nav = rememberNavController()
+    UpdateProblems(container.updates)
     // Home leaves the composition while the editor is open and its effects run again on the way
     // back, so a share is taken once, here, or every Back would start another post from it.
     var pending by rememberSaveable { mutableStateOf(shared != null) }
@@ -116,6 +117,7 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
                 blogs = viewModel { BlogsViewModel(container) },
                 onAddBlog = { nav.navigate("add-blog/$it") },
                 onAddSignIn = { nav.navigate("add-sign-in") },
+                updateNotice = { UpdateNotice(container.updates) },
             )
         }
         composable("editor/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
