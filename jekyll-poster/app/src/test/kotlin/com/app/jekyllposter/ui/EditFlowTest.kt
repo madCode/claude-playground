@@ -86,9 +86,9 @@ class EditFlowTest {
     }
 
     @Test fun aHideGoesOutAtOnceChangingOnlyItsLineEvenInFrontMatterTheEditorWouldRefuse() {
-        // Pushed from a laptop: a flow map over two lines, which the front matter field refuses.
+        // Pushed from a laptop: a merge key, which the front matter field refuses.
         val path = "_posts/2025-05-05-odd-map.md"
-        val odd = "---\ntitle: Odd map\nlinks: {a: 1,\nb: 2}\ndate: 2025-05-05\ntags: [x]\n---\n\nText.\n"
+        val odd = "---\ntitle: Odd map\nbase: &b {x: 1}\n<<: *b\ndate: 2025-05-05\ntags: [x]\n---\n\nText.\n"
         github.push("Laptop", mapOf(path to odd))
         runBlocking {
             app.signIn()
@@ -101,9 +101,10 @@ class EditFlowTest {
         compose.onNodeWithContentDescription("More").performClick()
         compose.onNodeWithText("Hide from the site").performClick()
 
-        // Not held for a random time, and the one line added where Jekyll reads it, the rest in place.
+        // The one line added where Jekyll reads it, the rest in place, and not held for a random time.
         compose.waitUntilLooped(15_000) { github.text(path)?.contains("published: false") == true }
         assertEquals(odd.replace("tags: [x]\n", "tags: [x]\npublished: false\n"), github.text(path))
+        assertEquals(null, runBlocking { app.container.database.drafts().list() }.single { it.editingPath == path }.sendAfter)
     }
 
     @Test fun anEarlierUpdateOfAHiddenPostNoLongerSaysItIsLive() {
