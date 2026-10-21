@@ -178,10 +178,12 @@ class LiveUpdatesTest {
         answer(140, PackageInstaller.STATUS_FAILURE_ABORTED)
         answer(140, PackageInstaller.STATUS_FAILURE_ABORTED)
         assertEquals("the owner saying no isn't a failure", SelfUpdater.Step.Install, updates.next(140, false, true))
-        answer(140, PackageInstaller.STATUS_FAILURE_STORAGE)
-        answer(140, PackageInstaller.STATUS_FAILURE_STORAGE)
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES) { answer(140, PackageInstaller.STATUS_FAILURE_STORAGE) }
+        assertEquals("no room isn't the build's failure", SelfUpdater.Step.Install, updates.next(140, false, true))
+        answer(140, PackageInstaller.STATUS_FAILURE)
+        answer(140, PackageInstaller.STATUS_FAILURE)
         assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
-        answer(140, PackageInstaller.STATUS_FAILURE_STORAGE)
+        answer(140, PackageInstaller.STATUS_FAILURE)
         assertEquals(SelfUpdater.Step.Browser, updates.next(140, false, true))
 
         answer(141, PackageInstaller.STATUS_FAILURE_CONFLICT)

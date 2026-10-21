@@ -346,6 +346,8 @@ internal class LiveUpdates(
                 PackageInstaller.STATUS_FAILURE_INVALID,
                 PackageInstaller.STATUS_FAILURE_INCOMPATIBLE,
                 PackageInstaller.STATUS_FAILURE_CONFLICT -> { reject(prefs, build); true }
+                // No room: the phone's, not the build's. The background tries again once there is.
+                PackageInstaller.STATUS_FAILURE_STORAGE -> { LiveInstallWorker.enqueue(WorkManager.getInstance(context)); false }
                 else -> failed(prefs, build)
             }
         }
