@@ -29,6 +29,11 @@ Times are when each cycle landed, Pacific.
 
 ## Wed 21 Oct
 
+### Cycle 46: backlog grooming
+- **Found:** Unpublish already works by typing `published: false` in More front matter, so it
+  became a one-tap cycle. Collections and Hugo need madCode's call: issues #179 and #180. The
+  keep-private word list needs one too: replace a listed word, or block the publish?
+
 ### Cycle 45: New post from the launcher, and the app killed while a post waits, on the emulator
 - **Why:** the last two device tests in BACKLOG.md's Next.
 - **Changed (tests and CI):** on every PR, a test long-presses the app's icon on the emulator's

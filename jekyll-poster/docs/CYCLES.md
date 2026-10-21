@@ -9,6 +9,13 @@ waiting on madCode is done, or 7am Pacific (14:00 UTC), whichever comes first. A
 that the app's update system (the `jekyll-poster-debug` release) matches the other apps' (Carry,
 newspaperss), and puts any difference in BACKLOG.md.
 
+### Cycle 46 — audit: backlog grooming
+
+- Check each backlog item against the code before planning it: Unpublish was already possible
+  through More front matter, so the cycle became a one-tap action rather than a feature.
+- An item that needs madCode's call goes under "Waiting on madCode", with an issue for the long
+  ones, so a night run doesn't stall on it.
+
 ### Cycle 45 — build: New post from the launcher, and the app killed while a post waits
 
 - Check a guard against what it reads: "SKIPPED" in Gradle's log matched Gradle's own task

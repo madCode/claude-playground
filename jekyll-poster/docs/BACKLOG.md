@@ -7,18 +7,23 @@ and moves it to Done.
 
 - [ ] More of the device live check (`LiveOnTheDeviceTest`): a photo, an edit and a delete
   from the screens, and an edit conflict made by the workflow committing while the post is open.
+- [ ] Per-blog templates: front matter a new post starts with.
 - [ ] Sign in with GitHub and a TalkBack listen, by a person, now and then
   ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)).
 
+## Waiting on madCode
+
+- [ ] A "keep private" word list per blog, checked before every publish (obyde's find/replace,
+  for posts not from Obsidian): should a listed word be replaced, or block the publish until
+  it's taken out?
+- [ ] Collections other than posts, and `collections_dir`: worth building?
+  ([#179](https://github.com/madCode/claude-playground/issues/179))
+- [ ] Hugo, or other static site generators on GitHub: keep, narrow or drop?
+  ([#180](https://github.com/madCode/claude-playground/issues/180))
 
 ## Later
 
-- [ ] Per-blog templates: front matter a new post starts with
 - [ ] Unpublish (`published: false`), keeping the file
-- [ ] Collections other than posts; `collections_dir`
-- [ ] Hugo, or other static site generators on GitHub
-- [ ] A "keep private" word list per blog, checked before every publish (obyde's find/replace,
-  for posts not from Obsidian)
 
 ## Done
 
