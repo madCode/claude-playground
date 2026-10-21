@@ -287,7 +287,8 @@ class LiveOnTheDeviceTest {
             val id = runBlocking {
                 val login = GitHubClient(http, a.token).user().login
                 app.container.accounts.save(Account(login, a.token, a.owner, a.name, a.branch))
-                app.container.privacy.update(key) { it.copy(onlyThroughVpn = true) }
+                // Only the VPN switch: a random send time would hold the post back for its own reason.
+                app.container.privacy.update(key) { it.copy(onlyThroughVpn = true, sendAtRandomTime = false) }
                 app.container.drafts.insert(Draft(blog = key, title = titleVpn, body = "Sent through a VPN by the nightly device check, then deleted.", state = PostState.Queued))
                     .also { app.container.publishQueue.enqueue(it, null) }
             }
@@ -296,7 +297,9 @@ class LiveOnTheDeviceTest {
             // Long enough for a worker that ignored the switch to have sent it.
             Thread.sleep(30_000)
             assertFalse("Sent without the VPN", runBlocking { hasPost(a, "device-check-$stamp-through-the-vpn") })
-            assertEquals(PostState.Queued, runBlocking { app.container.drafts.get(id) }!!.state)
+            val waiting = runBlocking { app.container.drafts.get(id) }!!
+            assertEquals(PostState.Queued, waiting.state)
+            assertEquals("Held for a random time, not the VPN", null, waiting.sendAfter)
 
             setTunnel(tunnel, up = true)
             val vpnAddress = publicAddress()
