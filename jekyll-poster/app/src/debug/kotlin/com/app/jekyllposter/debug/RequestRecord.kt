@@ -108,7 +108,7 @@ class RequestRecord(dir: File) {
         private const val MAX_FILE = 4L * 1024 * 1024
         private val hiddenHeaders = setOf("authorization", "cookie", "proxy-authorization")
         private val hiddenFields = setOf("device_code", "refresh_token", "code", "client_secret")
-        private val secretParams = listOf("token", "sig", "secret", "key", "auth", "credential", "password")
+        private val secretParams = listOf("token", "sig", "secret", "key", "auth", "credential", "password", "jwt")
 
         // GitHub's token shapes: classic, OAuth, user-to-server, server-to-server, refresh, fine-grained.
         // No word boundary before it: a token can follow `%3D` or `_` in a link.

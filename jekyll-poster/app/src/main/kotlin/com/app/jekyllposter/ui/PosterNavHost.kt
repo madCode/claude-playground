@@ -64,13 +64,16 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
     }
     NavHost(nav, startDestination = if (signedIn == true) "home" else "connect") {
         composable("connect") {
+            HoldUpdates(container)
             ConnectScreen(viewModel { ConnectViewModel(container) }) { connected(it) }
         }
         composable("add-sign-in") {
+            HoldUpdates(container)
             ConnectScreen(viewModel { ConnectViewModel(container) }, onCancel = { nav.popBackStack() }) { connected(it) }
         }
         composable("add-blog/{signIn}", arguments = listOf(navArgument("signIn") { type = NavType.LongType })) { entry ->
             val signIn = entry.arguments!!.getLong("signIn")
+            HoldUpdates(container)
             // Straight to the sign-in's repositories, with its token already in hand.
             ConnectScreen(viewModel { ConnectViewModel(container).also { it.addBlogTo(signIn) } }, onCancel = { nav.popBackStack() }) { connected(it) }
         }
@@ -122,6 +125,7 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
         }
         composable("editor/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
             val id = entry.arguments!!.getLong("id")
+            HoldUpdates(container)
             EditorScreen(viewModel(key = "editor-$id") { EditorViewModel(container, id) }) { nav.popBackStack() }
         }
     }

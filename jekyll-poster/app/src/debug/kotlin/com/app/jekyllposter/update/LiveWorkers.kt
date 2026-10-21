@@ -66,7 +66,8 @@ class LiveDownloadWorker(context: Context, params: WorkerParameters) : Coroutine
 }
 
 /**
- * Installs the downloaded build once the app is closed and no post is going out. While either
+ * Installs the downloaded build once the app is closed, no post is going out and no editor or
+ * Connect screen was left open. While either
  * holds, the install is tried again later, [RETRY_MINUTES] further apart each time.
  */
 class LiveInstallWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
@@ -84,6 +85,8 @@ class LiveInstallWorker(context: Context, params: WorkerParameters) : CoroutineW
 
         fun enqueue(work: WorkManager) {
             val request = OneTimeWorkRequestBuilder<LiveInstallWorker>()
+                // Android's copy of the build needs room as the download did.
+                .setConstraints(Constraints.Builder().setRequiresStorageNotLow(true).build())
                 .setBackoffCriteria(BackoffPolicy.LINEAR, RETRY_MINUTES, TimeUnit.MINUTES)
                 .build()
             work.enqueueUniqueWork(UNIQUE, ExistingWorkPolicy.KEEP, request)

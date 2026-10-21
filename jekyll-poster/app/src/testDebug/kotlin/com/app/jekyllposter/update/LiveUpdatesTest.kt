@@ -51,8 +51,8 @@ class LiveUpdatesTest {
     private var canInstall = true
     private var clock = 1_000_000_000L
     private var stageCalls = 0
-    private var busy = false
     private var publishing = false
+    private var screenLeftOpen = false
     private var downloads = 0
     private val background = mutableListOf<Int>()
     private val dir by lazy { tmp.newFolder("updates") }
@@ -72,7 +72,7 @@ class LiveUpdatesTest {
     }
 
     private fun updates(installedBuild: Int = 130, stage: (File) -> Int = { stageCalls++; stageFails?.let { e -> throw e }; staged += 7; 7 }) = LiveUpdates(
-        app, installedBuild, OkHttpClient(), publishing = { publishing }, prefs = prefs, dir = dir,
+        app, installedBuild, OkHttpClient(), waitFor = { if (publishing) Hold.Post else if (screenLeftOpen) Hold.Screen else null }, prefs = prefs, dir = dir,
         download = { downloads++; it.writeText(serving()) },
         inspect = { apks[it.readText()] },
         installed = { installed },
@@ -81,13 +81,15 @@ class LiveUpdatesTest {
         abandon = { abandoned += it },
         canInstallNow = { canInstall },
         now = { clock },
-        busy = { busy || LiveUpdates.mustWait(clock, publishing) },
         work = { work },
     )
 
     private fun infos(name: String) = work.getWorkInfosForUniqueWork(name).get()
 
-    private fun LiveUpdates.tap(build: Int = 140, publishing: () -> Boolean = { false }) = runBlocking { install(build, publishing) }
+    private fun LiveUpdates.tap(build: Int = 140, hold: () -> Hold? = { null }) = runBlocking { install(build, hold) }
+
+    /** What Android's installer throws for a session it won't take, whatever the room. */
+    private val refused = IllegalStateException("Session is sealed")
 
     @Test
     fun `a newer build of this app with its key is handed to Android`() {
@@ -132,7 +134,7 @@ class LiveUpdatesTest {
     @Test
     fun `a post that starts going out while the build is copied stops the install`() {
         // Nothing going out at the tap; a post starts by the time the copy is done.
-        val problem = updates().tap { staged.isNotEmpty() }!!
+        val problem = updates().tap { if (staged.isNotEmpty()) Hold.Post else null }!!
         assertEquals(emptyList<Pair<Int, Int>>(), committed)
         assertEquals("the staged session must not be left behind", listOf(7), abandoned)
         assertEquals(SelfUpdater.WAIT_FOR_POST, problem.why)
@@ -149,11 +151,54 @@ class LiveUpdatesTest {
     }
 
     @Test
-    fun `three failed hand-offs give up on the build`() {
+    fun `opening a post while the build is copied keeps it for when the post is left`() {
+        val updates = updates()
+        val problem = updates.tap { if (staged.isNotEmpty()) Hold.Screen else null }!!
+        assertEquals(UpdateProblem(SelfUpdater.WAIT_FOR_SCREEN, offerLink = false, resumes = true), problem)
+        assertEquals(emptyList<Pair<Int, Int>>(), committed)
+        assertEquals("the staged session must not be left behind", listOf(7), abandoned)
+        assertFalse(UpdateInstaller.installing.value)
+        // Left the post: the checked file installs without downloading again.
+        assertNull(updates.tap())
+        assertEquals(1, downloads)
+        assertEquals(listOf(7 to 140), committed)
+    }
+
+    @Test
+    fun `the tap's download without the VPN offers no link, and isn't counted`() {
+        serving = { throw com.app.jekyllposter.core.github.NoVpnException() }
+        val updates = updates()
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES + 1) {
+            assertEquals(UpdateProblem(SelfUpdater.WAIT_FOR_VPN, offerLink = false), updates.tap())
+        }
+        assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
+        assertFalse(UpdateInstaller.installing.value)
+    }
+
+    @Test
+    fun `no room to stage the build isn't held against it`() {
         stageFails = IOException("No space left on device")
         val updates = updates()
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES + 1) {
+            val problem = updates.tap()!!
+            assertEquals("Android couldn't take the update: No space left on device. Free some space, then tap again.", problem.why)
+            assertFalse(problem.offerLink)
+        }
+        assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
+
+        // In the background too: tried again later, never given up on.
+        UpdateInstaller.finish()
+        updates.fetched()
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES + 1) { assertEquals(LiveUpdates.Outcome.Retry, updates.inBackground()) }
+        assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
+    }
+
+    @Test
+    fun `three failed hand-offs give up on the build`() {
+        stageFails = refused
+        val updates = updates()
         repeat(LiveUpdates.MAX_INSTALL_FAILURES - 1) {
-            assertEquals("Android couldn't take the update: No space left on device.", updates.tap()!!.why)
+            assertEquals("Android wouldn't take the update: Session is sealed.", updates.tap()!!.why)
             assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
         }
         assertTrue(updates.tap()!!.why.endsWith("The app won't try this build again."))
@@ -191,7 +236,7 @@ class LiveUpdatesTest {
         // The fixed-name file still holds 135 while GitHub already lists 140.
         apks["apk-135"] = ApkFacts(app.packageName, 135, ourKey)
         serving = { "apk-135" }
-        stageFails = IOException("No space left on device")
+        stageFails = refused
         val updates = updates()
         repeat(LiveUpdates.MAX_INSTALL_FAILURES) { updates.tap(140) }
         assertEquals(SelfUpdater.Step.Browser, updates.next(135, false, true))
@@ -290,29 +335,33 @@ class LiveUpdatesTest {
     fun `a downloaded build is installed while the app is closed and no post is going out`() {
         val updates = updates()
         assertEquals(LiveUpdates.Outcome.Done, updates.fetched())
-        assertEquals(1, infos(LiveInstallWorker.UNIQUE).size)
+        val install = infos(LiveInstallWorker.UNIQUE).single()
+        assertTrue("Android's copy needs room too", install.constraints.requiresStorageNotLow())
         assertEquals(LiveUpdates.Outcome.Started, updates.inBackground())
         assertEquals(listOf(140), background)
     }
 
     @Test
-    fun `the app on screen, only just left, or sending a post holds the background install back`() {
+    fun `the app on screen, only just left, sending a post or a post left open holds the background install back`() {
         val updates = updates()
         updates.fetched()
         for ((why, set) in listOf<Pair<String, () -> Unit>>(
             "on screen" to { UpdateInstaller.inFront = true },
             "only just left: the editor saves a moment later" to { updates.paused() },
             "a post going out" to { publishing = true },
+            "a post's editor left open, perhaps behind the camera" to { screenLeftOpen = true },
         )) {
             UpdateInstaller.inFront = false
             UpdateInstaller.leftFrontAt = 0
             publishing = false
+            screenLeftOpen = false
             set()
             assertEquals(why, LiveUpdates.Outcome.Busy, updates.inBackground())
             assertEquals("nothing staged: $why", emptyList<Int>(), staged)
             assertFalse(UpdateInstaller.installing.value)
         }
         publishing = false
+        screenLeftOpen = false
         updates.paused()
         clock += LiveUpdates.SETTLE_MILLIS - 1
         assertEquals(LiveUpdates.Outcome.Busy, updates.inBackground())
@@ -322,7 +371,7 @@ class LiveUpdatesTest {
 
     @Test
     fun `a post that starts while the build is copied stops the background install`() {
-        val updates = updates(stage = { busy = true; 7 })
+        val updates = updates(stage = { publishing = true; 7 })
         updates.fetched()
         assertEquals(LiveUpdates.Outcome.Busy, updates.inBackground())
         assertEquals(emptyList<Pair<Int, Int>>(), committed)
@@ -405,7 +454,7 @@ class LiveUpdatesTest {
     fun `while the newest file lags, a build given up on isn't kept as the one to install`() {
         apks["apk-135"] = ApkFacts(app.packageName, 135, ourKey)
         serving = { "apk-135" }
-        stageFails = IOException("No space left on device")
+        stageFails = refused
         val updates = updates()
         repeat(LiveUpdates.MAX_INSTALL_FAILURES) { updates.tap(135) }
         repeat(LiveUpdates.DOWNLOAD_TRIES + 1) { assertEquals(LiveUpdates.Outcome.Retry, updates.fetched(140)) }
@@ -456,7 +505,44 @@ class UpdateDownloadTest {
     }
 }
 
-/** The debug build carries the installer; [com.app.jekyllposter.update.ReleaseBuildTest] checks a release doesn't. */
+/** The download through the app's own update client, behind "Only connect through a VPN". */
+@RunWith(AndroidJUnit4::class)
+@org.robolectric.annotation.Config(application = com.app.jekyllposter.testutil.TestApp::class)
+class UpdateDownloadVpnTest {
+    private val app = ApplicationProvider.getApplicationContext<com.app.jekyllposter.testutil.TestApp>()
+    private val server = MockWebServer().apply { start() }
+    private val dir = java.nio.file.Files.createTempDirectory("jekyll-poster-update").toFile()
+    private val dest = File(dir, "jekyll-poster-debug.apk")
+
+    @After fun stop() {
+        server.close()
+        app.github.close()
+        dir.deleteRecursively()
+    }
+
+    @Test
+    fun `with a blog asking for the VPN and none up, the download sends nothing`() {
+        runBlocking { app.signIn(); app.container.setOnlyThroughVpn(com.app.jekyllposter.testutil.SAMPLE_BLOG, true) }
+        app.vpn.up.value = false
+        server.enqueue(MockResponse.Builder().body("apk bytes").build())
+        assertThrows(com.app.jekyllposter.core.github.NoVpnException::class.java) {
+            UpdateInstaller.download(app.container.updateCalls, server.url("/release"), dest)
+        }
+        assertEquals(0, server.requestCount)
+        assertEquals(emptyList<String>(), dir.list()!!.toList())
+    }
+
+    @Test
+    fun `with the VPN up, it downloads through it`() {
+        runBlocking { app.signIn(); app.container.setOnlyThroughVpn(com.app.jekyllposter.testutil.SAMPLE_BLOG, true) }
+        server.enqueue(MockResponse.Builder().body("apk bytes").build())
+        UpdateInstaller.download(app.container.updateCalls, server.url("/release"), dest)
+        assertEquals("apk bytes", dest.readText())
+        assertTrue(app.vpn.connections > 0)
+    }
+}
+
+/** The debug build carries the installer; Gradle's `checkReleaseSelfUpdateManifest` checks a release doesn't. */
 @RunWith(AndroidJUnit4::class)
 class LiveBuildManifestTest {
     @Test

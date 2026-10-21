@@ -39,10 +39,15 @@ Times are when each cycle landed, Pacific.
 - **Fitted to this app:** the check carries no token and follows *Only connect through a VPN*:
   through the VPN if any blog asks, nothing sent without one. An install waits while a post is
   going out, and for ten seconds after the app closes, so the editor's last save lands.
+- **The review caught:** a download refused for want of the VPN opened the browser around it;
+  a tap could restart the app under an open post, and the background under the camera or a
+  sign-in in the browser; a full phone gave up on a good build; the file host's `jwt` reached
+  the request record. All fixed: the editor and Connect now hold updates back, on disk too.
 - **Tests:** the check, the release read and the privacy rule on the JVM; the installer's
   decisions under `testDebug`; the notice's taps. Each was broken on purpose and went red. A
   Gradle check fails a release whose manifest could install apps. What Android's installer does
   with the file can only be checked on a phone.
+
 ### Cycle 51: the debug release, as Carry's
 - **Why:** cycle 50's comparison with Carry and newspaperss.
 - **Changed (CI and README):**

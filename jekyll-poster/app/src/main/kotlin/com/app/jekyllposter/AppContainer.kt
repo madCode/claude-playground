@@ -37,7 +37,9 @@ import com.app.jekyllposter.ui.catching
 import com.app.jekyllposter.ui.editor.PreviewFetcher
 import com.app.jekyllposter.update.AppUpdates
 import com.app.jekyllposter.update.DebugUpdates
+import com.app.jekyllposter.update.Hold
 import com.app.jekyllposter.update.SelfUpdater
+import com.app.jekyllposter.update.UpdateHolds
 import com.app.jekyllposter.update.selfUpdater
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -223,10 +225,22 @@ class AppContainer(
     val buildWatcher = BuildWatcher(drafts, accounts, { client(it) }, onBuildFinished)
 
     /** Whether a newer debug build is out, and installing it; a release build does neither. */
+    private val updateHolds = UpdateHolds(DebugUpdates.prefsOf(context))
+
     val updates = AppUpdates(
         DebugUpdates(DebugUpdates.prefsOf(context), installedBuild, fetch = { DebugUpdates.fetchRelease(updateCalls, releaseApi) }),
-        installedBuild?.let { selfUpdater(context, it, updateCalls) { publisher.publishing } } ?: SelfUpdater.NONE,
+        installedBuild?.let { build ->
+            selfUpdater(context, build, updateCalls) {
+                when {
+                    publisher.publishing -> Hold.Post
+                    updateHolds.heldOrLeftOpen -> Hold.Screen
+                    else -> null
+                }
+            }
+        } ?: SelfUpdater.NONE,
         publishing = { publisher.publishing },
+        holds = updateHolds,
+        waitingForVpn = { privacy.anyOnlyThroughVpn() && vpn.current() == null },
         scope = appScope,
     )
 

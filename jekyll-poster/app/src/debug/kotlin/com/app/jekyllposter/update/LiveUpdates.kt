@@ -7,6 +7,7 @@ import android.content.pm.PackageInstaller
 import android.util.Log
 import androidx.work.WorkManager
 import com.app.jekyllposter.PosterApp
+import com.app.jekyllposter.core.github.NoVpnException
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -30,13 +31,14 @@ import okhttp3.Call
  * download in a browser instead.
  *
  * @param calls the update client, behind the VPN switch: see `AppContainer.updateCalls`.
- * @param publishing whether a post is being sent now.
+ * @param waitFor what a background install waits for now, beside the app being on screen: a post
+ *   being sent, or a screen open or left open when the app went away ([UpdateHolds]).
  */
 internal class LiveUpdates(
     private val context: Context,
     private val installedBuild: Int,
     calls: Call.Factory,
-    private val publishing: () -> Boolean,
+    private val waitFor: () -> Hold?,
     private val prefs: SharedPreferences = prefsOf(context),
     private val dir: File = File(context.cacheDir, "updates"),
     private val download: (File) -> Unit = { UpdateInstaller.download(calls, DebugUpdates.DOWNLOAD, it) },
@@ -48,8 +50,8 @@ internal class LiveUpdates(
     private val abandon: (Int) -> Unit = { UpdateInstaller.abandon(context, it) },
     private val canInstallNow: () -> Boolean = { UpdateInstaller.canInstall(context) },
     private val now: () -> Long = System::currentTimeMillis,
-    /** Why a background install must wait: the app on screen, only just left, or sending a post. */
-    private val busy: () -> Boolean = { mustWait(now(), publishing()) },
+    /** Why a background install must wait: the app on screen, only just left, or [waitFor]. */
+    private val busy: () -> Boolean = { mustWait(now(), waitFor() != null) },
     private val work: () -> WorkManager = { WorkManager.getInstance(context) },
 ) : SelfUpdater {
     override val installing: StateFlow<Boolean> = UpdateInstaller.installing
@@ -78,7 +80,7 @@ internal class LiveUpdates(
         else -> SelfUpdater.Step.Install
     }
 
-    override suspend fun install(build: Int, publishing: () -> Boolean): UpdateProblem? {
+    override suspend fun install(build: Int, hold: () -> Hold?): UpdateProblem? {
         if (build <= installedBuild) return null
         // The background may be part way through installing it: said, rather than a tap that
         // does nothing.
@@ -87,7 +89,7 @@ internal class LiveUpdates(
         // Failures count against the build in the file once it passed its checks: the fixed-name
         // download can lag behind the newest build, which mustn't be given up on untried.
         var counted = build
-        val problem = try { files.withLock {
+        val problem = try { files.withLock locked@{
             // Downloaded in the background already, or now.
             val apk = readyApk(build) ?: withContext(Dispatchers.IO) {
                 dir.mkdirs()
@@ -112,17 +114,29 @@ internal class LiveUpdates(
                     val id = try {
                         withContext(Dispatchers.IO) { stage(apk) }
                     } catch (e: IOException) {
-                        throw InstallFailed(e)
+                        // Usually no room: the phone's, not the build's, so not counted against it.
+                        return@locked UpdateProblem(
+                            "Android couldn't take the update: ${e.message ?: "no room?"}. Free some space, then tap again.",
+                            offerLink = false,
+                        )
                     }
                     // After the slow parts and immediately before the commit, so a post that
-                    // started going out during them isn't cut short.
-                    if (publishing()) {
-                        abandon(id)
-                        UpdateProblem(SelfUpdater.WAIT_FOR_POST, offerLink = false)
-                    } else {
-                        commit(id, counted, false)
-                        handedOver = true
-                        null
+                    // started going out, or one opened, during them isn't cut short.
+                    when (hold()) {
+                        Hold.Post -> {
+                            abandon(id)
+                            UpdateProblem(SelfUpdater.WAIT_FOR_POST, offerLink = false)
+                        }
+                        Hold.Screen -> {
+                            abandon(id)
+                            keepReady(apk, counted)
+                            UpdateProblem(SelfUpdater.WAIT_FOR_SCREEN, offerLink = false, resumes = true)
+                        }
+                        null -> {
+                            commit(id, counted, false)
+                            handedOver = true
+                            null
+                        }
                     }
                 }
             }
@@ -131,8 +145,9 @@ internal class LiveUpdates(
             // is over.
             if (!handedOver) UpdateInstaller.finish()
             throw e
-        } catch (e: InstallFailed) {
-            failure(counted, "Android couldn't take the update: ${e.cause?.message ?: "no room?"}.")
+        } catch (_: NoVpnException) {
+            // No link: the browser would fetch it around the VPN the writer asked for.
+            UpdateProblem(SelfUpdater.WAIT_FOR_VPN, offerLink = false)
         } catch (e: IOException) {
             UpdateProblem("Couldn't download the update: ${e.message ?: "no connection"}.", offerLink = true)
         } catch (e: Exception) {
@@ -276,6 +291,10 @@ internal class LiveUpdates(
                 Outcome.Started
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: IOException) {
+                // Usually no room: tried again later, not counted against the build.
+                log("Build $ready couldn't be staged: ${e.message}")
+                Outcome.Retry
             } catch (e: Exception) {
                 log("Build $ready couldn't be handed to Android: ${e.javaClass.simpleName} ${e.message}")
                 if (failed(prefs, ready)) Outcome.Failed else Outcome.Retry
@@ -290,6 +309,14 @@ internal class LiveUpdates(
 
     private fun apkOf(build: Int) = File(dir, "build-$build.apk")
 
+    /** A tapped download, checked, kept as the one to install once nothing holds it back. */
+    private fun keepReady(apk: File, build: Int) {
+        val ready = apkOf(build)
+        if (apk != ready && !apk.renameTo(ready)) return
+        prefs.edit().putInt(READY, build).remove(ASKED).commit()
+        LiveInstallWorker.enqueue(work())
+    }
+
     private fun clearUp() {
         dir.listFiles()?.forEach { it.delete() }
         prefs.edit().remove(READY).remove(ASKED).commit()
@@ -299,8 +326,6 @@ internal class LiveUpdates(
 
     /** How a background step went, for its worker. */
     enum class Outcome { Done, Started, Busy, Retry, Failed }
-
-    private class InstallFailed(cause: Throwable) : Exception(cause)
 
     companion object {
         /** Each of these is one try; Android then says "can't install" for the same reasons. */
@@ -321,8 +346,8 @@ internal class LiveUpdates(
         private const val TAPPED = "jekyll-poster-debug.apk"
 
         /** Whether a background install must wait at [now]: see [busy]. */
-        fun mustWait(now: Long, publishing: Boolean): Boolean =
-            UpdateInstaller.inFront || now - UpdateInstaller.leftFrontAt in 0 until SETTLE_MILLIS || publishing
+        fun mustWait(now: Long, held: Boolean): Boolean =
+            UpdateInstaller.inFront || now - UpdateInstaller.leftFrontAt in 0 until SETTLE_MILLIS || held
 
         /** One step at a time: a tap and a background run share the files in the cache. */
         private val files = Mutex()

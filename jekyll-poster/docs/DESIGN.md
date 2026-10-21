@@ -390,17 +390,28 @@ manifest asks to).
   answer doesn't.
 - **Nothing of the writer's goes with it.** No token: its client has none on it. It goes through
   the VPN when any blog asks for one, like signing in, since it isn't for one blog. With no VPN up
-  nothing is sent, and it asks again next time. The request record lists it as `updates`.
+  nothing is sent, the download included, and the browser's download isn't offered either: the
+  tap says it waits for the VPN. The request record lists it as `updates`, the file host's `jwt`
+  hidden.
 - **Home says it:** "Build N is out", at the top of the list. A tap asks once for Android's
   "Install unknown apps" switch, then downloads the fixed link, checks the file (this app,
-  signed with the same key, a higher build) and hands it to Android's installer.
+  signed with the same key, a higher build) and hands it to Android's installer. TalkBack hears
+  what the tap will do, and "Getting build N…" when it starts.
+- **What the key check proves:** little on its own. The debug key is in this public repository,
+  so anyone can sign with it; the real trust is TLS to GitHub and who can write the release.
+- **Never under the writer.** Installing ends the app, so it waits while a post is being sent and
+  while a post's editor or Connect is open, including behind the camera, a picker or the
+  browser they open. A tap that finds the editor open just before the hand-off keeps the checked
+  file and installs once the post is left. The mark outlives the process, so a background
+  install waits for an editor Android will restore; a fresh start of the app clears it.
 - **In the background**, a newer build downloads on Wi-Fi, and installs once the app has been
-  closed for ten seconds (the editor saves the last keystrokes just after) and no post is being
-  sent; it is tried again 30 minutes later otherwise. A tap also waits for a post going out. If
-  Android wants the writer to confirm, the background doesn't ask out of nowhere: the tap does.
-- **Failures:** a tap's failure says why and opens the download in a browser. A file that fails
-  its checks, five failed downloads or three failed installs of one build and the app gives up
-  on it: the tap opens the browser instead, and a newer build is tried again.
+  closed for ten seconds, nothing above holds it and there's room; it is tried again 30 minutes
+  later otherwise. If Android wants the writer to confirm, the background doesn't ask out of
+  nowhere: the tap does.
+- **Failures:** a tap's failure says why and opens the download in a browser (not around the VPN).
+  A file that fails its checks, five failed downloads or three failed installs of one build and
+  the app gives up on it: the tap opens the browser instead, and a newer build is tried again.
+  No room to copy the build into Android's installer isn't held against the build.
 
 The same as Carry's (`carry/docs/DESIGN.md`), which this was ported from.
 

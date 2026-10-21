@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.testutil.TestApp
@@ -17,6 +18,8 @@ import com.app.jekyllposter.update.AppUpdates
 import com.app.jekyllposter.update.DebugUpdates
 import com.app.jekyllposter.update.SelfUpdater
 import com.app.jekyllposter.update.UpdateProblem
+import com.app.jekyllposter.update.Hold
+import com.app.jekyllposter.update.UpdateHolds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +47,7 @@ class UpdateNoticeTest {
     private val installs = mutableListOf<Int>()
     private val installing = MutableStateFlow(false)
     private var problem: UpdateProblem? = null
+    private var vpnMissing = false
 
     private val updater = object : SelfUpdater {
         override val installing = this@UpdateNoticeTest.installing
@@ -51,7 +55,7 @@ class UpdateNoticeTest {
         override fun start() {}
         override fun newerBuild(build: Int) {}
         override fun canInstall() = true
-        override suspend fun install(build: Int, publishing: () -> Boolean): UpdateProblem? { installs += build; return problem }
+        override suspend fun install(build: Int, hold: () -> Hold?): UpdateProblem? { installs += build; return problem }
         override fun resumed(activity: Activity) {}
         override fun paused() {}
     }
@@ -60,7 +64,8 @@ class UpdateNoticeTest {
         val prefs = app.getSharedPreferences("notice-test", Context.MODE_PRIVATE).apply { edit().clear().commit() }
         val check = DebugUpdates(prefs, 130, fetch = { latest?.let { """{"name":"jekyll-poster-debug-$it.apk"}""" } })
         runBlocking { check.checkIfDue() }
-        return AppUpdates(check, updater, publishing = { false }, scope = CoroutineScope(Dispatchers.Main))
+        val holds = UpdateHolds(app.getSharedPreferences("notice-holds", Context.MODE_PRIVATE))
+        return AppUpdates(check, updater, publishing = { false }, holds = holds, waitingForVpn = { vpnMissing }, scope = CoroutineScope(Dispatchers.Main))
     }
 
     private fun show(updates: AppUpdates) = compose.setContent {
@@ -117,6 +122,49 @@ class UpdateNoticeTest {
         assertEquals(DebugUpdates.DOWNLOAD.toString(), started()!!.dataString)
     }
 
+    @Test fun theLabelSaysWhatTheTapWillDo() {
+        val updates = updates(latest = 140)
+        show(updates)
+        for ((now, label) in listOf(
+            SelfUpdater.Step.Install to "Install it",
+            SelfUpdater.Step.AllowInstalls to "Allow installs",
+            SelfUpdater.Step.Browser to "Open the download",
+            SelfUpdater.Step.WaitForPost to "Say why it waits",
+        )) {
+            step = now
+            // A return to the app reads the step again.
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED)
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+            compose.waitForIdle()
+            val node = compose.onNodeWithText("Build 140 is out").fetchSemanticsNode()
+            assertEquals(label, node.config[androidx.compose.ui.semantics.SemanticsActions.OnClick].label)
+        }
+    }
+
+    @Test fun gettingTheBuildIsAnnouncedPolitely() {
+        installing.value = true
+        show(updates(latest = 140))
+        val node = compose.onNodeWithText("Getting build 140…").fetchSemanticsNode()
+        assertEquals(androidx.compose.ui.semantics.LiveRegionMode.Polite, node.config[androidx.compose.ui.semantics.SemanticsProperties.LiveRegion])
+    }
+
+    @Test fun withoutTheVpnTheBrowserIsntOpenedAroundIt() {
+        vpnMissing = true
+        step = SelfUpdater.Step.Browser
+        show(updates(latest = 140))
+        compose.onNodeWithText("Build 140 is out").performClick()
+        compose.waitUntilLooped { ShadowToast.getTextOfLatestToast() != null }
+        assertEquals(SelfUpdater.WAIT_FOR_VPN, ShadowToast.getTextOfLatestToast())
+        assertNull(started())
+
+        // Nor after a failed tap that would otherwise offer the link.
+        step = SelfUpdater.Step.Install
+        problem = UpdateProblem("Couldn't download the update: the download answered 404.", offerLink = true)
+        compose.onNodeWithText("Build 140 is out").performClick()
+        compose.waitUntilLooped { ShadowToast.getTextOfLatestToast() == SelfUpdater.WAIT_FOR_VPN && ShadowToast.shownToastCount() == 3 }
+        assertNull(started())
+    }
+
     @Test fun aFailedInstallIsSaidOnceWithTheLinkWhenItHelps() {
         problem = UpdateProblem("Couldn't download the update: the download answered 404.", offerLink = true)
         val updates = updates(latest = 140)
@@ -126,5 +174,33 @@ class UpdateNoticeTest {
         assertEquals("Couldn't download the update: the download answered 404.", ShadowToast.getTextOfLatestToast())
         assertEquals(DebugUpdates.DOWNLOAD.toString(), started()!!.dataString)
         assertNull("said once", started())
+    }
+}
+
+/** A post's editor and Connect hold updates back while open, through the real navigation. */
+@RunWith(AndroidJUnit4::class)
+@Config(application = TestApp::class, qualifiers = "w411dp-h891dp")
+class UpdateHoldsOnScreenTest {
+    @get:Rule val compose = androidx.compose.ui.test.junit4.createComposeRule()
+    private val app = androidx.test.core.app.ApplicationProvider.getApplicationContext<TestApp>()
+    private val holds get() = app.container.updates.holds
+
+    @After fun close() = app.github.close()
+
+    @Test fun aPostsEditorHoldsUpdatesUntilItIsLeft() {
+        runBlocking { app.signIn() }
+        compose.setContent { PosterTheme { PosterNavHost(app.container) } }
+        compose.waitUntilLooped { compose.onAllNodesWithText("New post", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        org.junit.Assert.assertFalse("Home holds nothing", holds.heldOrLeftOpen)
+        compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
+        compose.waitUntilLooped { holds.held }
+        androidx.test.espresso.Espresso.pressBack()
+        compose.waitUntilLooped { !holds.heldOrLeftOpen }
+    }
+
+    @Test fun connectHoldsUpdatesWhileSigningIn() {
+        compose.setContent { PosterTheme { PosterNavHost(app.container) } }
+        compose.waitUntilLooped { compose.onAllNodesWithText("Connect with a token").fetchSemanticsNodes().isNotEmpty() }
+        org.junit.Assert.assertTrue(holds.held)
     }
 }

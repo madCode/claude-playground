@@ -114,6 +114,11 @@ class DebugUpdatesTest {
         assertNull(DebugUpdates.latestBuild(release()))
         // Another app's files on a release are not this app's builds.
         assertNull(DebugUpdates.latestBuild("""{"assets":[{"name":"carry-debug-900.apk"}]}"""))
+        // The shape GitHub answers with for the release, as CI publishes it.
+        val github = """{"tag_name":"jekyll-poster-debug","body":"Build 167 from main (27eb5a3).","assets":[
+            {"name":"jekyll-poster-debug-167.apk","browser_download_url":"https://github.com/madCode/claude-playground/releases/download/jekyll-poster-debug/jekyll-poster-debug-167.apk"},
+            {"name":"jekyll-poster-debug.apk","browser_download_url":"https://github.com/madCode/claude-playground/releases/download/jekyll-poster-debug/jekyll-poster-debug.apk"}]}"""
+        assertEquals(167, DebugUpdates.latestBuild(github))
         assertEquals(131, DebugUpdates.buildOf("0.1.0-debug.131+012eb32"))
         assertNull(DebugUpdates.buildOf("0.1.0-debug"))
         assertNull(DebugUpdates.buildOf("0.1.0"))

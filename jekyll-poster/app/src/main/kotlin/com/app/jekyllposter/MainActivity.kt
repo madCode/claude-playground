@@ -21,6 +21,8 @@ class MainActivity : ComponentActivity() {
         // A rotation passes it again; the nav host takes each share only once.
         val shared = postToStart(intent)
         addNewPostShortcut()
+        // Nothing to restore: an editor left open when the app went away is gone.
+        if (savedInstanceState == null) container.updates.holds.freshStart()
         container.updates.start()
         setContent {
             PosterTheme {
