@@ -35,8 +35,12 @@ Times are when each cycle landed, Pacific.
   Proton config. Its VPN test publishes with *Only connect through a VPN* on: with the tunnel off
   the post waits and nothing reaches GitHub; with it on, the phone's public address changes and
   the post goes out.
-- **Checked:** the first run passed. Breaking the switch (the blog's gate ignoring it) turned it
-  red.
+- **Checked:** the first run passed. Breaking the switch (the blog's gate ignoring it) first left
+  it green: the worker waits for the VPN by itself, before the gate. Checking the request record
+  too (nothing may reach GitHub before the tunnel) turned it red, naming Home's two reads of the
+  blog.
+- **The review caught:** a WireGuard problem would have failed the whole nightly; the scan before
+  the public artifact didn't look for the VPN's key or in the logcat.
 
 ## Tue 20 Oct
 
