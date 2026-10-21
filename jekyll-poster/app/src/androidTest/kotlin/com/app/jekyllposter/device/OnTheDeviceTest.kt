@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.ParcelFileDescriptor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -128,4 +129,35 @@ class OnTheDeviceTest {
         assertEquals(head, github.head)
         assertEquals(odd, github.text(path))
     }
+
+    @Test fun signingInWithGitHubTwiceKeepsOneSignIn() {
+        github.addRepository("garden", mapOf("_config.yml" to "title: The Garden\n".toByteArray()))
+        // The pretend GitHub answers as if the code were entered: the browser's part is a person's.
+        github.deviceApproved = true
+        ActivityScenario.launch(MainActivity::class.java)
+        signInWithGitHub("sample/sample-blog")
+        openSettings()
+        compose.onNodeWithText("Your blogs").performClick()
+        waitFor("+ Add a sign-in")
+        compose.onNodeWithText("+ Add a sign-in").performClick()
+        signInWithGitHub("sample/garden")
+
+        openSettings()
+        waitFor("2 blogs, 1 sign-in")
+    }
+
+    private fun signInWithGitHub(repo: String) {
+        waitFor("Sign in with GitHub")
+        compose.onNodeWithText("Sign in with GitHub").performClick()
+        waitFor(repo)
+        compose.onNodeWithText(repo).performClick()
+        waitFor("New post")
+    }
+
+    private fun openSettings() {
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Settings").performClick()
+        waitFor("Your blogs")
+    }
 }
+

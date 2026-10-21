@@ -5,7 +5,6 @@ import android.os.ParcelFileDescriptor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -148,7 +147,12 @@ class LiveOnTheDeviceTest {
         val a = a!!
         val b = b!!
         ActivityScenario.launch(MainActivity::class.java)
-        signInWithToken(a)
+        waitFor("Connect with a token")
+        compose.onNodeWithText("Token").performTextInput(a.token)
+        compose.onNodeWithText("Continue").performClick()
+        waitFor(a.fullName)
+        compose.onNodeWithText(a.fullName).performClick()
+        waitFor("New post")
 
         compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
         compose.waitUntil(20_000) { compose.onAllNodes(hasTestTag("title")).fetchSemanticsNodes().isNotEmpty() }
@@ -314,42 +318,6 @@ class LiveOnTheDeviceTest {
             throw e
         }
         setTunnel(tunnel, up = false)
-    }
-
-    /**
-     * Blog A and the organisation's blog, each signed in to with its own token from the screens.
-     * Both tokens are the tester's, so the second sign-in joins the first: one sign-in, two blogs.
-     */
-    @Test fun theSameAccountSignedInTwiceIsOneSignIn() {
-        testName = "same-account"
-        val a = a!!
-        val b = b!!
-        ActivityScenario.launch(MainActivity::class.java)
-        signInWithToken(a)
-        openSettings()
-        compose.onNodeWithText("Your blogs").performClick()
-        waitFor("+ Add a sign-in")
-        compose.onNodeWithText("+ Add a sign-in").performClick()
-        signInWithToken(b)
-
-        openSettings()
-        waitFor("2 blogs, 1 sign-in")
-    }
-
-    private fun openSettings() {
-        compose.onNodeWithContentDescription("More").performClick()
-        compose.onNodeWithText("Settings").performClick()
-        waitFor("Your blogs")
-    }
-
-    /** Signs in with [blog]'s token on the screen that asks for one, and picks [blog]. */
-    private fun signInWithToken(blog: Blog) {
-        waitFor("Connect with a token")
-        compose.onNodeWithText("Token").performTextInput(blog.token)
-        compose.onNodeWithText("Continue").performClick()
-        waitFor(blog.fullName)
-        compose.onNodeWithText(blog.fullName).performClick()
-        waitFor("New post")
     }
 
     /**
