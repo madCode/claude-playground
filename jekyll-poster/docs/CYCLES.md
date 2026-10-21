@@ -3,6 +3,30 @@
 For the next cycle: what to do differently, newest first. What each cycle built is in
 [DEVLOG.md](DEVLOG.md). Keep the last ten or so.
 
+**The run of 21 Oct (night)**, as madCode set it: cycles until everything in BACKLOG.md that isn't
+waiting on madCode is done, or 7am Pacific (14:00 UTC), whichever comes first. About 60% build,
+40% audit. Near the end, documentation cycles until the docs match the app. One of them checks
+that the app's update system (the `jekyll-poster-debug` release) matches the other apps' (Carry,
+newspaperss), and puts any difference in BACKLOG.md.
+
+### Cycle 44 — build: the `?` key and Sign in with GitHub twice, on the emulator
+
+- Read the code a check is about before writing its test: two tokens for one account are two
+  sign-ins on purpose (`AccountStore.save` merges only the same token, or GitHub App sign-ins). A
+  live test written from the card's wording asserted the opposite.
+
+### Cycle 43 — build: Only connect through a VPN, with a real one
+
+- The first falsification of the VPN test stayed green: the worker waits for the VPN before the
+  network gate ever sees a request. Break the layer the test claims to cover, not the nearest
+  one, and add an assertion at that layer (here, the request record).
+
+### Cycle 42 — build: the laptop's device checks on CI's emulator
+
+- `UiAutomation.executeShellCommand` splits at spaces and doesn't parse quotes: pass text to
+  another app as Base64.
+- At large text a `LazyColumn` composes only what fits: wait for what heads the list.
+
 ### Cycle 39 — audit: what GitHub knows about the writer
 
 - Read the run's records, not the code: the commit's `-0700` and the blog read three times on

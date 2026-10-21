@@ -29,6 +29,14 @@ Times are when each cycle landed, Pacific.
 
 ## Wed 21 Oct
 
+### Cycle 44: front matter the app can't follow, and Sign in with GitHub twice, on the emulator
+- **Asked for:** madCode's morning-page questions: can the emulator do these two laptop checks?
+- **Changed (tests):** two device tests on every PR. A post with a `?` key isn't opened, Home
+  says why, and GitHub is untouched. Signing in with GitHub again for a second blog keeps one
+  sign-in (the pretend GitHub approves the code).
+- **Found:** two different tokens for one account are two sign-ins by design: each fine-grained
+  token reaches its own blogs. So the check is Sign in with GitHub's, not the tokens'.
+
 ### Cycle 43: Only connect through a VPN, with a real one
 - **Asked for:** the last laptop check, in CI, once madCode added the `PROTON_WG_CONF` secret.
 - **Changed (tests and CI):** the device live check installs the WireGuard app with the tester's
