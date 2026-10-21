@@ -29,6 +29,21 @@ Times are when each cycle landed, Pacific.
 
 ## Wed 21 Oct
 
+### Cycle 48: per-blog templates, checked before building
+- **Found:** Jekyll's `defaults:` in `_config.yml` already gives every post its front matter, and
+  the app reads it. A phone template would add only starting tags, categories and a body. Asked
+  madCode whether to build that or drop it: #182.
+
+### Cycle 46: backlog grooming
+- **Found:** Unpublish already works by typing `published: false` in More front matter, so it
+  became a one-tap cycle. Collections and Hugo need madCode's call: issues #179 and #180. The
+  keep-private word list needs one too: replace a listed word, or block the publish?
+
+### Cycle 45: New post from the launcher, and the app killed while a post waits, on the emulator
+- **Why:** the last two device tests in BACKLOG.md's Next.
+- **Changed (tests and CI):** on every PR, a test long-presses the app's icon on the emulator's
+  home screen and taps New post. In the nightly live check, a post is queued a minute ahead and
+  the app's process ended; a later step finds it on the tester's blog, sent by Android alone.
 ### Cycle 51: the debug release, as Carry's
 - **Why:** cycle 50's comparison with Carry and newspaperss.
 - **Changed (CI and README):**
