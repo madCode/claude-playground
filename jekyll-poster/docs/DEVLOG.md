@@ -29,6 +29,12 @@ Times are when each cycle landed, Pacific.
 
 ## Wed 21 Oct
 
+### Cycle 50: the update system, checked against Carry's and newspaperss's
+- **Found:** Jekyll Poster publishes a debug build that installs over the last, like the others,
+  but it never says a newer one is out; Carry and newspaperss check, download on Wi-Fi and
+  install. It also lacks the numbered APK, its publish job can cancel itself mid-upload, and its
+  actions aren't pinned. All four are in BACKLOG.md's Next.
+
 ### Cycle 49: a photo, an edit, a delete and an edit conflict, against the real GitHub
 - **Why:** the last item in BACKLOG.md's Next that isn't waiting on madCode.
 - **Changed (tests and CI):** the nightly device live check shares a photo with a location into
