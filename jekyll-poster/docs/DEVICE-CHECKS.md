@@ -18,7 +18,9 @@ app installed beside it, so photos and notes arrive from another process with a 
 | Large text and dark theme | `ScreensOnTheDeviceTest` | Home, the editor and Blog & privacy at twice the text size, in the dark, pass Android's accessibility checks (labels, touch targets, contrast). Their pictures are kept in the run's report, under `screens/` |
 
 "Jekyll Poster device live check" runs nightly against the tester's real blogs
-([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)).
+([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)). Its VPN test turns on *Only connect through a VPN*,
+checks a post waits with the tunnel off, then turns the WireGuard app's Proton tunnel on and
+checks the phone's address changed and the post went out.
 
 What CI can't show:
 

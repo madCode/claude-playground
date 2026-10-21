@@ -9,8 +9,6 @@ and moves it to Done.
   shortcut from the launcher, the app killed while a post is queued.
 - [ ] More of the device live check (`LiveOnTheDeviceTest`): a photo, an edit and a delete
   from the screens, and an edit conflict made by the workflow committing while the post is open.
-- [ ] Only connect through a VPN on CI's emulator: the WireGuard app with a Proton config, once
-  the `PROTON_WG_CONF` secret is set.
 - [ ] Sign in with GitHub and a TalkBack listen, by a person, now and then
   ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)).
 
@@ -26,6 +24,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 43: Only connect through a VPN, checked nightly with a real VPN (WireGuard and Proton)
 - [x] Cycle 42: the laptop's device checks on CI's emulator; the editor's picker and dialogs survive rotation
 - [x] Cycle 41: by the day alone, the commit is dated by the day too (madCode chose it, 2026-10-20)
 - [x] Cycle 39: what GitHub knows about the writer, read from the device live check's records
