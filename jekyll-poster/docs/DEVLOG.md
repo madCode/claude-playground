@@ -41,6 +41,13 @@ Times are when each cycle landed, Pacific.
 - **Changed:** the editor's menu, while editing a post, has **Hide from the site** and, once
   hidden, **Show on the site again**. Home marks the post Hidden; the notification says it's off
   the site rather than live, and doesn't open its old address.
+- **Review caught:**
+  - Jekyll also hides on `no`, `off`, `False` and an empty `published:`; the blog list missed
+    those already.
+  - Hiding moved the post's other keys and could be refused over keys the writer never touched.
+    Now only the one line changes.
+  - A hide waited for a random time; now it goes out at once, like a delete.
+  - An earlier update of the post went on saying it was live.
 
 ### Cycle 43: Only connect through a VPN, with a real one
 - **Asked for:** the last laptop check, in CI, once madCode added the `PROTON_WG_CONF` secret.

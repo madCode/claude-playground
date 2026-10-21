@@ -261,9 +261,15 @@ doesn't want to open a laptop and make a commit for every post.
 - **Hide from the site** (the menu, while editing a post) adds `published: false` to its front
   matter and sends it as an Update, with the writer's other changes. Jekyll then leaves it out of
   the site; the file stays on GitHub, and Home marks it Hidden.
-- **Show on the site again** takes the key out: Jekyll publishes by default.
+- Like a delete, a hide goes out at once, never at a random time: the writer wants it gone.
+- **Show on the site again** takes the key out: Jekyll publishes by default. It goes out like any
+  update.
+- Only that line changes in the file, even in front matter the field would refuse.
+- A post counts as hidden however Jekyll reads it: `published: false`, `no`, `off`, `False`, or
+  empty.
 - When the site has rebuilt, the notification says the post is off the site, and opens the app,
-  not the address that no longer answers.
+  not the address that no longer answers. Earlier updates of the post leave Home's list then, so
+  none goes on saying it's live.
 - A public repository is still readable on GitHub: hiding is for the site, not for privacy.
 - Not offered for a Jekyll draft, which isn't on the site, or for an edit opened before the app
   kept front matter, which doesn't know the post's other keys.
