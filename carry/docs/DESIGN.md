@@ -652,8 +652,10 @@ the debug source set only; a release build has neither.
    toast only. Three failed installs of one build, or one Android says can
    never install (invalid, incompatible, a conflict), and Carry gives up on
    that build: the notice's tap then opens the download in a browser
-   instead. A newer build is tried again. A failed download, or the owner
-   saying no to Android's question, isn't counted.
+   instead. A newer build is tried again. A failed download, the owner
+   saying no to Android's question, or a phone too full to take the copy
+   isn't counted. That last says to free some space and offers no link: a
+   browser's download needs the same room.
 
 The notice reads "Downloading build N…" and can't be tapped again until
 Android's installer has answered, so a second tap can't start a second
@@ -687,12 +689,22 @@ without a tap (`LiveUpdates`, `LiveWorkers`):
   on screen or the mark is set, the install is tried again later, 30
   minutes further apart each time. Both are checked again after the copy
   into Android's installer, just before the hand-off.
+- **Nor while the folder picker is out.** The picker pauses Carry just as
+  leaving it does, so an install then would end Carry under it and the
+  folder picked would arrive nowhere. `MainActivity` notes each answer it
+  sends another app for (`AwaitedAnswers`, on disk) and crosses it off
+  when the answer comes, so a turn of the phone or Android dropping the
+  process meanwhile doesn't let go of it. Only a start from the launcher
+  with nothing to restore clears one left behind: opened any other way,
+  the task with the picker may still come back.
+- **And not while storage is low**, since Android's copy of the build
+  needs room as the download did.
 - **No question out of nowhere.** If Android wants the owner to confirm
   (the first in-app update, or below Android 12), the background attempt
   is dropped and the notice's tap installs it instead. A dialog appearing
   on its own, perhaps while the owner glances at the sheet in the lobby,
   would be worse than waiting. A failure in the background isn't toasted,
-  but it is counted toward giving up.
+  but it is counted toward giving up, unless it's for want of room.
 - Without "install unknown apps" allowed, nothing happens in the
   background; the tap asks for it as before.
 

@@ -18,13 +18,13 @@ import java.io.IOException
 /**
  * The CI debug build keeping itself current. A newer build is downloaded on Wi-Fi in the
  * background, checked (this app, this app's key, newer), and installed once Carry is closed with
- * no unsaved typing ([UnsavedMark]). A tap on the notice installs it at once, downloading first if
- * the background hasn't.
+ * no unsaved typing ([UnsavedMark]) and no picker waiting to answer it ([AwaitedAnswers]). A tap
+ * on the notice installs it at once, downloading first if the background hasn't.
  *
  * What it knows lives in [prefs], so a process that dies part way picks up where it was. A build
- * that fails the checks, can't be downloaded, or fails to install [MAX_INSTALL_FAILURES] times is
- * given up on ([REJECTED]): only a newer one is fetched again, and the notice's tap opens the
- * download in a browser instead.
+ * that fails the checks, can't be downloaded, or fails to install [MAX_INSTALL_FAILURES] times
+ * (a full phone doesn't count) is given up on ([REJECTED]): only a newer one is fetched again,
+ * and the notice's tap opens the download in a browser instead.
  */
 internal class LiveUpdates(
     private val context: Context,
@@ -40,8 +40,8 @@ internal class LiveUpdates(
     private val abandon: (Int) -> Unit = { UpdateInstaller.abandon(context, it) },
     private val canInstallNow: () -> Boolean = { UpdateInstaller.canInstall(context) },
     private val now: () -> Long = System::currentTimeMillis,
-    /** Why a background install must wait: Carry on screen, or typing not saved. */
-    private val busy: () -> Boolean = { UpdateInstaller.inFront || UnsavedMark(context).isSet },
+    /** Why a background install must wait: Carry on screen, typing not saved, or a picker out. */
+    private val busy: () -> Boolean = { UpdateInstaller.inFront || UnsavedMark(context).isSet || AwaitedAnswers(context).any },
     private val work: () -> WorkManager = { WorkManager.getInstance(context) },
 ) : SelfUpdater {
     override val installing: StateFlow<Boolean> = UpdateInstaller.installing
@@ -79,7 +79,7 @@ internal class LiveUpdates(
         // Failures count against the build in the file once it passed its checks: the fixed-name
         // download can lag behind the newest build, which mustn't be given up on untried.
         var counted = build
-        val problem = try { files.withLock {
+        val problem = try { files.withLock locked@{
             // Downloaded in the background already, or now.
             val apk = readyApk(build) ?: withContext(Dispatchers.IO) {
                 dir.mkdirs()
@@ -104,7 +104,11 @@ internal class LiveUpdates(
                     val id = try {
                         withContext(Dispatchers.IO) { stage(apk) }
                     } catch (e: IOException) {
-                        throw InstallFailed(e)
+                        // Usually no room: the phone's, not the build's, so not counted against it.
+                        return@locked UpdateProblem(
+                            "Android couldn't take the update: ${e.message ?: "no room?"}. Free some space, then tap again.",
+                            offerLink = false,
+                        )
                     }
                     // Back on the caller's thread, after the slow parts and immediately before
                     // the commit, so nothing typed during them can be installed over.
@@ -123,8 +127,6 @@ internal class LiveUpdates(
             // is over.
             if (!handedOver) UpdateInstaller.finish()
             throw e
-        } catch (e: InstallFailed) {
-            failure(counted, "Android couldn't take the update: ${e.cause?.message ?: "no room?"}.")
         } catch (e: IOException) {
             UpdateProblem("Couldn't download the update: ${e.message ?: "no connection"}.", offerLink = true)
         } catch (e: Exception) {
@@ -231,8 +233,9 @@ internal class LiveUpdates(
     }
 
     /**
-     * Installs the downloaded build while Carry is closed with nothing unsaved. If Android wants
-     * the owner to confirm, it waits for their tap on the notice instead ([needsConfirming]).
+     * Installs the downloaded build while Carry is closed with nothing unsaved or awaited. If
+     * Android wants the owner to confirm, it waits for their tap on the notice instead
+     * ([needsConfirming]).
      */
     suspend fun installInBackground(): Outcome = files.withLock {
         withContext(Dispatchers.IO) {
@@ -274,6 +277,10 @@ internal class LiveUpdates(
                 Outcome.Started
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: IOException) {
+                // Usually no room: tried again later, not counted against the build.
+                log("Build $ready couldn't be staged: ${e.message}")
+                Outcome.Retry
             } catch (e: Exception) {
                 log("Build $ready couldn't be handed to Android: ${e.javaClass.simpleName} ${e.message}")
                 if (failed(prefs, ready)) Outcome.Failed else Outcome.Retry
@@ -297,8 +304,6 @@ internal class LiveUpdates(
 
     /** How a background step went, for its worker. */
     enum class Outcome { Done, Started, Busy, Retry, Failed }
-
-    private class InstallFailed(cause: Throwable) : Exception(cause)
 
     companion object {
         /** Each of these is one try; Android then says "can't install" for the same reasons. */
@@ -342,6 +347,8 @@ internal class LiveUpdates(
                 PackageInstaller.STATUS_FAILURE_INVALID,
                 PackageInstaller.STATUS_FAILURE_INCOMPATIBLE,
                 PackageInstaller.STATUS_FAILURE_CONFLICT -> { reject(prefs, build); true }
+                // No room, or the storage it installs to is missing: the phone's, not the build's.
+                PackageInstaller.STATUS_FAILURE_STORAGE -> false
                 else -> failed(prefs, build)
             }
         }

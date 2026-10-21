@@ -33,6 +33,25 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-21 — updates wait for the folder picker, and a full phone isn't the build's fault
+
+Jekyll Poster's review of the self-update it took from Carry
+(claude-playground #187) found three problems in the shared design. Two
+were Carry's too.
+
+- **An update could end Carry under the folder picker.** Carry counted
+  itself closed whenever it wasn't on screen, and the picker covers it
+  just as leaving does: an install then lost the folder picked. Now it
+  waits while an answer from another app is due, kept on disk so a turn
+  or a dropped process doesn't let go of it.
+- **A full phone counted against the build.** Android failing to take the
+  copy for want of room was one of the three failures that give up on a
+  build for good, and the install wasn't held back while storage was low.
+  Now neither counts, and the install waits for room as the download did.
+- The third, a hold on a screen let go of when the phone turns, has no
+  counterpart here: the unsaved mark lives in the ViewModel, which a turn
+  keeps.
+
 ## 2026-10-20 — cycle 73: tests for the guards, and the whole-phone refusal stays
 
 - Picking **Internal storage** instead of a folder now leaves *That's your

@@ -343,8 +343,8 @@ Only a real phone can answer these.
 - [ ] **Updates on a phone** *(due with cycles 71 and 72)*. Only a device
   can show: the signing check reading a real downloaded APK; a background
   install while Carry is closed (no dialog on Android 12+, once Carry has
-  installed itself); no install while the After tab holds unsaved typing;
-  a release build with no "install unknown apps" entry. The steps are in
+  installed itself); no install while the After tab holds unsaved typing,
+  or while the folder picker is open over Carry; a release build with no "install unknown apps" entry. The steps are in
   DEVLOG.md, cycle 72. **And the folder grant surviving it:** an update
   replaces the installed app the way `adb install -r` does, which can
   revoke a persisted tree grant and look exactly like a first run. After

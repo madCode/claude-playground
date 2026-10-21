@@ -1,5 +1,6 @@
 package com.app.carry
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -32,6 +33,8 @@ class MainActivity : ComponentActivity() {
     // is read again from scratch.
     private val model: CarryViewModel by viewModels()
 
+    private val answers by lazy { AwaitedAnswers(this) }
+
     /**
      * Asked for once, and only when there is a folder for a session file to
      * land in — a permission dialog on first launch, before the owner has
@@ -50,6 +53,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Only a launcher start with nothing restored: anything else may still be waiting on a
+        // picker in a task Android will bring back.
+        if (savedInstanceState == null && intent?.action == Intent.ACTION_MAIN &&
+            intent?.hasCategory(Intent.CATEGORY_LAUNCHER) == true
+        ) {
+            answers.forget()
+        }
         // KEEP, so this is safe on every launch: it will not restart the
         // period and leave the check never actually running.
         SessionWatchWorker.schedule(this)
@@ -174,6 +184,26 @@ class MainActivity : ComponentActivity() {
 
     private fun say(text: String) =
         android.widget.Toast.makeText(this, text, android.widget.Toast.LENGTH_LONG).show()
+
+    // Every result contract launches through these, so they see each picker without a hold at
+    // every launch site. Permission requests don't, and an unanswered one is only asked again.
+    @Suppress("OVERRIDE_DEPRECATION")
+    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        answers.sent(requestCode)
+        try {
+            super.startActivityForResult(intent, requestCode, options)
+        } catch (e: RuntimeException) {
+            answers.answered(requestCode)
+            throw e
+        }
+    }
+
+    // Before the callback, which may send for another.
+    @Suppress("OVERRIDE_DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        answers.answered(requestCode)
+        super.onActivityResult(requestCode, resultCode, data)
+    }
 
     /** The normal case is a sync dropping the day's session in while the
      *  app is backgrounded, so the folder is re-read on every resume. */
