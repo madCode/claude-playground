@@ -65,7 +65,7 @@ class UpdateNoticeTest {
         val check = DebugUpdates(prefs, 130, fetch = { latest?.let { """{"name":"jekyll-poster-debug-$it.apk"}""" } })
         runBlocking { check.checkIfDue() }
         val holds = UpdateHolds(app.getSharedPreferences("notice-holds", Context.MODE_PRIVATE))
-        return AppUpdates(check, updater, publishing = { false }, holds = holds, waitingForVpn = { vpnMissing }, scope = CoroutineScope(Dispatchers.Main))
+        return AppUpdates(check, updater, publishing = MutableStateFlow(false), holds = holds, waitingForVpn = { vpnMissing }, scope = CoroutineScope(Dispatchers.Main))
     }
 
     private fun show(updates: AppUpdates) = compose.setContent {

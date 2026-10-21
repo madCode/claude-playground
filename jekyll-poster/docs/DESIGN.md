@@ -401,9 +401,12 @@ manifest asks to).
   so anyone can sign with it; the real trust is TLS to GitHub and who can write the release.
 - **Never under the writer.** Installing ends the app, so it waits while a post is being sent and
   while a post's editor or Connect is open, including behind the camera, a picker or the
-  browser they open. A tap that finds the editor open just before the hand-off keeps the checked
-  file and installs once the post is left. The mark outlives the process, so a background
-  install waits for an editor Android will restore; a fresh start of the app clears it.
+  browser they open, and across a rotation. A tap that finds the editor open, or a post going
+  out, just before the hand-off keeps the checked file and installs once the post is left and
+  nothing is being sent (leaving by Publish sends one). The mark outlives the process, so a
+  background install waits for an editor Android will restore. Only opening the app from the
+  launcher afresh clears it: a share starts the app in the sharing app's task, while the
+  writer's own may still wait in recents.
 - **In the background**, a newer build downloads on Wi-Fi, and installs once the app has been
   closed for ten seconds, nothing above holds it and there's room; it is tried again 30 minutes
   later otherwise. If Android wants the writer to confirm, the background doesn't ask out of

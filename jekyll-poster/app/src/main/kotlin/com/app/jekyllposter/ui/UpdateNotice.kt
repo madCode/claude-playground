@@ -17,6 +17,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.activity.compose.LocalActivity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -34,6 +36,7 @@ import com.app.jekyllposter.update.AppUpdates
 import com.app.jekyllposter.update.AppUpdates.Tap
 import com.app.jekyllposter.update.DebugUpdates
 import com.app.jekyllposter.update.SelfUpdater
+import java.util.UUID
 import kotlinx.coroutines.launch
 
 /** A line on Home while a newer debug build is out; a tap installs it. Nothing otherwise. */
@@ -92,9 +95,13 @@ fun UpdateProblems(updates: AppUpdates) {
 /** While on screen, an update waits rather than end the app under it: see [com.app.jekyllposter.update.UpdateHolds]. */
 @Composable
 fun HoldUpdates(container: AppContainer) {
-    DisposableEffect(Unit) {
-        container.updates.holds.hold()
-        onDispose { container.updates.holds.release() }
+    // Kept across a rotation, as is the hold: the screen comes straight back, and releasing in
+    // between would let a waiting install go under it.
+    val key = rememberSaveable { UUID.randomUUID().toString() }
+    val activity = LocalActivity.current
+    DisposableEffect(key) {
+        container.updates.holds.hold(key)
+        onDispose { if (activity?.isChangingConfigurations != true) container.updates.holds.release(key) }
     }
 }
 

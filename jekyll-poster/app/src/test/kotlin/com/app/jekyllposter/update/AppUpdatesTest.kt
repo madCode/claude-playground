@@ -23,7 +23,7 @@ class AppUpdatesTest {
 
     private var step = SelfUpdater.Step.Install
     private var vpnMissing = false
-    private var publishing = false
+    private val publishing = MutableStateFlow(false)
 
     /** What each install call was told to wait for, at the moment it asked. */
     private val asked = mutableListOf<Hold?>()
@@ -48,7 +48,7 @@ class AppUpdatesTest {
     private val updates = AppUpdates(
         DebugUpdates(prefs("app-updates-test"), 130, fetch = { null }),
         updater,
-        publishing = { publishing },
+        publishing = publishing,
         holds = holds,
         waitingForVpn = { vpnMissing },
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
@@ -68,24 +68,38 @@ class AppUpdatesTest {
         // Each install runs on its own; it asks just before handing the build over.
         tap()
         idleUntil { asked.size == 1 }
-        publishing = true
+        publishing.value = true
         tap()
         idleUntil { asked.size == 2 }
-        publishing = false
-        holds.hold()
+        publishing.value = false
+        holds.hold("post")
         tap()
         idleUntil { asked.size == 3 }
         assertEquals(listOf(null, Hold.Post, Hold.Screen), asked)
     }
 
     @Test fun anInstallHeldByThePostGoesOnceThePostIsLeft() {
-        holds.hold()
+        holds.hold("post")
         answers += UpdateProblem(SelfUpdater.WAIT_FOR_SCREEN, offerLink = false, resumes = true)
         tap()
         idleUntil { updates.problem.value != null }
         assertEquals(listOf<Hold?>(Hold.Screen), asked)
         assertEquals("not while the post is open", 1, asked.size)
-        holds.release()
+        holds.release("post")
+        idleUntil { asked.size == 2 }
+        assertEquals(listOf(Hold.Screen, null), asked)
+    }
+
+    @Test fun leavingThePostByPublishingInstallsOnceThePostIsSent() {
+        holds.hold("post")
+        answers += UpdateProblem(SelfUpdater.WAIT_FOR_SCREEN, offerLink = false, resumes = true)
+        tap()
+        idleUntil { updates.problem.value != null }
+        // Publish: the post goes out as the editor closes.
+        publishing.value = true
+        holds.release("post")
+        assertEquals("not while the post is going out", 1, asked.size)
+        publishing.value = false
         idleUntil { asked.size == 2 }
         assertEquals(listOf(Hold.Screen, null), asked)
     }
@@ -98,7 +112,7 @@ class UpdateHoldsTest {
 
     @Test fun aScreenLeftOpenWhenTheProcessDiedStillHoldsTheBackgroundUntilAFreshStart() {
         val before = UpdateHolds(prefs)
-        before.hold()
+        before.hold("editor")
         assertTrue(before.held)
         // The process dies with the editor open; a worker starts a new one.
         val after = UpdateHolds(prefs)
@@ -110,11 +124,13 @@ class UpdateHoldsTest {
 
     @Test fun twoScreensHoldUntilBothAreLeft() {
         val holds = UpdateHolds(prefs)
-        holds.hold()
-        holds.hold()
-        holds.release()
+        holds.hold("editor")
+        holds.hold("connect")
+        // The same screen again, as after a rotation: still one.
+        holds.hold("editor")
+        holds.release("editor")
         assertTrue(holds.heldOrLeftOpen)
-        holds.release()
+        holds.release("connect")
         assertFalse(holds.heldOrLeftOpen)
     }
 }

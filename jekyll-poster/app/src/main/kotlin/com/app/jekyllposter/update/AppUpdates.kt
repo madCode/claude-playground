@@ -6,6 +6,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -21,7 +22,7 @@ import kotlinx.coroutines.launch
 class AppUpdates(
     val check: DebugUpdates,
     val updater: SelfUpdater,
-    private val publishing: () -> Boolean,
+    private val publishing: StateFlow<Boolean>,
     val holds: UpdateHolds,
     private val waitingForVpn: suspend () -> Boolean,
     private val scope: CoroutineScope,
@@ -48,7 +49,7 @@ class AppUpdates(
     }
 
     /** What a tap on the notice for [build] will do, for its label. */
-    fun next(build: Int): SelfUpdater.Step = updater.next(build, publishing(), updater.canInstall())
+    fun next(build: Int): SelfUpdater.Step = updater.next(build, publishing.value, updater.canInstall())
 
     /** What the screen does for a tap on the notice for [build]. */
     sealed interface Tap {
@@ -79,10 +80,11 @@ class AppUpdates(
         scope.launch {
             val problem = updater.install(build, ::tapHold) ?: return@launch
             _problem.value = problem
-            // Once the post is left, the kept file installs; the writer doesn't tap again.
+            // Once the post is left and nothing is going out (leaving by Publish sends one), the
+            // kept file installs; the writer doesn't tap again.
             if (problem.resumes && resuming?.isActive != true) {
                 resuming = scope.launch {
-                    holds.open.first { it == 0 }
+                    combine(holds.open, publishing) { open, sending -> open.isEmpty() && !sending }.first { it }
                     install(build)
                 }
             }
@@ -90,7 +92,7 @@ class AppUpdates(
     }
 
     private fun tapHold(): Hold? = when {
-        publishing() -> Hold.Post
+        publishing.value -> Hold.Post
         holds.held -> Hold.Screen
         else -> null
     }

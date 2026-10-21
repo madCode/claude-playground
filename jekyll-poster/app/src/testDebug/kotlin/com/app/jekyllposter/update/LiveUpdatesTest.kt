@@ -132,14 +132,16 @@ class LiveUpdatesTest {
     }
 
     @Test
-    fun `a post that starts going out while the build is copied stops the install`() {
+    fun `a post that starts going out while the build is copied holds the install until it's sent`() {
         // Nothing going out at the tap; a post starts by the time the copy is done.
-        val problem = updates().tap { if (staged.isNotEmpty()) Hold.Post else null }!!
+        val updates = updates()
+        val problem = updates.tap { if (staged.isNotEmpty()) Hold.Post else null }!!
+        assertEquals(UpdateProblem(SelfUpdater.WAIT_FOR_SENT, offerLink = false, resumes = true), problem)
         assertEquals(emptyList<Pair<Int, Int>>(), committed)
         assertEquals("the staged session must not be left behind", listOf(7), abandoned)
-        assertEquals(SelfUpdater.WAIT_FOR_POST, problem.why)
-        assertFalse(problem.offerLink)
         assertFalse(UpdateInstaller.installing.value)
+        assertNull("sent: the kept file installs", updates.tap())
+        assertEquals(1, downloads)
     }
 
     @Test

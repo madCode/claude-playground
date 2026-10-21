@@ -125,7 +125,8 @@ internal class LiveUpdates(
                     when (hold()) {
                         Hold.Post -> {
                             abandon(id)
-                            UpdateProblem(SelfUpdater.WAIT_FOR_POST, offerLink = false)
+                            keepReady(apk, counted)
+                            UpdateProblem(SelfUpdater.WAIT_FOR_SENT, offerLink = false, resumes = true)
                         }
                         Hold.Screen -> {
                             abandon(id)

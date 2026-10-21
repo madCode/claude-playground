@@ -238,7 +238,7 @@ class AppContainer(
                 }
             }
         } ?: SelfUpdater.NONE,
-        publishing = { publisher.publishing },
+        publishing = publisher.sending,
         holds = updateHolds,
         waitingForVpn = { privacy.anyOnlyThroughVpn() && vpn.current() == null },
         scope = appScope,

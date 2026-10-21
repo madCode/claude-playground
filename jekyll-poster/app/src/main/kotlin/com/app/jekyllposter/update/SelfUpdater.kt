@@ -12,7 +12,7 @@ data class UpdateProblem(val why: String, val offerLink: Boolean, val resumes: B
 
 /** What an install must wait for: installing ends the running app. */
 enum class Hold {
-    /** A post being sent: the writer taps again once it's out. */
+    /** A post being sent. */
     Post,
 
     /** A post's editor or Connect open, perhaps behind the camera, a picker or the browser. */
@@ -44,7 +44,7 @@ interface SelfUpdater {
     /**
      * Downloads the newest build, checks it is this app, signed with this app's key and newer, and
      * hands it to Android. [hold] is asked again immediately before the hand-off, since installing
-     * ends the running app; held by a screen, the checked file is kept for when it's left. Null
+     * ends the running app; held, the checked file is kept for when nothing holds it. Null
      * once handed over.
      */
     suspend fun install(build: Int, hold: () -> Hold?): UpdateProblem?
@@ -66,6 +66,7 @@ interface SelfUpdater {
 
     companion object {
         const val WAIT_FOR_POST = "A post is going out. Tap again once it's sent: updating restarts the app."
+        const val WAIT_FOR_SENT = "A post is going out. The update installs once it's sent."
         const val WAIT_FOR_SCREEN = "The update waits until you leave the post, then installs."
         const val WAIT_FOR_VPN = "Your blogs ask for a VPN and there's none, so the update waits. Turn your VPN on, then tap again."
 
