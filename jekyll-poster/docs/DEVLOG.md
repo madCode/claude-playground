@@ -36,6 +36,7 @@ Times are when each cycle landed, Pacific.
   - Its publish job waits its turn rather than cancelling the one before mid-upload.
   - The build's actions are pinned to commits, and the Gradle wrapper is checked.
   - The README says how to update.
+
 ### Cycle 47: Hide from the site
 - **Why:** taking a post off the site meant typing `published: false` into More front matter.
 - **Changed:** the editor's menu, while editing a post, has **Hide from the site** and, once
