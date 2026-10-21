@@ -1,5 +1,6 @@
 package com.app.carry
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInstaller
@@ -25,6 +26,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import java.io.File
 import java.io.IOException
 
@@ -76,6 +78,9 @@ class LiveUpdatesTest {
         busy = { busy },
         work = { work },
     )
+
+    /** Android refusing the session: counted against the build, unlike no room to copy it. */
+    private val refused = IllegalStateException("Session is sealed")
 
     private fun infos(name: String) = work.getWorkInfosForUniqueWork(name).get()
 
@@ -133,15 +138,33 @@ class LiveUpdatesTest {
 
     @Test
     fun `three failed hand-offs give up on the build`() {
-        stageFails = IOException("No space left on device")
+        stageFails = refused
         val updates = updates()
         repeat(LiveUpdates.MAX_INSTALL_FAILURES - 1) {
-            assertEquals("Android couldn't take the update: No space left on device.", updates.tap()!!.why)
+            assertEquals("Android wouldn't take the update: Session is sealed.", updates.tap()!!.why)
             assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
         }
         assertTrue(updates.tap()!!.why.endsWith("Carry won't try this build again."))
         assertEquals(SelfUpdater.Step.Browser, updates.next(140, false, true))
         assertFalse(UpdateInstaller.installing.value)
+    }
+
+    @Test
+    fun `no room to stage the build isn't held against it`() {
+        stageFails = IOException("No space left on device")
+        val updates = updates()
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES + 1) {
+            val problem = updates.tap()!!
+            assertEquals("Android couldn't take the update: No space left on device. Free some space, then tap again.", problem.why)
+            assertFalse(problem.offerLink)
+            assertFalse(UpdateInstaller.installing.value)
+        }
+        assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
+
+        // In the background too: tried again later, never given up on.
+        updates.fetched()
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES + 1) { assertEquals(LiveUpdates.Outcome.Retry, updates.inBackground()) }
+        assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
     }
 
     @Test
@@ -172,7 +195,7 @@ class LiveUpdatesTest {
         // The fixed-name file still holds 135 while GitHub already lists 140.
         apks["apk-135"] = ApkFacts(app.packageName, 135, ourKey)
         serving = { "apk-135" }
-        stageFails = IOException("No space left on device")
+        stageFails = refused
         val updates = updates()
         repeat(LiveUpdates.MAX_INSTALL_FAILURES) { updates.tap(140) }
         assertEquals(SelfUpdater.Step.Browser, updates.next(135, false, true))
@@ -257,7 +280,7 @@ class LiveUpdatesTest {
     fun `while the newest file lags, a build given up on isn't downloaded and tried again`() {
         apks["apk-135"] = ApkFacts(app.packageName, 135, ourKey)
         serving = { "apk-135" }
-        stageFails = IOException("No space left on device")
+        stageFails = refused
         val updates = updates()
         repeat(LiveUpdates.MAX_INSTALL_FAILURES) { updates.tap(140) }
         assertEquals(LiveUpdates.MAX_INSTALL_FAILURES, stageCalls)
@@ -311,7 +334,8 @@ class LiveUpdatesTest {
     fun `a downloaded build is installed while Carry is closed with nothing unsaved`() {
         val updates = updates()
         assertEquals(LiveUpdates.Outcome.Done, updates.fetched())
-        assertEquals(1, infos(LiveInstallWorker.UNIQUE).size)
+        val install = infos(LiveInstallWorker.UNIQUE).single()
+        assertTrue("Android's copy needs room too", install.constraints.requiresStorageNotLow())
         assertEquals(LiveUpdates.Outcome.Started, updates.inBackground())
         assertEquals(listOf(140), background)
     }
@@ -324,6 +348,30 @@ class LiveUpdatesTest {
         assertEquals(LiveUpdates.Outcome.Busy, updates.inBackground())
         assertEquals("nothing staged while busy", emptyList<Int>(), staged)
         assertFalse(UpdateInstaller.installing.value)
+    }
+
+    @Test
+    fun `a screen Carry opened holds the background install back until Carry is in front again`() {
+        // Whether Carry is closed as Android and the disk say, not as a test says.
+        fun real() = LiveUpdates(
+            app, 130, prefs = prefs, dir = dir, download = { it.writeText("apk-140") }, inspect = { apks[it.readText()] },
+            installed = { installed }, stage = { staged += 7; 7 }, commit = { id, b, bg -> committed += id to b; if (bg) background += b },
+            abandon = { abandoned += it }, canInstallNow = { true }, work = { work },
+        )
+        UnsavedMark(app).set(false)
+        val updates = real()
+        updates.fetched()
+        // The folder picker, the share sheet: Carry is paused, but the owner hasn't left it.
+        updates.leaving()
+        updates.paused()
+        assertEquals(LiveUpdates.Outcome.Busy, updates.inBackground())
+        assertEquals("nor once the process has died meanwhile", LiveUpdates.Outcome.Busy, real().inBackground())
+        assertEquals(emptyList<Int>(), staged)
+
+        updates.resumed(Robolectric.buildActivity(Activity::class.java).get(), unsaved = false)
+        updates.paused()
+        assertEquals("closed after coming back", LiveUpdates.Outcome.Started, real().inBackground())
+        assertEquals(listOf(140), background)
     }
 
     @Test
@@ -422,7 +470,7 @@ class LiveUpdatesTest {
     fun `while the newest file lags, a build given up on isn't kept as the one to install`() {
         apks["apk-135"] = ApkFacts(app.packageName, 135, ourKey)
         serving = { "apk-135" }
-        stageFails = IOException("No space left on device")
+        stageFails = refused
         val updates = updates()
         repeat(LiveUpdates.MAX_INSTALL_FAILURES) { updates.tap(135) }
         repeat(LiveUpdates.DOWNLOAD_TRIES + 1) { assertEquals(LiveUpdates.Outcome.Retry, updates.fetched(140)) }

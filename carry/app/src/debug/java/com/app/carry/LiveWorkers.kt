@@ -66,7 +66,7 @@ class LiveDownloadWorker(context: Context, params: WorkerParameters) : Coroutine
 }
 
 /**
- * Installs the downloaded build once Carry is closed with nothing unsaved. While it isn't, the
+ * Installs the downloaded build once Carry is closed with nothing unsaved, and there is room. While it isn't, the
  * install is tried again later, [RETRY_MINUTES] further apart each time.
  */
 class LiveInstallWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
@@ -84,6 +84,9 @@ class LiveInstallWorker(context: Context, params: WorkerParameters) : CoroutineW
 
         fun enqueue(work: WorkManager) {
             val request = OneTimeWorkRequestBuilder<LiveInstallWorker>()
+                // Android copies the build before installing it: on a nearly full phone that
+                // fails, and the retry would come round again with no more room.
+                .setConstraints(Constraints.Builder().setRequiresStorageNotLow(true).build())
                 .setBackoffCriteria(BackoffPolicy.LINEAR, RETRY_MINUTES, TimeUnit.MINUTES)
                 .build()
             work.enqueueUniqueWork(UNIQUE, ExistingWorkPolicy.KEEP, request)

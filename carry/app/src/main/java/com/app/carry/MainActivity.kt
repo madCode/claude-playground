@@ -175,6 +175,15 @@ class MainActivity : ComponentActivity() {
     private fun say(text: String) =
         android.widget.Toast.makeText(this, text, android.widget.Toast.LENGTH_LONG).show()
 
+    // Every screen of another app Carry opens passes through this: a plain startActivity, and the
+    // folder picker's launcher. One that fails to open leaves the mark until Carry's next return,
+    // which only delays a background install.
+    @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
+    override fun startActivityForResult(intent: android.content.Intent, requestCode: Int, options: Bundle?) {
+        model.updater.leaving()
+        super.startActivityForResult(intent, requestCode, options)
+    }
+
     /** The normal case is a sync dropping the day's session in while the
      *  app is backgrounded, so the folder is re-read on every resume. */
     override fun onPause() {

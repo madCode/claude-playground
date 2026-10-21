@@ -18,7 +18,7 @@ import java.io.IOException
 /**
  * The CI debug build keeping itself current. A newer build is downloaded on Wi-Fi in the
  * background, checked (this app, this app's key, newer), and installed once Carry is closed with
- * no unsaved typing ([UnsavedMark]). A tap on the notice installs it at once, downloading first if
+ * no unsaved typing ([UnsavedMark]), and not merely behind a screen it opened ([leaving]). A tap on the notice installs it at once, downloading first if
  * the background hasn't.
  *
  * What it knows lives in [prefs], so a process that dies part way picks up where it was. A build
@@ -40,8 +40,11 @@ internal class LiveUpdates(
     private val abandon: (Int) -> Unit = { UpdateInstaller.abandon(context, it) },
     private val canInstallNow: () -> Boolean = { UpdateInstaller.canInstall(context) },
     private val now: () -> Long = System::currentTimeMillis,
-    /** Why a background install must wait: Carry on screen, or typing not saved. */
-    private val busy: () -> Boolean = { UpdateInstaller.inFront || UnsavedMark(context).isSet },
+    /** Why a background install must wait: Carry on screen or behind a screen it opened, or
+     *  typing not saved. */
+    private val busy: () -> Boolean = {
+        UpdateInstaller.inFront || prefs.getBoolean(AWAY, false) || UnsavedMark(context).isSet
+    },
     private val work: () -> WorkManager = { WorkManager.getInstance(context) },
 ) : SelfUpdater {
     override val installing: StateFlow<Boolean> = UpdateInstaller.installing
@@ -79,7 +82,7 @@ internal class LiveUpdates(
         // Failures count against the build in the file once it passed its checks: the fixed-name
         // download can lag behind the newest build, which mustn't be given up on untried.
         var counted = build
-        val problem = try { files.withLock {
+        val problem = try { files.withLock locked@{
             // Downloaded in the background already, or now.
             val apk = readyApk(build) ?: withContext(Dispatchers.IO) {
                 dir.mkdirs()
@@ -104,7 +107,11 @@ internal class LiveUpdates(
                     val id = try {
                         withContext(Dispatchers.IO) { stage(apk) }
                     } catch (e: IOException) {
-                        throw InstallFailed(e)
+                        // Usually no room: the phone's, not the build's, so not counted against it.
+                        return@locked UpdateProblem(
+                            "Android couldn't take the update: ${e.message ?: "no room?"}. Free some space, then tap again.",
+                            offerLink = false,
+                        )
                     }
                     // Back on the caller's thread, after the slow parts and immediately before
                     // the commit, so nothing typed during them can be installed over.
@@ -123,8 +130,6 @@ internal class LiveUpdates(
             // is over.
             if (!handedOver) UpdateInstaller.finish()
             throw e
-        } catch (e: InstallFailed) {
-            failure(counted, "Android couldn't take the update: ${e.cause?.message ?: "no room?"}.")
         } catch (e: IOException) {
             UpdateProblem("Couldn't download the update: ${e.message ?: "no connection"}.", offerLink = true)
         } catch (e: Exception) {
@@ -141,8 +146,14 @@ internal class LiveUpdates(
         if (failed(prefs, build)) UpdateProblem("$why Carry won't try this build again.", offerLink = true)
         else UpdateProblem(why, offerLink = true)
 
+    override fun leaving() {
+        prefs.edit().putBoolean(AWAY, true).commit()
+    }
+
     override fun resumed(activity: Activity, unsaved: Boolean) {
         UpdateInstaller.inFront = true
+        // Back from whatever Carry opened, or opened afresh: either way the owner is here now.
+        prefs.edit().remove(AWAY).commit()
         runCatching { UpdateInstaller.forgetIfGone(activity) }
         // Android's question, which arrived while Carry was behind another app: shown once. Typed
         // since the tap, it's dropped rather than asked over the typing.
@@ -274,6 +285,10 @@ internal class LiveUpdates(
                 Outcome.Started
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: IOException) {
+                // Usually no room: tried again later, not counted against the build.
+                log("Build $ready couldn't be staged: ${e.message}")
+                Outcome.Retry
             } catch (e: Exception) {
                 log("Build $ready couldn't be handed to Android: ${e.javaClass.simpleName} ${e.message}")
                 if (failed(prefs, ready)) Outcome.Failed else Outcome.Retry
@@ -298,8 +313,6 @@ internal class LiveUpdates(
     /** How a background step went, for its worker. */
     enum class Outcome { Done, Started, Busy, Retry, Failed }
 
-    private class InstallFailed(cause: Throwable) : Exception(cause)
-
     companion object {
         /** Each of these is one try; Android then says "can't install" for the same reasons. */
         const val MAX_INSTALL_FAILURES = 3
@@ -312,6 +325,7 @@ internal class LiveUpdates(
         private const val ASKED = "asked"
         private const val DOWNLOADING = "downloading"
         private const val TRIES = "tries"
+        private const val AWAY = "away"
 
         /** One step at a time: a tap and a background run share the files in the cache. */
         private val files = Mutex()

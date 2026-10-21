@@ -118,6 +118,17 @@ class MainActivityTest {
     }
 
     @Test
+    fun `opening the folder picker tells the updater Carry isn't closed`() {
+        var left = 0
+        ViewModelProvider(compose.activity)[CarryViewModel::class.java].updater =
+            object : SelfUpdater by SelfUpdater.NONE { override fun leaving() { left++ } }
+        compose.onNodeWithText("Choose folder").performClick()
+        compose.waitForIdle()
+        assertEquals(Intent.ACTION_OPEN_DOCUMENT_TREE, shadowOf(compose.activity).nextStartedActivityForResult.intent.action)
+        assertEquals(1, left)
+    }
+
+    @Test
     fun `a whole volume picked by mistake is refused, said, and not held`() {
         compose.onNodeWithText("Pick your folder").assertExists()
         val reads = countReads()

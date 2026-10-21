@@ -33,6 +33,19 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-21 — background updates: a screen Carry opened, and a full phone
+
+Two gaps Jekyll Poster's review of the same design found (claude-playground #187):
+
+- **The folder picker or share sheet counted as Carry being closed.** Both
+  pause Carry, so a background install could replace it while the owner
+  was picking a folder. Carry now marks on disk that it sent the owner
+  elsewhere, and the install waits until Carry is in front again.
+- **A full phone counted against the build.** No room to copy the build
+  into Android's installer counted toward the three failures that give up
+  on it. It no longer does, and the install, like the download, waits for
+  enough free storage.
+
 ## 2026-10-20 — cycle 73: tests for the guards, and the whole-phone refusal stays
 
 - Picking **Internal storage** instead of a folder now leaves *That's your

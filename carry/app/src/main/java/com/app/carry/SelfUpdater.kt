@@ -38,6 +38,13 @@ interface SelfUpdater {
     fun resumed(activity: Activity, unsaved: Boolean)
     fun paused()
 
+    /**
+     * Carry is opening another app's screen (the folder picker, the share sheet, Settings, a
+     * browser) and expects the owner back: that pauses Carry without it being closed, so a
+     * background install waits until Carry is in front again.
+     */
+    fun leaving()
+
     enum class Step {
         SaveFirst,
         AllowInstalls,
@@ -57,6 +64,7 @@ interface SelfUpdater {
             override suspend fun install(build: Int, unsaved: () -> Boolean): UpdateProblem? = null
             override fun resumed(activity: Activity, unsaved: Boolean) {}
             override fun paused() {}
+            override fun leaving() {}
         }
     }
 }
