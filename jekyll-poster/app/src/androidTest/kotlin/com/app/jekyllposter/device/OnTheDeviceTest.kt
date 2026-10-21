@@ -48,8 +48,8 @@ class OnTheDeviceTest {
     // No pressHome here: @After runs before the failure rule, whose picture should show the failure.
     @After fun close() = github.close()
 
-    private fun waitFor(text: String, timeoutMs: Long = 20_000) =
-        compose.waitUntil(timeoutMs) { compose.onAllNodes(hasText(text, substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+    private fun waitFor(text: String, timeoutMs: Long = 20_000, substring: Boolean = true) =
+        compose.waitUntil(timeoutMs) { compose.onAllNodes(hasText(text, substring = substring), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
 
     private fun waitForTag(tag: String) =
         compose.waitUntil(20_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty() }
@@ -127,30 +127,36 @@ class OnTheDeviceTest {
         assertTrue("The editor opened", compose.onAllNodes(androidx.compose.ui.test.hasTestTag("title")).fetchSemanticsNodes().isEmpty())
         assertEquals(head, github.head)
         assertEquals(odd, github.text(path))
+        assertEquals("A draft was made of it", 0, runBlocking { app.container.database.drafts().snapshotCount() })
     }
 
     @Test fun signingInWithGitHubTwiceKeepsOneSignIn() {
         github.addRepository("garden", mapOf("_config.yml" to "title: The Garden\n".toByteArray()))
         // The pretend GitHub answers as if the code were entered: the browser's part is a person's.
+        // Each sign-in gets a new token, as on GitHub, so only the app's own rule can merge them.
         github.deviceApproved = true
+        github.newTokenPerSignIn = true
         ActivityScenario.launch(MainActivity::class.java)
-        signInWithGitHub("sample/sample-blog")
+        signInWithGitHub("Post to your Jekyll blog", "sample/sample-blog")
+        waitFor("New post")
         openSettings()
-        compose.onNodeWithText("Your blogs").performClick()
-        waitFor("+ Add a sign-in")
         compose.onNodeWithText("+ Add a sign-in").performClick()
-        signInWithGitHub("sample/garden")
+        signInWithGitHub("Add a sign-in", "sample/garden")
+        // A blog beside others opens its Blog & privacy first.
+        waitFor("Blog & privacy", substring = false)
+        device.pressBack()
+        waitFor("New post")
 
         openSettings()
         waitFor("2 blogs, 1 sign-in")
     }
 
-    private fun signInWithGitHub(repo: String) {
-        waitFor("Sign in with GitHub")
+    /** Signs in from the Connect screen headed [heading], exactly: Settings, being left, mentions it too. */
+    private fun signInWithGitHub(heading: String, repo: String) {
+        waitFor(heading, substring = false)
         compose.onNodeWithText("Sign in with GitHub").performClick()
-        waitFor(repo)
+        waitFor(repo, substring = false)
         compose.onNodeWithText(repo).performClick()
-        waitFor("New post")
     }
 
     private fun openSettings() {

@@ -1,5 +1,6 @@
 package com.app.jekyllposter.device
 
+import android.os.ParcelFileDescriptor
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.services.storage.TestStorage
 import androidx.test.uiautomator.UiDevice
@@ -16,7 +17,9 @@ import org.junit.runner.Description
  */
 class ScreenOnFailure : TestWatcher() {
     override fun starting(description: Description) {
-        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("cmd statusbar collapse").close()
+        // Read to the end: closing the stream at once doesn't wait for the command to finish.
+        val out = InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("cmd statusbar collapse")
+        ParcelFileDescriptor.AutoCloseInputStream(out).use { it.readBytes() }
     }
 
     override fun failed(e: Throwable, description: Description) {
