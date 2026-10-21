@@ -29,6 +29,13 @@ Times are when each cycle landed, Pacific.
 
 ## Wed 21 Oct
 
+### Cycle 49: a photo, an edit, a delete and an edit conflict, against the real GitHub
+- **Why:** the last item in BACKLOG.md's Next that isn't waiting on madCode.
+- **Changed (tests and CI):** the nightly device live check shares a photo with a location into
+  the app, publishes it, and checks the copy on GitHub has none. It then edits the post and
+  deletes it from the screens. A second test changes a post on GitHub while it's open on the
+  phone: Update refuses, and the other change stays.
+
 ### Cycle 48: per-blog templates, checked before building
 - **Found:** Jekyll's `defaults:` in `_config.yml` already gives every post its front matter, and
   the app reads it. A phone template would add only starting tags, categories and a body. Asked

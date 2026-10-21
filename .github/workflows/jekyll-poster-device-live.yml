@@ -97,6 +97,8 @@ jobs:
           working-directory: jekyll-poster
           script: |
             adb shell svc power stayon true
+            # The photo is shared in from another app, as from a gallery.
+            ./gradlew :sender:installDebug
             adb logcat -c
             if [ -n "$WG_CONF" ] && [ -s "$RUNNER_TEMP/wireguard.apk" ]; then tools/wireguard-on-emulator.sh "$RUNNER_TEMP/wireguard.apk" && touch "$RUNNER_TEMP/wireguard-ready" || echo "::warning::WireGuard couldn't be set up, so the VPN test is skipped."; fi
             # First, before the main run clears the app's data: a post queued for a minute ahead,
