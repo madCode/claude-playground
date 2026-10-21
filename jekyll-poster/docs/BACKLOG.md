@@ -7,12 +7,7 @@ and moves it to Done.
 
 - [ ] Say when a newer debug build is out, and install it, as Carry and newspaperss do
   (`practices/android.md`): a check when the app opens and every few hours, a download on Wi-Fi,
-  the installer. Needs the numbered APK below.
-- [ ] The debug release also gets `jekyll-poster-debug-<run>.apk`, numbered, as Carry's does.
-- [ ] The publish job doesn't cancel itself (`cancel-in-progress: false`): two overlapping jobs
-  collided on the release's files in newspaperss. Pin its actions to commit SHAs, and validate
-  the Gradle wrapper, as `carry.yml` does.
-- [ ] The README says how to update, not only how to install.
+  the installer.
 - [ ] Sign in with GitHub and a TalkBack listen, by a person, now and then
   ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)).
 
@@ -31,6 +26,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 51: the debug release numbered, never cancelled mid-upload, its actions pinned; the README says how to update
 - [x] Cycle 49: the device live check also publishes a photo, edits and deletes from the screens, and meets an edit conflict
 - [x] Cycle 45: on the emulator, New post from the launcher, and the app killed while a post waits
 - [x] Cycle 47: Hide from the site (`published: false`) and Show on the site again, from the editor's menu
