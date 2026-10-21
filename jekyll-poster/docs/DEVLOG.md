@@ -23,10 +23,24 @@ Times are when each cycle landed, Pacific.
 - **Watching:** `EditFlowTest.tappingAPostOnTheBlogOpensItsTextToEdit` failed once with "addObserver
   must be called on the main thread" (Compose composing off the main thread), in 1 of 9 full runs
   with cycle 34's change and none of 40 before it. Count it before blaming the change.
-- **Waiting on you:** the `PROTON_WG_CONF` secret, a WireGuard config from the tester's Proton
-  account, for the VPN check on CI's emulator. The tester account is set up
+- **Waiting on you:** nothing. The tester account is set up
   ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)), and the live check posts to its three blogs nightly.
   The Android SDK is in the cloud environment, at `/opt/android-sdk`.
+
+## Wed 21 Oct
+
+### Cycle 43: Only connect through a VPN, with a real one
+- **Asked for:** the last laptop check, in CI, once madCode added the `PROTON_WG_CONF` secret.
+- **Changed (tests and CI):** the device live check installs the WireGuard app with the tester's
+  Proton config. Its VPN test publishes with *Only connect through a VPN* on: with the tunnel off
+  the post waits and nothing reaches GitHub; with it on, the phone's public address changes and
+  the post goes out.
+- **Checked:** the first run passed. Breaking the switch (the blog's gate ignoring it) first left
+  it green: the worker waits for the VPN by itself, before the gate. Checking the request record
+  too (nothing may reach GitHub before the tunnel) turned it red, naming Home's two reads of the
+  blog.
+- **The review caught:** a WireGuard problem would have failed the whole nightly; the scan before
+  the public artifact didn't look for the VPN's key or in the logcat.
 
 ## Tue 20 Oct
 

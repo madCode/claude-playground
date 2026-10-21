@@ -14,6 +14,7 @@ on:
     paths:
       - '.github/workflows/jekyll-poster-device-live.yml'
       - 'jekyll-poster/app/src/androidTest/kotlin/com/app/jekyllposter/device/LiveOnTheDeviceTest.kt'
+      - 'jekyll-poster/tools/wireguard-on-emulator.sh'
 
 permissions:
   contents: read
@@ -36,6 +37,9 @@ jobs:
       TOKEN_A: ${{ secrets.TEST_BLOG_A_TOKEN }}
       REPO_B: ${{ vars.TEST_BLOG_ORG }}
       TOKEN_B: ${{ secrets.TEST_BLOG_ORG_TOKEN }}
+      # A WireGuard config from the tester's Proton account, for Only connect through a VPN.
+      # Without it that test is skipped.
+      WG_CONF: ${{ secrets.PROTON_WG_CONF }}
     steps:
       - name: Check the tester's blogs are configured
         run: |
@@ -58,6 +62,14 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Build the app and its device tests
         run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+      # A WireGuard problem skips only the VPN test: the rest of the check still runs.
+      - name: Fetch the WireGuard app
+        if: env.WG_CONF != ''
+        continue-on-error: true
+        run: |
+          apk=$(curl -fsSL https://download.wireguard.com/android-client/ | grep -o 'com\.wireguard\.android-[0-9.]*\.apk' | sort -uV | tail -1)
+          curl -fsSL -o "$RUNNER_TEMP/wireguard.apk" "https://download.wireguard.com/android-client/$apk"
+          echo "$apk: $(sha256sum "$RUNNER_TEMP/wireguard.apk" | cut -d' ' -f1)"
       - name: Publish to two blogs from the emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
@@ -71,29 +83,34 @@ jobs:
           script: |
             adb shell svc power stayon true
             adb logcat -c
-            ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.app.jekyllposter.device.LiveOnTheDeviceTest "-Pandroid.testInstrumentationRunnerArguments.liveRepoA=$REPO_A" "-Pandroid.testInstrumentationRunnerArguments.liveTokenA=$TOKEN_A" "-Pandroid.testInstrumentationRunnerArguments.liveRepoB=$REPO_B" "-Pandroid.testInstrumentationRunnerArguments.liveTokenB=$TOKEN_B" || { adb logcat -d > app/build/device-logcat.txt; adb logcat -d -b crash; exit 1; }
-      # The kept files (request records, the privacy report) go into a public artifact: refuse
-      # them all if either token is anywhere in them.
-      - name: Check the kept files hold no token
+            if [ -n "$WG_CONF" ] && [ -s "$RUNNER_TEMP/wireguard.apk" ]; then tools/wireguard-on-emulator.sh "$RUNNER_TEMP/wireguard.apk" && touch "$RUNNER_TEMP/wireguard-ready" || echo "::warning::WireGuard couldn't be set up, so the VPN test is skipped."; fi
+            ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.app.jekyllposter.device.LiveOnTheDeviceTest $([ -f "$RUNNER_TEMP/wireguard-ready" ] && echo -Pandroid.testInstrumentationRunnerArguments.vpnTunnel=proton) "-Pandroid.testInstrumentationRunnerArguments.liveRepoA=$REPO_A" "-Pandroid.testInstrumentationRunnerArguments.liveTokenA=$TOKEN_A" "-Pandroid.testInstrumentationRunnerArguments.liveRepoB=$REPO_B" "-Pandroid.testInstrumentationRunnerArguments.liveTokenB=$TOKEN_B" || { adb logcat -d > app/build/device-logcat.txt; adb logcat -d -b crash; exit 1; }
+      # The kept files (request records, the privacy report, a failed run's logcat) go into a
+      # public artifact: refuse them all if a token or the VPN's private key is anywhere in them.
+      - name: Check the kept files hold no secret
         id: scan
         if: always()
         run: |
           # File by file: the device's folder name has spaces. grep exits 1 for "not found";
           # anything else (2: unreadable) fails the step rather than passing as clean.
+          secrets=(-e "$TOKEN_A" -e "$TOKEN_B")
+          key=$(printf '%s\n' "$WG_CONF" | sed -n 's/^[[:space:]]*PrivateKey[[:space:]]*=[[:space:]]*//p' | tr -d '\r[:space:]')
+          [ -n "$key" ] && secrets+=(-e "$key")
           mkdir -p app/build/request-record
           found=0
           while IFS= read -r -d '' file; do
-            found=1
-            set +e; grep -qF -e "$TOKEN_A" -e "$TOKEN_B" "$file"; status=$?; set -e
+            set +e; grep -qF "${secrets[@]}" "$file"; status=$?; set -e
             if [ "$status" -ne 1 ]; then
-              rm -rf app/build/request-record
+              rm -rf app/build/request-record app/build/device-logcat.txt
               find app/build/outputs -path '*additional_output*' -type f -delete
-              echo "::error::A kept file holds a token or couldn't be read ($status); none were uploaded."
+              echo "::error::A kept file holds a secret or couldn't be read ($status); none were uploaded."
               exit 1
             fi
+            [ "$(basename "$file")" = device-logcat.txt ] && continue
+            found=1
             cp "$file" app/build/request-record/
-            echo "$(basename "$file"): $(wc -l < "$file") lines, no token"
-          done < <(find app/build/outputs -path '*additional_output*' -type f \( -name '*.jsonl' -o -name '*.json' \) -print0)
+            echo "$(basename "$file"): $(wc -l < "$file") lines, no secret"
+          done < <(find app/build/outputs -path '*additional_output*' -type f \( -name '*.jsonl' -o -name '*.json' \) -print0; find app/build -maxdepth 1 -name device-logcat.txt -print0)
           [ "$found" = 1 ] || echo "::warning::No request record or report came back."
       - name: Keep the request record and the report
         if: always() && steps.scan.outcome == 'success'

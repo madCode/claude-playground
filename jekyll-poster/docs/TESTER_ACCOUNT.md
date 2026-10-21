@@ -71,15 +71,17 @@ Never paste a token into a chat, an issue or a commit. They go into these secret
    sign-in stays there, so Claude can enter a device code on the emulator's behalf. Only
    there: kept out of your everyday browser, it can't get mixed up with your own GitHub.
 
-## 6. A VPN (for the laptop checks)
+## 6. A VPN (for the device live check)
 
 The "only connect through a VPN" switch needs a real VPN to check: a post waits while it's off
-and goes out once it's on.
+and goes out once it's on. The device live check runs it with the WireGuard app and a config
+from a free [Proton](https://proton.me/vpn) account for the tester (another `+` alias of the
+studio's inbox).
 
-1. Make a free [Proton](https://proton.me/vpn) account for the tester, with another `+`
-   alias of the studio's inbox.
-2. Sign in to it once in the desktop app's built-in browser, as for GitHub. Claude installs
-   the Proton VPN app on the emulator and signs in there.
+1. At account.protonvpn.com, Downloads, WireGuard configuration: name it `jekyll-poster-ci`,
+   platform Android, NetShield off, any free server. Download the file.
+2. Paste the whole file into the secret `PROTON_WG_CONF`, as for the tokens above, then delete
+   the download. Without it, the VPN test is skipped.
 
 Then tell Claude it's done. The first cycle after that runs the live check against all three
 blogs to show the tokens work.

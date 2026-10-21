@@ -21,6 +21,7 @@ import com.app.jekyllposter.MainActivity
 import com.app.jekyllposter.core.github.FileChange
 import com.app.jekyllposter.core.github.GitHubClient
 import com.app.jekyllposter.data.Account
+import com.app.jekyllposter.data.AndroidVpn
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import java.io.File
@@ -48,7 +49,8 @@ import org.junit.runner.RunWith
  * The app as installed, against the real GitHub and the tester's blogs (docs/TESTER_ACCOUNT.md),
  * with the request record on. Only the "Jekyll Poster device live check" workflow runs it, with
  * `liveRepoA`/`liveTokenA` and `liveRepoB`/`liveTokenB` as instrumentation arguments: two blogs
- * under two sign-ins, for the several-blogs audit. Elsewhere it's skipped.
+ * under two sign-ins, for the several-blogs audit, and `vpnTunnel` when it has a VPN to try.
+ * Elsewhere it's skipped.
  *
  * Blog A is signed in to through the screens and published to from the editor; blog B is added
  * as a second sign-in and its post goes out through WorkManager. Both wait for the "is live"
@@ -86,6 +88,7 @@ class LiveOnTheDeviceTest {
     private val titleA = "Device check $stamp"
     private val titleB = "Device check $stamp, second blog"
     private val titlePrivate = "Device check $stamp, private"
+    private val titleVpn = "Device check $stamp, through the VPN"
     private val record = File(app.filesDir, "requests")
 
     @Before fun setUp() {
@@ -182,8 +185,8 @@ class LiveOnTheDeviceTest {
     }
 
     /**
-     * Every switch "Set up for writing anonymously" turns on except the VPN, which the CI emulator
-     * hasn't got (the laptop's Proton check covers it). Then a link with tracking codes is shared in,
+     * Every switch "Set up for writing anonymously" turns on except the VPN, which has a test of its
+     * own. Then a link with tracking codes is shared in,
      * published, and what GitHub kept of it is read back and written to `privacy-report.json`.
      */
     @Test fun atMostPrivacyGitHubKeepsOnlyTheAccountAndTheTimeItWentOut() {
@@ -264,5 +267,85 @@ class LiveOnTheDeviceTest {
         assertEquals("${day}T00:00:00Z", author["date"]!!.jsonPrimitive.content)
         assertEquals(author["date"]!!.jsonPrimitive.content, committer["date"]!!.jsonPrimitive.content)
         assertTrue(patchDate.orEmpty(), patchDate.orEmpty().endsWith("00:00:00 +0000"))
+    }
+
+    /**
+     * Only connect through a VPN, with a real one: the WireGuard app and a Proton config, which
+     * the workflow installs when it has the `PROTON_WG_CONF` secret and names as `vpnTunnel`.
+     * Without the tunnel the post waits and nothing reaches GitHub; with it up, the post goes out,
+     * and from another address than the phone's own.
+     */
+    @Test fun onlyThroughAVpnAPostWaitsThenGoesOutThroughIt() {
+        testName = "vpn"
+        val tunnel = args.getString("vpnTunnel").orEmpty()
+        assumeTrue("Needs the WireGuard tunnel the workflow sets up from PROTON_WG_CONF", tunnel.isNotBlank())
+        val a = a!!
+        val key = "${a.fullName}@${a.branch}"
+        setTunnel(tunnel, up = false)
+        val ownAddress = publicAddress()
+        try {
+            val id = runBlocking {
+                val login = GitHubClient(http, a.token).user().login
+                app.container.accounts.save(Account(login, a.token, a.owner, a.name, a.branch))
+                // Only the VPN switch: a random send time would hold the post back for its own reason.
+                app.container.privacy.update(key) { it.copy(onlyThroughVpn = true, sendAtRandomTime = false) }
+                app.container.drafts.insert(Draft(blog = key, title = titleVpn, body = "Sent through a VPN by the nightly device check, then deleted.", state = PostState.Queued))
+                    .also { app.container.publishQueue.enqueue(it, null) }
+            }
+            ActivityScenario.launch(MainActivity::class.java)
+            waitFor("Waiting for your VPN…")
+            // Long enough for a worker that ignored the switch to have sent it.
+            Thread.sleep(30_000)
+            assertFalse("Sent without the VPN", runBlocking { hasPost(a, "device-check-$stamp-through-the-vpn") })
+            val waiting = runBlocking { app.container.drafts.get(id) }!!
+            assertEquals(PostState.Queued, waiting.state)
+            assertEquals("Held for a random time, not the VPN", null, waiting.sendAfter)
+            // Home read the blog meanwhile, and the worker may have tried: none of it may have got
+            // a connection. The record sees only requests that did, each with GitHub's answer.
+            val reached = File(record, "requests.jsonl").takeIf { it.exists() }?.readLines().orEmpty()
+                .map { Json.parseToJsonElement(it).jsonObject }
+                .filter { it["outcome"]!!.jsonPrimitive.content.matches(Regex("""\d{3}""")) }
+                .map { "${it["method"]!!.jsonPrimitive.content} ${it["url"]!!.jsonPrimitive.content}" }
+            assertEquals("Reached GitHub without the VPN", emptyList<String>(), reached)
+
+            setTunnel(tunnel, up = true)
+            val vpnAddress = publicAddress()
+            assertTrue("The tunnel didn't change the address ($vpnAddress)", vpnAddress != ownAddress)
+            waitUntil("the post on ${a.fullName} through the VPN", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, "device-check-$stamp-through-the-vpn") }
+        } catch (e: Throwable) {
+            // The test's own failure is the one to report, not the tunnel's on the way out.
+            runCatching { setTunnel(tunnel, up = false) }.exceptionOrNull()?.let(e::addSuppressed)
+            throw e
+        }
+        setTunnel(tunnel, up = false)
+    }
+
+    /**
+     * The address the internet sees this phone at, through whatever network is up. Tried a few
+     * times: just after Android says the tunnel is up, its first handshake may not be done.
+     */
+    private fun publicAddress(): String {
+        repeat(3) {
+            runCatching { http.newCall(Request.Builder().url("https://api.ipify.org").build()).execute().use { r -> r.body.string().trim().takeIf { r.isSuccessful } } }
+                .getOrNull()?.let { return it }
+            Thread.sleep(5_000)
+        }
+        error("Couldn't read this phone's public address")
+    }
+
+    /** Turns [tunnel] on or off in the WireGuard app's list, then waits for Android to agree. */
+    private fun setTunnel(tunnel: String, up: Boolean) {
+        shell("am start -W -n com.wireguard.android/.activity.MainActivity")
+        check(device.wait(Until.hasObject(By.text(tunnel)), 20_000)) { "WireGuard doesn't list $tunnel" }
+        val toggle = device.findObject(By.res("com.wireguard.android", "tunnel_switch"))
+            ?: device.findObject(By.clazz("android.widget.Switch"))
+            ?: error("No switch for $tunnel")
+        if (toggle.isChecked != up) toggle.click()
+        val end = System.currentTimeMillis() + 30_000
+        while ((AndroidVpn(app).current() != null) != up) {
+            check(System.currentTimeMillis() < end) { "The tunnel didn't come ${if (up) "up" else "down"}" }
+            Thread.sleep(500)
+        }
+        device.pressHome()
     }
 }
