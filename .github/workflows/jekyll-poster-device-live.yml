@@ -27,18 +27,21 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: jekyll-poster-device-live
-  cancel-in-progress: false
-
 defaults:
   run:
     working-directory: jekyll-poster
 
 jobs:
   device-live:
-    # A fork's PR gets no secrets: the check would only fail.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # A fork's PR, or Dependabot's, gets no secrets: the check would only fail.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+    # One run at a time on the tester's blogs. On the job, not the workflow, so a skipped run
+    # doesn't take the one waiting place and cancel a run that would have run.
+    concurrency:
+      group: jekyll-poster-device-live
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
