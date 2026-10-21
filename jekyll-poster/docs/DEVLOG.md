@@ -22,6 +22,12 @@ Times are when each cycle landed, Pacific.
 
 ## Wed 21 Oct
 
+### Android's "not enough storage" isn't held against a build
+- **Fixed:** Android's own no-room answer counted as a failed install, so three on a full phone
+  gave up on the build for good, the same problem #187 fixed for the copy into Android's
+  installer. Now it isn't counted, and the background install, which waits for free storage,
+  tries again. Ported from Carry.
+
 ### Cycle 54: a second documentation pass
 - **Fixed:** DESIGN's Updates section, cut to what a person needs and corrected (the background
   retries further apart each time; not every failure offers the browser). DEVICE-CHECKS counts
