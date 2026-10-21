@@ -305,14 +305,26 @@ class LiveOnTheDeviceTest {
             val vpnAddress = publicAddress()
             assertTrue("The tunnel didn't change the address ($vpnAddress)", vpnAddress != ownAddress)
             waitUntil("the post on ${a.fullName} through the VPN", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, "device-check-$stamp-through-the-vpn") }
-        } finally {
-            setTunnel(tunnel, up = false)
+        } catch (e: Throwable) {
+            // The test's own failure is the one to report, not the tunnel's on the way out.
+            runCatching { setTunnel(tunnel, up = false) }.exceptionOrNull()?.let(e::addSuppressed)
+            throw e
         }
+        setTunnel(tunnel, up = false)
     }
 
-    /** The address the internet sees this phone at, through whatever network is up. */
-    private fun publicAddress(): String =
-        http.newCall(Request.Builder().url("https://api.ipify.org").build()).execute().use { it.body.string().trim() }
+    /**
+     * The address the internet sees this phone at, through whatever network is up. Tried a few
+     * times: just after Android says the tunnel is up, its first handshake may not be done.
+     */
+    private fun publicAddress(): String {
+        repeat(3) {
+            runCatching { http.newCall(Request.Builder().url("https://api.ipify.org").build()).execute().use { r -> r.body.string().trim().takeIf { r.isSuccessful } } }
+                .getOrNull()?.let { return it }
+            Thread.sleep(5_000)
+        }
+        error("Couldn't read this phone's public address")
+    }
 
     /** Turns [tunnel] on or off in the WireGuard app's list, then waits for Android to agree. */
     private fun setTunnel(tunnel: String, up: Boolean) {

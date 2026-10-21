@@ -9,7 +9,9 @@ pkg=com.wireguard.android
 : "${WG_CONF:?WG_CONF is empty}"
 
 adb root >/dev/null
-adb wait-for-device
+# adbd restarts as root, and wait-for-device can answer before it has.
+for _ in $(seq 30); do [ "$(adb shell id -u 2>/dev/null | tr -d '\r')" = 0 ] && break; sleep 1; done
+[ "$(adb shell id -u | tr -d '\r')" = 0 ] || { echo "adb didn't come back as root"; exit 1; }
 adb install -r "$apk" >/dev/null
 # Opened once, so Android makes its data folder; then closed before its tunnel list is read again.
 adb shell am start -W -n "$pkg/.activity.MainActivity" >/dev/null
