@@ -96,7 +96,7 @@ class AppContainer(
      */
     private val blogCalls = ConcurrentHashMap<String, GatedCalls>()
 
-    private fun callsFor(key: String) = blogCalls.getOrPut(key) { GatedCalls(base.recordedAs(context, key), VpnGate(vpn) { runBlocking { privacy.get(key).onlyThroughVpn } }) }
+    private fun callsFor(key: String) = blogCalls.getOrPut(key) { GatedCalls(base.recordedAs(context, key), VpnGate(vpn) { false }) }
 
     /**
      * Signing in, listing a sign-in's repositories and renewing its token aren't for one blog: they
