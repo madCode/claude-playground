@@ -9,6 +9,13 @@ waiting on madCode is done, or 7am Pacific (14:00 UTC), whichever comes first. A
 that the app's update system (the `jekyll-poster-debug` release) matches the other apps' (Carry,
 newspaperss), and puts any difference in BACKLOG.md.
 
+### Cycle 45 — build: New post from the launcher, and the app killed while a post waits
+
+- Check a guard against what it reads: "SKIPPED" in Gradle's log matched Gradle's own task
+  lines, not a skipped test, and failed a run that had passed. Read the test results instead.
+- Each `connectedDebugAndroidTest` clears the last one's outputs, so the run whose files are kept
+  goes last.
+
 ### Cycle 44 — build: the `?` key and Sign in with GitHub twice, on the emulator
 
 - Read the code a check is about before writing its test: two tokens for one account are two

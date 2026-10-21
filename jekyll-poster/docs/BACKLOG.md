@@ -5,8 +5,6 @@ and moves it to Done.
 
 ## Next
 
-- [ ] More device tests on the suite cycle 36 started (`OnTheDeviceTest`): the New post
-  shortcut from the launcher, the app killed while a post is queued.
 - [ ] More of the device live check (`LiveOnTheDeviceTest`): a photo, an edit and a delete
   from the screens, and an edit conflict made by the workflow committing while the post is open.
 - [ ] Sign in with GitHub and a TalkBack listen, by a person, now and then
@@ -24,6 +22,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 45: on the emulator, New post from the launcher, and the app killed while a post waits
 - [x] Cycle 44: on the emulator, front matter the app can't follow, and Sign in with GitHub twice
 - [x] Cycle 43: Only connect through a VPN, checked nightly with a real VPN (WireGuard and Proton)
 - [x] Cycle 42: the laptop's device checks on CI's emulator; the editor's picker and dialogs survive rotation

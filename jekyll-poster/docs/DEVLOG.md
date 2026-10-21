@@ -29,6 +29,12 @@ Times are when each cycle landed, Pacific.
 
 ## Wed 21 Oct
 
+### Cycle 45: New post from the launcher, and the app killed while a post waits, on the emulator
+- **Why:** the last two device tests in BACKLOG.md's Next.
+- **Changed (tests and CI):** on every PR, a test long-presses the app's icon on the emulator's
+  home screen and taps New post. In the nightly live check, a post is queued a minute ahead and
+  the app's process ended; a later step finds it on the tester's blog, sent by Android alone.
+
 ### Cycle 44: front matter the app can't follow, and Sign in with GitHub twice, on the emulator
 - **Asked for:** madCode's morning-page questions: can the emulator do these two laptop checks?
 - **Changed (tests):** two device tests on every PR. A post with a `?` key isn't opened, Home
