@@ -21,12 +21,17 @@ import com.app.jekyllposter.data.Draft
 class Notifier(private val context: Context) {
     fun buildFinished(draft: Draft) {
         val (title, text) = when (draft.buildState) {
+            BuildState.Live if draft.hidden -> "“${draft.title}” is off your site" to "Its file stays on GitHub, marked “published: false”."
             BuildState.Live -> "“${draft.title}” is live" to "Tap to open it on your site."
             BuildState.Failed -> "Your site didn't rebuild" to "“${draft.title}” is on GitHub, but the Pages build failed. Check Actions on GitHub."
             else -> return
         }
         // What a locked phone shows instead: no title, which says what the writer writes about.
-        val public = if (draft.buildState == BuildState.Live) "A post is live" else "Your site didn't rebuild"
+        val public = when {
+            draft.buildState != BuildState.Live -> "Your site didn't rebuild"
+            draft.hidden -> "Your site rebuilt"
+            else -> "A post is live"
+        }
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -34,7 +39,7 @@ class Notifier(private val context: Context) {
         }
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL, "Published posts", NotificationManager.IMPORTANCE_DEFAULT))
-        val open = draft.postUrl?.takeIf { draft.buildState == BuildState.Live }
+        val open = draft.postUrl?.takeIf { draft.buildState == BuildState.Live && !draft.hidden }
             ?.let { Intent(Intent.ACTION_VIEW, Uri.parse(it)) }
             ?: Intent(context, MainActivity::class.java)
         val tap = PendingIntent.getActivity(context, draft.id.toInt(), open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
