@@ -38,7 +38,11 @@ class UpdateWaitsForPickerTest {
     @get:Rule val compose = createEmptyComposeRule()
 
     private val app = ApplicationProvider.getApplicationContext<Context>()
-    private val ours = ApkFacts(app.packageName, 130, setOf("our-key"))
+    // Above this build's own number: on CI the app's own updater runs in onCreate, and clears a
+    // ready build it already has.
+    private val installedBuild = DebugUpdates.buildOf(BuildConfig.VERSION_NAME) ?: 130
+    private val newer = installedBuild + 10
+    private val ours = ApkFacts(app.packageName, installedBuild.toLong(), setOf("our-key"))
     private val installs = mutableListOf<Int>()
     private val scenarios = mutableListOf<ActivityScenario<MainActivity>>()
 
@@ -60,13 +64,13 @@ class UpdateWaitsForPickerTest {
     /** A new build downloaded and waiting for Carry to close. Busy is decided as on a phone. */
     private val updates by lazy {
         LiveUpdates(
-            app, 130, prefs = LiveUpdates.prefsOf(app), dir = tmp.newFolder("updates"),
-            download = { it.writeText("apk-140") },
-            inspect = { ApkFacts(app.packageName, 140, setOf("our-key")) },
+            app, installedBuild, prefs = LiveUpdates.prefsOf(app), dir = tmp.newFolder("updates"),
+            download = { it.writeText("apk") },
+            inspect = { ApkFacts(app.packageName, newer.toLong(), setOf("our-key")) },
             installed = { ours },
             stage = { 7 }, commit = { _, build, _ -> installs += build }, abandon = {},
             canInstallNow = { true }, work = { WorkManager.getInstance(app) },
-        ).also { runBlocking { it.fetch(140) } }
+        ).also { runBlocking { it.fetch(newer) } }
     }
 
     private fun inBackground() = runBlocking {
@@ -107,7 +111,7 @@ class UpdateWaitsForPickerTest {
         scenario.onActivity { shadowOf(it).receiveResult(asked, Activity.RESULT_CANCELED, null) }
         coveredBy(scenario)
         assertEquals("answered, and Carry is closed", LiveUpdates.Outcome.Started, inBackground())
-        assertEquals(listOf(140), installs)
+        assertEquals(listOf(newer), installs)
     }
 
     @Test
