@@ -9,6 +9,11 @@ waiting on madCode is done, or 7am Pacific (14:00 UTC), whichever comes first. A
 that the app's update system (the `jekyll-poster-debug` release) matches the other apps' (Carry,
 newspaperss), and puts any difference in BACKLOG.md.
 
+### Cycle 50 — audit: the update system, against Carry's and newspaperss's
+
+- Compare against the shared practice and the other apps, not only against the app's own docs:
+  the gap (no in-app update check) was in `practices/android.md` all along.
+
 ### Cycle 48 — audit: per-blog templates, before building them
 
 - Look for what the platform already does before building a setting: Jekyll's `defaults:` gives
