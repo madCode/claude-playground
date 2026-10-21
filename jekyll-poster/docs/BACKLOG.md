@@ -7,12 +7,14 @@ and moves it to Done.
 
 - [ ] More of the device live check (`LiveOnTheDeviceTest`): a photo, an edit and a delete
   from the screens, and an edit conflict made by the workflow committing while the post is open.
-- [ ] Per-blog templates: front matter a new post starts with.
 - [ ] Sign in with GitHub and a TalkBack listen, by a person, now and then
   ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)).
 
 ## Waiting on madCode
 
+- [ ] Per-blog templates for new posts: Jekyll's `defaults:` already covers front matter for every
+  post. Build a small "New posts start with" (tags, categories, a body), or drop it?
+  ([#182](https://github.com/madCode/claude-playground/issues/182))
 - [ ] A "keep private" word list per blog, checked before every publish (obyde's find/replace,
   for posts not from Obsidian): should a listed word be replaced, or block the publish until
   it's taken out?

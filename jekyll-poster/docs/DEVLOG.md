@@ -29,6 +29,11 @@ Times are when each cycle landed, Pacific.
 
 ## Wed 21 Oct
 
+### Cycle 48: per-blog templates, checked before building
+- **Found:** Jekyll's `defaults:` in `_config.yml` already gives every post its front matter, and
+  the app reads it. A phone template would add only starting tags, categories and a body. Asked
+  madCode whether to build that or drop it: #182.
+
 ### Cycle 46: backlog grooming
 - **Found:** Unpublish already works by typing `published: false` in More front matter, so it
   became a one-tap cycle. Collections and Hugo need madCode's call: issues #179 and #180. The
