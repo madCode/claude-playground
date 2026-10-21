@@ -36,6 +36,18 @@ Times are when each cycle landed, Pacific.
   - Its publish job waits its turn rather than cancelling the one before mid-upload.
   - The build's actions are pinned to commits, and the Gradle wrapper is checked.
   - The README says how to update.
+### Cycle 47: Hide from the site
+- **Why:** taking a post off the site meant typing `published: false` into More front matter.
+- **Changed:** the editor's menu, while editing a post, has **Hide from the site** and, once
+  hidden, **Show on the site again**. Home marks the post Hidden; the notification says it's off
+  the site rather than live, and doesn't open its old address.
+- **Review caught:**
+  - Jekyll also hides on `no`, `off`, `False` and an empty `published:`; the blog list missed
+    those already.
+  - Hiding moved the post's other keys and could be refused over keys the writer never touched.
+    Now only the one line changes.
+  - A hide waited for a random time; now it goes out at once, like a delete.
+  - An earlier update of the post went on saying it was live.
 
 ### Cycle 44: front matter the app can't follow, and Sign in with GitHub twice, on the emulator
 - **Asked for:** madCode's morning-page questions: can the emulator do these two laptop checks?
