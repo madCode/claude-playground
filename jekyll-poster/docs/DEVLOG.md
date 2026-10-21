@@ -36,6 +36,11 @@ Times are when each cycle landed, Pacific.
   sign-in (the pretend GitHub approves the code).
 - **Found:** two different tokens for one account are two sign-ins by design: each fine-grained
   token reaches its own blogs. So the check is Sign in with GitHub's, not the tokens'.
+### Cycle 47: Hide from the site
+- **Why:** taking a post off the site meant typing `published: false` into More front matter.
+- **Changed:** the editor's menu, while editing a post, has **Hide from the site** and, once
+  hidden, **Show on the site again**. Home marks the post Hidden; the notification says it's off
+  the site rather than live, and doesn't open its old address.
 
 ### Cycle 43: Only connect through a VPN, with a real one
 - **Asked for:** the last laptop check, in CI, once madCode added the `PROTON_WG_CONF` secret.

@@ -40,6 +40,20 @@ fun extraFrontMatterProblem(yaml: String): String? {
     }
 }
 
+/** Whether [yaml], a post's "more front matter", keeps it off the site: `published: false`. */
+fun hidesPost(yaml: String?): Boolean =
+    yaml != null && FrontMatterDocument.parse("---\n$yaml\n---\n").values()["published"] == false
+
+/**
+ * [yaml] with `published: false`, so Jekyll leaves the post out of the site while its file stays,
+ * or, to show it again, without the key: Jekyll publishes by default. The rest is kept as written.
+ */
+fun withPostHidden(yaml: String, hidden: Boolean): String {
+    val doc = FrontMatterDocument.parse("---\n$yaml\n---\n")
+    doc.set("published", if (hidden) false else null)
+    return doc.render().removePrefix("---\n").removeSuffix("---\n").trimEnd('\n')
+}
+
 object PostWriter {
     /** Keys the editor writes itself; the rest is the writer's "more front matter". */
     val MANAGED = setOf("layout", "title", "date", "categories", "category", "tags", "tag")

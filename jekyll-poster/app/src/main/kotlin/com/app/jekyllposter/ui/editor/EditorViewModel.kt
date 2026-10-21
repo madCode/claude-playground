@@ -20,6 +20,7 @@ import com.app.jekyllposter.core.jekyll.MarkdownEdits
 import com.app.jekyllposter.core.jekyll.Preview
 import com.app.jekyllposter.core.jekyll.Taxonomy
 import com.app.jekyllposter.core.jekyll.Term
+import com.app.jekyllposter.core.jekyll.withPostHidden
 import com.app.jekyllposter.core.obsidian.ObsidianNote
 import com.app.jekyllposter.data.CachedPost
 import com.app.jekyllposter.data.Destination
@@ -373,6 +374,16 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         // writing here would replace keys the writer never saw.
         if (text?.editingPath != null && text?.extraFrontMatter == null) return
         edit { it.copy(extraFrontMatter = yaml) }
+    }
+
+    /**
+     * Sends the post being edited with `published: false` ([hidden]) or without it, along with
+     * whatever else the writer changed: Jekyll then leaves it off the site, or shows it again.
+     */
+    fun setHidden(hidden: Boolean) {
+        val extra = text?.takeIf { it.editingPath != null }?.extraFrontMatter ?: return
+        setExtraFrontMatter(withPostHidden(extra, hidden))
+        publish(Destination.Posts)
     }
 
     fun frontMatterShown() = flags.update { it.copy(frontMatterBlocked = null) }

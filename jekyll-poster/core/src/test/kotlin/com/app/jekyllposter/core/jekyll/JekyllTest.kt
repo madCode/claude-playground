@@ -156,4 +156,21 @@ class MoreFrontMatterTest {
         assertTrue(extraFrontMatterProblem("just words")!!.contains("isn't YAML"))
         assertTrue(extraFrontMatterProblem("title: Sneaky")!!.contains("`title`"))
     }
+
+    @Test fun hidingAPostSetsPublishedFalseAndShowingTakesItOut() {
+        val extra = "# card\nimage: /a.png\nexcerpt: |\n  Two\n  lines"
+        val hidden = withPostHidden(extra, hidden = true)
+        assertEquals("$extra\npublished: false", hidden)
+        assertTrue(hidesPost(hidden))
+        assertEquals(null, extraFrontMatterProblem(hidden))
+        assertEquals(extra, withPostHidden(hidden, hidden = false))
+        assertFalse(hidesPost(extra))
+        // A post with no other keys, and one already saying `published: true`.
+        assertEquals("published: false", withPostHidden("", hidden = true))
+        assertEquals("image: /a.png\npublished: false", withPostHidden("image: /a.png\npublished: true", hidden = true))
+        assertEquals("", withPostHidden("published: false", hidden = false))
+        // Jekyll hides only on the boolean: a quoted "false" is published.
+        assertFalse(hidesPost("published: \"false\""))
+        assertFalse(hidesPost(null))
+    }
 }

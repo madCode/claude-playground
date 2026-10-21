@@ -1,6 +1,7 @@
 package com.app.jekyllposter.ui
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -55,5 +56,31 @@ class EditFlowTest {
         }
         // The rest of the post, kept as it was.
         assertTrue(github.files().getValue("_posts/2025-04-20-reading-list.md").toString(Charsets.UTF_8).contains("image: /assets/img/books.png"))
+    }
+
+    @Test fun hidingAPostKeepsItsFileWithPublishedFalseAndShowingTakesThatOut() {
+        val path = "_posts/2025-04-20-reading-list.md"
+        fun post() = github.files().getValue(path).toString(Charsets.UTF_8)
+        val before = post()
+        runBlocking { app.signIn() }
+        compose.setContent { PosterTheme { PosterNavHost(app.container) } }
+        compose.waitFor("What I read in April")
+        compose.onNodeWithText("What I read in April").performClick()
+        compose.waitFor("A few books, a few essays.")
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Hide from the site").performClick()
+
+        compose.waitUntilLooped(15_000) { post().contains("published: false") }
+        // Only the key added: the rest of the post as it was.
+        assertEquals(before.lines().filter { it != "published: false" }, post().lines().filter { it != "published: false" })
+        compose.waitFor("Hidden · the site is rebuilding…")
+
+        // The blog's copy, under the phone's own row for the edit just sent.
+        compose.onAllNodesWithText("What I read in April")[1].performClick()
+        compose.waitFor("A few books, a few essays.")
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Show on the site again").performClick()
+        compose.waitUntilLooped(15_000) { !post().contains("published") }
+        assertEquals(before, post())
     }
 }

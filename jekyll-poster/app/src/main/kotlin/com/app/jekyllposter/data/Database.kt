@@ -20,6 +20,7 @@ import androidx.room.Update
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.app.jekyllposter.core.jekyll.extraFrontMatterProblem
+import com.app.jekyllposter.core.jekyll.hidesPost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -113,6 +114,9 @@ data class Draft(
     /** Why the "more front matter" can't be published, or null; only checked once it's changed. */
     val frontMatterProblem: String?
         get() = extraFrontMatter?.takeIf { it != extraFrontMatterOpened }?.let { extraFrontMatterProblem(it) }
+
+    /** The post says `published: false`: Jekyll leaves it off the site, though its file stays. */
+    val hidden: Boolean get() = hidesPost(extraFrontMatter)
 
     val isEmpty: Boolean get() = title.isBlank() && body.isBlank() && extraFrontMatter.isNullOrBlank() && images.isEmpty()
 

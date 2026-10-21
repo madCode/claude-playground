@@ -256,6 +256,18 @@ doesn't want to open a laptop and make a commit for every post.
 - If the post changed on GitHub since it was opened, even in the moment of committing, Update
   refuses and says to discard and start from the new version.
 
+## Hiding a post from the site
+
+- **Hide from the site** (the menu, while editing a post) adds `published: false` to its front
+  matter and sends it as an Update, with the writer's other changes. Jekyll then leaves it out of
+  the site; the file stays on GitHub, and Home marks it Hidden.
+- **Show on the site again** takes the key out: Jekyll publishes by default.
+- When the site has rebuilt, the notification says the post is off the site, and opens the app,
+  not the address that no longer answers.
+- A public repository is still readable on GitHub: hiding is for the site, not for privacy.
+- Not offered for a Jekyll draft, which isn't on the site, or for an edit opened before the app
+  kept front matter, which doesn't know the post's other keys.
+
 ## Deleting a post from the blog
 
 - **Delete from the blog** (the menu, while editing a post or Jekyll draft) asks first, then
