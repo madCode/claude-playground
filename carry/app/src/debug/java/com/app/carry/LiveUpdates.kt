@@ -264,7 +264,13 @@ internal class LiveUpdates(
             if (!UpdateInstaller.start()) return@withContext Outcome.Busy
             var handedOver = false
             try {
-                val id = stage(apk)
+                val id = try {
+                    stage(apk)
+                } catch (e: IOException) {
+                    // Usually no room: tried again later, not counted against the build.
+                    log("Build $ready couldn't be staged: ${e.message}")
+                    return@withContext Outcome.Retry
+                }
                 // Asked again just before Android takes it: the copy takes a while, and the owner
                 // may have opened Carry and typed meanwhile.
                 if (busy()) {
@@ -276,10 +282,6 @@ internal class LiveUpdates(
                 Outcome.Started
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: IOException) {
-                // Usually no room: tried again later, not counted against the build.
-                log("Build $ready couldn't be staged: ${e.message}")
-                Outcome.Retry
             } catch (e: Exception) {
                 log("Build $ready couldn't be handed to Android: ${e.javaClass.simpleName} ${e.message}")
                 if (failed(prefs, ready)) Outcome.Failed else Outcome.Retry
@@ -346,6 +348,8 @@ internal class LiveUpdates(
                 PackageInstaller.STATUS_FAILURE_INVALID,
                 PackageInstaller.STATUS_FAILURE_INCOMPATIBLE,
                 PackageInstaller.STATUS_FAILURE_CONFLICT -> { reject(prefs, build); true }
+                // The phone's room, not the build: tried again on the next tap or check.
+                PackageInstaller.STATUS_FAILURE_STORAGE -> false
                 else -> failed(prefs, build)
             }
         }
