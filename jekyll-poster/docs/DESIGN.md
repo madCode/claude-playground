@@ -382,43 +382,31 @@ blog's switches, whichever blog is open when it goes.
 ## Updates (debug builds)
 
 A debug build from CI notices a newer one and installs it. Release builds, and builds made on a
-laptop, do neither; a release carries no installer and can't install apps (`check` fails if its
-manifest asks to).
+laptop, do neither; a release carries no installer (`check` fails if its manifest asks for one).
 
 - **Asking:** when the app comes to the front, at most every three hours, and every six hours in
-  the background. A GET of the `jekyll-poster-debug` release's public JSON; the newest build is
-  the highest `jekyll-poster-debug-<run>.apk` on it. A body over 256 KB isn't read, and the whole
-  request has 30 seconds. Any answer counts as asked, so a rate limit isn't spent again; no
-  answer doesn't.
-- **Nothing of the writer's goes with it.** No token: its client has none on it. It goes through
-  the VPN when any blog asks for one, like signing in, since it isn't for one blog. With no VPN up
-  nothing is sent, the download included, and the browser's download isn't offered either: the
-  tap says it waits for the VPN. The request record lists it as `updates`, the file host's `jwt`
-  hidden.
+  the background. It reads the `jekyll-poster-debug` release's public list; the newest build is
+  the highest `jekyll-poster-debug-<run>.apk` on it. Any answer counts as asked, so a rate limit
+  isn't spent again; no answer doesn't.
+- **Nothing of the writer's goes with it.** No token. It goes through the VPN when any blog asks
+  for one, like signing in; with no VPN up nothing is sent, and the browser isn't offered either.
+  The request record lists it as `updates`.
 - **Home says it:** "Build N is out", at the top of the list. A tap asks once for Android's
-  "Install unknown apps" switch, then downloads the fixed link, checks the file (this app,
-  signed with the same key, a higher build) and hands it to Android's installer. TalkBack hears
-  what the tap will do, and "Getting build N…" when it starts.
+  "Install unknown apps" switch, then downloads the build, checks it (this app, the same key, a
+  higher build) and hands it to Android's installer.
 - **What the key check proves:** little on its own. The debug key is in this public repository,
   so anyone can sign with it; the real trust is TLS to GitHub and who can write the release.
 - **Never under the writer.** Installing ends the app, so it waits while a post is being sent and
-  while a post's editor or Connect is open, including behind the camera, a picker or the
-  browser they open, and across a rotation. A tap that finds the editor open, or a post going
-  out, just before the hand-off keeps the checked file and installs once the post is left and
-  nothing is being sent (leaving by Publish sends one). The mark outlives the process, so a
-  background install waits for an editor Android will restore. Only opening the app from the
-  launcher afresh clears it: a share starts the app in the sharing app's task, while the
-  writer's own may still wait in recents.
-- **In the background**, a newer build downloads on Wi-Fi, and installs once the app has been
-  closed for ten seconds, nothing above holds it and there's room; it is tried again 30 minutes
-  later otherwise. If Android wants the writer to confirm, the background doesn't ask out of
-  nowhere: the tap does.
-- **Failures:** a tap's failure says why and opens the download in a browser (not around the VPN).
-  A file that fails its checks, five failed downloads or three failed installs of one build and
-  the app gives up on it: the tap opens the browser instead, and a newer build is tried again.
-  No room to copy the build into Android's installer isn't held against the build.
-
-The same as Carry's (`carry/docs/DESIGN.md`), which this was ported from.
+  while a post's editor or Connect is open (behind the camera or a picker too, and across a
+  rotation). A tap made then installs once the post is left and nothing is being sent.
+- **In the background**, a newer build downloads on Wi-Fi and installs once the app has been
+  closed for ten seconds and there's room; otherwise it's tried again later, 30 minutes further
+  apart each time. If Android wants the writer to confirm, the tap asks, not the background.
+- **Failures:** a tap's failure says why, and offers the download in a browser when that would
+  help (never around the VPN). A file that fails its checks, five failed downloads or three
+  failed installs of one build (at once, if Android says it can never install) and the app gives
+  up on it: the tap opens the browser instead, and a newer build is tried again. No room isn't
+  held against the build.
 
 ## The request record (debug builds)
 

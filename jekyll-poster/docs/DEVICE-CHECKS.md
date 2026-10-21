@@ -1,7 +1,7 @@
 # Device checks
 
 Every check of the app on a device: what CI's emulator runs on every PR, what it runs nightly,
-and on PRs that change the app's code, against real GitHub, and the two a person runs now and then. The JVM tests (`:core:test`,
+and on PRs that change the app's code, against real GitHub, and the three a person runs now and then. The JVM tests (`:core:test`,
 `:app:testDebugUnitTest`) cover the rest, without a device.
 
 ## On CI's emulator, every PR
@@ -62,7 +62,8 @@ puts it on an emulator). Post only to the tester's blogs, and delete what you po
 
 The first needs a browser signed in as the tester, whose password and 2FA stay out of CI. The
 second needs someone listening: CI's accessibility checks find missing labels, not labels that
-make no sense.
+make no sense. The third needs a phone with an older CI build: CI can't watch Android's
+installer ask and update.
 
 ## Last checked by a person
 

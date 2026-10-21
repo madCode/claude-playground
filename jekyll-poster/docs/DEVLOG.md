@@ -7,27 +7,26 @@ Times are when each cycle landed, Pacific.
 
 ## Status
 
-- **Built so far:** night 1 built the app from nothing: sign-in two ways, the blog's own
-  categories, writing with a toolbar, photos without their location, publishing exactly once,
-  following the Pages build, safe edits and deletes, front matter, `_drafts`, a New post
-  shortcut, search and a zine look. Day 1 added the tag picker, Blog & privacy, posts from
-  Obsidian, `[[` links to posts, only connecting through a VPN, a one-tap setup for writing
-  anonymously, and three passes simplifying the code. Every code PR had a fresh-eyes review.
-- **Tried on a real blog:** posts from the phone land on the sample blog
-  ([madCode/sample-blog](https://github.com/madCode/sample-blog), live on Pages). The live check
-  workflow publishes and deletes one there through the app's own GitHub client.
-- **Used for real:** madCode has published to their own blog from the phone.
-- **Several blogs:** all three cycles are built: blogs under several accounts, a switcher from
-  the title, Remove, and privacy per blog. The switcher's UX pass found nothing to change; the
-  request-log audit reads the request record (cycle 35) from a run on the tester's blogs.
-- **Watching:** `EditFlowTest.tappingAPostOnTheBlogOpensItsTextToEdit` failed once with "addObserver
-  must be called on the main thread" (Compose composing off the main thread), in 1 of 9 full runs
-  with cycle 34's change and none of 40 before it. Count it before blaming the change.
-- **Waiting on you:** nothing. The tester account is set up
-  ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)), and the live check posts to its three blogs nightly.
-  The Android SDK is in the cloud environment, at `/opt/android-sdk`.
+- **Built:** sign-in two ways; several blogs and accounts; writing with photos stripped of their
+  location; notes from Obsidian; safe edits, deletes and Hide from the site; publishing exactly
+  once. Privacy is per blog, Only connect through a VPN included. Debug builds say when a newer
+  build is out, and install it.
+- **Checked:** CI's emulator runs the screens, shares, the camera, rotation, large text, the
+  launcher shortcut and a killed app on every PR. Each night, and on PRs that change the app,
+  a live check on the tester's real blogs covers two sign-ins, privacy at its most, a photo, an
+  edit, a delete, an edit conflict and a real VPN.
+- **Used for real:** madCode publishes to their own blog from the phone.
+- **Waiting on you:** four questions in [BACKLOG.md](BACKLOG.md), and three checks by a person
+  ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)): Sign in with GitHub, a TalkBack listen, and updating
+  itself on a phone. None has been run yet.
 
 ## Wed 21 Oct
+
+### Cycle 54: a second documentation pass
+- **Fixed:** DESIGN's Updates section, cut to what a person needs and corrected (the background
+  retries further apart each time; not every failure offers the browser). DEVICE-CHECKS counts
+  three person checks. BACKLOG lists the cycles it skipped. This Status section, rewritten: it
+  stopped at day 1.
 
 ### Cycle 52: debug builds say when a newer one is out, and install it
 - **Asked for:** the rule every app here follows (practices/android.md): the app says when a
