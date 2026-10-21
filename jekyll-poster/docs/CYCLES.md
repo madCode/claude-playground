@@ -14,6 +14,11 @@ newspaperss), and puts any difference in BACKLOG.md.
 - Have the auditor check claims against the code, not only read for style: most of what it
   found was a doc behind the code (a schedule, a key list), not wording.
 
+### Cycle 50 — audit: the update system, against Carry's and newspaperss's
+
+- Compare against the shared practice and the other apps, not only against the app's own docs:
+  the gap (no in-app update check) was in `practices/android.md` all along.
+
 ### Cycle 48 — audit: per-blog templates, before building them
 
 - Look for what the platform already does before building a setting: Jekyll's `defaults:` gives

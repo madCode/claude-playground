@@ -39,6 +39,18 @@ Times are when each cycle landed, Pacific.
   - DESIGN had a plan and some history in it, and said one thing twice.
   - The tester-account doc still asked for setup done on 20 Oct.
   - BACKLOG's Done list now starts at cycle 40; DEVLOG has the rest.
+### Cycle 50: the update system, checked against Carry's and newspaperss's
+- **Found:** Jekyll Poster publishes a debug build that installs over the last, like the others,
+  but it never says a newer one is out; Carry and newspaperss check, download on Wi-Fi and
+  install. It also lacks the numbered APK, its publish job can cancel itself mid-upload, and its
+  actions aren't pinned. All four are in BACKLOG.md's Next.
+
+### Cycle 49: a photo, an edit, a delete and an edit conflict, against the real GitHub
+- **Why:** the last item in BACKLOG.md's Next that isn't waiting on madCode.
+- **Changed (tests and CI):** the nightly device live check shares a photo with a location into
+  the app, publishes it, and checks the copy on GitHub has none. It then edits the post and
+  deletes it from the screens. A second test changes a post on GitHub while it's open on the
+  phone: Update refuses, and the other change stays.
 
 ### Cycle 48: per-blog templates, checked before building
 - **Found:** Jekyll's `defaults:` in `_config.yml` already gives every post its front matter, and
