@@ -111,4 +111,21 @@ class OnTheDeviceTest {
         assertTrue(github.text(postFile("a-good-read")!!)!!.contains("[Good](https://example.com/read)"))
         assertEquals(1, runBlocking { app.container.database.drafts().snapshotCount() })
     }
+
+    @Test fun aPostWithFrontMatterTheAppCantFollowIsLeftAlone() {
+        // Pushed from a laptop: a `?` key, which an edit from the phone would have rewritten.
+        val path = "_posts/2025-05-05-odd-keys.md"
+        val odd = "---\ntitle: Odd keys\n? complex key\n: kept\n---\n\nText.\n"
+        github.push("Laptop", mapOf(path to odd))
+        val head = github.head
+        runBlocking { app.container.accounts.save(Account("sample", github.token, "sample", "sample-blog", "main")) }
+        ActivityScenario.launch(MainActivity::class.java)
+        waitFor("Odd keys")
+        compose.onNodeWithText("Odd keys").performClick()
+
+        waitFor("The app can't change this post without changing front matter")
+        assertTrue("The editor opened", compose.onAllNodes(androidx.compose.ui.test.hasTestTag("title")).fetchSemanticsNodes().isEmpty())
+        assertEquals(head, github.head)
+        assertEquals(odd, github.text(path))
+    }
 }
