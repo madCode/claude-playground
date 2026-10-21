@@ -653,9 +653,9 @@ the debug source set only; a release build has neither.
    never install (invalid, incompatible, a conflict), and Carry gives up on
    that build: the notice's tap then opens the download in a browser
    instead. A newer build is tried again. A failed download, no room on
-   the phone to copy the build into the installer, or the owner saying no
-   to Android's question, isn't counted: none of them is the build's
-   fault.
+   the phone (to copy the build into the installer, or Android's own "out
+   of storage" answer), or the owner saying no to Android's question, isn't
+   counted: none of them is the build's fault.
 
 The notice reads "Downloading build N…" and can't be tapped again until
 Android's installer has answered, so a second tap can't start a second
@@ -693,8 +693,10 @@ without a tap (`LiveUpdates`, `LiveWorkers`):
   share sheet, Settings and the browser all pause Carry while the owner is
   still using it. Carry marks on disk that it sent them there, and clears
   the mark when it is in front again; until then the install waits, even
-  in a process started after Carry's died. If the owner never comes back,
-  the install waits for the next time Carry is opened and closed.
+  in a process started after Carry's died. A session that ends there (a
+  post shared, then Home) never clears it, so after an hour it no longer
+  counts. Android's notification-permission dialog isn't marked: it is
+  brief and sits over Carry.
 - **The install waits for enough free storage**, like the download: the
   copy into Android's installer needs room too. If the copy fails anyway,
   it is tried again later and not counted toward giving up.

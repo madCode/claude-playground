@@ -43,7 +43,7 @@ internal class LiveUpdates(
     /** Why a background install must wait: Carry on screen or behind a screen it opened, or
      *  typing not saved. */
     private val busy: () -> Boolean = {
-        UpdateInstaller.inFront || prefs.getBoolean(AWAY, false) || UnsavedMark(context).isSet
+        UpdateInstaller.inFront || away(prefs, now()) || UnsavedMark(context).isSet
     },
     private val work: () -> WorkManager = { WorkManager.getInstance(context) },
 ) : SelfUpdater {
@@ -147,7 +147,7 @@ internal class LiveUpdates(
         else UpdateProblem(why, offerLink = true)
 
     override fun leaving() {
-        prefs.edit().putBoolean(AWAY, true).commit()
+        prefs.edit().putLong(AWAY, now()).commit()
     }
 
     override fun resumed(activity: Activity, unsaved: Boolean) {
@@ -318,6 +318,8 @@ internal class LiveUpdates(
         const val MAX_INSTALL_FAILURES = 3
         /** An approved install is over in well under this; one still unanswered was left. */
         val UNANSWERED_MILLIS = java.util.concurrent.TimeUnit.MINUTES.toMillis(5)
+        /** Longer than picking a folder or writing a post takes. */
+        val AWAY_MILLIS = java.util.concurrent.TimeUnit.HOURS.toMillis(1)
         /** With the backoff, about a quarter of an hour of a bad connection. */
         const val DOWNLOAD_TRIES = 5
         internal const val REJECTED = "rejected"
@@ -338,6 +340,11 @@ internal class LiveUpdates(
         fun needsConfirming(context: Context, build: Int) {
             if (build > 0) prefsOf(context).edit().putInt(ASKED, build).commit()
         }
+        /** Behind a screen Carry opened, lately. A session that ends there, with Home from the
+         *  app shared to, never comes back to clear it: after [AWAY_MILLIS] it no longer counts. */
+        private fun away(prefs: SharedPreferences, now: Long) =
+            now - prefs.getLong(AWAY, Long.MIN_VALUE / 2) in 0 until AWAY_MILLIS
+
         private const val FAILING = "failing"
         private const val FAILURES = "failures"
 
@@ -356,6 +363,8 @@ internal class LiveUpdates(
                 PackageInstaller.STATUS_FAILURE_INVALID,
                 PackageInstaller.STATUS_FAILURE_INCOMPATIBLE,
                 PackageInstaller.STATUS_FAILURE_CONFLICT -> { reject(prefs, build); true }
+                // The phone's room, not the build: tried again on the next check or tap.
+                PackageInstaller.STATUS_FAILURE_STORAGE -> false
                 else -> failed(prefs, build)
             }
         }

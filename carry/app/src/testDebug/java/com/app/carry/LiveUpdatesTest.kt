@@ -180,10 +180,12 @@ class LiveUpdatesTest {
         answer(140, PackageInstaller.STATUS_FAILURE_ABORTED)
         answer(140, PackageInstaller.STATUS_FAILURE_ABORTED)
         assertEquals("the owner saying no isn't a failure", SelfUpdater.Step.Install, updates.next(140, false, true))
-        answer(140, PackageInstaller.STATUS_FAILURE_STORAGE)
-        answer(140, PackageInstaller.STATUS_FAILURE_STORAGE)
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES) { answer(140, PackageInstaller.STATUS_FAILURE_STORAGE) }
+        assertEquals("nor is a full phone", SelfUpdater.Step.Install, updates.next(140, false, true))
+        answer(140, PackageInstaller.STATUS_FAILURE_BLOCKED)
+        answer(140, PackageInstaller.STATUS_FAILURE_BLOCKED)
         assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
-        answer(140, PackageInstaller.STATUS_FAILURE_STORAGE)
+        answer(140, PackageInstaller.STATUS_FAILURE_BLOCKED)
         assertEquals(SelfUpdater.Step.Browser, updates.next(140, false, true))
 
         answer(141, PackageInstaller.STATUS_FAILURE_CONFLICT)
@@ -356,7 +358,7 @@ class LiveUpdatesTest {
         fun real() = LiveUpdates(
             app, 130, prefs = prefs, dir = dir, download = { it.writeText("apk-140") }, inspect = { apks[it.readText()] },
             installed = { installed }, stage = { staged += 7; 7 }, commit = { id, b, bg -> committed += id to b; if (bg) background += b },
-            abandon = { abandoned += it }, canInstallNow = { true }, work = { work },
+            abandon = { abandoned += it }, canInstallNow = { true }, now = { clock }, work = { work },
         )
         UnsavedMark(app).set(false)
         val updates = real()
@@ -372,6 +374,23 @@ class LiveUpdatesTest {
         updates.paused()
         assertEquals("closed after coming back", LiveUpdates.Outcome.Started, real().inBackground())
         assertEquals(listOf(140), background)
+    }
+
+    @Test
+    fun `a session that ends in the app Carry shared to doesn't hold the install back for good`() {
+        UnsavedMark(app).set(false)
+        val updates = LiveUpdates(
+            app, 130, prefs = prefs, dir = dir, download = { it.writeText("apk-140") }, inspect = { apks[it.readText()] },
+            installed = { installed }, stage = { 7 }, commit = { id, b, _ -> committed += id to b },
+            abandon = { abandoned += it }, canInstallNow = { true }, now = { clock }, work = { work },
+        )
+        updates.fetched()
+        updates.leaving()
+        updates.paused()
+        clock += LiveUpdates.AWAY_MILLIS - 1
+        assertEquals(LiveUpdates.Outcome.Busy, updates.inBackground())
+        clock += 1
+        assertEquals(LiveUpdates.Outcome.Started, updates.inBackground())
     }
 
     @Test

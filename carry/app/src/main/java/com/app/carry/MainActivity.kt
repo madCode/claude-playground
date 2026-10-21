@@ -176,12 +176,12 @@ class MainActivity : ComponentActivity() {
         android.widget.Toast.makeText(this, text, android.widget.Toast.LENGTH_LONG).show()
 
     // Every screen of another app Carry opens passes through this: a plain startActivity, and the
-    // folder picker's launcher. One that fails to open leaves the mark until Carry's next return,
-    // which only delays a background install.
+    // folder picker's launcher. Not the notification permission's dialog, which is brief and
+    // over Carry itself. Marked once it opened, so a launch that throws leaves nothing behind.
     @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
     override fun startActivityForResult(intent: android.content.Intent, requestCode: Int, options: Bundle?) {
-        model.updater.leaving()
         super.startActivityForResult(intent, requestCode, options)
+        model.updater.leaving()
     }
 
     /** The normal case is a sync dropping the day's session in while the
