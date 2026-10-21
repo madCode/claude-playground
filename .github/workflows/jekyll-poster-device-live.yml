@@ -8,12 +8,20 @@ on:
     # 04:07 Pacific (summer time), after the live check's 03:37.
     - cron: '7 11 * * *'
   workflow_dispatch:
-  # A change to the check itself runs it.
+  # A change to the check, or to the app's own code, runs it: privacy and the VPN are only
+  # proven against the real GitHub, so a PR that could break them waits for it.
   pull_request:
     branches: [main]
     paths:
       - '.github/workflows/jekyll-poster-device-live.yml'
+      - 'jekyll-poster/app/src/main/**'
+      - 'jekyll-poster/app/src/debug/**'
+      - 'jekyll-poster/core/src/main/**'
+      - 'jekyll-poster/*.gradle.kts'
+      - 'jekyll-poster/*/build.gradle.kts'
+      - 'jekyll-poster/gradle/**'
       - 'jekyll-poster/app/src/androidTest/kotlin/com/app/jekyllposter/device/LiveOnTheDeviceTest.kt'
+      - 'jekyll-poster/app/src/androidTest/kotlin/com/app/jekyllposter/device/ScreenOnFailure.kt'
       - 'jekyll-poster/tools/wireguard-on-emulator.sh'
 
 permissions:
@@ -29,6 +37,8 @@ defaults:
 
 jobs:
   device-live:
+    # A fork's PR gets no secrets: the check would only fail.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:

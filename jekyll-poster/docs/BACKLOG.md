@@ -24,6 +24,7 @@ and moves it to Done.
 
 ## Done
 
+- [x] Cycle 44: on the emulator, front matter the app can't follow, and Sign in with GitHub twice
 - [x] Cycle 43: Only connect through a VPN, checked nightly with a real VPN (WireGuard and Proton)
 - [x] Cycle 42: the laptop's device checks on CI's emulator; the editor's picker and dialogs survive rotation
 - [x] Cycle 41: by the day alone, the commit is dated by the day too (madCode chose it, 2026-10-20)

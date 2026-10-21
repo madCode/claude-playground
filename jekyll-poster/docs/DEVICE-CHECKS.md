@@ -14,6 +14,8 @@ photos and notes arrive from another process with a real URI grant.
 |---|---|---|
 | Sign in, write, publish | `OnTheDeviceTest` | Signing in with a token, a post written in the editor goes out through the phone's own background work, and the "is live" notification shows |
 | A link from another app | `OnTheDeviceTest` | A link shared from outside the app starts one post with it as a Markdown link |
+| Front matter the app can't follow | `OnTheDeviceTest` | A post with a `?` key, pushed from elsewhere, isn't opened: Home says why, and nothing on GitHub changes |
+| Sign in with GitHub twice | `OnTheDeviceTest` | Signing in with GitHub again to add a second blog keeps one sign-in holding both (the pretend GitHub approves the code; entering it in a browser is the person's check below) |
 | A photo from another app | `FromOtherAppsTest` | It's added with its alt text, and the copy on GitHub has no location and doesn't say what made it |
 | A note from Obsidian | `FromOtherAppsTest` | The post takes the note's name as its title, `[[links]]` to the blog's posts become `post_url` links, `%%comments%%` are gone |
 | The camera | `FromOtherAppsTest` | A photo from the emulator's own camera app is added, and the original is deleted from the app's cache |
@@ -23,7 +25,7 @@ photos and notes arrive from another process with a real URI grant.
 ## On CI's emulator, nightly, against real GitHub
 
 "Jekyll Poster device live check" (`LiveOnTheDeviceTest`) runs these every night, and on a PR that
-changes it, on the tester's real blogs ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)). Its posts are
+changes it or the app's own code, on the tester's real blogs ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)). Its posts are
 deleted after, and its request record is kept for the privacy audit.
 
 | Check | It proves |

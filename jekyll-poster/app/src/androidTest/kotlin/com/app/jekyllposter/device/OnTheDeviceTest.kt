@@ -4,9 +4,11 @@ import android.Manifest
 import android.os.ParcelFileDescriptor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -33,6 +35,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class OnTheDeviceTest {
     @get:Rule val compose = createEmptyComposeRule()
+    @get:Rule val onFailure = ScreenOnFailure()
 
     private val app = ApplicationProvider.getApplicationContext<DeviceTestApp>()
     private val github get() = app.github
@@ -43,13 +46,11 @@ class OnTheDeviceTest {
         instrumentation.uiAutomation.grantRuntimePermission(app.packageName, Manifest.permission.POST_NOTIFICATIONS)
     }
 
-    @After fun close() {
-        device.pressHome()
-        github.close()
-    }
+    // No pressHome here: @After runs before the failure rule, whose picture should show the failure.
+    @After fun close() = github.close()
 
-    private fun waitFor(text: String, timeoutMs: Long = 20_000) =
-        compose.waitUntil(timeoutMs) { compose.onAllNodes(hasText(text, substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+    private fun waitFor(text: String, timeoutMs: Long = 20_000, substring: Boolean = true) =
+        compose.waitUntil(timeoutMs) { compose.onAllNodes(hasText(text, substring = substring), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
 
     private fun waitForTag(tag: String) =
         compose.waitUntil(20_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty() }
@@ -111,4 +112,60 @@ class OnTheDeviceTest {
         assertTrue(github.text(postFile("a-good-read")!!)!!.contains("[Good](https://example.com/read)"))
         assertEquals(1, runBlocking { app.container.database.drafts().snapshotCount() })
     }
+
+    @Test fun aPostWithFrontMatterTheAppCantFollowIsLeftAlone() {
+        // Pushed from a laptop: a `?` key, which an edit from the phone would have rewritten.
+        val path = "_posts/2025-05-05-odd-keys.md"
+        val odd = "---\ntitle: Odd keys\n? complex key\n: kept\n---\n\nText.\n"
+        github.push("Laptop", mapOf(path to odd))
+        val head = github.head
+        runBlocking { app.container.accounts.save(Account("sample", github.token, "sample", "sample-blog", "main")) }
+        ActivityScenario.launch(MainActivity::class.java)
+        waitFor("Odd keys")
+        compose.onNodeWithText("Odd keys").performClick()
+
+        waitFor("The app can't change this post without changing front matter")
+        assertTrue("The editor opened", compose.onAllNodes(androidx.compose.ui.test.hasTestTag("title")).fetchSemanticsNodes().isEmpty())
+        assertEquals(head, github.head)
+        assertEquals(odd, github.text(path))
+        assertEquals("A draft was made of it", 0, runBlocking { app.container.database.drafts().snapshotCount() })
+    }
+
+    @Test fun signingInWithGitHubTwiceKeepsOneSignIn() {
+        github.addRepository("garden", mapOf("_config.yml" to "title: The Garden\n".toByteArray()))
+        // The pretend GitHub answers as if the code were entered: the browser's part is a person's.
+        // Each sign-in gets a new token, as on GitHub, so only the app's own rule can merge them.
+        github.deviceApproved = true
+        github.newTokenPerSignIn = true
+        ActivityScenario.launch(MainActivity::class.java)
+        signInWithGitHub("Post to your Jekyll blog", "sample/sample-blog")
+        waitFor("New post")
+        openSettings()
+        compose.onNodeWithText("+ Add a sign-in").performScrollTo().performClick()
+        signInWithGitHub("Add a sign-in", "sample/garden")
+        // A blog beside others opens its Blog & privacy first.
+        waitFor("Blog & privacy", substring = false)
+        // Its title comes from its own repository, which the new token has to reach.
+        waitFor("The Garden · sample/garden")
+        device.pressBack()
+        waitFor("New post")
+
+        openSettings()
+        waitFor("2 blogs, 1 sign-in")
+    }
+
+    /** Signs in from the Connect screen headed [heading], exactly: Settings, being left, mentions it too. */
+    private fun signInWithGitHub(heading: String, repo: String) {
+        waitFor(heading, substring = false)
+        compose.onNodeWithText("Sign in with GitHub").performClick()
+        waitFor(repo, substring = false)
+        compose.onNodeWithText(repo).performClick()
+    }
+
+    private fun openSettings() {
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Settings").performClick()
+        waitFor("Your blogs")
+    }
 }
+
