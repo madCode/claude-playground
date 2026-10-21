@@ -114,8 +114,11 @@ class LiveOnTheDeviceTest {
                 val github = GitHubClient(http, blog.token)
                 // With an earlier run's post from the kill check, which the workflow only looks for.
                 github.files(blog.owner, blog.name, blog.branch).filter { "device-check-$stamp" in it.path || "device-check-run-" in it.path }.forEach { entry ->
-                    val sent = github.file(blog.owner, blog.name, blog.branch, entry.path) ?: return@forEach
-                    github.commit(blog.owner, blog.name, blog.branch, "Delete post: device check", listOf(FileChange.delete(entry.path)), expect = mapOf(entry.path to sent.sha))
+                    // One file refused doesn't leave the rest on the public blog.
+                    runCatching {
+                        val sent = github.file(blog.owner, blog.name, blog.branch, entry.path) ?: return@runCatching
+                        github.commit(blog.owner, blog.name, blog.branch, "Delete post: device check", listOf(FileChange.delete(entry.path)), expect = mapOf(entry.path to sent.sha))
+                    }
                 }
             }
         }
@@ -346,13 +349,15 @@ class LiveOnTheDeviceTest {
         return http.newCall(request).execute().use { check(it.isSuccessful) { "No $path: ${it.code}" }; it.body.bytes() }
     }
 
-    /** Opens the blog's copy of [title] from Home: below the phone's own row for it, if there is one. */
+    /**
+     * Opens the blog's copy of [title] from Home, the row after the phone's own rows for it, which
+     * come first and may show before the blog's list has loaded.
+     */
     private fun openFromTheBlog(title: String) {
+        val rows = runBlocking { app.container.database.drafts().list() }.count { it.title == title } + 1
         ActivityScenario.launch(MainActivity::class.java)
-        waitFor(title, TimeUnit.MINUTES.toMillis(2))
-        compose.onAllNodes(hasText(title), useUnmergedTree = true).fetchSemanticsNodes().size.let { n ->
-            compose.onAllNodes(hasText(title), useUnmergedTree = true)[n - 1].performClick()
-        }
+        compose.waitUntil(TimeUnit.MINUTES.toMillis(2)) { compose.onAllNodes(hasText(title), useUnmergedTree = true).fetchSemanticsNodes().size >= rows }
+        compose.onAllNodes(hasText(title), useUnmergedTree = true)[rows - 1].performClick()
         compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("body")).fetchSemanticsNodes().isNotEmpty() }
     }
 
