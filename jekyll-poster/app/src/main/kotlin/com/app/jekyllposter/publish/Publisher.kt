@@ -324,6 +324,8 @@ class Publisher(
                 error = null, updatedAt = System.currentTimeMillis(),
             ),
         )
+        // Earlier updates of the same post would go on saying what they said: live, when it's now hidden.
+        latest.blog?.let { drafts.deleteEarlierPublishedEditsOf(path, it, latest.id) }
         // The photos are on the blog now; the preview loads them from there.
         latest.images.forEach { File(it.file).delete() }
         runCatching { blogs.refresh(blog) }

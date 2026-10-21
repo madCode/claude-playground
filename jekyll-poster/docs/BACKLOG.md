@@ -16,7 +16,6 @@ and moves it to Done.
 ## Later
 
 - [ ] Per-blog templates: front matter a new post starts with
-- [ ] Unpublish (`published: false`), keeping the file
 - [ ] Collections other than posts; `collections_dir`
 - [ ] Hugo, or other static site generators on GitHub
 - [ ] A "keep private" word list per blog, checked before every publish (obyde's find/replace,
@@ -25,6 +24,7 @@ and moves it to Done.
 ## Done
 
 - [x] Cycle 52: debug builds say when a newer one is out, and install it
+- [x] Cycle 47: Hide from the site (`published: false`) and Show on the site again, from the editor's menu
 - [x] Cycle 44: on the emulator, front matter the app can't follow, and Sign in with GitHub twice
 - [x] Cycle 43: Only connect through a VPN, checked nightly with a real VPN (WireGuard and Proton)
 - [x] Cycle 42: the laptop's device checks on CI's emulator; the editor's picker and dialogs survive rotation

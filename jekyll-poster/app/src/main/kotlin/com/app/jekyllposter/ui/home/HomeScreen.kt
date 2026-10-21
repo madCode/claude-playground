@@ -216,7 +216,7 @@ private fun DraftRow(draft: Draft, waitingForVpn: Boolean, onClick: () -> Unit) 
         Text(draft.title.ifBlank { "Untitled" }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         val whimsy = LocalWhimsy.current
         val (label, isError) = draft.status(whimsy.live, waitingForVpn, nowUntil(draft.sendAfter))
-        val shown = if (draft.state == PostState.Published && draft.buildState == BuildState.Live) label + whimsy.liveMark else label
+        val shown = if (draft.state == PostState.Published && draft.buildState == BuildState.Live && !draft.hidden) label + whimsy.liveMark else label
         Text(
             shown, style = MaterialTheme.typography.bodySmall,
             color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2,
@@ -242,7 +242,12 @@ fun Draft.status(live: String = "live on the site", waitingForVpn: Boolean = fal
         else -> "Waiting to publish…"
     } to false
     PostState.Failed -> (if (destination == Destination.Delete) "Didn't delete: " else "Didn't publish: ") + error.orEmpty() to true
-    PostState.Published -> if (targetPath?.let { PostPath(it).isDraft } == true) "Saved to the blog's _drafts" to false else when (buildState) {
+    PostState.Published -> if (targetPath?.let { PostPath(it).isDraft } == true) "Saved to the blog's _drafts" to false else if (hidden) when (buildState) {
+        BuildState.Building -> "Hidden · the site is rebuilding…" to false
+        BuildState.Live -> "Hidden from the site; the file stays on GitHub" to false
+        BuildState.Failed -> "Hidden on GitHub, but the site build failed. Check Actions on GitHub." to true
+        BuildState.Unknown, null -> "Hidden from the site" to false
+    } else when (buildState) {
         BuildState.Building -> "Published · the site is rebuilding…" to false
         BuildState.Live -> "Published · $live" to false
         BuildState.Failed -> "Published, but the site build failed. Check Actions on GitHub." to true
