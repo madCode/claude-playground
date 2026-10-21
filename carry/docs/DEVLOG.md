@@ -49,8 +49,8 @@ were Carry's too.
   build for good, and the install wasn't held back while storage was low.
   Now neither counts, and the install waits for room as the download did.
 - The third, a hold on a screen let go of when the phone turns, has no
-  counterpart here: the unsaved mark lives in the ViewModel, which a turn
-  keeps.
+  counterpart here: the unsaved mark is on disk, set from the ViewModel,
+  which a turn keeps.
 
 ## 2026-10-20 — cycle 73: tests for the guards, and the whole-phone refusal stays
 

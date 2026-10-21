@@ -187,8 +187,10 @@ class MainActivity : ComponentActivity() {
 
     // Every result contract launches through these, so they see each picker without a hold at
     // every launch site. Permission requests don't, and an unanswered one is only asked again.
+    // A plain startActivity comes through here too, as -1: nothing answers it, so it isn't held.
     @Suppress("OVERRIDE_DEPRECATION")
     override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        if (requestCode < 0) return super.startActivityForResult(intent, requestCode, options)
         answers.sent(requestCode)
         try {
             super.startActivityForResult(intent, requestCode, options)

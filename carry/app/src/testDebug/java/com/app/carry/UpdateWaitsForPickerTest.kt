@@ -3,6 +3,7 @@ package com.app.carry
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -107,6 +108,14 @@ class UpdateWaitsForPickerTest {
         coveredBy(scenario)
         assertEquals("answered, and Carry is closed", LiveUpdates.Outcome.Started, inBackground())
         assertEquals(listOf(140), installs)
+    }
+
+    @Test
+    fun `another app opened with nothing to answer, like the share sheet, doesn't hold the install`() {
+        val scenario = launch()
+        scenario.onActivity { it.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com/carry-debug.apk"))) }
+        coveredBy(scenario)
+        assertEquals(LiveUpdates.Outcome.Started, inBackground())
     }
 
     @Test
