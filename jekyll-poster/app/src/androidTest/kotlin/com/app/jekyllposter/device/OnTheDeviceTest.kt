@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -140,10 +141,12 @@ class OnTheDeviceTest {
         signInWithGitHub("Post to your Jekyll blog", "sample/sample-blog")
         waitFor("New post")
         openSettings()
-        compose.onNodeWithText("+ Add a sign-in").performClick()
+        compose.onNodeWithText("+ Add a sign-in").performScrollTo().performClick()
         signInWithGitHub("Add a sign-in", "sample/garden")
         // A blog beside others opens its Blog & privacy first.
         waitFor("Blog & privacy", substring = false)
+        // Its title comes from its own repository, which the new token has to reach.
+        waitFor("The Garden · sample/garden")
         device.pressBack()
         waitFor("New post")
 

@@ -56,14 +56,16 @@ class FakeGitHub(
     val otherRuns = mutableMapOf<String, List<Triple<String, String, String?>>>()
 
     /** Whether the writer has entered the device-flow code on "github.com". */
-    var deviceApproved = false
+    @Volatile var deviceApproved = false
 
     /**
      * When set, each device-flow approval hands out a token of its own, as GitHub does, and every
      * one is accepted. Otherwise each approval gives [token].
      */
-    var newTokenPerSignIn = false
-    private val issued = mutableListOf<String>()
+    @Volatile var newTokenPerSignIn = false
+
+    // Shared with the repositories beside this one: a sign-in's token reaches them all.
+    private var issued = mutableListOf<String>()
 
     /** Set to make the tree listing say it was cut short, as GitHub does for huge repositories. */
     var truncated = false
@@ -82,7 +84,7 @@ class FakeGitHub(
      * reached through this one's [apiBase] and listed with this one's repositories.
      */
     fun addRepository(repo: String, files: Map<String, ByteArray>, owner: String = this.owner): FakeGitHub =
-        FakeGitHub(files, owner, repo, branch, token).also { others["$owner/$repo"] = it }
+        FakeGitHub(files, owner, repo, branch, token).also { it.issued = issued; others["$owner/$repo"] = it }
 
     /** Accounts served beside this one, by their token. */
     private val accounts = mutableMapOf<String, FakeGitHub>()

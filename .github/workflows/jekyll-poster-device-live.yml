@@ -17,9 +17,11 @@ on:
       - 'jekyll-poster/app/src/main/**'
       - 'jekyll-poster/app/src/debug/**'
       - 'jekyll-poster/core/src/main/**'
-      - 'jekyll-poster/app/build.gradle.kts'
+      - 'jekyll-poster/*.gradle.kts'
+      - 'jekyll-poster/*/build.gradle.kts'
       - 'jekyll-poster/gradle/**'
-      - 'jekyll-poster/app/src/androidTest/**'
+      - 'jekyll-poster/app/src/androidTest/kotlin/com/app/jekyllposter/device/LiveOnTheDeviceTest.kt'
+      - 'jekyll-poster/app/src/androidTest/kotlin/com/app/jekyllposter/device/ScreenOnFailure.kt'
       - 'jekyll-poster/tools/wireguard-on-emulator.sh'
 
 permissions:
