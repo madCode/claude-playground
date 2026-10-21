@@ -60,6 +60,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class LiveOnTheDeviceTest {
     @get:Rule val compose = createEmptyComposeRule()
+    @get:Rule val onFailure = ScreenOnFailure()
 
     private val app = ApplicationProvider.getApplicationContext<DeviceTestApp>()
     private val instrumentation = InstrumentationRegistry.getInstrumentation()

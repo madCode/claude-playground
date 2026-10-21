@@ -34,6 +34,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class OnTheDeviceTest {
     @get:Rule val compose = createEmptyComposeRule()
+    @get:Rule val onFailure = ScreenOnFailure()
 
     private val app = ApplicationProvider.getApplicationContext<DeviceTestApp>()
     private val github get() = app.github
@@ -44,10 +45,8 @@ class OnTheDeviceTest {
         instrumentation.uiAutomation.grantRuntimePermission(app.packageName, Manifest.permission.POST_NOTIFICATIONS)
     }
 
-    @After fun close() {
-        device.pressHome()
-        github.close()
-    }
+    // No pressHome here: @After runs before the failure rule, whose picture should show the failure.
+    @After fun close() = github.close()
 
     private fun waitFor(text: String, timeoutMs: Long = 20_000) =
         compose.waitUntil(timeoutMs) { compose.onAllNodes(hasText(text, substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }

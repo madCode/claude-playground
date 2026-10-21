@@ -15,7 +15,6 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.services.storage.TestStorage
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.UiDevice
@@ -32,8 +31,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TestWatcher
-import org.junit.runner.Description
 import org.junit.runner.RunWith
 
 /**
@@ -49,18 +46,7 @@ class FromOtherAppsTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val device = UiDevice.getInstance(instrumentation)
 
-    // Another app's screens leave no trace in the report, so a failure keeps what was on screen.
-    @get:Rule val onFailure = object : TestWatcher() {
-        override fun failed(e: Throwable, description: Description) {
-            val name = description.methodName
-            runCatching { TestStorage().openOutputFile("$name-window.xml").use { device.dumpWindowHierarchy(it) } }
-            runCatching {
-                val shot = File(app.cacheDir, "$name.png")
-                device.takeScreenshot(shot)
-                TestStorage().openOutputFile("$name.png").use { out -> shot.inputStream().use { it.copyTo(out) } }
-            }
-        }
-    }
+    @get:Rule val onFailure = ScreenOnFailure()
 
     @Before fun signIn() {
         runBlocking { app.container.accounts.save(Account("sample", github.token, "sample", "sample-blog", "main")) }
