@@ -2,6 +2,9 @@ package com.app.jekyllposter.device
 
 import android.Manifest
 import android.os.ParcelFileDescriptor
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasTestTag
 import androidx.exifinterface.media.ExifInterface
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -329,6 +332,24 @@ class LiveOnTheDeviceTest {
             throw e
         }
         setTunnel(tunnel, up = false)
+    }
+
+    /**
+     * Sign in with GitHub as far as a test can take it: the build has the GitHub App's client ID,
+     * so the button shows, and GitHub answers it with a device code, which proves the ID is one it
+     * knows with device flow on. Entering the code needs a browser signed in as the tester, which
+     * stays a person's check (docs/DEVICE-CHECKS.md). The code expires unused.
+     */
+    @Test fun signInWithGitHubGetsACodeFromGitHub() {
+        testName = "sign-in-with-github"
+        ActivityScenario.launch(MainActivity::class.java)
+        waitFor("Connect with a token")
+        compose.onNodeWithText("Sign in with GitHub").performClick()
+        waitFor("Enter this code on GitHub")
+        val deviceCode = SemanticsMatcher("a device code") { node ->
+            node.config.getOrNull(SemanticsProperties.Text).orEmpty().any { Regex("[A-Z0-9]{4}-[A-Z0-9]{4}").matches(it.text) }
+        }
+        assertTrue("No device code from GitHub on screen", compose.onAllNodes(deviceCode, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
     }
 
     private fun signInToA(): Blog {
