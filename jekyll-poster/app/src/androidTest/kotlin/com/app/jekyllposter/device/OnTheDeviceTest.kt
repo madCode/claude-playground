@@ -177,7 +177,7 @@ class OnTheDeviceTest {
         // As a person would: the app drawer, a long press on the icon, then New post.
         // On a just-booted emulator the launcher may still be loading and swallow the first swipe.
         device.pressHome()
-        check(device.wait(Until.hasObject(By.pkg(device.launcherPackageName)), 20_000)) { "The launcher never showed" }
+        device.waitForIdle()
         val icon = (1..3).firstNotNullOfOrNull {
             device.swipe(device.displayWidth / 2, device.displayHeight * 9 / 10, device.displayWidth / 2, device.displayHeight / 4, 20)
             device.wait(Until.findObject(By.text("Jekyll Poster")), 5_000)
