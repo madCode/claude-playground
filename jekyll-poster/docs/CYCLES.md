@@ -14,6 +14,10 @@ newspaperss), and puts any difference in BACKLOG.md.
 - Read the code a check is about before writing its test: two tokens for one account are two
   sign-ins on purpose (`AccountStore.save` merges only the same token, or GitHub App sign-ins). A
   live test written from the card's wording asserted the opposite.
+- A fake that hands out one token for every sign-in can't tell two merge rules apart. Make the
+  fake as distinct as the real thing where the rule under test depends on it.
+- A failure picture beats a guess: the sign-in test's failure was blamed on the notification
+  shade, but its picture showed the app on Blog & privacy, a screen the test didn't expect.
 
 ### Cycle 43 — build: Only connect through a VPN, with a real one
 
