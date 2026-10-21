@@ -89,12 +89,13 @@ class LiveInstallWorker(context: Context, params: WorkerParameters) : CoroutineW
 
         /**
          * After Android said there's no room. Delayed, since "storage not low" can hold while
-         * the installer still refuses, and appended, since the attempt that got that answer
-         * may not have finished yet.
+         * the installer still refuses. Replacing, since kept, the attempt that got that answer
+         * may still be finishing and the retry would be dropped; appended, one would pile up
+         * per answer.
          */
         fun enqueueAfterNoRoom(work: WorkManager) {
             val request = request().setInitialDelay(RETRY_MINUTES, TimeUnit.MINUTES).build()
-            work.enqueueUniqueWork(UNIQUE, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
+            work.enqueueUniqueWork(UNIQUE, ExistingWorkPolicy.REPLACE, request)
         }
 
         private fun request() = OneTimeWorkRequestBuilder<LiveInstallWorker>()

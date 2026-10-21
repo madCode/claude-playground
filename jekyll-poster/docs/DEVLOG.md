@@ -29,7 +29,7 @@ Times are when each cycle landed, Pacific.
   Ported from Carry.
 - **Review caught:** a retry at once could loop on a nearly full phone, since WorkManager's
   "storage not low" holds while Android's installer still refuses; and keeping an existing run
-  could drop the retry. Now delayed and appended.
+  could drop the retry. Now delayed, and replacing any earlier one.
 
 ### Cycle 54: a second documentation pass
 - **Fixed:** DESIGN's Updates section, cut to what a person needs and corrected (the background
