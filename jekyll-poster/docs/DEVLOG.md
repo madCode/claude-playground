@@ -22,14 +22,18 @@ Times are when each cycle landed, Pacific.
 
 ## Wed 21 Oct
 
-### Android's "not enough storage" isn't held against a build
-- **Fixed:** Android's own no-room answer counted as a failed install, so three on a full phone
-  gave up on the build for good, the same problem #187 fixed for the copy into Android's
-  installer. Now it isn't counted, and a downloaded build is tried again 30 minutes later.
-  Ported from Carry.
+### A full phone's build is tried again later
+- **Fixed:** since the entry below, Android's "storage" answer isn't counted, but nothing tried
+  the build again until the next six-hourly check. Now a downloaded build is tried again 30
+  minutes later, once storage isn't low.
 - **Review caught:** a retry at once could loop on a nearly full phone, since WorkManager's
   "storage not low" holds while Android's installer still refuses; and keeping an existing run
   could drop the retry. Now delayed, and replacing any earlier one.
+
+### Android saying there's no room isn't held against a build
+- **Fixed:** a failed copy into Android's installer already wasn't counted, but Android's own
+  "storage" answer after the hand-off still was: three of them gave up on the build for good.
+  Now neither counts, as DESIGN already said. Carry and newspaperss made the same change.
 
 ### Cycle 54: a second documentation pass
 - **Fixed:** DESIGN's Updates section, cut to what a person needs and corrected (the background
