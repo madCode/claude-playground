@@ -1,28 +1,41 @@
 # Device checks
 
-Most of what used to need the laptop's emulator runs on CI's, on every PR and on main. Two checks
-still need a person: run them now and then, when a change touches their path. Neither is on a
-schedule.
+Every check of the app on a device: what CI's emulator runs on every PR, what it runs nightly
+against real GitHub, and the two a person runs now and then. The JVM tests (`:core:test`,
+`:app:testDebugUnitTest`) cover the rest, without a device.
 
-## On CI's emulator
+## On CI's emulator, every PR
 
-"Jekyll Poster device tests" runs these on every PR that touches the app. `:sender` is a second
-app installed beside it, so photos and notes arrive from another process with a real URI grant.
+"Jekyll Poster device tests" runs these on every PR that touches the app, against a pretend
+GitHub on the emulator serving the sample blog. `:sender` is a second app installed beside it, so
+photos and notes arrive from another process with a real URI grant.
 
 | Check | Test | It proves |
 |---|---|---|
+| Sign in, write, publish | `OnTheDeviceTest` | Signing in with a token, a post written in the editor goes out through the phone's own background work, and the "is live" notification shows |
+| A link from another app | `OnTheDeviceTest` | A link shared from outside the app starts one post with it as a Markdown link |
 | A photo from another app | `FromOtherAppsTest` | It's added with its alt text, and the copy on GitHub has no location and doesn't say what made it |
 | A note from Obsidian | `FromOtherAppsTest` | The post takes the note's name as its title, `[[links]]` to the blog's posts become `post_url` links, `%%comments%%` are gone |
 | The camera | `FromOtherAppsTest` | A photo from the emulator's own camera app is added, and the original is deleted from the app's cache |
 | Rotation | `ScreensOnTheDeviceTest` | Text typed, the tag picker and its search survive turning the phone, and the post isn't made twice |
 | Large text and dark theme | `ScreensOnTheDeviceTest` | Home, the editor and Blog & privacy at twice the text size, in the dark, pass Android's accessibility checks (labels, touch targets, contrast). Their pictures are kept in the run's report, under `screens/` |
 
-"Jekyll Poster device live check" runs nightly against the tester's real blogs
-([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)). Its VPN test turns on *Only connect through a VPN*,
-checks a post waits with the tunnel off, then turns the WireGuard app's Proton tunnel on and
-checks the phone's address changed and the post went out.
+## On CI's emulator, nightly, against real GitHub
 
-What CI can't show:
+"Jekyll Poster device live check" (`LiveOnTheDeviceTest`) runs these every night, and on a PR that
+changes it, on the tester's real blogs ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)). Its posts are
+deleted after, and its request record is kept for the privacy audit.
+
+| Check | It proves |
+|---|---|
+| Two blogs, two sign-ins | Blog A signed in to and published from the screens, the organisation's blog added as a second sign-in; both posts go live on Pages and their notifications show |
+| Privacy at its most | Every switch of Set up for writing anonymously but the VPN: the commit says "Update blog", names the no-reply address, and is dated by the day; tracking codes are gone; a random send time is set. What GitHub kept goes in `privacy-report.json` |
+| Only connect through a VPN | With the WireGuard app's Proton tunnel off, a post waits and no request reaches GitHub; with it on, the phone's public address changes and the post goes out |
+
+"Jekyll Poster live check", a separate workflow with no emulator, publishes to and deletes from
+all three of the tester's blogs nightly through the app's GitHub client.
+
+## What CI can't show
 
 - The camera's real lens, and a location in its photos. The shared photo's location is checked
   instead.
