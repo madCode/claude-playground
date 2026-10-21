@@ -26,6 +26,7 @@ tester:
    repository (its Settings) and the tester uses **Use this template** instead.
 2. Make an organisation (free plan), `seafloor-studio-test-org`, and import a third copy into
    it as `jekyll-test-blog-org`.
+   The device live check uses A and the organisation's blog; the live check uses all three.
 3. On each: Settings → Pages → Deploy from a branch, `main`, `/ (root)`. A minute later the site
    is at `https://<owner>.github.io/<repo>/`.
 4. On the organisation: Settings → Personal access tokens → allow fine-grained tokens, without
@@ -83,5 +84,4 @@ studio's inbox).
 2. Paste the whole file into the secret `PROTON_WG_CONF`, as for the tokens above, then delete
    the download. Without it, the VPN test is skipped.
 
-Then tell Claude it's done. The first cycle after that runs the live check against all three
-blogs to show the tokens work.
+Set up on 2026-10-20. Redo the tokens (section 3) when they expire.

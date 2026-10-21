@@ -47,6 +47,16 @@ Times are when each cycle landed, Pacific.
   decisions under `testDebug`; the notice's taps. Each was broken on purpose and went red. A
   Gradle check fails a release whose manifest could install apps. What Android's installer does
   with the file can only be checked on a phone.
+### Cycle 53: a documentation pass
+- **Checked:** every doc against the code. Most claims held: labels, settings, numbers, test
+  names, scripts, secrets.
+- **Fixed:**
+  - The device live check runs on app PRs too, not only nightly.
+  - The numbered APK, Hide from the site and the killed-app guarantee were missing from some
+    docs.
+  - DESIGN had a plan and some history in it, and said one thing twice.
+  - The tester-account doc still asked for setup done on 20 Oct.
+  - BACKLOG's Done list now starts at cycle 40; DEVLOG has the rest.
 ### Cycle 50: the update system, checked against Carry's and newspaperss's
 - **Found:** Jekyll Poster publishes a debug build that installs over the last, like the others,
   but it never says a newer one is out; Carry and newspaperss check, download on Wi-Fi and

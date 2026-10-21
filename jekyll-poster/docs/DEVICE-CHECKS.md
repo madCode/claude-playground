@@ -1,7 +1,7 @@
 # Device checks
 
-Every check of the app on a device: what CI's emulator runs on every PR, what it runs nightly
-against real GitHub, and the two a person runs now and then. The JVM tests (`:core:test`,
+Every check of the app on a device: what CI's emulator runs on every PR, what it runs nightly,
+and on PRs that change the app's code, against real GitHub, and the two a person runs now and then. The JVM tests (`:core:test`,
 `:app:testDebugUnitTest`) cover the rest, without a device.
 
 ## On CI's emulator, every PR
@@ -23,7 +23,7 @@ photos and notes arrive from another process with a real URI grant.
 | Rotation | `ScreensOnTheDeviceTest` | Text typed, the tag picker and its search survive turning the phone, and the post isn't made twice |
 | Large text and dark theme | `ScreensOnTheDeviceTest` | Home, the editor and Blog & privacy at twice the text size, in the dark, pass Android's accessibility checks (labels, touch targets, contrast). Their pictures are kept in the run's report, under `screens/` |
 
-## On CI's emulator, nightly, against real GitHub
+## On CI's emulator, against real GitHub
 
 "Jekyll Poster device live check" (`LiveOnTheDeviceTest`) runs these every night, and on a PR that
 changes it or the app's own code, on the tester's real blogs ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)). Its posts are

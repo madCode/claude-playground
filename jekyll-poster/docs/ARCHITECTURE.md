@@ -9,7 +9,8 @@
   - `jekyll/`: Jekyll's conventions. `PostPath` (what's a post, its date, slug and folder
     categories, whether it's a draft), `Slug`, `SiteConfig` (from `_config.yml`), `ConfigEdit`
     (changes one `_config.yml` line), `PostSummary`, `Taxonomy`, `PostWriter` (new posts and
-    edits, the date as a timestamp or a day), `parseJekyllDate`, `Permalink` (a post's address,
+    edits, the date as a timestamp or a day; `hidesPost` and `withPostHidden` for
+    `published: false`), `parseJekyllDate`, `Permalink` (a post's address,
     the site's address), `Images` (where a new photo goes and its Markdown), `MarkdownEdits`
     (the editor's toolbar) and `Preview` (commonmark, Liquid links, nothing the WebView would
     fetch past the app).
@@ -68,7 +69,7 @@
     run for its commit), `Notifier`.
   - `ui/`: Compose screens with a ViewModel each: `connect`, `home`, `editor` (the screen, its
     fields, toolbar, preview with `PreviewFetcher`, and term picker in their own files),
-    `settings` (with `BlogPrivacy`), `blogs` (the switcher's list, Your blogs and Remove, shared by
+    `settings` (with `BlogPrivacyScreen`), `blogs` (the switcher's list, Your blogs and Remove, shared by
     Home's sheet and Settings). `catching` is `runCatching` that lets cancellation through.
     `ui/theme`: the look as a `PosterStyle` (colours, type, shapes) and its `Whimsy` (marks,
     squiggles, row style, category colours, the stamp), read by small shared composables
@@ -109,3 +110,4 @@
    `error`; they edit and publish again.
 6. Delete from the blog is the same queue with `Destination.Delete`: the path is recorded in
    `targetPath` before the commit, and the row is deleted once the file is gone.
+7. Hide from the site is an edit carrying `published: false`, queued without a random time.
