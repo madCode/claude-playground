@@ -228,6 +228,7 @@ class LiveUpdatesTest {
         assertEquals("no room isn't the build's failure", SelfUpdater.Step.Install, updates.next(140, false, true))
         val retry = infos(LiveInstallWorker.UNIQUE).single()
         assertTrue("tried again once there's room", retry.constraints.requiresStorageNotLow())
+        assertTrue("not at once: the installer can refuse while storage isn't low", retry.initialDelayMillis > 0)
         repeat(LiveUpdates.MAX_INSTALL_FAILURES - 1) { answer(status = PackageInstaller.STATUS_FAILURE) }
         assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
         answer(status = PackageInstaller.STATUS_FAILURE)

@@ -25,8 +25,11 @@ Times are when each cycle landed, Pacific.
 ### Android's "not enough storage" isn't held against a build
 - **Fixed:** Android's own no-room answer counted as a failed install, so three on a full phone
   gave up on the build for good, the same problem #187 fixed for the copy into Android's
-  installer. Now it isn't counted, and the background install, which waits for free storage,
-  tries again. Ported from Carry.
+  installer. Now it isn't counted, and a downloaded build is tried again 30 minutes later.
+  Ported from Carry.
+- **Review caught:** a retry at once could loop on a nearly full phone, since WorkManager's
+  "storage not low" holds while Android's installer still refuses; and keeping an existing run
+  could drop the retry. Now delayed and appended.
 
 ### Cycle 54: a second documentation pass
 - **Fixed:** DESIGN's Updates section, cut to what a person needs and corrected (the background

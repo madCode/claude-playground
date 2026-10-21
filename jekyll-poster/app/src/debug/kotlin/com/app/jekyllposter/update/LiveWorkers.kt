@@ -84,12 +84,22 @@ class LiveInstallWorker(context: Context, params: WorkerParameters) : CoroutineW
         const val RETRY_MINUTES = 30L
 
         fun enqueue(work: WorkManager) {
-            val request = OneTimeWorkRequestBuilder<LiveInstallWorker>()
-                // Android's copy of the build needs room as the download did.
-                .setConstraints(Constraints.Builder().setRequiresStorageNotLow(true).build())
-                .setBackoffCriteria(BackoffPolicy.LINEAR, RETRY_MINUTES, TimeUnit.MINUTES)
-                .build()
-            work.enqueueUniqueWork(UNIQUE, ExistingWorkPolicy.KEEP, request)
+            work.enqueueUniqueWork(UNIQUE, ExistingWorkPolicy.KEEP, request().build())
         }
+
+        /**
+         * After Android said there's no room. Delayed, since "storage not low" can hold while
+         * the installer still refuses, and appended, since the attempt that got that answer
+         * may not have finished yet.
+         */
+        fun enqueueAfterNoRoom(work: WorkManager) {
+            val request = request().setInitialDelay(RETRY_MINUTES, TimeUnit.MINUTES).build()
+            work.enqueueUniqueWork(UNIQUE, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
+        }
+
+        private fun request() = OneTimeWorkRequestBuilder<LiveInstallWorker>()
+            // Android's copy of the build needs room as the download did.
+            .setConstraints(Constraints.Builder().setRequiresStorageNotLow(true).build())
+            .setBackoffCriteria(BackoffPolicy.LINEAR, RETRY_MINUTES, TimeUnit.MINUTES)
     }
 }
