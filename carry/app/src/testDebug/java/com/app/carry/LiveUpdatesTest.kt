@@ -131,16 +131,37 @@ class LiveUpdatesTest {
         assertFalse(UpdateInstaller.installing.value)
     }
 
+    /** Android refusing the session, which a retry meets again: unlike no room, it counts. */
+    private val refused = IllegalStateException("Session is sealed")
+
     @Test
     fun `three failed hand-offs give up on the build`() {
-        stageFails = IOException("No space left on device")
+        stageFails = refused
         val updates = updates()
         repeat(LiveUpdates.MAX_INSTALL_FAILURES - 1) {
-            assertEquals("Android couldn't take the update: No space left on device.", updates.tap()!!.why)
+            assertEquals("Android wouldn't take the update: Session is sealed.", updates.tap()!!.why)
             assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
         }
         assertTrue(updates.tap()!!.why.endsWith("Carry won't try this build again."))
         assertEquals(SelfUpdater.Step.Browser, updates.next(140, false, true))
+        assertFalse(UpdateInstaller.installing.value)
+    }
+
+    @Test
+    fun `no room to stage the build isn't held against it`() {
+        stageFails = IOException("No space left on device")
+        val updates = updates()
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES + 1) {
+            val problem = updates.tap()!!
+            assertEquals("Android couldn't take the update: No space left on device. Free some space, then tap again.", problem.why)
+            assertFalse(problem.offerLink)
+        }
+        assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
+
+        // In the background too: tried again later, never given up on.
+        updates.fetched()
+        repeat(LiveUpdates.MAX_INSTALL_FAILURES + 1) { assertEquals(LiveUpdates.Outcome.Retry, updates.inBackground()) }
+        assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
         assertFalse(UpdateInstaller.installing.value)
     }
 
@@ -172,7 +193,7 @@ class LiveUpdatesTest {
         // The fixed-name file still holds 135 while GitHub already lists 140.
         apks["apk-135"] = ApkFacts(app.packageName, 135, ourKey)
         serving = { "apk-135" }
-        stageFails = IOException("No space left on device")
+        stageFails = refused
         val updates = updates()
         repeat(LiveUpdates.MAX_INSTALL_FAILURES) { updates.tap(140) }
         assertEquals(SelfUpdater.Step.Browser, updates.next(135, false, true))
@@ -257,7 +278,7 @@ class LiveUpdatesTest {
     fun `while the newest file lags, a build given up on isn't downloaded and tried again`() {
         apks["apk-135"] = ApkFacts(app.packageName, 135, ourKey)
         serving = { "apk-135" }
-        stageFails = IOException("No space left on device")
+        stageFails = refused
         val updates = updates()
         repeat(LiveUpdates.MAX_INSTALL_FAILURES) { updates.tap(140) }
         assertEquals(LiveUpdates.MAX_INSTALL_FAILURES, stageCalls)
@@ -311,7 +332,8 @@ class LiveUpdatesTest {
     fun `a downloaded build is installed while Carry is closed with nothing unsaved`() {
         val updates = updates()
         assertEquals(LiveUpdates.Outcome.Done, updates.fetched())
-        assertEquals(1, infos(LiveInstallWorker.UNIQUE).size)
+        val install = infos(LiveInstallWorker.UNIQUE).single()
+        assertTrue("Android's copy needs room too", install.constraints.requiresStorageNotLow())
         assertEquals(LiveUpdates.Outcome.Started, updates.inBackground())
         assertEquals(listOf(140), background)
     }
@@ -422,7 +444,7 @@ class LiveUpdatesTest {
     fun `while the newest file lags, a build given up on isn't kept as the one to install`() {
         apks["apk-135"] = ApkFacts(app.packageName, 135, ourKey)
         serving = { "apk-135" }
-        stageFails = IOException("No space left on device")
+        stageFails = refused
         val updates = updates()
         repeat(LiveUpdates.MAX_INSTALL_FAILURES) { updates.tap(135) }
         repeat(LiveUpdates.DOWNLOAD_TRIES + 1) { assertEquals(LiveUpdates.Outcome.Retry, updates.fetched(140)) }

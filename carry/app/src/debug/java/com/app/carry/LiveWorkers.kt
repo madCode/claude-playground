@@ -84,6 +84,8 @@ class LiveInstallWorker(context: Context, params: WorkerParameters) : CoroutineW
 
         fun enqueue(work: WorkManager) {
             val request = OneTimeWorkRequestBuilder<LiveInstallWorker>()
+                // Android's copy of the build needs room as the download did.
+                .setConstraints(Constraints.Builder().setRequiresStorageNotLow(true).build())
                 .setBackoffCriteria(BackoffPolicy.LINEAR, RETRY_MINUTES, TimeUnit.MINUTES)
                 .build()
             work.enqueueUniqueWork(UNIQUE, ExistingWorkPolicy.KEEP, request)
