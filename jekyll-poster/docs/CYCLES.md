@@ -14,6 +14,14 @@ newspaperss), and puts any difference in BACKLOG.md.
 - Look for what the platform already does before building a setting: Jekyll's `defaults:` gives
   every post its front matter, and the app reads it. What's left was small enough to ask about.
 
+### Cycle 47 — build: Hide from the site
+
+- Falsify each fix alone. One test covering three fixes went red when all three were broken,
+  and stayed green when two of them were broken one at a time: the test app sends at once
+  whatever time is chosen, and the first odd YAML tried wasn't one the check refuses.
+- Read the JUnit XML, not `gradlew -q`'s silence: a loop whose restore failed printed nothing
+  either way.
+
 ### Cycle 46 — audit: backlog grooming
 
 - Check each backlog item against the code before planning it: Unpublish was already possible

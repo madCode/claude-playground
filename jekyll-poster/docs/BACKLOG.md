@@ -23,13 +23,10 @@ and moves it to Done.
 - [ ] Hugo, or other static site generators on GitHub: keep, narrow or drop?
   ([#180](https://github.com/madCode/claude-playground/issues/180))
 
-## Later
-
-- [ ] Unpublish (`published: false`), keeping the file
-
 ## Done
 
 - [x] Cycle 45: on the emulator, New post from the launcher, and the app killed while a post waits
+- [x] Cycle 47: Hide from the site (`published: false`) and Show on the site again, from the editor's menu
 - [x] Cycle 44: on the emulator, front matter the app can't follow, and Sign in with GitHub twice
 - [x] Cycle 43: Only connect through a VPN, checked nightly with a real VPN (WireGuard and Proton)
 - [x] Cycle 42: the laptop's device checks on CI's emulator; the editor's picker and dialogs survive rotation
