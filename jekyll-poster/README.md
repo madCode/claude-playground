@@ -30,6 +30,7 @@ tells you when GitHub Pages has rebuilt the site.
   New post button, and every category in its own colour.
 - **Preview, and a nudge when it's live.** See the post as a page before publishing; get a
   notification with its address once GitHub Pages has rebuilt.
+- **Hide a post.** Take it off the site (`published: false`) and put it back, from the editor.
 - **Quick to start.** Long-press the app's icon for New post, or share text, a link or photos
   to it.
 
@@ -52,4 +53,6 @@ GitHub App is set up ([how](docs/GITHUB_APP.md)), "Sign in with GitHub".
 - [Architecture](docs/ARCHITECTURE.md): how the code fits together.
 - [Backlog](docs/BACKLOG.md): what's next.
 - [Devlog](docs/DEVLOG.md): what changed each cycle, and why.
+- [Device checks](docs/DEVICE-CHECKS.md): what's checked on a device, and how.
+- [Tester account](docs/TESTER_ACCOUNT.md): the test blogs and their tokens.
 - [Existing solutions](docs/research/existing-solutions.md): what else is out there.

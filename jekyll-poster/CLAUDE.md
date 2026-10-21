@@ -22,8 +22,9 @@ claude-playground repository; run commands from this folder. The rules every pro
   session has no KVM for one). `DeviceTestRunner` swaps in `DeviceTestApp`: the real app, with
   `FakeGitHub` serving the sample blog on the device itself, over plain HTTP to localhost, which
   only debug builds allow. Each test runs in a process of its own with the app's data cleared.
-  `LiveOnTheDeviceTest` runs only in "Jekyll Poster device live check" (nightly): the real GitHub,
-  two of the tester's blogs, the request record kept as an artifact.
+  `LiveOnTheDeviceTest` runs only in "Jekyll Poster device live check" (nightly, by hand, and on
+  PRs that change the app's code): the real GitHub, two of the tester's blogs, the request record
+  kept as an artifact.
 - `sender/`: a test-only second app, installed beside the app in the device tests, so photos and
   notes are shared into it from another process.
 - `sample-blog/`: a small Jekyll blog with every front matter shape the app reads. It is the
@@ -48,7 +49,7 @@ emulator. The test blogs and their tokens: [docs/TESTER_ACCOUNT.md](docs/TESTER_
 JDK 21 and the Android SDK (compileSdk 37) are required. The cloud environment has the SDK at
 `/opt/android-sdk`: write `sdk.dir=/opt/android-sdk` into the gitignored `local.properties`;
 `tools/install-android-sdk.sh` installs it where it's missing. CI publishes main's debug APK to
-the `jekyll-poster-debug` release.
+the `jekyll-poster-debug` release, beside a numbered copy, `jekyll-poster-debug-<run>.apk`.
 
 Debug builds are installed and in use, so changing a Room entity means bumping the database
 version, adding a Migration with a `MigrationTest` case, and committing the new schema JSON in

@@ -9,6 +9,11 @@ waiting on madCode is done, or 7am Pacific (14:00 UTC), whichever comes first. A
 that the app's update system (the `jekyll-poster-debug` release) matches the other apps' (Carry,
 newspaperss), and puts any difference in BACKLOG.md.
 
+### Cycle 53 — audit: documentation pass
+
+- Have the auditor check claims against the code, not only read for style: most of what it
+  found was a doc behind the code (a schedule, a key list), not wording.
+
 ### Cycle 48 — audit: per-blog templates, before building them
 
 - Look for what the platform already does before building a setting: Jekyll's `defaults:` gives

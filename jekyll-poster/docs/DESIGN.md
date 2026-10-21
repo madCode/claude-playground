@@ -113,8 +113,9 @@ doesn't want to open a laptop and make a commit for every post.
   as a shared note's, so every retry sends the same text; one that matches no post (a post
   queued at the same moment, say) stays as written. An edit's hand-written `[[Exact title]]`
   becomes a link too. The preview shows them as links.
-- A post that others link to can't be deleted without failing the site's next build: Jekyll
-  can't find the `post_url`. The app doesn't check for links to it yet.
+- A post that others link to can't be deleted or renamed without failing the site's next build:
+  Jekyll can't find the `post_url`, Pages keeps the last good build, and the app says the build
+  failed. The app doesn't look for links to a post before deleting it.
 - Long-pressing the app's icon offers **New post**, straight into the editor.
 - A share starts one post: going back from it returns to the list.
 - A new post with nothing in it is dropped when you leave it. One left when the app closed under
@@ -156,12 +157,14 @@ doesn't want to open a laptop and make a commit for every post.
 - Obsidian comments, `%%like this%%`, go first, before the title, photos or links are read:
   they're the writer's notes to themselves, and Jekyll would show them. All of one goes, code
   inside included; one never closed runs to the end, as in Obsidian. In code, `%%` is text.
-- A note's `date:` is the post's date, in its file name and front matter. It's kept as written
-  and read when publishing, in the site's time zone as it is then: a bare day is midnight there,
-  as Jekyll reads it. Dating by the day only, it's that moment's day where Jekyll builds (UTC
-  without a site zone), which can be a day before the one the note shows. The editor shows it, and **Use the publish day** drops it (until a commit
-  was tried: then the post keeps its name and date, so it can't go out twice). A date the app
-  can't read is shown as such, and the post is dated when published.
+- A note's `date:` is the post's date, in its file name and front matter:
+  - Kept as written, and read when publishing in the site's time zone as it is then: a bare day
+    is midnight there, as Jekyll reads it.
+  - Dating by the day only, it's that moment's day where Jekyll builds (UTC without a site
+    zone), which can be a day before the one the note shows.
+  - The editor shows it. **Use the publish day** drops it, until a commit was tried: then the
+    post keeps its name and date, so it can't go out twice.
+  - A date the app can't read is shown as such, and the post is dated when published.
 - A future date is kept too: Jekyll won't show the post until then, though the app says live.
 - Saved to the blog's `_drafts` first, a note loses its date: drafts are undated, and Publish to
   the site dates them then.
@@ -173,8 +176,7 @@ doesn't want to open a laptop and make a commit for every post.
 - A site its own workflow builds with Jekyll 4 (its Gemfile says so, and a workflow runs
   `jekyll build`) gets a plain `post_url`: Jekyll 4 adds the baseurl itself.
 - The blog's post list is refreshed first: a `post_url` to a post that's gone fails the site's
-  build. So does deleting or renaming a post that others link to, later: Pages then keeps the
-  last good build and the app says the build failed.
+  build.
 - obyde's `find:` and `replace:` lists (Python regular expressions, in pairs) are taken out of
   the note first, then applied to everything else: title, text, tags, other front matter, and
   the file name the title may come from. So the words they hide don't reach the phone's draft
@@ -196,7 +198,7 @@ doesn't want to open a laptop and make a commit for every post.
   back byte for byte and not checked; changed, comments stay.
 - Changed text must be one `key: value` per line from the left edge. YAML the blog couldn't
   read, indented, `{…}`, `?` or `<<` keys, a `---` line, or a key the app sets (`title`,
-  `date`, `categories`, `tags`, `layout`) stops Publish, opens the section and says why.
+  `date`, `categories`, `category`, `tags`, `tag`, `layout`) stops Publish, opens the section and says why.
 - An edit opened before the app kept front matter shows it read-only: it can't know the
   post's other keys.
 
@@ -211,6 +213,8 @@ doesn't want to open a laptop and make a commit for every post.
 - A queued post goes to the blog it was written for, with that blog's sign-in, even if another
   blog is open by the time it goes; so does the check that it's live. Signed out of its blog,
   it fails and says to sign in to that blog.
+- A queued post goes out even if the app is closed or killed: Android starts its background
+  work.
 - A post that hasn't gone out yet (waiting for its time, a connection or the VPN) opens
   read-only with **Stop and edit**, which takes it back to a draft: change it, then Publish
   again (with a new random time, if that's on).
@@ -311,8 +315,6 @@ blog's switches, whichever blog is open when it goes.
     if any blog asks for it. Renewing a sign-in's token goes through it if any of that sign-in's
     blogs asks.
   - Switching blogs moves the preview to new connections, as turning the switch does.
-  - Switches kept for the whole app by an older version go to every blog on first use; signed
-    out, they wait for the next blog, and the VPN one still covers signing in meanwhile.
   - Each connection is bound to the VPN, and names are looked up through it: if the VPN drops
     mid-request, the request fails rather than going out over Wi-Fi. No SOCKS proxy is used
     (OkHttp would open it around the VPN); an HTTP proxy is reached through the VPN.

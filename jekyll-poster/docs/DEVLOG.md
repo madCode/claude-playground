@@ -29,6 +29,17 @@ Times are when each cycle landed, Pacific.
 
 ## Wed 21 Oct
 
+### Cycle 53: a documentation pass
+- **Checked:** every doc against the code. Most claims held: labels, settings, numbers, test
+  names, scripts, secrets.
+- **Fixed:**
+  - The device live check runs on app PRs too, not only nightly.
+  - The numbered APK, Hide from the site and the killed-app guarantee were missing from some
+    docs.
+  - DESIGN had a plan and some history in it, and said one thing twice.
+  - The tester-account doc still asked for setup done on 20 Oct.
+  - BACKLOG's Done list now starts at cycle 40; DEVLOG has the rest.
+
 ### Cycle 48: per-blog templates, checked before building
 - **Found:** Jekyll's `defaults:` in `_config.yml` already gives every post its front matter, and
   the app reads it. A phone template would add only starting tags, categories and a body. Asked
