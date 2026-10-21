@@ -62,7 +62,7 @@ jobs:
             ./gradlew :app:connectedDebugAndroidTest || { adb logcat -d > app/build/device-logcat.txt; adb logcat -d -b crash; exit 1; }
       - name: Keep the report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: jekyll-poster-device-report
           path: |

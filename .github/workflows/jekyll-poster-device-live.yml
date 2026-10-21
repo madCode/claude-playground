@@ -124,7 +124,7 @@ jobs:
           [ "$found" = 1 ] || echo "::warning::No request record or report came back."
       - name: Keep the request record and the report
         if: always() && steps.scan.outcome == 'success'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: jekyll-poster-device-live
           path: |
