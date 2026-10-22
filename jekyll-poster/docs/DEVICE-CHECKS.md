@@ -1,7 +1,7 @@
 # Device checks
 
 Every check of the app on a device: what CI's emulator runs on every PR, what it runs nightly,
-and on PRs that change the app's code, against real GitHub, and the three a person runs now and then. The JVM tests (`:core:test`,
+and on PRs that change the app's code, against real GitHub, and the five a person runs now and then. The JVM tests (`:core:test`,
 `:app:testDebugUnitTest`) cover the rest, without a device.
 
 ## On CI's emulator, every PR
@@ -69,12 +69,15 @@ puts it on an emulator). Post only to the tester's blogs, and delete what you po
 |---|---|---|---|
 | **Sign in with GitHub** | A change to sign-in, or the GitHub App | Sign in with GitHub; enter the code at github.com/login/device signed in as the tester, and authorise | The tester's blogs are listed; pick `jekyll-test-blog-a` and its posts load |
 | **A TalkBack listen** | A new screen, or a change to one's layout | Turn TalkBack on; go through New post and Publish | Every button says what it does; the blog switcher names the open blog |
+| **A scheduled post on a sleeping phone** | A change to scheduling or `SendTimeAlarm` | Schedule… a short post ten minutes ahead, lock the phone and leave it | It goes out within a few minutes of its time; Home said "Scheduled for…" until then |
+| **A notification for the other blog** | A change to notifications or switching blogs | With two blogs, publish to the one that isn't open | Its notification names that blog; a tap opens the app on it, saying "Switched to …" |
 | **Updating itself** | A change to `update/` | On a phone with an older CI debug build, open the app once a newer build is out; tap "Build N is out" | Android asks to allow installs, then to update; the app restarts on the newer build (Settings shows it), drafts intact |
 
 The first needs a browser signed in as the tester, whose password and 2FA stay out of CI. The
 second needs someone listening: CI's accessibility checks find missing labels, not labels that
 make no sense. The third needs a phone with an older CI build: CI can't watch Android's
-installer ask and update.
+installer ask and update. The fourth needs a phone left idle, which an emulator in CI isn't;
+the fifth, Android's own notification shade with two blogs signed in.
 
 ## Last checked by a person
 
@@ -83,3 +86,5 @@ installer ask and update.
 | Sign in with GitHub | Not yet |
 | A TalkBack listen | Not yet |
 | Updating itself | Not yet |
+| A scheduled post on a sleeping phone | Not yet |
+| A notification for the other blog | Not yet |
