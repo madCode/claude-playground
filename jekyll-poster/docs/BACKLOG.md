@@ -5,11 +5,10 @@ and moves it to Done.
 
 ## Next
 
-- [ ] On every PR's emulator: delete a local draft, Discard changes, Remove from this list; a
-  note's Use the publish day; the first Publish asking for notifications, and its tap; Remove a
-  sign-in and Send them now; search and category pills; Read the blog again; Forget the vault
-  folder; several photos at once, a note as text, Open with.
-- [ ] Sign in with GitHub, a TalkBack listen, and updating itself on a phone, by a person, now and then
+- [ ] Keep the live check's failure pictures: `ScreenOnFailure` writes them, but the workflow
+  uploads only the request record, so a failed screen step has only its stack trace to go on.
+- [ ] Sign in with GitHub, a TalkBack listen, updating itself, a scheduled post on a sleeping phone,
+  and a notification for the other blog, on a phone, by a person, now and then
   ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)).
 
 ## Not doing
@@ -29,6 +28,9 @@ madCode decided these on the morning page, 21 Oct. Each comes back if a writer a
 
 Cycles 40 on, newest first. Earlier cycles, and what madCode set up, are in [DEVLOG.md](DEVLOG.md).
 
+- [x] Cycle 64: close-out: a test for Forget the vault folder, the records, the coverage page and the morning page
+- [x] Cycles 62–63: the smaller journeys on every PR's emulator: Delete draft, Discard and Remove; Use the publish day; the notification prompt and its tap; removing a sign-in; search, pills and Read again; two photos at once, a note as text, Open with
+- [x] Cycle 58: #189 merged (a notification names its blog), #137 closed
 - [x] Cycles 59–61: the nightly live check walks the journeys through the screens: Hide and Show, Jekyll drafts, blog B added from Settings and a switch, Set up for writing anonymously, the random time's Stop and edit and Send now, offline, a revoked token, a delete conflict, the editor's tools
 - [x] Cycle 57: scheduled posts (Schedule… in the editor), woken by an alarm at their time
 - [x] Cycle 56: audit: Home's "double reads" in the request record are the publish's own reads, kept
