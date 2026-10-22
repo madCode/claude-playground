@@ -226,6 +226,9 @@ class LiveUpdatesTest {
         assertEquals("the writer saying no isn't a failure", SelfUpdater.Step.Install, updates.next(140, false, true))
         repeat(LiveUpdates.MAX_INSTALL_FAILURES + 1) { answer(status = PackageInstaller.STATUS_FAILURE_STORAGE) }
         assertEquals("a full phone isn't the build's failure", SelfUpdater.Step.Install, updates.next(140, false, true))
+        val retry = infos(LiveInstallWorker.UNIQUE).single()
+        assertTrue("tried again once there's room", retry.constraints.requiresStorageNotLow())
+        assertTrue("not at once: the installer can refuse while storage isn't low", retry.initialDelayMillis > 0)
         answer(status = PackageInstaller.STATUS_FAILURE)
         answer(status = PackageInstaller.STATUS_FAILURE_BLOCKED)
         assertEquals(SelfUpdater.Step.Install, updates.next(140, false, true))
