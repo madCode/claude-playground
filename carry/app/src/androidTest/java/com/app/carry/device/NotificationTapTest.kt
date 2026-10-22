@@ -70,11 +70,14 @@ class NotificationTapTest {
     }
 
     /** The After tab's weight box for the sheet's one row, going to the tab if it isn't showing. */
-    private fun weightBox() = device.wait(Until.findObject(By.desc(BOX)), 2_000)
+    private fun weightBox() = device.wait(Until.findObject(box()), 2_000)
         ?: run {
             device.wait(Until.findObject(By.text("After")), 10_000)!!.click()
-            device.wait(Until.findObject(By.desc(BOX)), 10_000)!!
+            device.wait(Until.findObject(box()), 10_000)!!
         }
+
+    // The text is on the field; its label is on a view inside it.
+    private fun box() = By.clazz("android.widget.EditText").hasChild(By.desc(BOX))
 
     @Test fun tappingTheNotificationKeepsUnsavedTyping() {
         open()
@@ -82,7 +85,7 @@ class NotificationTapTest {
         // Typed through the keyboard, as the owner types: UiAutomator's setText doesn't reach the box.
         weightBox().click()
         shell("input text 42")
-        assertTrue("The typing didn't land", device.wait(Until.hasObject(By.desc(BOX).text("42")), 10_000))
+        assertTrue("The typing didn't land", device.wait(Until.hasObject(box().text("42")), 10_000))
 
         // Not saved. The owner goes Home and taps the sheet's notice. Opening Carry scheduled the
         // hourly check, whose first run is at once: that run posted it, with the real intent.
