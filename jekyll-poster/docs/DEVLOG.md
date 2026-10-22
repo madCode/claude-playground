@@ -8,18 +8,42 @@ Times are when each cycle landed, Pacific.
 ## Status
 
 - **Built:** sign-in two ways; several blogs and accounts; writing with photos stripped of their
-  location; notes from Obsidian; safe edits, deletes and Hide from the site; publishing exactly
-  once. Privacy is per blog, Only connect through a VPN included. Debug builds say when a newer
-  build is out, and install it.
-- **Checked:** CI's emulator runs the screens, shares, the camera, rotation, large text, the
-  launcher shortcut and a killed app on every PR. Each night, and on PRs that change the app,
-  a live check on the tester's real blogs covers two sign-ins, privacy at its most, a photo, an
-  edit, a delete, an edit conflict and a real VPN.
+  location; notes from Obsidian; safe edits, deletes and Hide from the site; scheduled posts;
+  publishing exactly once. Privacy is per blog, Only connect through a VPN included. Debug builds
+  say when a newer build is out, and install it.
+- **Checked:** nearly every journey a writer takes is walked through the screens: on CI's
+  emulator with a pretend GitHub on every PR, or each night (and on PRs that change the app) on
+  the tester's real blogs, with a real VPN. The
+  [coverage page](https://claude.ai/artifact/F3gWC6RBgdtCwN5tgbPDdS) shows which.
 - **Used for real:** madCode publishes to their own blog from the phone.
-- **Waiting on you:** three checks by a person ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)): Sign in
-  with GitHub, a TalkBack listen, and updating itself on a phone. None has been run yet.
+- **Waiting on you:** checks by a person ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)): Sign in with
+  GitHub, a TalkBack listen, updating itself, a scheduled post on a sleeping phone, and a
+  notification for the other blog. None has been run yet.
 
 ## Thu 22 Oct
+
+### Cycle 64: close-out
+- **Built:** a test for Settings → Forget the vault folder, the last journey with no test that
+  doesn't need Android's folder picker.
+- **Updated:** the records, the journey coverage page and the morning page.
+
+### Cycles 62–63: the smaller journeys on every PR's emulator
+- **Built:** device tests, through the screens against the pretend GitHub:
+  - Delete draft, Discard changes and Remove from this list;
+  - a shared note's Use the publish day;
+  - the first Publish asking for notifications, and a failed build's notification opening the
+    app;
+  - removing a sign-in with a post still to go;
+  - Home's category pills, search and Read the blog again;
+  - two photos shared at once, a note as a text file, and Open with. The test sender app learnt
+    these three shares.
+- **Falsified on CI:** a pushed commit broke each journey; every new test went red, and nothing
+  else did. Then reverted.
+
+### Cycle 58: a notification names its blog; #137 closed
+- [#189](https://github.com/madCode/claude-playground/pull/189), cycle 55's PR, brought up to
+  date with main and merged. Its first build hung on CI and passed on a re-run. #137 is closed,
+  as madCode asked.
 
 ### Cycles 59–61: the nightly live check through the screens
 - **Asked:** madCode wants the nightly check to click through every journey a writer takes.
@@ -38,7 +62,12 @@ Times are when each cycle landed, Pacific.
 - **Review caught:** the Preview check could never pass (a WebView's text isn't in Compose's
   tree); the random-time steps could tap the closing editor instead of Home; the offline test
   could publish before the network dropped, and its cleanup could leave a post behind. Fixed.
-- **Left:** a `[[` link, which needs a post the tester's blog already builds.
+- **Also built:** a `[[` link to a post pushed as from a laptop, picked from the suggestions;
+  the site builds with it.
+- **First runs:** three tests failed on their first live run, each in the test, not the app.
+  Home composes only the rows on screen, so a draft listed last was never found. A network
+  check threw while the emulator's network came back. A tap on Add category landed on nothing
+  after typing in the body had scrolled it away.
 
 ### Cycle 57: scheduled posts
 - **Asked:** madCode asked for scheduled posts.

@@ -13,7 +13,16 @@ newspaperss), and puts any difference in BACKLOG.md.
 reads, scheduled posts, #189, the journey gaps nightly and on every PR, a close-out), until 7am
 Pacific (14:00 UTC), merging each PR once it's green.
 
+### Cycles 62–64 — build: the smaller journeys on every PR's emulator, and the close-out
+
+- Falsify device tests in one pushed commit and cancel the live run it queues: it touches the
+  app's code, and a live run on a break proves nothing and holds the queue for 15 minutes.
+
 ### Cycles 59–61 — build: the nightly live check through the screens
+
+- A screen step that times out on the device, and works in the every-PR suite, is usually
+  something off screen: Home composes only the rows on screen, and typing in the body scrolls
+  the term rows away. Search for the row, or do the step before the typing.
 
 - Have a reviewer trace a live test against the screens before pushing: each live run costs 15
   minutes, and the review found a check that could never pass (Preview is a WebView, read with
