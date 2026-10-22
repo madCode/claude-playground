@@ -1,7 +1,7 @@
 name: Carry device tests
 
-# Carry as installed, on an emulator: the folder grant, WorkManager, and a tap on a real
-# notification in the system's shade, which Robolectric only imitates. Slower than the unit job
+# Carry as installed, on an emulator: the folder grant, WorkManager, a tap on a real notification
+# in the system's shade, and a reboot, which Robolectric only imitates. Slower than the unit job
 # (an emulator has to boot), so it runs on its own.
 on:
   pull_request:
@@ -62,6 +62,8 @@ jobs:
             adb shell svc power stayon true
             adb logcat -c
             env -u GITHUB_RUN_NUMBER -u GITHUB_SHA ./gradlew :app:connectedDebugAndroidTest || { adb logcat -d > app/build/device-logcat.txt; adb logcat -d -b crash; exit 1; }
+            # Last, as it reboots the emulator: the hourly session check comes back on its own.
+            tools/reboot-check.sh app/build/outputs/apk/debug/app-debug.apk || { adb logcat -d > app/build/device-logcat.txt; exit 1; }
       - name: Keep the report
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
