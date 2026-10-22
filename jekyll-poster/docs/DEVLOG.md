@@ -44,6 +44,17 @@ Times are when each cycle landed, Pacific.
 
 ## Wed 21 Oct
 
+### Cycle 55: a notification names its blog
+- **Asked for:** the last unbuilt line of the several-blogs design (#137): a notification for a
+  blog that isn't open names it, and its tap switches to that blog and says so.
+- **Changed:** "“Bus notes” is live on Night Notes" and "Night Notes didn't rebuild" when another
+  blog is open; the lock screen still shows neither. A failed or hidden post's tap opens the app
+  on its own blog, where Home lists it, with "Switched to Night Notes". A live post's tap still
+  opens the post on the site, without switching the app behind the writer's back.
+- **The review caught:** any app could have switched the blog through the exported activity;
+  the tap could switch under an editor still open beneath; a cancelled build watch could lose
+  the notification. Now the tap goes through an alias only the app can start and opens a fresh
+  task, and the notification is posted whatever the lookup does.
 ### A full phone's build is tried again later
 - **Fixed:** since the entry below, Android's "storage" answer isn't counted, but nothing tried
   the build again until the next six-hourly check. Now a downloaded build is tried again 30
