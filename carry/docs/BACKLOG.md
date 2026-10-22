@@ -235,22 +235,6 @@ These are the open paths to one, hardest first.
   `aapt2 dump permissions` on the built APK said otherwise. `DESIGN.md`
   carries the table *(design:
   [new-session-notification](designs/new-session-notification.md))*
-- [ ] **Can WorkManager's `FOREGROUND_SERVICE` be stripped?** It is
-  for expedited or foreground work, and Carry has none: no
-  `setExpedited`, no `setForeground`. The built APK still lists it, with
-  WorkManager's `SystemForegroundService`, so `tools:node="remove"` should
-  drop it. `ACCESS_NETWORK_STATE` is no longer a candidate: the debug
-  build's update download waits for Wi-Fi (an unmetered constraint) and
-  its six-hourly check for any connection, and WorkManager needs it to
-  see either. Checked with `aapt2 dump permissions` on the built APKs
-  (cycle 72): debug and release both list it. NOT done blind: removing a
-  permission a library expects fails at runtime, in a background worker,
-  silently, which is the worst failure shape this app has. Needs an
-  install on a device and a session check confirmed running after a
-  reboot before it is believed. `WAKE_LOCK` and `RECEIVE_BOOT_COMPLETED`
-  must stay: the work would stop surviving reboots without them *(found by
-  checking the built APK rather than the source manifest; reworded in
-  cycle 72)*
 - [ ] **Read the class from the phone's own calendar** — *your call*.
   Looked at again 2026-10-20, when you asked for it if possible. Nothing
   useful can be built in Carry alone yet:
@@ -320,13 +304,22 @@ These are the open paths to one, hardest first.
   alone leaves the other half unexplained *(you asked)*
 
 ### Health and tidying
+- [ ] **A blank screenshot fails `CarryAppScreenTest` now and then.**
+  *An unknown format label is quoted back* came back flat ("captured a
+  blank image") on 3 of 8 CI builds of #204, all with the same app code,
+  and passed 10 of 10 run alone locally. Its neighbours that flatten
+  every time already skip `shoot()`. Count it over 20 CI-like runs (the
+  whole class) before changing anything *(found by cycle 75)*
+- [ ] **`tools:node="remove"` drops `FOREGROUND_SERVICE` whoever asks for
+  it.** A library added later that really runs foreground work would
+  build, pass `check` and fail at run time. When a dependency is added,
+  look at its manifest *(review of cycle 75)*
 - [ ] **More journeys on the emulator job.** It exists now (cycle 74),
   so the device-only rows of the journey map can each get a test with a
   made-up sheet: rotation and a killed app on a half-filled After tab
   with a real Activity, the share chooser opening with the preview's
-  text, a long session's last row above the navigation bar. The reboot
-  check comes first, as the `FOREGROUND_SERVICE` item waits on it
-  *(found by cycle 74)*
+  text, a long session's last row above the navigation bar *(found by
+  cycle 74; the reboot check came in cycle 75)*
 
 ### Owed on a device
 
@@ -470,6 +463,13 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **WorkManager's `FOREGROUND_SERVICE` removed.** Cycle 75 (#204):
+  CI's emulator job now reboots after the device tests
+  (`tools/reboot-check.sh`) and checks the hourly session check is
+  scheduled again without Carry being opened, and runs. It passed on
+  main's manifest first, then without the permission. `aapt2 dump
+  permissions` shows it gone from debug and release, and `check` fails if
+  it returns *(health)*
 - [x] **Tapping a notification keeps typed-but-unsaved numbers.**
   Cycle 74 (#201): Carry's first device test, `NotificationTapTest`, run
   on an emulator by the new `carry-device.yml` job on every PR touching

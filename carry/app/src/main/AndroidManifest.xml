@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!--
       POST_NOTIFICATIONS is this app's own, added 2026-10-16 so a session
       file landing in the synced folder can say so. The notification text
@@ -9,13 +10,21 @@
       src/debug/AndroidManifest.xml, to install newer CI builds of itself.
       A release build asks for neither; `check` fails if it does.
 
-      THIS FILE IS NOT THE WHOLE ANSWER. androidx.work brings four more
-      (WAKE_LOCK, RECEIVE_BOOT_COMPLETED, ACCESS_NETWORK_STATE and
-      FOREGROUND_SERVICE) which appear only in the MERGED manifest.
-      `aapt2 dump permissions` on the built APK is the honest check;
-      docs/DESIGN.md carries the table and the reasons.
+      THIS FILE IS NOT THE WHOLE ANSWER. androidx.work brings three more
+      (WAKE_LOCK, RECEIVE_BOOT_COMPLETED and ACCESS_NETWORK_STATE) which
+      appear only in the MERGED manifest. `aapt2 dump permissions` on the
+      built APK is the honest check; docs/DESIGN.md carries the table and
+      the reasons.
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!--
+      WorkManager's fourth, for expedited and foreground work. Carry has
+      none, and CI's emulator job checks the hourly session check still
+      comes back after a reboot without it. `check` fails if it returns.
+    -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE"
+        tools:node="remove" />
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/backup_rules"
