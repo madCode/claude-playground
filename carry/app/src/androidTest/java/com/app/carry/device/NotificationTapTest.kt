@@ -90,13 +90,24 @@ class NotificationTapTest {
         // Not saved. The owner goes Home and taps the sheet's notice. Opening Carry scheduled the
         // hourly check, whose first run is at once: that run posted it, with the real intent.
         device.pressHome()
-        device.openNotification()
-        val notice = device.wait(Until.findObject(By.text("3G sheet is ready")), 60_000)
-        checkNotNull(notice) { "No notification for today's sheet" }
-        notice.click()
+        noticeInShade("3G sheet is ready").click()
 
         assertTrue("The tap didn't bring Carry back", device.wait(Until.hasObject(By.pkg(pkg).depth(0)), 20_000))
         assertEquals("The typed weight was lost", "42", weightBox().text)
+    }
+
+    /**
+     * The notice, in the opened shade. The shade can close on its own a moment after opening (it did
+     * on main's first run, with the notice already posted), so it's opened again until the notice
+     * shows or a minute has passed.
+     */
+    private fun noticeInShade(text: String): androidx.test.uiautomator.UiObject2 {
+        val end = System.currentTimeMillis() + 60_000
+        while (System.currentTimeMillis() < end) {
+            device.openNotification()
+            device.wait(Until.findObject(By.text(text)), 5_000)?.let { return it }
+        }
+        error("No notification for today's sheet")
     }
 
     private companion object {

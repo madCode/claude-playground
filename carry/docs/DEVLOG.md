@@ -6,7 +6,8 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** a device test on an emulator in CI, proving a tap on the
+- **Lately:** the hourly sheet check proven to come back after a reboot,
+  and `FOREGROUND_SERVICE` gone (cycle 75); a device test on an emulator in CI, proving a tap on the
   sheet's notification keeps unsaved typing (cycle 74); a debug build that updates itself on Wi-Fi while Carry is
   closed, and checks the file itself (cycles 71–72); the bars beside each family's heaviest gone, the number kept
   (#116); a timed hold keeping its done chip whatever its duration says
@@ -33,6 +34,22 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-22 — cycle 75: the hourly check survives a reboot, and one permission fewer
+
+- **After a reboot, the sheet check comes back on its own.** CI's
+  emulator now reboots after the device tests and checks, without
+  opening Carry, that the hourly check is scheduled again and runs. It
+  is: Android tells WorkManager the phone has started, and WorkManager
+  puts the check back.
+- **Carry asks for one permission fewer.** `FOREGROUND_SERVICE` came
+  with WorkManager for work Carry never does. It's removed, the reboot
+  check still passes without it, and the build fails if it comes back.
+  The debug build now holds six permissions, a release build four.
+- **Cycle 76 (the "N rounds · log your heaviest set" hint) was skipped
+  here:** it was built in another session at the same time, on its own
+  PR, once gym-coach's `rounds` field reached its main.
+- Nothing you see changed.
 
 ## 2026-10-22 — cycle 74: Carry's first device test, on CI's emulator
 
