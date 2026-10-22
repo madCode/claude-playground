@@ -19,6 +19,8 @@ photos and notes arrive from another process with a real URI grant.
 | New post from the launcher | `OnTheDeviceTest` | Long-pressing the app's icon on the home screen offers New post, which opens one empty post |
 | A photo from another app | `FromOtherAppsTest` | It's added with its alt text, and the copy on GitHub has no location and doesn't say what made it |
 | A note from Obsidian | `FromOtherAppsTest` | The post takes the note's name as its title, `[[links]]` to the blog's posts become `post_url` links, `%%comments%%` are gone |
+| Two photos at once | `FromOtherAppsTest` | Shared in one go, each is described in turn, and neither copy on GitHub has a location |
+| A note as a text file, and Open with | `FromOtherAppsTest` | A note sent as a `.txt` file, or opened with the app from a file manager, starts a post from it, Obsidian comments gone |
 | The camera | `FromOtherAppsTest` | A photo from the emulator's own camera app is added, and the original is deleted from the app's cache |
 | Rotation | `ScreensOnTheDeviceTest` | Text typed, the tag picker and its search survive turning the phone, and the post isn't made twice |
 | Throwing away on the phone | `JourneysOnTheDeviceTest` | Delete draft, Discard changes and Remove from this list each clear the phone's copy and leave the blog as it was |
