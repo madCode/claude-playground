@@ -279,7 +279,14 @@ These are the open paths to one, hardest first.
 - [x] **Say what to type when one row stands for several rounds**
   *(you asked, 2026-10-18)*. **Done 2026-10-22:** the After tab's row says
   "3 rounds · log your heaviest set", from gym-coach's `rounds` field
-  (gym-coach #73). A board that
+  (gym-coach #73). Only on a row that takes a weight.
+- [ ] **What to log for a bodyweight ladder** — *your call*. `8 / 6 / 4 x
+  push-up` is one row too, but every round has the same load, so
+  "heaviest" picks nothing, and its reps box has no faint count (the
+  slash reads as a range). The first round, the last, or the total would
+  each be stored as a plain count, and nothing later can tell which. The
+  coach's own number for the row is its smallest rung. Which should the
+  row ask for? *(found by the review of the ladder hint)* A board that
   prescribes `8 / 6 / 4` is three sets of one movement, and Carry gives it
   one row. Nothing on either screen says what that row means, so the
   convention lives only in the owner's head: they record *"only my max

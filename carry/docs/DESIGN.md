@@ -95,7 +95,9 @@ added · anything untouched counts as not done". *hurt* on its own is not
 one row standing for three sets. Under its name the row says "3 rounds ·
 log your heaviest set": one true weight and count is what the coach's
 arithmetic uses, and saying so keeps a tired day from changing what the
-record means. The count comes from the coach's `rounds` field, never from
+record means. Only on a row that takes a weight: on a bodyweight ladder
+every round has the same load, so "heaviest" picks nothing. The count
+comes from the coach's `rounds` field, never from
 the board's words, so a file without the field, or with a value of the
 wrong shape, shows no hint and loses nothing else.
 

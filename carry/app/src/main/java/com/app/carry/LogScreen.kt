@@ -203,7 +203,10 @@ fun LogScreen(
                 LogRow(
                     name = set.displayName,
                     prescription = set.prescription,
-                    rounds = set.roundCount,
+                    // Only where a weight is logged: on a bodyweight ladder every
+                    // round has the same load, so "heaviest" picks nothing, and
+                    // which count to log there is the owner's call.
+                    rounds = set.roundCount?.takeIf { !set.offersMod && !set.timed },
                     // A range has no single count to fill: its floor would
                     // go into history as the reps done.
                     prescribedReps = set.prescribedReps.takeIf { set.prescribedText?.isRange() != true },

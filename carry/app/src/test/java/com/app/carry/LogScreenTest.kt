@@ -486,6 +486,18 @@ class LogScreenTest {
     }
 
     @Test
+    fun `a bodyweight ladder gets no hint, since no set of it is heavier`() {
+        val pushUps = ExerciseSet(
+            ref = 2, line = "8 / 6 / 4 x push-up", canonical = "push-up", prescribedReps = 4,
+            prescribedText = "8 / 6 / 4", rounds = Json.parseToJsonElement("[8, 6, 4]"),
+            variant = buildJsonObject { put("implement", "bodyweight") },
+        )
+        show(session = ladder.copy(sets = ladder.sets + pushUps))
+        reach("push-up")
+        compose.onAllNodesWithText("rounds", substring = true).assertCountEquals(1)
+    }
+
+    @Test
     fun `the same ladder without the coach's rounds gets no hint, whatever its text says`() {
         // Never read out of prescribed_text: a file from before the field
         // reads exactly as it did.

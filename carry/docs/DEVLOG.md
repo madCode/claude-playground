@@ -43,6 +43,9 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   `null`, one rung, a string, a fraction, a zero or a count over 1000
   shows no hint, and the row reads as before. A file from before the
   field reads as it did.
+- **Only on a row that takes a weight.** The review found that a
+  bodyweight ladder has no heaviest set, so it gets no hint; what to log
+  there is a question in the backlog.
 - **Pairs with the sheet:** it now advises the first round, and this row
   records the heaviest one.
 
