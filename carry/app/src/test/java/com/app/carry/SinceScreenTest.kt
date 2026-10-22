@@ -1,14 +1,10 @@
 package com.app.carry
 
-import android.graphics.Bitmap
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertTrue
@@ -219,10 +215,7 @@ class SinceScreenTest {
         )
         compose.setContent { SinceScreen(empty) }
         compose.onNodeWithText("Nothing logged yet", substring = true).assertIsDisplayed()
-        // No shot: this is one of the simple centred screens that
-        // `captureToImage` returns as a flat colour (see the backlog). The
-        // assertion was always the real test; claiming a picture that is
-        // blank is how seven of twelve screenshots lied in cycle 11.
+        shoot("44-since-empty")
     }
 
     @Test
@@ -445,14 +438,7 @@ class SinceScreenTest {
         compose.onNodeWithText("A sheet didn't read, so nothing older than it is shown here.").assertIsDisplayed()
     }
 
-    private fun shoot(name: String) {
-        compose.waitForIdle()
-        val shot = compose.onRoot().captureToImage().asAndroidBitmap()
-        check(!shot.isFlat()) { "$name captured a blank image, so it proves nothing" }
-        File(out, "$name.png").outputStream().use {
-            shot.compress(Bitmap.CompressFormat.PNG, 100, it)
-        }
-    }
+    private fun shoot(name: String) = compose.shoot(out, name)
 
     @Test
     fun `a newer build is named at the top and the tap asks for it`() {
