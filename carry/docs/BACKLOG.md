@@ -251,8 +251,10 @@ These are the open paths to one, hardest first.
   must stay: the work would stop surviving reboots without them *(found by
   checking the built APK rather than the source manifest; reworded in
   cycle 72)*
-- [ ] **Read the class from the phone's own calendar** — *your call*.
-  Looked at again 2026-10-20, when you asked for it if possible. Nothing
+- [x] **Read the class from the phone's own calendar.** **Answered
+  2026-10-22 on the morning page: wait for the brain move.** Nothing is
+  built now; it's listed under *Waits for this move* below *(you
+  decided)*. Looked at again 2026-10-20, when you asked for it if possible. Nothing
   useful can be built in Carry alone yet:
   - The session file already carries the class and its start
     (`starts_at`), from the coach's own calendar read. Carry reading the
@@ -274,8 +276,7 @@ These are the open paths to one, hardest first.
     tab when the calendar has a class today and no sheet has arrived an
     hour before it. That catches the coach's trigger not firing. It needs
     `READ_CALENDAR` too.
-  Which, if either? *(design:
-  [read-class-from-calendar](designs/read-class-from-calendar.md))*
+  *(design: [read-class-from-calendar](designs/read-class-from-calendar.md))*
 - [ ] **Say what to type when one row stands for several rounds**
   *(you asked, 2026-10-18; needs gym-coach's half first)*. A board that
   prescribes `8 / 6 / 4` is three sets of one movement, and Carry gives it
@@ -448,6 +449,11 @@ owner's own training record months later.
 
 **Waits for this move**, because the session file goes with it:
 
+- Reading the class from the phone's own calendar, so the coach no
+  longer needs its calendar config. Before the move it would show nothing
+  the sheet doesn't already carry. The two versions, and the
+  `READ_CALENDAR` cost, are in the item above and its design *(you
+  decided, 2026-10-22, #155)*
 - A resume can put another session on screen over pending typing. The
   refresh on every resume shows the newest session; the draft for the old
   one is then hidden, and the next keystroke replaces it. Finishing an
