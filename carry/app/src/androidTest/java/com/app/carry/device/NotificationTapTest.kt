@@ -79,8 +79,10 @@ class NotificationTapTest {
     @Test fun tappingTheNotificationKeepsUnsavedTyping() {
         open()
         assertTrue("The sheet didn't show", device.wait(Until.hasObject(By.textContains("goblet squat")), 20_000))
-        weightBox().text = "42"
-        assertEquals("42", weightBox().text)
+        // Typed through the keyboard, as the owner types: UiAutomator's setText doesn't reach the box.
+        weightBox().click()
+        shell("input text 42")
+        assertTrue("The typing didn't land", device.wait(Until.hasObject(By.desc(BOX).text("42")), 10_000))
 
         // Not saved. The owner goes Home and taps the sheet's notice. Opening Carry scheduled the
         // hourly check, whose first run is at once: that run posted it, with the real intent.
