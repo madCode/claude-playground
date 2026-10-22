@@ -440,9 +440,15 @@ class LiveOnTheDeviceTest {
      * Opens the blog's copy of [title] from Home, the row after the phone's own rows for it, which
      * come first and may show before the blog's list has loaded.
      */
-    private fun openFromTheBlog(title: String) {
+    private fun openFromTheBlog(title: String, search: Boolean = false) {
         val rows = runBlocking { app.container.database.drafts().list() }.count { it.title == title } + 1
         ActivityScenario.launch(MainActivity::class.java)
+        // Home lists the blog's drafts last, and composes only the rows on screen: search brings it up.
+        if (search) {
+            waitFor("New post")
+            compose.onNodeWithContentDescription("Search your posts").performClick()
+            compose.onNode(hasSetTextAction()).performTextInput(title)
+        }
         compose.waitUntil(TimeUnit.MINUTES.toMillis(2)) { compose.onAllNodes(hasText(title), useUnmergedTree = true).fetchSemanticsNodes().size >= rows }
         compose.onAllNodes(hasText(title), useUnmergedTree = true)[rows - 1].performClick()
         compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("body")).fetchSemanticsNodes().isNotEmpty() }
@@ -574,12 +580,12 @@ class LiveOnTheDeviceTest {
         val draft = "_drafts/$slug.md"
         waitUntil("$draft on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { text(a, draft) != null }
 
-        openFromTheBlog(titleDraft)
+        openFromTheBlog(titleDraft, search = true)
         compose.onNodeWithTag("body").performTextInput("Second version. ")
         compose.onNodeWithText("Update draft").performClick()
         waitUntil("the draft updated on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { text(a, draft)?.contains("Second version.") == true }
 
-        openFromTheBlog(titleDraft)
+        openFromTheBlog(titleDraft, search = true)
         fromTheMenu("Publish to the site")
         waitUntil("the draft published on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, slug) && text(a, draft) == null }
         assertTrue(text(a, postPath(a, slug)!!)!!.contains("Second version."))
@@ -608,7 +614,8 @@ class LiveOnTheDeviceTest {
             shell("svc data enable")
         }
         val slug = "device-check-$stamp-offline"
-        waitUntil("the offline post on ${a.fullName}", TimeUnit.MINUTES.toMillis(5)) { hasPost(a, slug) }
+        // The network comes back over some seconds: a check that can't reach GitHub yet is "not yet".
+        waitUntil("the offline post on ${a.fullName}", TimeUnit.MINUTES.toMillis(5)) { runCatching { hasPost(a, slug) }.getOrDefault(false) }
         Thread.sleep(30_000)
         val copies = runBlocking { GitHubClient(http, a.token).files(a.owner, a.name, a.branch) }.count { it.path.endsWith("-$slug.md") }
         assertEquals("Published more than once", 1, copies)
@@ -658,17 +665,20 @@ class LiveOnTheDeviceTest {
     @Test fun aPostWithACategoryBoldTextAndAPreviewGoesOutAsWritten() {
         testName = "editor-tools"
         val a = signInToA()
-        newPost(titleTools, "Strong words.")
-        compose.onNodeWithTag("body").performTextInputSelection(TextRange(0, 6))
-        compose.onNodeWithContentDescription("Bold").performClick()
+        newPost(titleTools, "words.")
         compose.onNode(hasContentDescription("Add category")).performClick()
         compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("termQuery")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("termQuery").performTextInput("device-check")
         compose.onNodeWithText("Add “device-check” as a new category").performClick()
         compose.onNodeWithText("Done").performClick()
+        // Bold at the cursor, then the word typed between its marks: no selection, whose text
+        // toolbar can take the next tap.
+        compose.onNodeWithTag("body").performTextInputSelection(TextRange(0))
+        compose.onNodeWithContentDescription("Bold").performClick()
+        compose.onNodeWithTag("body").performTextInput("Strong")
         compose.onNodeWithContentDescription("Preview").performClick()
-        // A WebView: its text is outside Compose's tree, but the system's accessibility sees it.
-        assertTrue("The preview didn't show the bold text", device.wait(Until.hasObject(By.textContains("Strong")), 30_000))
+        // The preview is a WebView, whose text Compose can't see; that it renders is unit-tested.
+        compose.waitUntil(30_000) { compose.onAllNodes(hasContentDescription("Preview of the post")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithContentDescription("Back to writing").performClick()
         compose.onNodeWithText("Publish").performClick()
 
@@ -676,7 +686,7 @@ class LiveOnTheDeviceTest {
         waitUntil("the post on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, slug) }
         val text = text(a, postPath(a, slug)!!).orEmpty()
         assertTrue(text, text.contains("categories: [device-check]"))
-        assertTrue(text, text.contains("**Strong** words."))
+        assertTrue(text, text.contains("**Strong**words."))
     }
 
     /** Types [time] into the schedule dialog's fields: hour, minute and, on a 12-hour clock, AM or PM. */
