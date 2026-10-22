@@ -29,6 +29,9 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -60,9 +63,26 @@ class Publisher(
     private val lock = Mutex()
 
     /** Runs [block] between publishes, for another commit that a publish's plan relies on. */
-    suspend fun <T> betweenPublishes(block: suspend () -> T): T = lock.withLock { block() }
+    suspend fun <T> betweenPublishes(block: suspend () -> T): T = locked { block() }
 
-    suspend fun publish(id: Long): Outcome = lock.withLock {
+    private val active = MutableStateFlow(false)
+
+    /** [publishing], as it changes: an update held back by a post going out waits on it. */
+    val sending: StateFlow<Boolean> = active.asStateFlow()
+
+    private suspend inline fun <T> locked(block: () -> T): T = lock.withLock {
+        active.value = true
+        try {
+            block()
+        } finally {
+            active.value = false
+        }
+    }
+
+    /** Whether a post is being sent now: installing an update would end the app part way through. */
+    val publishing: Boolean get() = active.value
+
+    suspend fun publish(id: Long): Outcome = locked {
         repeat(3) { attempt(id)?.let { return it } }
         Outcome.Retry
     }

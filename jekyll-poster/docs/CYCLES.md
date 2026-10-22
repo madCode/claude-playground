@@ -9,6 +9,60 @@ waiting on madCode is done, or 7am Pacific (14:00 UTC), whichever comes first. A
 that the app's update system (the `jekyll-poster-debug` release) matches the other apps' (Carry,
 newspaperss), and puts any difference in BACKLOG.md.
 
+**The run of 22 Oct (night)**, as madCode set it: the cycles proposed on 22 Oct (the double
+reads, scheduled posts, #189, the journey gaps nightly and on every PR, a close-out), until 7am
+Pacific (14:00 UTC), merging each PR once it's green.
+
+### Cycles 62–64 — build: the smaller journeys on every PR's emulator, and the close-out
+
+- Falsify device tests in one pushed commit and cancel the live run it queues: it touches the
+  app's code, and a live run on a break proves nothing and holds the queue for 15 minutes.
+
+### Cycles 59–61 — build: the nightly live check through the screens
+
+- A screen step that times out on the device, and works in the every-PR suite, is usually
+  something off screen: Home composes only the rows on screen, and typing in the body scrolls
+  the term rows away. Search for the row, or do the step before the typing.
+
+- Have a reviewer trace a live test against the screens before pushing: each live run costs 15
+  minutes, and the review found a check that could never pass (Preview is a WebView, read with
+  UiAutomator) and two that raced the screen.
+- A CI step that hangs past its time limit with no failing test, while the same tree passes
+  locally in 4 minutes, was a one-off (#189's build): re-run it once before digging.
+
+### Cycle 57 — build: scheduled posts
+
+- Ask the reviewer what Android does to background work on an idle phone: WorkManager's delay
+  was fine for a random time and wrong for a time the writer chose, and only the review saw it.
+- A Compose test helper that finds fields by `hasSetTextAction()` finds the screen's behind a
+  dialog too: scope it with `hasAnyAncestor(isDialog())`.
+
+### Cycle 56 — audit: Home's double reads
+
+- Read the caller list before calling a request redundant: the "second Home read" was the
+  publish's own read before its commit (`Publisher.kt`), which it needs.
+
+### Cycle 54 — audit: a second documentation pass
+
+- Run a docs pass again after a large feature lands: the self-update PR brought back a long,
+  partly wrong DESIGN section an hour after the first pass, and DEVLOG's Status had been stale
+  since day 1 without either pass flagging it until asked.
+
+### Cycle 53 — audit: documentation pass
+
+- Have the auditor check claims against the code, not only read for style: most of what it
+  found was a doc behind the code (a schedule, a key list), not wording.
+
+### Cycle 50 — audit: the update system, against Carry's and newspaperss's
+
+- Compare against the shared practice and the other apps, not only against the app's own docs:
+  the gap (no in-app update check) was in `practices/android.md` all along.
+
+### Cycle 48 — audit: per-blog templates, before building them
+
+- Look for what the platform already does before building a setting: Jekyll's `defaults:` gives
+  every post its front matter, and the app reads it. What's left was small enough to ask about.
+
 ### Cycle 47 — build: Hide from the site
 
 - Falsify each fix alone. One test covering three fixes went red when all three were broken,
@@ -16,6 +70,20 @@ newspaperss), and puts any difference in BACKLOG.md.
   whatever time is chosen, and the first odd YAML tried wasn't one the check refuses.
 - Read the JUnit XML, not `gradlew -q`'s silence: a loop whose restore failed printed nothing
   either way.
+
+### Cycle 46 — audit: backlog grooming
+
+- Check each backlog item against the code before planning it: Unpublish was already possible
+  through More front matter, so the cycle became a one-tap action rather than a feature.
+- An item that needs madCode's call goes under "Waiting on madCode", with an issue for the long
+  ones, so a night run doesn't stall on it.
+
+### Cycle 45 — build: New post from the launcher, and the app killed while a post waits
+
+- Check a guard against what it reads: "SKIPPED" in Gradle's log matched Gradle's own task
+  lines, not a skipped test, and failed a run that had passed. Read the test results instead.
+- Each `connectedDebugAndroidTest` clears the last one's outputs, so the run whose files are kept
+  goes last.
 
 ### Cycle 44 — build: the `?` key and Sign in with GitHub twice, on the emulator
 

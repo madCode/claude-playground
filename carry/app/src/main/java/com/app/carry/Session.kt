@@ -3,9 +3,11 @@ package com.app.carry
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.intOrNull
 
 /**
  * The session file, as the companion script defines it.
@@ -99,6 +101,13 @@ data class ExerciseSet(
     /** Seconds, when the line prescribes time instead of reps ("45 sec of
      *  low plank"). Exclusive with the two above. */
     @SerialName("prescribed_duration_sec") val prescribedDurationSec: Int? = null,
+    /**
+     * A ladder's rungs as the board wrote them, `[8, 6, 4]`, or null for one
+     * round. From the coach, so Carry never picks a ladder out of
+     * [prescribedText]. Kept raw and read by [roundCount]: a value of the
+     * wrong shape costs the hint, not the whole row.
+     */
+    val rounds: JsonElement? = null,
     /** What the coach said to try, verbatim, e.g. "try 45 lb (up from 40, held 3x)". */
     val suggested: String? = null,
     /** Parsed out by the runner so the screen never has to read prose. */
@@ -144,6 +153,16 @@ data class ExerciseSet(
      * an extra chip on a row that also has boxes costs nothing.
      */
     val timed: Boolean get() = prescribedDurationSec?.let { it > 0 } == true
+
+    /** How many rounds this one row stands for, or null for a single round or
+     *  a [rounds] that isn't two or more counts a set could have. */
+    val roundCount: Int?
+        get() {
+            val rungs = rounds as? JsonArray ?: return null
+            if (rungs.size !in 2..MAX_ROUNDS) return null
+            val counts = rungs.all { r -> (r as? JsonPrimitive)?.takeIf { !it.isString }?.intOrNull in 1..MAX_REPS }
+            return rungs.size.takeIf { counts }
+        }
 
     /** The variant's `implement` ("bodyweight", "double_dumbbell"...), or
      *  null when the variant is not an object or the key is missing or not
@@ -200,6 +219,10 @@ data class ExerciseSet(
  * would go on the Log row AND into a public post.
  */
 private const val MAX_DURATION_SEC = 60 * 60
+
+/** The importer's own ceiling on a rep count, and a ladder longer than any board writes. */
+private const val MAX_REPS = 1000
+private const val MAX_ROUNDS = 20
 
 /** "45 sec", "1 min" — the way the sheet writes it. */
 internal fun durationText(seconds: Int): String =

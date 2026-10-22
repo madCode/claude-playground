@@ -12,6 +12,7 @@ import com.app.jekyllposter.core.net.VpnGate
 import com.app.jekyllposter.core.obsidian.ObsidianNote
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.AccountStore
+import com.app.jekyllposter.data.BlogEntry
 import com.app.jekyllposter.data.AesGcmCipher
 import com.app.jekyllposter.data.AndroidVpn
 import com.app.jekyllposter.data.BlogRepository
@@ -35,6 +36,12 @@ import com.app.jekyllposter.publish.Publisher
 import com.app.jekyllposter.publish.WorkManagerQueue
 import com.app.jekyllposter.ui.catching
 import com.app.jekyllposter.ui.editor.PreviewFetcher
+import com.app.jekyllposter.update.AppUpdates
+import com.app.jekyllposter.update.DebugUpdates
+import com.app.jekyllposter.update.Hold
+import com.app.jekyllposter.update.SelfUpdater
+import com.app.jekyllposter.update.UpdateHolds
+import com.app.jekyllposter.update.selfUpdater
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -42,6 +49,7 @@ import kotlin.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -49,6 +57,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Cache
 import okhttp3.HttpUrl
@@ -70,12 +79,19 @@ class AppContainer(
     val database: PosterDatabase = PosterDatabase.create(context),
     /** Where queued posts go to be sent; WorkManager in the app, direct calls in tests. */
     val publishQueue: PublishQueue = WorkManagerQueue(context),
-    /** When the site has (or hasn't) built a published post; a notification in the app. */
-    onBuildFinished: (Draft) -> Unit = Notifier(context)::buildFinished,
+    /**
+     * When the site has (or hasn't) built a published post, with the post's blog when another is
+     * open; a notification in the app.
+     */
+    onBuildFinished: (Draft, BlogEntry?) -> Unit = Notifier(context)::buildFinished,
     /** The files in an Obsidian vault folder; tests list a plain folder instead. */
     val vaultFiles: suspend (tree: String) -> VaultImages = { listVault(context, it) },
     /** The phone's VPN; tests pretend one is up or down. */
     private val vpn: Vpn = AndroidVpn(context),
+    /** This debug build's CI number, which asks whether a newer one is out; null never asks. */
+    installedBuild: Int? = DebugUpdates.buildOf(BuildConfig.VERSION_NAME),
+    /** The debug release's JSON on GitHub; tests point it at a local server. */
+    releaseApi: HttpUrl = DebugUpdates.RELEASE_API,
 ) {
     /** What a share brought, waiting for the editor of the post it started. */
     val pendingShares = ConcurrentHashMap<Long, PendingShare>()
@@ -103,6 +119,13 @@ class AppContainer(
      * go through the VPN if any blog asks for it, since the app can't know which blog they're for.
      */
     private val signInCalls = GatedCalls(base.recordedAs(context, "sign-in"), VpnGate(vpn) { runBlocking { privacy.anyOnlyThroughVpn() } })
+
+    /**
+     * Asking whether a newer debug build is out, and downloading it. No token on it: the release
+     * is public. Like signing in, it isn't for one blog, so it goes through the VPN if any blog
+     * asks for one; with none up nothing goes out, and the check counts as offline.
+     */
+    internal val updateCalls = GatedCalls(base.recordedAs(context, "updates"), VpnGate(vpn) { runBlocking { privacy.anyOnlyThroughVpn() } })
 
     /** For a sign-in that isn't one blog's yet: see [signInCalls]. */
     fun client(token: String) = GitHubClient(signInCalls, token, apiBase)
@@ -165,6 +188,7 @@ class AppContainer(
     private fun renewClients(key: String) {
         callsFor(key).renew()
         signInCalls.renew()
+        updateCalls.renew()
         renewalCalls.values.forEach { it.renew() }
         renewPreview()
     }
@@ -204,18 +228,50 @@ class AppContainer(
     val blogs = BlogRepository(accounts, database.posts()) { account: Account -> client(account) }
     val publisher = Publisher(drafts, accounts, blogs, privacy)
     val images = ImageImporter(context.contentResolver, File(context.filesDir, "images"))
-    val buildWatcher = BuildWatcher(drafts, accounts, { client(it) }, onBuildFinished)
+    // The post's state is already saved: neither a cancelled worker nor an unreadable store may
+    // cost its notification, which then just doesn't name the blog.
+    val buildWatcher = BuildWatcher(drafts, accounts, { client(it) }) {
+        onBuildFinished(it, withContext(NonCancellable) { runCatching { otherBlog(it) }.getOrNull() })
+    }
+
+    /** [draft]'s blog when another one is open; null when it's the open one, or has gone. */
+    private suspend fun otherBlog(draft: Draft): BlogEntry? {
+        val key = draft.blog ?: return null
+        val open = accounts.currentKey() ?: return null
+        if (key == open) return null
+        return accounts.blogs.first().firstOrNull { it.key == key }
+    }
+
+    /** Whether a newer debug build is out, and installing it; a release build does neither. */
+    private val updateHolds = UpdateHolds(DebugUpdates.prefsOf(context))
+
+    val updates = AppUpdates(
+        DebugUpdates(DebugUpdates.prefsOf(context), installedBuild, fetch = { DebugUpdates.fetchRelease(updateCalls, releaseApi) }),
+        installedBuild?.let { build ->
+            selfUpdater(context, build, updateCalls) {
+                when {
+                    publisher.publishing -> Hold.Post
+                    updateHolds.heldOrLeftOpen -> Hold.Screen
+                    else -> null
+                }
+            }
+        } ?: SelfUpdater.NONE,
+        publishing = publisher.sending,
+        holds = updateHolds,
+        waitingForVpn = { privacy.anyOnlyThroughVpn() && vpn.current() == null },
+        scope = appScope,
+    )
 
     /**
      * Opens blog [key], an added one, and reads it. Nothing is published or changed on any blog.
-     * False when it has gone meanwhile.
+     * False when it has gone meanwhile. Without [read], the caller reads it, to show how that went.
      */
-    suspend fun open(key: String): Boolean {
+    suspend fun open(key: String, read: Boolean = true): Boolean {
         if (!accounts.open(key)) return false
         renewPreview()
         // After the switch: a read of the blog left, finishing now, can't put its title back.
         blogs.clear()
-        catching { blogs.refresh() }
+        if (read) catching { blogs.refresh() }
         return true
     }
 

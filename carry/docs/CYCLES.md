@@ -5,6 +5,50 @@ differently. Newest first; read the top before starting. What was built is
 in [DEVLOG.md](DEVLOG.md). Kept to the last ten or so cycles; older lessons
 that hold become rules in CLAUDE.md or the cycles skill.
 
+## 2026-10-22 (cloud session, night run: cycles 74–76)
+
+Baseline: a cloud container, no emulator running, nothing in the
+background. madCode's PR #197 merged before the run.
+
+### Cycle 76 — skipped: the ladder hint was built in another session
+
+madCode's main session built it on its own branch once gym-coach #73
+merged, and asked this run not to start a second. Checked the branch
+before skipping. **Before building an item, look for an open branch or PR
+that already has it**, not only main.
+
+### Cycle 75 — build: a reboot check, then `FOREGROUND_SERVICE` removed
+
+- **WorkManager's jobs don't survive a reboot; its boot receiver
+  reschedules them** (2.12 only ever calls `setPersisted(false)`). So a
+  reboot check has to wait for Android to have *saved* that receiver as
+  enabled (`package-restrictions.xml`, a few seconds' delay). Rebooting
+  straight away made it look as if Carry's check never came back.
+- **A periodic job forced before its period is due is skipped**, not run.
+  Prove "it runs" from WorkManager's `period_count` (database in
+  `no_backup/`, readable with `run-as` on a debug build) after moving the
+  emulator's clock past the period.
+- **Read the library's bytecode before guessing its behaviour** (`javap`
+  on the AAR in `~/.gradle/caches`): two of this cycle's wrong turns were
+  guesses about WorkManager that one `javap` settled.
+- Emulator runs only on CI; nothing was started in this container.
+
+### Cycle 74 — build: Carry's first device test job
+
+- **The test APK's own process has no Kotlin runtime.** A provider or
+  activity declared in `src/androidTest` runs there, not in Carry's
+  process, so it dies on `kotlin.jvm.internal.Intrinsics`. Write those in
+  Java (`TestFolder.java`); test code that runs in Carry's process can
+  stay Kotlin.
+- **UiAutomator and Carry's number boxes:** `setText` doesn't reach them,
+  and the text sits on the `EditText` while the label is on a view inside
+  it. Tap the box, `input text`, and select
+  `By.clazz(EditText).hasChild(By.desc(label))`. The job's report keeps
+  the window hierarchy of a failed test, which is how both were found in
+  one look.
+- **Opening Carry runs the session check at once** (the periodic work's
+  first run), so a test needn't run the worker itself.
+
 ## 2026-10-20 (cloud session, second Carry agent, later)
 
 ### Cycle 73 — build: tests for the guards, and `MainActivity`

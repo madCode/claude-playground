@@ -100,6 +100,8 @@ fun HomeScreen(
     blogs: BlogsViewModel? = null,
     onAddBlog: (Long) -> Unit = {},
     onAddSignIn: () -> Unit = {},
+    /** A newer debug build's line, at the top of the list. */
+    updateNotice: @Composable () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val blogState = blogs?.state?.collectAsStateWithLifecycle()?.value
@@ -110,6 +112,9 @@ fun HomeScreen(
     var menu by remember { mutableStateOf(false) }
     LaunchedEffect(state.error) {
         state.error?.let { snackbar.showSnackbar(it); viewModel.dismissError() }
+    }
+    LaunchedEffect(state.notice) {
+        state.notice?.let { snackbar.showSnackbar(it); viewModel.dismissNotice() }
     }
     BackHandler(enabled = state.query != null, onBack = viewModel::stopSearch)
     Scaffold(
@@ -173,6 +178,7 @@ fun HomeScreen(
         }
         PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = viewModel::refresh, modifier = Modifier.padding(padding).fillMaxSize()) {
             LazyColumn(Modifier.fillMaxSize()) {
+                item { updateNotice() }
                 if (state.onPhone.isNotEmpty()) {
                     item { SectionHeading("On this phone") }
                     items(state.onPhone, key = { "d${it.id}" }) { draft ->
@@ -230,7 +236,10 @@ private fun DraftRow(draft: Draft, waitingForVpn: Boolean, onClick: () -> Unit) 
 fun Draft.status(live: String = "live on the site", waitingForVpn: Boolean = false, now: Long = System.currentTimeMillis()): Pair<String, Boolean> = when (state) {
     PostState.Draft -> (if (editingPath != null) "Editing · not published yet" else "Draft") to false
     PostState.Queued -> when {
+        // The time it's due says more than the VPN until then: the VPN may well be back by then.
+        (sendAfter ?: 0) > now && scheduled -> "Scheduled for ${whenScheduled(sendAfter!!, now)}"
         waitingForVpn -> "Waiting for your VPN…"
+        scheduled && sendAfter != null -> "Scheduled for ${whenScheduled(sendAfter, now)}; sending…"
         (sendAfter ?: 0) > now -> "Going out at ${
             Instant.ofEpochMilli(sendAfter!!).atZone(ZoneId.systemDefault()).toLocalTime()
                 .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
@@ -327,4 +336,16 @@ fun nowUntil(at: Long?): Long {
             value = System.currentTimeMillis()
         }
     }.value
+}
+
+/** [at] (epoch millis) as the writer reads it: "18:40 today", "9:00 tomorrow", "Fri 23 Oct, 9:00". */
+fun whenScheduled(at: Long, now: Long = System.currentTimeMillis(), zone: ZoneId = ZoneId.systemDefault()): String {
+    val time = Instant.ofEpochMilli(at).atZone(zone)
+    val clock = time.toLocalTime().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
+    val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    return when (time.toLocalDate()) {
+        today -> "$clock today"
+        today.plusDays(1) -> "$clock tomorrow"
+        else -> "${time.format(DateTimeFormatter.ofPattern("EEE d MMM"))}, $clock"
+    }
 }
