@@ -1,10 +1,15 @@
 #!/bin/sh
 # Does Carry's hourly session check survive a reboot? Installs the debug APK on the running
-# emulator, opens Carry once (which schedules the check), reboots, and then, without opening Carry
-# again, waits for the check to be scheduled again and makes it run.
+# emulator and opens Carry once, which schedules the check and runs its first period. Then it
+# reboots and, without opening Carry again, waits for the check to be scheduled again, moves the
+# clock past the hour and runs it.
 #
 # What brings the check back is WorkManager's own reschedule on BOOT_COMPLETED. The permissions it
-# brings, and whether any can be removed, are in docs/DESIGN.md; this is the proof one asks for.
+# brings, and why FOREGROUND_SERVICE isn't one of them any more, are in docs/DESIGN.md.
+#
+# "Runs" is read from WorkManager's own record, the periods the work has completed, since a job
+# forced before its period is due is only rescheduled, and WorkManager logs nothing at the
+# default level. The debug build is debuggable, so run-as can read the database.
 #
 # Usage, from carry/ with one emulator attached: tools/reboot-check.sh app/build/outputs/apk/debug/app-debug.apk
 set -eu
@@ -12,6 +17,7 @@ set -eu
 apk=$1
 pkg=com.app.carry.debug
 worker=com.app.carry.SessionWatchWorker
+work=$(mktemp -d)
 
 fail() { echo "reboot check: $*" >&2; exit 1; }
 
@@ -25,22 +31,43 @@ jobs() {
 }
 
 # What dumpsys says about Carry, for a failure's log.
-show_jobs() { adb shell dumpsys jobscheduler | grep -n "$pkg" | head -20 >&2; }
+show_jobs() { adb shell dumpsys jobscheduler | grep -n "$pkg" | head -30 >&2; }
 
-# Waits up to $1 seconds for a scheduled job; prints its ids.
+# Waits up to $1 seconds for a scheduled job; prints the keys.
 await_jobs() {
   i=0
   while [ "$i" -lt "$1" ]; do
-    ids=$(jobs)
-    [ -n "$ids" ] && { echo "$ids"; return 0; }
+    keys=$(jobs)
+    [ -n "$keys" ] && { echo "$keys"; return 0; }
     sleep 2; i=$((i + 2))
   done
   return 1
 }
 
-# Runs each job now and waits up to 60 seconds for WorkManager to log the worker succeeding.
-run_and_see() {
-  adb logcat -c
+# How many periods of the session check WorkManager has recorded as done.
+periods() {
+  for f in androidx.work.workdb androidx.work.workdb-wal androidx.work.workdb-shm; do
+    adb exec-out run-as "$pkg" cat "databases/$f" > "$work/$f" 2>/dev/null || rm -f "$work/$f"
+  done
+  python3 - "$work/androidx.work.workdb" "$worker" <<'PY'
+import sqlite3, sys
+db = sqlite3.connect(sys.argv[1])
+row = db.execute("select period_count from WorkSpec where worker_class_name = ?", (sys.argv[2],)).fetchone()
+print(row[0] if row else -1)
+PY
+}
+
+# Waits up to $2 seconds for more than $1 periods done.
+await_period() {
+  i=0
+  while [ "$i" -lt "$2" ]; do
+    [ "$(periods)" -gt "$1" ] && return 0
+    sleep 2; i=$((i + 2))
+  done
+  return 1
+}
+
+run() {
   for key in $1; do
     id=${key##*/}
     case ${key%/*} in
@@ -48,19 +75,16 @@ run_and_see() {
       *) adb shell cmd jobscheduler run -f "$pkg" "$id" ;;
     esac
   done
-  i=0
-  while [ "$i" -lt 60 ]; do
-    adb logcat -d -s WM-WorkerWrapper:I | grep "Worker result SUCCESS" | grep -q "$worker" && return 0
-    sleep 2; i=$((i + 2))
-  done
-  return 1
 }
 
 adb install -r -g "$apk" > /dev/null
 adb shell am start -W -n "$pkg/com.app.carry.MainActivity" > /dev/null
 before=$(await_jobs 60) || { show_jobs; fail "opening Carry scheduled no session check"; }
-echo "Scheduled before the reboot: job $before"
-run_and_see "$before" || { show_jobs; fail "the session check didn't run before the reboot"; }
+echo "Scheduled before the reboot: $before"
+# The first period runs as soon as it is scheduled.
+await_period 0 60 || { show_jobs; fail "the session check didn't run before the reboot"; }
+done_before=$(periods)
+echo "Periods done before the reboot: $done_before"
 adb shell input keyevent KEYCODE_HOME
 
 boot=$(adb shell cat /proc/sys/kernel/random/boot_id)
@@ -75,6 +99,16 @@ adb shell svc power stayon true
 
 # Carry isn't opened again: only the boot can bring the check back.
 after=$(await_jobs 180) || { show_jobs; fail "no session check scheduled after the reboot"; }
-echo "Scheduled after the reboot: job $after"
-run_and_see "$after" || { show_jobs; fail "the session check didn't run after the reboot"; }
+echo "Scheduled after the reboot: $after"
+
+# Two hours on, so the next period is due, then the job as JobScheduler would start it.
+adb root > /dev/null
+adb wait-for-device
+adb shell settings put global auto_time 0
+adb shell date "@$(( $(adb shell date +%s | tr -d '\r') + 7200 ))" > /dev/null
+sleep 5
+due=$(await_jobs 60) || { show_jobs; fail "the session check wasn't scheduled after the clock moved"; }
+run "$due"
+await_period "$done_before" 90 || { show_jobs; fail "the session check didn't run after the reboot"; }
+echo "Periods done after the reboot: $(periods)"
 echo "The session check is scheduled after a reboot and runs."
