@@ -5,11 +5,6 @@ and moves it to Done.
 
 ## Next
 
-- [ ] The nightly live check through the screens, where it now sets things in code or skips them:
-  Hide and Show again, and Jekyll drafts; blog B's sign-in added from Settings and a switch from
-  Home's title, and Set up for writing anonymously tapped; the random time with Send now, Stop
-  and edit, offline then back, a bad token, a delete that meets a change, and a category, the
-  toolbar, a `[[` link and Preview.
 - [ ] On every PR's emulator: delete a local draft, Discard changes, Remove from this list; a
   note's Use the publish day; the first Publish asking for notifications, and its tap; Remove a
   sign-in and Send them now; search and category pills; Read the blog again; Forget the vault
@@ -34,6 +29,7 @@ madCode decided these on the morning page, 21 Oct. Each comes back if a writer a
 
 Cycles 40 on, newest first. Earlier cycles, and what madCode set up, are in [DEVLOG.md](DEVLOG.md).
 
+- [x] Cycles 59–61: the nightly live check walks the journeys through the screens: Hide and Show, Jekyll drafts, blog B added from Settings and a switch, Set up for writing anonymously, the random time's Stop and edit and Send now, offline, a revoked token, a delete conflict, the editor's tools
 - [x] Cycle 57: scheduled posts (Schedule… in the editor), woken by an alarm at their time
 - [x] Cycle 56: audit: Home's "double reads" in the request record are the publish's own reads, kept
 - [x] Cycle 55: a post's notification names its blog when another is open; a tap opens the app on that blog (#137)

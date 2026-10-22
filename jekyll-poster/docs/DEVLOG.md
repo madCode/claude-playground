@@ -21,6 +21,25 @@ Times are when each cycle landed, Pacific.
 
 ## Thu 22 Oct
 
+### Cycles 59–61: the nightly live check through the screens
+- **Asked:** madCode wants the nightly check to click through every journey a writer takes.
+- **Built:** on the tester's real blogs, through the screens:
+  - Hide from the site, then Show again;
+  - a Jekyll draft saved, updated, then published to the site;
+  - blog B added from Settings → Add a sign-in, and a switch back from Home's title;
+  - Set up for writing anonymously tapped in Blog & privacy;
+  - the random time's Stop and edit and Send now;
+  - a post published offline going out once when the network is back;
+  - a revoked token failing and saying to sign in again;
+  - a delete refused when the post changed on GitHub;
+  - a category, Bold and Preview.
+- **Fixed in the docs:** DEVICE-CHECKS.md had said blog B was added, and the privacy setup
+  tapped, from the screens, when both were done in code. They now are done from the screens.
+- **Review caught:** the Preview check could never pass (a WebView's text isn't in Compose's
+  tree); the random-time steps could tap the closing editor instead of Home; the offline test
+  could publish before the network dropped, and its cleanup could leave a post behind. Fixed.
+- **Left:** a `[[` link, which needs a post the tester's blog already builds.
+
 ### Cycle 57: scheduled posts
 - **Asked:** madCode asked for scheduled posts.
 - **Built:** **Schedule…** in the editor's menu picks today, tomorrow or another day, and a time.
