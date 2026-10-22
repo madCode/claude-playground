@@ -411,7 +411,9 @@ laptop, do neither; a release carries no installer (`check` fails if its manifes
   help (never around the VPN). A file that fails its checks, five failed downloads or three
   failed installs of one build (at once, if Android says it can never install) and the app gives
   up on it: the tap opens the browser instead, and a newer build is tried again. No room isn't
-  held against the build.
+  held against the build, whether copying it in ran out or Android said there isn't enough
+  storage. A build the background downloaded is tried again 30 minutes later, once there's
+  room; one a tap downloaded, on the next tap or after the next check fetches it again.
 
 ## The request record (debug builds)
 
