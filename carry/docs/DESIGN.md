@@ -655,7 +655,10 @@ the debug source set only; a release build has neither.
    instead. A newer build is tried again. A failed download, the owner
    saying no to Android's question, or a phone too full to take the copy
    isn't counted. That last says to free some space and offers no link: a
-   browser's download needs the same room.
+   browser's download needs the same room. If Android itself answers that
+   there isn't enough storage, a build the background downloaded is tried
+   again 30 minutes later, once storage isn't low; one a tap downloaded,
+   on the next tap or after the next check fetches it again.
 
 The notice reads "Downloading build N…" and can't be tapped again until
 Android's installer has answered, so a second tap can't start a second
