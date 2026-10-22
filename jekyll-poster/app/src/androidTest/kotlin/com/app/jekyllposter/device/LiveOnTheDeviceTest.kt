@@ -108,6 +108,8 @@ class LiveOnTheDeviceTest {
     private val titlePhoto = "Device check $stamp, photo"
     private val titleConflict = "Device check $stamp, conflict"
     private val titleScheduled = "Device check $stamp, scheduled"
+    private val titleHidden = "Device check $stamp, hidden"
+    private val titleDraft = "Device check $stamp, draft"
     private val record = File(app.filesDir, "requests")
 
     @Before fun setUp() {
@@ -461,6 +463,71 @@ class LiveOnTheDeviceTest {
             .first { it["method"]?.jsonPrimitive?.content == "POST" && it["url"]?.jsonPrimitive?.content.orEmpty().endsWith("/git/blobs") }
         val wrote = Instant.parse(firstWrite["at"]!!.jsonPrimitive.content).toEpochMilli()
         assertTrue("Sent at $wrote, before its time $due", wrote >= due - 1_000)
+    }
+
+    /** Opens a new post from Home and writes [title] and [body] in it. */
+    private fun newPost(title: String, body: String) {
+        ActivityScenario.launch(MainActivity::class.java)
+        waitFor("New post")
+        compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
+        compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("title")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("title").performTextInput(title)
+        compose.onNodeWithTag("body").performTextInput(body)
+    }
+
+    /** Taps [item] in the editor's menu. */
+    private fun fromTheMenu(item: String) {
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText(item).performClick()
+    }
+
+    /**
+     * Hide from the site and Show on the site again, from the editor's menu, on a post published
+     * from the screens: the file stays, marked `published: false`, the site rebuilds without it,
+     * and showing takes the line out again.
+     */
+    @Test fun aPostIsHiddenFromTheSiteThenShownAgain() {
+        testName = "hide-show"
+        val a = signInToA()
+        newPost(titleHidden, "Hidden, then shown.")
+        compose.onNodeWithText("Publish").performClick()
+        val slug = "device-check-$stamp-hidden"
+        waitUntil("the post on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, slug) }
+        val path = postPath(a, slug)!!
+
+        openFromTheBlog(titleHidden)
+        fromTheMenu("Hide from the site")
+        waitUntil("published: false on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { text(a, path)?.contains("published: false") == true }
+        // The phone heard the site rebuild after the hide.
+        waitFor("Hidden from the site; the file stays on GitHub", TimeUnit.MINUTES.toMillis(12))
+
+        openFromTheBlog(titleHidden)
+        fromTheMenu("Show on the site again")
+        waitUntil("the post shown again on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { text(a, path)?.contains("published:") == false }
+    }
+
+    /**
+     * A Jekyll draft from the screens: saved to the blog's `_drafts`, updated there, then
+     * published to the site, which moves it into `_posts` in one commit.
+     */
+    @Test fun aJekyllDraftIsSavedUpdatedThenPublishedToTheSite() {
+        testName = "jekyll-draft"
+        val a = signInToA()
+        newPost(titleDraft, "First version.")
+        fromTheMenu("Save to the blog's _drafts")
+        val slug = "device-check-$stamp-draft"
+        val draft = "_drafts/$slug.md"
+        waitUntil("$draft on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { text(a, draft) != null }
+
+        openFromTheBlog(titleDraft)
+        compose.onNodeWithTag("body").performTextInput("Second version. ")
+        compose.onNodeWithText("Update draft").performClick()
+        waitUntil("the draft updated on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { text(a, draft)?.contains("Second version.") == true }
+
+        openFromTheBlog(titleDraft)
+        fromTheMenu("Publish to the site")
+        waitUntil("the draft published on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, slug) && text(a, draft) == null }
+        assertTrue(text(a, postPath(a, slug)!!)!!.contains("Second version."))
     }
 
     /** Types [time] into the schedule dialog's fields: hour, minute and, on a 12-hour clock, AM or PM. */
