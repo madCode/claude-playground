@@ -377,6 +377,9 @@ internal class LiveUpdates(
                 PackageInstaller.STATUS_FAILURE_INVALID,
                 PackageInstaller.STATUS_FAILURE_INCOMPATIBLE,
                 PackageInstaller.STATUS_FAILURE_CONFLICT -> { reject(prefs, build); true }
+                // No room, or the storage it installs to is missing: the phone's, not the build's.
+                // A downloaded build is tried again later.
+                PackageInstaller.STATUS_FAILURE_STORAGE -> { LiveInstallWorker.enqueueAfterNoRoom(WorkManager.getInstance(context)); false }
                 else -> failed(prefs, build)
             }
         }
