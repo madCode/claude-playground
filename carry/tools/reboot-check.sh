@@ -16,10 +16,12 @@ worker=com.app.carry.SessionWatchWorker
 fail() { echo "reboot check: $*" >&2; exit 1; }
 
 # JobScheduler's jobs for Carry's WorkManager, one per line, as the key dumpsys prints after
-# "JOB #": the uid, the namespace when there is one, and the id ("u0a190/ns/3" or "u0a190/3").
+# "JOB": the namespace when there is one, the uid and the id. Android 16 prints
+# "JOB androidx.work.systemjobscheduler:u0a220/1: e006984 @androidx.work...@<pkg>/androidx.work...";
+# older versions "JOB #u0a220/1: e006984 <pkg>/androidx.work...".
 jobs() {
-  adb shell dumpsys jobscheduler | grep 'JOB #' | grep "$pkg/androidx.work" \
-    | sed 's/.*JOB #\([^:]*\):.*/\1/' | sort -u
+  adb shell dumpsys jobscheduler | grep -E "^ *JOB [^ ]+: [0-9a-f]+ .*$pkg/androidx\.work" \
+    | awk '{print $2}' | sed 's/^#//; s/:$//' | sort -u
 }
 
 # What dumpsys says about Carry, for a failure's log.
@@ -40,12 +42,11 @@ await_jobs() {
 run_and_see() {
   adb logcat -c
   for key in $1; do
-    id=${key##*/}; rest=${key%/*}; ns=${rest#*/}
-    if [ "$ns" != "$rest" ]; then
-      adb shell cmd jobscheduler run -f -n "$ns" "$pkg" "$id"
-    else
-      adb shell cmd jobscheduler run -f "$pkg" "$id"
-    fi
+    id=${key##*/}
+    case ${key%/*} in
+      *:*) adb shell cmd jobscheduler run -f -n "${key%%:*}" "$pkg" "$id" ;;
+      *) adb shell cmd jobscheduler run -f "$pkg" "$id" ;;
+    esac
   done
   i=0
   while [ "$i" -lt 60 ]; do
