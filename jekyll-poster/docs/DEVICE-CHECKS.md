@@ -38,6 +38,7 @@ deleted after, and its request record is kept for the privacy audit.
 | An edit conflict | The post changes on GitHub while it's open on the phone: Update refuses, and the other change stays |
 | Hide and show | A post hidden from the editor's menu gets `published: false`, the site rebuilds without it, and Show on the site again takes the line out |
 | A Jekyll draft | Saved to `_drafts` from the menu, updated there, then Publish to the site moves it into `_posts` |
+| A link to another post | A post pushed as from a laptop is offered when `[[` is typed; picked, it goes out as a `post_url` link, and the site builds |
 | A scheduled post | Scheduled from the menu three minutes ahead: nothing reaches GitHub before then, and it goes out after |
 | Only connect through a VPN | With the WireGuard app's Proton tunnel off, a post waits and no request reaches GitHub; with it on, the phone's public address changes and the post goes out |
 

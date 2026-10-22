@@ -118,6 +118,8 @@ class LiveOnTheDeviceTest {
     private val titleBadToken = "Device check $stamp, bad token"
     private val titleDeleteConflict = "Device check $stamp, delete conflict"
     private val titleTools = "Device check $stamp, tools"
+    private val titleTarget = "Device check $stamp, linked to"
+    private val titleLinking = "Device check $stamp, linking"
     private val record = File(app.filesDir, "requests")
 
     @Before fun setUp() {
@@ -687,6 +689,35 @@ class LiveOnTheDeviceTest {
         val text = text(a, postPath(a, slug)!!).orEmpty()
         assertTrue(text, text.contains("categories: [device-check]"))
         assertTrue(text, text.contains("**Strong**words."))
+    }
+
+    /**
+     * A `[[` link to a post the site builds, picked from the editor's suggestions: it goes out as
+     * a `post_url` link, which Jekyll resolves (a link to a post it doesn't build fails the build).
+     */
+    @Test fun aLinkToAnotherPostGoesOutAsAPostUrl() {
+        testName = "post-link"
+        val a = signInToA()
+        // Pushed as from a laptop, dated yesterday: a post in the future isn't one Jekyll builds.
+        val day = LocalDate.now(java.time.ZoneOffset.UTC).minusDays(1)
+        val target = "$day-device-check-$stamp-linked-to"
+        runBlocking {
+            GitHubClient(http, a.token).commit(
+                a.owner, a.name, a.branch, "Add post: device check",
+                listOf(FileChange.text("_posts/$target.md", "---\ntitle: \"$titleTarget\"\n---\n\nLinked to.\n")), expect = mapOf("_posts/$target.md" to null),
+            )
+        }
+        newPost(titleLinking, "See ")
+        compose.onNodeWithTag("body").performTextInput("[[Device check $stamp, lin")
+        compose.waitUntil(60_000) { compose.onAllNodes(hasText(titleTarget) and hasAnyAncestor(hasContentDescription("Posts to link")), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(hasText(titleTarget) and hasAnyAncestor(hasContentDescription("Posts to link")), useUnmergedTree = true)[0].performClick()
+        compose.onNodeWithText("Publish").performClick()
+
+        val slug = "device-check-$stamp-linking"
+        waitUntil("the linking post on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, slug) }
+        val text = text(a, postPath(a, slug)!!).orEmpty()
+        assertTrue(text, text.contains("{% post_url $target %}"))
+        hearItIsLive(titleLinking)
     }
 
     /** Types [time] into the schedule dialog's fields: hour, minute and, on a 12-hour clock, AM or PM. */

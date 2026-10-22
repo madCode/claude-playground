@@ -5,8 +5,6 @@ and moves it to Done.
 
 ## Next
 
-- [ ] A `[[` link to a post in the nightly live check: it needs a post the site already builds on
-  the tester's blog, which each run deletes.
 - [ ] On every PR's emulator: delete a local draft, Discard changes, Remove from this list; a
   note's Use the publish day; the first Publish asking for notifications, and its tap; Remove a
   sign-in and Send them now; search and category pills; Read the blog again; Forget the vault
