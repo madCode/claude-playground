@@ -8,18 +8,18 @@ and moves it to Done.
 - [ ] Sign in with GitHub, a TalkBack listen, and updating itself on a phone, by a person, now and then
   ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)).
 
-## Waiting on madCode
+## Not doing
 
-- [ ] Per-blog templates for new posts: Jekyll's `defaults:` already covers front matter for every
-  post. Build a small "New posts start with" (tags, categories, a body), or drop it?
-  ([#182](https://github.com/madCode/claude-playground/issues/182))
-- [ ] A "keep private" word list per blog, checked before every publish (obyde's find/replace,
-  for posts not from Obsidian): should a listed word be replaced, or block the publish until
-  it's taken out?
-- [ ] Collections other than posts, and `collections_dir`: worth building?
-  ([#179](https://github.com/madCode/claude-playground/issues/179))
-- [ ] Hugo, or other static site generators on GitHub: keep, narrow or drop?
-  ([#180](https://github.com/madCode/claude-playground/issues/180))
+madCode decided these on the morning page, 21 Oct. Each comes back if a writer asks for it.
+
+- Per-blog templates for new posts
+  ([#182](https://github.com/madCode/claude-playground/issues/182)): Jekyll's `defaults:` already
+  sets front matter for every post, and the app follows it.
+- A "keep private" word list per blog.
+- Collections other than posts, and `collections_dir`
+  ([#179](https://github.com/madCode/claude-playground/issues/179)).
+- Hugo, or other static site generators
+  ([#180](https://github.com/madCode/claude-playground/issues/180)): it stays a Jekyll app.
 
 ## Done
 
