@@ -10,6 +10,29 @@ that hold become rules in CLAUDE.md or the cycles skill.
 Baseline: a cloud container, no emulator running, nothing in the
 background. madCode's PR #197 merged before the run.
 
+### Cycle 76 — skipped: the ladder hint was built in another session
+
+madCode's main session built it on its own branch once gym-coach #73
+merged, and asked this run not to start a second. Checked the branch
+before skipping. **Before building an item, look for an open branch or PR
+that already has it**, not only main.
+
+### Cycle 75 — build: a reboot check, then `FOREGROUND_SERVICE` removed
+
+- **WorkManager's jobs don't survive a reboot; its boot receiver
+  reschedules them** (2.12 only ever calls `setPersisted(false)`). So a
+  reboot check has to wait for Android to have *saved* that receiver as
+  enabled (`package-restrictions.xml`, a few seconds' delay). Rebooting
+  straight away made it look as if Carry's check never came back.
+- **A periodic job forced before its period is due is skipped**, not run.
+  Prove "it runs" from WorkManager's `period_count` (database in
+  `no_backup/`, readable with `run-as` on a debug build) after moving the
+  emulator's clock past the period.
+- **Read the library's bytecode before guessing its behaviour** (`javap`
+  on the AAR in `~/.gradle/caches`): two of this cycle's wrong turns were
+  guesses about WorkManager that one `javap` settled.
+- Emulator runs only on CI; nothing was started in this container.
+
 ### Cycle 74 — build: Carry's first device test job
 
 - **The test APK's own process has no Kotlin runtime.** A provider or

@@ -49,6 +49,9 @@ periods() {
   for f in androidx.work.workdb androidx.work.workdb-wal androidx.work.workdb-shm; do
     adb exec-out run-as "$pkg" cat "no_backup/$f" > "$work/$f" 2>/dev/null || rm -f "$work/$f"
   done
+  # exec-out has no exit status: a failed run-as copies its error text instead of the database.
+  head -c 15 "$work/androidx.work.workdb" | grep -q 'SQLite format 3' \
+    || fail "couldn't read WorkManager's database: $(head -c 200 "$work/androidx.work.workdb")"
   python3 - "$work/androidx.work.workdb" "$worker" <<'PY'
 import sqlite3, sys
 db = sqlite3.connect(sys.argv[1])
@@ -71,8 +74,8 @@ run() {
   for key in $1; do
     id=${key##*/}
     case ${key%/*} in
-      *:*) adb shell cmd jobscheduler run -f -n "${key%%:*}" "$pkg" "$id" ;;
-      *) adb shell cmd jobscheduler run -f "$pkg" "$id" ;;
+      *:*) adb shell cmd jobscheduler run -f -n "${key%%:*}" "$pkg" "$id" || { show_jobs; fail "couldn't run job $key"; } ;;
+      *) adb shell cmd jobscheduler run -f "$pkg" "$id" || { show_jobs; fail "couldn't run job $key"; } ;;
     esac
   done
 }
@@ -109,6 +112,8 @@ done
 
 boot=$(adb shell cat /proc/sys/kernel/random/boot_id)
 adb reboot
+# adb reboot returns before adbd goes down: without this, the old system can answer below.
+adb wait-for-disconnect
 adb wait-for-device
 i=0
 until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do
