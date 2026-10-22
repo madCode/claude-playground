@@ -53,6 +53,11 @@ doesn't want to open a laptop and make a commit for every post.
   post goes above its title: `To Night Notes · @inkwell`.
 - A post goes out under its own blog's sign-in, whichever blog is open. A sign-in whose blog
   isn't open makes no requests except for its own post going out and that post's build.
+- **Its notification names its blog** when another is open: "“Bus notes” is live on Night
+  Notes", "Night Notes didn't rebuild". A live post's tap opens it on the site. A tap that opens
+  the app (a failed build, a hidden post) opens it afresh on the post's blog, where Home lists
+  the post, and says "Switched to Night Notes"; if that blog has been removed since, it says so
+  instead. A locked phone shows neither the title nor the blog.
 - **Privacy is per blog.** Each blog has its own switches (Blog & privacy, below), and the
   switcher's rows show the ones that are on, so a pseudonymous blog looks different before it's
   picked. A blog added beside others starts with every switch off, not copied from the open
@@ -210,6 +215,20 @@ doesn't want to open a laptop and make a commit for every post.
   hours and the post waits for it, saying "Going out at 18:40, a random time"; nothing about
   this post is read from or sent to GitHub before then (opening the app still reads the blog). **Send now** in the editor sends it at once. The moment
   is kept with the post, so a restart doesn't pick again. Deleting is never delayed.
+- **Schedule…** in the editor's menu (a new post) picks a day and a time on the phone's clock;
+  a moment already past can't be chosen. The post waits on the phone, saying "Scheduled for
+  9:00 AM tomorrow", and goes out at that time, in place of any random one. Nothing about it
+  reaches GitHub before then, so a public repository doesn't show it early.
+  - It goes out only if the phone is on and online then; otherwise as soon as it is. An alarm
+    Android allows on an idle phone wakes the app at the time, so a phone asleep sends it within
+    minutes; WorkManager, which an idle phone can hold back for hours, is the backstop. A random
+    time is woken the same way. A restart clears the alarm, leaving WorkManager.
+  - It's dated when it goes out, like any post. **Send now** and **Stop and edit** work as for
+    the random time, and forget the schedule; Send now stays once it's late.
+  - Its time shows instead of "Waiting for your VPN…" until it's due. Removing a sign-in it
+    waits on names it and its time, and "Send them now" sends it early.
+  - Not a future-dated commit: GitHub Pages' usual setup builds a post dated in the future at
+    once, and the repository would show it before its time.
 - A queued post goes to the blog it was written for, with that blog's sign-in, even if another
   blog is open by the time it goes; so does the check that it's live. Signed out of its blog,
   it fails and says to sign in to that blog.

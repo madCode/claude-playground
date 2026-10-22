@@ -9,6 +9,39 @@ waiting on madCode is done, or 7am Pacific (14:00 UTC), whichever comes first. A
 that the app's update system (the `jekyll-poster-debug` release) matches the other apps' (Carry,
 newspaperss), and puts any difference in BACKLOG.md.
 
+**The run of 22 Oct (night)**, as madCode set it: the cycles proposed on 22 Oct (the double
+reads, scheduled posts, #189, the journey gaps nightly and on every PR, a close-out), until 7am
+Pacific (14:00 UTC), merging each PR once it's green.
+
+### Cycles 62–64 — build: the smaller journeys on every PR's emulator, and the close-out
+
+- Falsify device tests in one pushed commit and cancel the live run it queues: it touches the
+  app's code, and a live run on a break proves nothing and holds the queue for 15 minutes.
+
+### Cycles 59–61 — build: the nightly live check through the screens
+
+- A screen step that times out on the device, and works in the every-PR suite, is usually
+  something off screen: Home composes only the rows on screen, and typing in the body scrolls
+  the term rows away. Search for the row, or do the step before the typing.
+
+- Have a reviewer trace a live test against the screens before pushing: each live run costs 15
+  minutes, and the review found a check that could never pass (Preview is a WebView, read with
+  UiAutomator) and two that raced the screen.
+- A CI step that hangs past its time limit with no failing test, while the same tree passes
+  locally in 4 minutes, was a one-off (#189's build): re-run it once before digging.
+
+### Cycle 57 — build: scheduled posts
+
+- Ask the reviewer what Android does to background work on an idle phone: WorkManager's delay
+  was fine for a random time and wrong for a time the writer chose, and only the review saw it.
+- A Compose test helper that finds fields by `hasSetTextAction()` finds the screen's behind a
+  dialog too: scope it with `hasAnyAncestor(isDialog())`.
+
+### Cycle 56 — audit: Home's double reads
+
+- Read the caller list before calling a request redundant: the "second Home read" was the
+  publish's own read before its commit (`Publisher.kt`), which it needs.
+
 ### Cycle 54 — audit: a second documentation pass
 
 - Run a docs pass again after a large feature lands: the self-update PR brought back a long,

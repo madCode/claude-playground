@@ -37,8 +37,9 @@ import com.app.jekyllposter.ui.settings.SettingsScreen
 
 private object Loading
 
+/** [openBlog] is the blog a notification's tap asked to open. */
 @Composable
-fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
+fun PosterNavHost(container: AppContainer, shared: Shared? = null, openBlog: String? = null) {
     // Wait for the stored account before choosing the first screen, so a signed-in writer never
     // sees the connect screen flash by.
     // Read once: the screens navigate on their own after that, and a passing null (a sign-in being
@@ -50,6 +51,8 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
     // Home leaves the composition while the editor is open and its effects run again on the way
     // back, so a share is taken once, here, or every Back would start another post from it.
     var pending by rememberSaveable { mutableStateOf(shared != null) }
+    // Likewise once: a rotation, or a restore after the process died, mustn't undo a switch made since.
+    var blogPending by rememberSaveable { mutableStateOf(openBlog != null) }
     // The last sign-in removed, from whichever screen, and whether or not that screen is still
     // open: back to signing in. Only a change counts; the first value chose the first screen.
     LaunchedEffect(nav) {
@@ -104,6 +107,10 @@ fun PosterNavHost(container: AppContainer, shared: Shared? = null) {
                 if (shared != null && pending) {
                     pending = false
                     vm.startShared(shared)
+                }
+                if (openBlog != null && blogPending) {
+                    blogPending = false
+                    vm.openFromNotification(openBlog)
                 }
             }
             val opened by vm.opened.collectAsStateWithLifecycle()

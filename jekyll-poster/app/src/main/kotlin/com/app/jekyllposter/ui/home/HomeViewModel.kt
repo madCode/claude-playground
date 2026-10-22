@@ -54,6 +54,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         val blogHasPosts: Boolean = false,
         val waitingForVpn: Boolean = false,
         val error: String? = null,
+        /** What the app did on its own, to say once: the blog a notification switched to. */
+        val notice: String? = null,
     ) {
         val searching: Boolean get() = !query.isNullOrBlank()
     }
@@ -90,8 +92,11 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     fun refresh() {
         status.update { it.copy(refreshing = true, error = null) }
         viewModelScope.launch {
+            val key = container.accounts.currentKey()
             val error = catching { container.blogs.refresh() }.exceptionOrNull()
-            status.update { it.copy(refreshing = false, error = error?.forWriter()) }
+            // A read of a blog left meanwhile says nothing about the open one.
+            val stale = container.accounts.currentKey() != key
+            status.update { it.copy(refreshing = false, error = error?.takeUnless { stale }?.forWriter()) }
         }
     }
 
@@ -99,6 +104,26 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     fun filter(category: String?) = status.update { it.copy(category = if (it.category.equals(category, ignoreCase = true)) null else category) }
 
     fun dismissError() = status.update { it.copy(error = null) }
+
+    fun dismissNotice() = status.update { it.copy(notice = null) }
+
+    /**
+     * Opens blog [key], the one a notification's post went to, and says so: Home lists the post
+     * only under its own blog. In the app's scope, like the switcher's: a rotation mustn't stop it.
+     */
+    fun openFromNotification(key: String) {
+        container.appScope.launch {
+            if (container.accounts.currentKey() == key) return@launch
+            val blog = container.accounts.blogs.first().firstOrNull { it.key == key }
+            if (blog == null || !container.open(key, read = false)) {
+                status.update { it.copy(notice = "That post's blog isn't in the app any more.") }
+                return@launch
+            }
+            status.update { it.copy(notice = "Switched to ${blog.name}") }
+            // Read here, not by the switch, so a failure shows: this Home's first read was of the blog left.
+            refresh()
+        }
+    }
 
     fun startSearch() = status.update { it.copy(query = it.query ?: "") }
 
