@@ -6,7 +6,8 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** a debug build that updates itself on Wi-Fi while Carry is
+- **Lately:** a device test on an emulator in CI, proving a tap on the
+  sheet's notification keeps unsaved typing (cycle 74); a debug build that updates itself on Wi-Fi while Carry is
   closed, and checks the file itself (cycles 71–72); the bars beside each family's heaviest gone, the number kept
   (#116); a timed hold keeping its done chip whatever its duration says
   (#115); a newer debug build named at the top of the Since tab
@@ -48,6 +49,23 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   there is a question in the backlog.
 - **Pairs with the sheet:** it now advises the first round, and this row
   records the heaviest one.
+## 2026-10-22 — cycle 74: Carry's first device test, on CI's emulator
+
+- **Tapping the sheet's notification keeps what you typed.** That was the
+  one thing the 16 October phone check couldn't show, because nothing had
+  been typed. Now a test shows it on every PR touching Carry: a made-up
+  sheet for today in a folder Carry holds, a weight typed on the After tab
+  and not saved, Home, a tap on the real notification, and the weight is
+  still in its box. With the old bug put back on purpose (`CLEAR_TOP`), the
+  same test went red with the box empty.
+- **Carry now has device tests at all.** `app/src/androidTest` runs on an
+  emulator in a new CI job, `carry-device.yml`, copied from Jekyll
+  Poster's with every action pinned. It takes about four minutes.
+- **The folder is a stand-in.** The test can't drive the system's folder
+  picker reliably, so a small provider in the test APK hands Carry the
+  same kind of lasting folder grant a pick does. Carry's own code reads
+  and writes it as it would your folder.
+- Nothing you see changed. The *Owed on a device* list is one shorter.
 
 ## 2026-10-22 — a full phone's build is tried again later
 
