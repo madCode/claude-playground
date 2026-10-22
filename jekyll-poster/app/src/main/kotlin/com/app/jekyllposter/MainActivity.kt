@@ -1,5 +1,7 @@
 package com.app.jekyllposter
 
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -20,12 +22,28 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // A rotation passes it again; the nav host takes each share only once.
         val shared = postToStart(intent)
+        val blog = blogToOpen(intent)
         addNewPostShortcut()
+        if (savedInstanceState == null && launchedFromLauncher(intent)) container.updates.holds.freshStart()
+        container.updates.start()
         setContent {
             PosterTheme {
-                PosterNavHost((application as PosterApp).container, shared)
+                PosterNavHost(container, shared, blog)
             }
         }
+    }
+
+    private val container get() = (application as PosterApp).container
+
+    override fun onResume() {
+        super.onResume()
+        container.updates.resumed(this)
+        container.updates.checkIfDue()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        container.updates.paused()
     }
 
     /**
@@ -52,8 +70,40 @@ class MainActivity : ComponentActivity() {
         /** The launcher's New post shortcut: opens an empty post. */
         const val ACTION_NEW_POST = "com.app.jekyllposter.NEW_POST"
         const val NEW_POST_SHORTCUT = "new-post"
+
+        /** The blog a notification's post went to ([com.app.jekyllposter.data.Account.blogKey]), to open. */
+        const val EXTRA_BLOG = "com.app.jekyllposter.BLOG"
+
+        /** The manifest's alias of this activity that only the app itself can start. */
+        const val OPEN_BLOG = "com.app.jekyllposter.OpenBlog"
+
+        /**
+         * Starts the app afresh on blog [key]. Through [OPEN_BLOG], not exported, so no other app
+         * can switch the writer's blog. A new task, not one on top: an editor left open beneath
+         * would go on with the blog left's categories and links.
+         */
+        fun openBlog(context: Context, key: String): Intent = Intent()
+            .setComponent(ComponentName(context.packageName, OPEN_BLOG))
+            .putExtra(EXTRA_BLOG, key)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
     }
 }
+
+/**
+ * Opened from the launcher afresh, so no editor of this task waits to be restored. Not from
+ * recents ([Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY]), which restores one.
+ */
+internal fun launchedFromLauncher(intent: Intent?): Boolean =
+    intent != null && intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_LAUNCHER) &&
+        intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0
+
+/**
+ * The blog a notification's tap opens ([MainActivity.openBlog]). Null for any other start, and when
+ * reopened from Recents, which would open it again over a switch made since.
+ */
+internal fun blogToOpen(intent: Intent?): String? =
+    intent?.takeIf { it.component?.className == MainActivity.OPEN_BLOG && it.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0 }
+        ?.getStringExtra(MainActivity.EXTRA_BLOG)
 
 /**
  * The post [intent] starts: empty for the launcher's New post, or what another app shared.

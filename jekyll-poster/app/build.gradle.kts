@@ -19,6 +19,12 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "com.app.jekyllposter.device.DeviceTestRunner"
+        // Each device test in a process of its own, with the app's data cleared: the app's
+        // DataStores are process-wide, and a sign-in would carry into the next test.
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
+        // Files a test keeps (the live check's request record) are pulled into the build's outputs.
+        testInstrumentationRunnerArguments["useTestStorageService"] = "true"
         // A GitHub App's client ID turns on "Sign in with GitHub" (device flow). Not a secret: the
         // device flow needs no client secret. Empty hides the button and leaves token sign-in.
         buildConfigField("String", "GITHUB_CLIENT_ID", "\"${providers.gradleProperty("githubClientId").getOrElse("")}\"")
@@ -60,6 +66,7 @@ android {
     sourceSets { getByName("debug").assets.srcDir("$projectDir/schemas") }
 
     testOptions {
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
@@ -128,10 +135,70 @@ dependencies {
     testImplementation(libs.compose.ui.test.junit4)
     // Compose UI test pulls an older Espresso that crashes on API 37.
     testImplementation(libs.espresso.core)
+
+    androidTestImplementation(testFixtures(project(":core")))
+    androidTestImplementation(libs.okhttp.mockwebserver)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.uiautomator)
+    androidTestImplementation(libs.androidx.test.storage)
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.compose.ui.test.junit4.accessibility)
+    androidTestImplementation(libs.espresso.core)
+    androidTestUtil(libs.androidx.test.orchestrator)
+    androidTestUtil(libs.androidx.test.services)
 }
+
+// The sample blog, zipped into the device tests' assets: the fake GitHub on the device serves it.
+// Zipped, because the asset packager leaves out folders starting with "_", like _posts.
+val sampleBlogAssets = layout.buildDirectory.dir("generated/sampleBlogAssets").get().asFile
+val sampleBlogZip = tasks.register<Zip>("sampleBlogZip") {
+    from(rootProject.file("sample-blog"))
+    archiveFileName.set("sample-blog.zip")
+    destinationDirectory.set(sampleBlogAssets)
+}
+android.sourceSets.getByName("androidTest").assets.srcDir(sampleBlogAssets)
+// Every task of the device tests reads the folder (assets, lint models), not only the merge.
+tasks.named { it.contains("AndroidTest") }.configureEach { dependsOn(sampleBlogZip) }
+
 
 androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
         ciRun?.let { run -> variant.outputs.forEach { it.versionCode.set(run) } }
+    }
+    // Unit tests run on debug only, so a release's manifest is checked here instead.
+    onVariants { variant ->
+        val name = variant.name.replaceFirstChar { it.uppercase() }
+        val manifestCheck = tasks.register<SelfUpdateManifestCheck>("check${name}SelfUpdateManifest") {
+            manifest.set(variant.artifacts.get(com.android.build.api.artifact.SingleArtifact.MERGED_MANIFEST))
+            selfUpdates.set(variant.buildType == "debug")
+        }
+        tasks.named("check") { dependsOn(manifestCheck) }
+    }
+}
+
+/**
+ * Fails when a variant's merged manifest disagrees about installing apps: the debug build installs
+ * newer CI builds (src/debug), and app stores refuse a release that can. Checking debug as well
+ * keeps the release check from passing on a manifest it misread.
+ */
+abstract class SelfUpdateManifestCheck : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val manifest: RegularFileProperty
+
+    @get:Input
+    abstract val selfUpdates: Property<Boolean>
+
+    @TaskAction
+    fun check() {
+        val text = manifest.get().asFile.readText()
+        for (name in listOf("android.permission.REQUEST_INSTALL_PACKAGES", "UpdateInstaller\$Result")) {
+            if ((name in text) != selfUpdates.get()) {
+                throw GradleException("${manifest.get().asFile}: $name should " + if (selfUpdates.get()) "be there" else "not be there")
+            }
+        }
     }
 }

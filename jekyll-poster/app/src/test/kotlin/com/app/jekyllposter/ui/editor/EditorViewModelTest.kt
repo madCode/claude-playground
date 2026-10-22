@@ -5,6 +5,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.core.jekyll.MarkdownEdits
+import com.app.jekyllposter.core.jekyll.PostWriter
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
@@ -20,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -56,6 +58,20 @@ class EditorViewModelTest {
         val text = app.github.text(post.path)!!
         assertTrue(text, text.contains("category: Writing\ntags: [books, essays]\n# Kept by hand"))
         assertEquals(PostState.Published, runBlocking { c.drafts.get(id!!) }!!.state)
+    }
+
+    @Test fun aPostWithKeysTheAppCantEditIsntOpenedAndHomeSaysWhy() {
+        app.github.push("Laptop", mapOf("_posts/2025-05-05-odd-keys.md" to "---\ntitle: Odd keys\n? complex key\n: kept\n---\n\nText.\n"))
+        runBlocking { c.blogs.refresh() }
+        val home = HomeViewModel(c)
+        val state = home.state.also { s -> CoroutineScope(Dispatchers.Unconfined).launch { s.collect {} } }
+        val post = runBlocking { c.database.posts().snapshot(SAMPLE_BLOG) }.first { it.path == "_posts/2025-05-05-odd-keys.md" }
+        var opened: Long? = null
+        home.edit(post) { opened = it }
+        idleUntil { state.value.error != null }
+        assertEquals(PostWriter.CANT_OPEN, state.value.error)
+        assertNull(opened)
+        assertTrue(runBlocking { c.drafts.list() }.none { it.editingPath == post.path })
     }
 
     @Test fun editingFromAStaleListStartsFromTheBlogAsItIsNow() {

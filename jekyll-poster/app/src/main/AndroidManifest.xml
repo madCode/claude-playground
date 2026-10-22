@@ -48,6 +48,11 @@
                 <data android:mimeType="image/*" />
             </intent-filter>
         </activity>
+        <!-- A notification's tap, opening the post's blog: not exported, so only the app starts it. -->
+        <activity-alias
+            android:name=".OpenBlog"
+            android:exported="false"
+            android:targetActivity=".MainActivity" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.camera"
@@ -57,5 +62,6 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/camera_paths" />
         </provider>
+        <receiver android:name=".publish.SendTimeAlarm" android:exported="false" />
     </application>
 </manifest>

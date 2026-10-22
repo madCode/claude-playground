@@ -29,8 +29,10 @@ import androidx.compose.material.icons.filled.Drafts
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -73,6 +75,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.jekyllposter.core.jekyll.Edit
 import com.app.jekyllposter.core.jekyll.PostPath
+import com.app.jekyllposter.core.jekyll.hidesPost
 import com.app.jekyllposter.data.BlogEntry
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
@@ -87,12 +90,13 @@ import com.app.jekyllposter.ui.theme.InkButton
 fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val text = viewModel.text
-    var picker by remember { mutableStateOf<TermKind?>(null) }
+    var picker by rememberSaveable { mutableStateOf<TermKind?>(null) }
     // The toolbar formats the body, so it only works while the body has the focus.
     var bodyFocused by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
-    var confirmDeleteFromBlog by remember { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var confirmDeleteFromBlog by rememberSaveable { mutableStateOf(false) }
+    var scheduling by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.closed) { if (state.closed) onClose() }
     BackHandler(onBack = viewModel::close)
     val editable = state.editable
@@ -162,8 +166,9 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                             },
                         ) { send(if (jekyllDraft) Destination.Drafts else Destination.Posts) }
                     }
-                    // Waiting for its random time: the writer can still send it at once.
-                    if (state.draft?.state == PostState.Queued && (state.draft?.sendAfter ?: 0) > nowUntil(state.draft?.sendAfter)) {
+                    // Waiting for its random or scheduled time, or a scheduled one Android hasn't
+                    // woken yet: the writer can still send it at once.
+                    if (state.draft?.state == PostState.Queued && ((state.draft?.sendAfter ?: 0) > nowUntil(state.draft?.sendAfter) || state.draft?.scheduled == true)) {
                         InkButton("Send now", onClick = viewModel::sendNow)
                     }
                     // A queued post may be mid-commit; deleting it then would lose the phone's record
@@ -187,11 +192,44 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                                     onClick = { menu = false; send(Destination.Drafts) },
                                 )
                             }
+                            if (editable && text?.editingPath == null) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text("Schedule…")
+                                            Text(
+                                                "Publish at a time you choose",
+                                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Schedule, null) },
+                                    onClick = { menu = false; scheduling = true },
+                                )
+                            }
                             if (editable && jekyllDraft) {
                                 DropdownMenuItem(
                                     text = { Text("Publish to the site") },
                                     leadingIcon = { Icon(Icons.Default.Public, null) },
                                     onClick = { menu = false; send(Destination.Posts) },
+                                )
+                            }
+                            // Needs the post's other keys, which an edit opened before the app kept them lacks.
+                            if (editable && text?.editingPath != null && !jekyllDraft && text.extraFrontMatter != null) {
+                                // As the blog has it: a hide that didn't go out leaves the post on the site.
+                                val hidden = hidesPost(text.extraFrontMatterOpened ?: text.extraFrontMatter)
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(if (hidden) "Show on the site again" else "Hide from the site")
+                                            Text(
+                                                if (hidden) "Takes out “published: false”" else "The file stays on GitHub, marked “published: false”",
+                                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    },
+                                    leadingIcon = { Icon(if (hidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null) },
+                                    onClick = { menu = false; viewModel.setHidden(!hidden) },
                                 )
                             }
                             if (editable && text?.editingPath != null) {
@@ -253,7 +291,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                 Surface(color = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(label, Modifier.weight(1f).padding(vertical = 8.dp), style = MaterialTheme.typography.bodyMedium)
-                        if (draft.state == PostState.Published && draft.postUrl != null) {
+                        if (draft.state == PostState.Published && draft.postUrl != null && !draft.hidden) {
                             TextButton(onClick = { uri.openUri(draft.postUrl) }) { Text("Open on the site") }
                         }
                         // Not yet gone: back to a draft, so the writer can change it before it goes.
@@ -330,6 +368,12 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Keep") } },
         )
     }
+    if (scheduling) {
+        ScheduleDialog(
+            onDismiss = { scheduling = false },
+            onSchedule = { at -> scheduling = false; askForNotifications(); viewModel.publish(Destination.Posts, at = at) },
+        )
+    }
     if (confirmDeleteFromBlog) {
         val title = text?.title?.trim().orEmpty().ifEmpty { "this post" }
         AlertDialog(
@@ -367,7 +411,7 @@ private fun plainField() = TextFieldDefaults.colors(
 @Composable
 private fun ToLine(blog: BlogEntry) {
     Text(
-        "To ${blog.title ?: blog.repoName} · @${blog.login}",
+        "To ${blog.name} · @${blog.login}",
         style = MaterialTheme.typography.labelLarge,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,

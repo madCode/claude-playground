@@ -38,7 +38,8 @@ class SharedPhotosTest {
         val id = runBlocking { app.container.drafts.insert(Draft(body = "From the gallery:")) }
         app.container.pendingShares[id] = PendingShare(photos = listOf(photo("a.jpg"), photo("b.jpg")))
         val editor = EditorViewModel(app.container, id)
-        idleUntil(10_000) { editor.text?.images?.size == 2 && !editor.state.value.addingPhoto }
+        // The screen's state follows the text through a flow of its own: wait for it too.
+        idleUntil(10_000) { editor.text?.images?.size == 2 && !editor.state.value.addingPhoto && editor.state.value.describing.size == 2 }
         val body = editor.text!!.body
         assertTrue(body, body.startsWith("From the gallery:\n\n![]({{ '/assets/images/"))
         val first = body.indexOf(editor.text!!.images[0].sitePath)

@@ -39,9 +39,12 @@ can tell the difference.
 
     ./gradlew build koverVerify          # everything CI runs
     ./gradlew :app:testDebugUnitTest --tests '*ScreenTest'   # PNGs in app/build/screenshots
+    ./gradlew :app:connectedDebugAndroidTest   # device tests, on an attached emulator
 
 JDK 21 and the Android SDK are required; `../jekyll-poster/tools/install-android-sdk.sh`
-installs the SDK for a cloud session.
+installs the SDK for a cloud session. A cloud session has no KVM, so the
+device tests (`app/src/androidTest`) run on CI's emulator job
+(`.github/workflows/carry-device.yml`): open the PR and read its report.
 
 ## The session file
 

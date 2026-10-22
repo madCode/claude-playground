@@ -20,6 +20,7 @@ import com.app.jekyllposter.core.jekyll.MarkdownEdits
 import com.app.jekyllposter.core.jekyll.Preview
 import com.app.jekyllposter.core.jekyll.Taxonomy
 import com.app.jekyllposter.core.jekyll.Term
+import com.app.jekyllposter.core.jekyll.withPostHidden
 import com.app.jekyllposter.core.obsidian.ObsidianNote
 import com.app.jekyllposter.data.CachedPost
 import com.app.jekyllposter.data.Destination
@@ -375,6 +376,17 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         edit { it.copy(extraFrontMatter = yaml) }
     }
 
+    /**
+     * Sends the post being edited with `published: false` ([hidden]) or without it, along with
+     * whatever else the writer changed: Jekyll then leaves it off the site, or shows it again.
+     */
+    fun setHidden(hidden: Boolean) {
+        val extra = text?.takeIf { it.editingPath != null }?.extraFrontMatter ?: return
+        setExtraFrontMatter(withPostHidden(extra, hidden))
+        // Like a delete, a hide isn't held for a random time: the writer wants it off the site.
+        publish(Destination.Posts, atOnce = hidden)
+    }
+
     fun frontMatterShown() = flags.update { it.copy(frontMatterBlocked = null) }
 
     /** Why the "more front matter" can't be published as it is, or null. */
@@ -444,8 +456,11 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         container.drafts.update(saved.copy(updatedAt = System.currentTimeMillis()))
     }
 
-    /** Sends the post to [destination]: the site's `_posts`, or the blog's `_drafts`. */
-    fun publish(destination: Destination? = null) {
+    /**
+     * Sends the post to [destination]: the site's `_posts`, or the blog's `_drafts`. With [at]
+     * (epoch millis), not before then: a time the writer chose, in place of any random one.
+     */
+    fun publish(destination: Destination? = null, atOnce: Boolean = false, at: Long? = null) {
         // Set before anything suspends: a double tap's second call would otherwise read the post
         // as not yet queued, and pick it a second random time.
         if (publishing) return
@@ -484,7 +499,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                 val again = draft.editable && draft.editingPath == null && draft.sentShas.isEmpty()
                 // A random moment in the next few hours, so commit times don't trace the writer's
                 // day. Deleting a post is never delayed: the writer wants it gone.
-                val sendAfter = if ((destination ?: draft.destination) != Destination.Delete &&
+                val sendAfter = at ?: if (!atOnce && (destination ?: draft.destination) != Destination.Delete &&
                     container.privacy.get(draft.blog ?: container.accounts.currentKey()).sendAtRandomTime
                 ) {
                     System.currentTimeMillis() + Random.nextLong(RANDOM_WINDOW.inWholeMilliseconds)
@@ -500,6 +515,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
                         targetPath = if (again || draft.destination == Destination.Delete) null else draft.targetPath,
                         publishDate = if (again) null else draft.publishDate,
                         sendAfter = sendAfter,
+                        scheduled = at != null,
                     ),
                 )
                 container.publishQueue.enqueue(id, sendAfter)
@@ -561,7 +577,7 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
         }
     }
 
-    /** Sends a post waiting for its random time now. In the app's scope: Back right after mustn't stop it. */
+    /** Sends a post waiting for its random or scheduled time now. In the app's scope: Back right after mustn't stop it. */
     fun sendNow() {
         container.appScope.launch { container.sendNow(id) }
     }

@@ -1,0 +1,90 @@
+# Device checks
+
+Every check of the app on a device: what CI's emulator runs on every PR, what it runs nightly,
+and on PRs that change the app's code, against real GitHub, and the five a person runs now and then. The JVM tests (`:core:test`,
+`:app:testDebugUnitTest`) cover the rest, without a device.
+
+## On CI's emulator, every PR
+
+"Jekyll Poster device tests" runs these on every PR that touches the app, against a pretend
+GitHub on the emulator serving the sample blog. `:sender` is a second app installed beside it, so
+photos and notes arrive from another process with a real URI grant.
+
+| Check | Test | It proves |
+|---|---|---|
+| Sign in, write, publish | `OnTheDeviceTest` | Signing in with a token, a post written in the editor goes out through the phone's own background work, and the "is live" notification shows |
+| A link from another app | `OnTheDeviceTest` | A link shared from outside the app starts one post with it as a Markdown link |
+| Front matter the app can't follow | `OnTheDeviceTest` | A post with a `?` key, pushed from elsewhere, isn't opened: Home says why, and nothing on GitHub changes |
+| Sign in with GitHub twice | `OnTheDeviceTest` | Signing in with GitHub again to add a second blog keeps one sign-in holding both (the pretend GitHub approves the code; entering it in a browser is the person's check below) |
+| New post from the launcher | `OnTheDeviceTest` | Long-pressing the app's icon on the home screen offers New post, which opens one empty post |
+| A photo from another app | `FromOtherAppsTest` | It's added with its alt text, and the copy on GitHub has no location and doesn't say what made it |
+| A note from Obsidian | `FromOtherAppsTest` | The post takes the note's name as its title, `[[links]]` to the blog's posts become `post_url` links, `%%comments%%` are gone |
+| Two photos at once | `FromOtherAppsTest` | Shared in one go, each is described in turn, and neither copy on GitHub has a location |
+| A note as a text file, and Open with | `FromOtherAppsTest` | A note sent as a `.txt` file, or opened with the app from a file manager, starts a post from it, Obsidian comments gone |
+| The camera | `FromOtherAppsTest` | A photo from the emulator's own camera app is added, and the original is deleted from the app's cache |
+| Rotation | `ScreensOnTheDeviceTest` | Text typed, the tag picker and its search survive turning the phone, and the post isn't made twice |
+| Throwing away on the phone | `JourneysOnTheDeviceTest` | Delete draft, Discard changes and Remove from this list each clear the phone's copy and leave the blog as it was |
+| A note's own date | `JourneysOnTheDeviceTest` | Use the publish day drops a shared note's date, and the post is dated when it goes out |
+| Notifications | `JourneysOnTheDeviceTest` | The first Publish asks for them and goes ahead; a failed build's notification, tapped, opens the app on the post |
+| Removing a sign-in | `JourneysOnTheDeviceTest` | With a post still to go it's refused and names the post; Send them now sends it; then it's removed and the app asks to sign in |
+| Finding posts | `JourneysOnTheDeviceTest` | A category pill and search narrow Home's list; Read the blog again picks up a post pushed meanwhile |
+| Large text and dark theme | `ScreensOnTheDeviceTest` | Home, the editor and Blog & privacy at twice the text size, in the dark, pass Android's accessibility checks (labels, touch targets, contrast). Their pictures are kept in the run's report, under `screens/` |
+
+## On CI's emulator, against real GitHub
+
+"Jekyll Poster device live check" (`LiveOnTheDeviceTest`) runs these every night, and on a PR that
+changes it or the app's own code, on the tester's real blogs ([TESTER_ACCOUNT.md](TESTER_ACCOUNT.md)). Its posts are
+deleted after, and its request record is kept for the privacy audit.
+
+| Check | It proves |
+|---|---|
+| Two blogs, two sign-ins | Blog A signed in to and published from the screens; the organisation's blog added from Settings → Add a sign-in and published to; a switch back from Home's title; both posts go live on Pages and their notifications show |
+| Privacy at its most | Set up for writing anonymously tapped in Blog & privacy turns every switch on; the VPN is then turned off, as it has a check of its own. The commit says "Update blog", names the no-reply address, and is dated by the day; tracking codes are gone; a random send time is set. What GitHub kept goes in `privacy-report.json` |
+| The app killed while a post waits | A post queued for a minute ahead, then the app's process ended: Android starts its background work alone, and the post goes out |
+| A photo, an edit and a delete | A photo shared in from another app goes out without its location; the post is then edited and deleted from the screens |
+| An edit conflict | The post changes on GitHub while it's open on the phone: Update refuses, and the other change stays |
+| Hide and show | A post hidden from the editor's menu gets `published: false`, the site rebuilds without it, and Show on the site again takes the line out |
+| A Jekyll draft | Saved to `_drafts` from the menu, updated there, then Publish to the site moves it into `_posts` |
+| A link to another post | A post pushed as from a laptop is offered when `[[` is typed; picked, it goes out as a `post_url` link, and the site builds |
+| A scheduled post | Scheduled from the menu three minutes ahead: nothing reaches GitHub before then, and it goes out after |
+| Only connect through a VPN | With the WireGuard app's Proton tunnel off, a post waits and no request reaches GitHub; with it on, the phone's public address changes and the post goes out |
+
+"Jekyll Poster live check", a separate workflow with no emulator, publishes to and deletes from
+all three of the tester's blogs nightly through the app's GitHub client.
+
+## What CI can't show
+
+- The camera's real lens, and a location in its photos. The shared photo's location is checked
+  instead.
+- A share from Obsidian itself. `:sender` shares a note the way Obsidian does.
+- A vault folder for a note's embedded photos, chosen in Android's folder picker. The JVM tests
+  cover the vault's photos.
+
+## Now and then, by a person
+
+On a phone or the laptop's emulator with the newest debug build (`tools/emulator-check.sh install`
+puts it on an emulator). Post only to the tester's blogs, and delete what you post.
+
+| Check | When | Do this | It worked if |
+|---|---|---|---|
+| **Sign in with GitHub** | A change to sign-in, or the GitHub App | Sign in with GitHub; enter the code at github.com/login/device signed in as the tester, and authorise | The tester's blogs are listed; pick `jekyll-test-blog-a` and its posts load |
+| **A TalkBack listen** | A new screen, or a change to one's layout | Turn TalkBack on; go through New post and Publish | Every button says what it does; the blog switcher names the open blog |
+| **A scheduled post on a sleeping phone** | A change to scheduling or `SendTimeAlarm` | Schedule… a short post ten minutes ahead, lock the phone and leave it | It goes out within a few minutes of its time; Home said "Scheduled for…" until then |
+| **A notification for the other blog** | A change to notifications or switching blogs | With two blogs, publish to the one that isn't open | Its notification names that blog; a tap opens the app on it, saying "Switched to …" |
+| **Updating itself** | A change to `update/` | On a phone with an older CI debug build, open the app once a newer build is out; tap "Build N is out" | Android asks to allow installs, then to update; the app restarts on the newer build (Settings shows it), drafts intact |
+
+The first needs a browser signed in as the tester, whose password and 2FA stay out of CI. The
+second needs someone listening: CI's accessibility checks find missing labels, not labels that
+make no sense. The third needs a phone with an older CI build: CI can't watch Android's
+installer ask and update. The fourth needs a phone left idle, which an emulator in CI isn't;
+the fifth, Android's own notification shade with two blogs signed in.
+
+## Last checked by a person
+
+| Check | When |
+|---|---|
+| Sign in with GitHub | Not yet |
+| A TalkBack listen | Not yet |
+| Updating itself | Not yet |
+| A scheduled post on a sleeping phone | Not yet |
+| A notification for the other blog | Not yet |

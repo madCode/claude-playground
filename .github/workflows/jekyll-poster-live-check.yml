@@ -1,31 +1,64 @@
 name: Jekyll Poster live check
 
-# Publishes a post to the sample blog through the real GitHub API, waits for Pages to serve it,
-# then deletes it. Run by hand, on any branch, to try a change end to end; a cloud session can't,
-# since its GitHub proxy refuses the commit calls the app makes.
+# Publishes a post to a real blog through the real GitHub API, waits for Pages to serve it, then
+# deletes it. Nightly against the tester's three blogs (docs/TESTER_ACCOUNT.md), and by hand on any
+# branch to try a change end to end. A cloud session starts it and reads its logs; it can't run it
+# itself, since its GitHub proxy refuses the commit calls the app makes.
 on:
+  schedule:
+    # 03:37 Pacific (summer time), when nobody is watching the blogs.
+    - cron: '37 10 * * *'
   workflow_dispatch:
     inputs:
       repo:
-        description: Blog repository to post to and delete from (owner/name)
-        default: madCode/sample-blog
+        description: "test blogs, or one blog repository to post to and delete from (owner/name, with SAMPLE_BLOG_TOKEN)"
+        default: test blogs
 
 permissions:
   contents: read
-
-# Two runs at once would race each other's commits on the blog's branch.
-concurrency:
-  group: jekyll-poster-live-check
-  cancel-in-progress: false
 
 defaults:
   run:
     working-directory: jekyll-poster
 
 jobs:
-  live-check:
+  test-blogs:
+    if: github.event_name == 'schedule' || inputs.repo == 'test blogs'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # Two blogs under the tester's own account, one under its organisation.
+        blog: [A, B, ORG]
+    # Two runs on one blog at once would race each other's commits on its branch.
+    concurrency:
+      group: jekyll-poster-live-check-${{ matrix.blog }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+      - name: Publish, check and delete a post
+        env:
+          REPO: ${{ vars[format('TEST_BLOG_{0}', matrix.blog)] }}
+          SAMPLE_BLOG_TOKEN: ${{ secrets[format('TEST_BLOG_{0}_TOKEN', matrix.blog)] }}
+          BLOG: ${{ matrix.blog }}
+        run: |
+          if [ -z "$REPO" ]; then echo "::error::Add a TEST_BLOG_$BLOG variable (owner/name)."; exit 1; fi
+          if [ -z "$SAMPLE_BLOG_TOKEN" ]; then echo "::error::Add a TEST_BLOG_${BLOG}_TOKEN secret: a token that can write $REPO."; exit 1; fi
+          ./gradlew :core:liveCheck "-PliveRepo=$REPO"
+
+  one-blog:
+    if: github.event_name == 'workflow_dispatch' && inputs.repo != 'test blogs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: jekyll-poster-live-check-${{ inputs.repo }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6

@@ -19,7 +19,7 @@ class BuildWatcher(
     private val drafts: DraftDao,
     private val accounts: AccountStore,
     private val clientFor: (Account) -> GitHubClient,
-    private val onFinished: (Draft) -> Unit = {},
+    private val onFinished: suspend (Draft) -> Unit = {},
 ) {
     /** True when there's nothing more to wait for. */
     suspend fun check(id: Long, giveUp: Boolean): Boolean {

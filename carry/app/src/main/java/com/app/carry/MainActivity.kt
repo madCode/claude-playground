@@ -1,5 +1,6 @@
 package com.app.carry
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -32,6 +33,8 @@ class MainActivity : ComponentActivity() {
     // is read again from scratch.
     private val model: CarryViewModel by viewModels()
 
+    private val answers by lazy { AwaitedAnswers(this) }
+
     /**
      * Asked for once, and only when there is a folder for a session file to
      * land in — a permission dialog on first launch, before the owner has
@@ -50,9 +53,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Only a fresh start at the root of its task has no picker below it left to answer. A start
+        // on top of an existing task, as a launcher tap gets after the session notice opened Carry,
+        // may have one.
+        if (savedInstanceState == null && isTaskRoot) {
+            answers.forget()
+        }
         // KEEP, so this is safe on every launch: it will not restart the
         // period and leave the check never actually running.
         SessionWatchWorker.schedule(this)
+        model.updater.start()
 
         setContent {
             val pick = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -142,9 +152,10 @@ class MainActivity : ComponentActivity() {
      * with no way to install, falls back to the download link.
      */
     private fun getBuild() {
-        when (UpdateInstaller.next(model.unsaved, UpdateInstaller.canInstall(this))) {
-            UpdateInstaller.Step.SaveFirst -> say("Save the After tab first, then tap the notice again. Updating restarts Carry.")
-            UpdateInstaller.Step.AllowInstalls -> {
+        val build = model.updates.newer.value ?: return
+        when (model.updater.next(build, model.unsaved, model.updater.canInstall())) {
+            SelfUpdater.Step.SaveFirst -> say("Save the After tab first, then tap the notice again. Updating restarts Carry.")
+            SelfUpdater.Step.AllowInstalls -> {
                 val settings = android.content.Intent(
                     android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                     Uri.parse("package:$packageName"),
@@ -155,7 +166,8 @@ class MainActivity : ComponentActivity() {
                     openDownload()
                 }
             }
-            UpdateInstaller.Step.Install -> model.installUpdate()
+            SelfUpdater.Step.Install -> model.installUpdate(build)
+            SelfUpdater.Step.Browser -> openDownload()
         }
     }
 
@@ -172,22 +184,38 @@ class MainActivity : ComponentActivity() {
     private fun say(text: String) =
         android.widget.Toast.makeText(this, text, android.widget.Toast.LENGTH_LONG).show()
 
+    // Every result contract launches through these, so they see each picker without a hold at
+    // every launch site. Permission requests don't, and an unanswered one is only asked again.
+    // A plain startActivity comes through here too, as -1: nothing answers it, so it isn't held.
+    @Suppress("OVERRIDE_DEPRECATION")
+    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        if (requestCode < 0) return super.startActivityForResult(intent, requestCode, options)
+        answers.sent(requestCode)
+        try {
+            super.startActivityForResult(intent, requestCode, options)
+        } catch (e: RuntimeException) {
+            answers.answered(requestCode)
+            throw e
+        }
+    }
+
+    // Before the callback, which may send for another.
+    @Suppress("OVERRIDE_DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        answers.answered(requestCode)
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
     /** The normal case is a sync dropping the day's session in while the
      *  app is backgrounded, so the folder is re-read on every resume. */
     override fun onPause() {
         super.onPause()
-        UpdateInstaller.inFront = false
+        model.updater.paused()
     }
 
     override fun onResume() {
         super.onResume()
-        UpdateInstaller.inFront = true
-        runCatching { UpdateInstaller.forgetIfGone(this) }
-        // An installer confirmation that arrived while Carry was behind another app.
-        UpdateInstaller.awaitingConfirm?.let { confirm ->
-            UpdateInstaller.awaitingConfirm = null
-            runCatching { startActivity(confirm) }.onFailure { UpdateInstaller.finish() }
-        }
+        model.updater.resumed(this, model.unsaved)
         model.refresh()
         model.checkForUpdate()
         maybeAskToNotify()

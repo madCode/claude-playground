@@ -1,0 +1,812 @@
+package com.app.jekyllposter.device
+
+import android.Manifest
+import android.os.ParcelFileDescriptor
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
+import androidx.exifinterface.media.ExifInterface
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextInputSelection
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.test.performTextReplacement
+import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.services.storage.TestStorage
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
+import com.app.jekyllposter.MainActivity
+import com.app.jekyllposter.core.github.FileChange
+import com.app.jekyllposter.core.github.GitHubClient
+import com.app.jekyllposter.data.Account
+import com.app.jekyllposter.data.AndroidVpn
+import com.app.jekyllposter.data.Draft
+import com.app.jekyllposter.data.PostState
+import java.io.File
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/**
+ * The app as installed, against the real GitHub and the tester's blogs (docs/TESTER_ACCOUNT.md),
+ * with the request record on. Only the "Jekyll Poster device live check" workflow runs it, with
+ * `liveRepoA`/`liveTokenA` and `liveRepoB`/`liveTokenB` as instrumentation arguments: two blogs
+ * under two sign-ins, for the several-blogs audit, and `vpnTunnel` when it has a VPN to try.
+ * Elsewhere it's skipped.
+ *
+ * Blog A is signed in to through the screens and published to from the editor; blog B is added
+ * as a second sign-in and its post goes out through WorkManager. Both wait for the "is live"
+ * notification, so Pages has built them. The posts are deleted through the API afterwards, and
+ * the record is kept as a test output (`requests.jsonl`).
+ */
+@RunWith(AndroidJUnit4::class)
+class LiveOnTheDeviceTest {
+    @get:Rule val compose = createEmptyComposeRule()
+    @get:Rule val onFailure = ScreenOnFailure()
+
+    private val app = ApplicationProvider.getApplicationContext<DeviceTestApp>()
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private val device = UiDevice.getInstance(instrumentation)
+    private val args = InstrumentationRegistry.getArguments()
+    private val http = OkHttpClient.Builder().readTimeout(60, TimeUnit.SECONDS).build()
+
+    private class Blog(val owner: String, val name: String, val token: String) {
+        val fullName get() = "$owner/$name"
+        lateinit var branch: String
+    }
+
+    private fun blog(letter: String): Blog? {
+        val repo = args.getString("liveRepo$letter").orEmpty()
+        val token = args.getString("liveToken$letter").orEmpty()
+        if (!repo.contains('/') || token.isBlank()) return null
+        val (owner, name) = repo.split('/', limit = 2)
+        return Blog(owner, name, token)
+    }
+
+    private val a = blog("A")
+    private val b = blog("B")
+
+    // One stamp for the run's posts, so cleanup finds them even after a failure.
+    private val stamp = System.currentTimeMillis() / 1000
+    private val titleA = "Device check $stamp"
+    private val titleB = "Device check $stamp, second blog"
+    private val titlePrivate = "Device check $stamp, private"
+    private val titleVpn = "Device check $stamp, through the VPN"
+    private val titlePhoto = "Device check $stamp, photo"
+    private val titleConflict = "Device check $stamp, conflict"
+    private val titleScheduled = "Device check $stamp, scheduled"
+    private val titleHidden = "Device check $stamp, hidden"
+    private val titleDraft = "Device check $stamp, draft"
+    private val titleOffline = "Device check $stamp, offline"
+    private val titleBadToken = "Device check $stamp, bad token"
+    private val titleDeleteConflict = "Device check $stamp, delete conflict"
+    private val titleTools = "Device check $stamp, tools"
+    private val titleTarget = "Device check $stamp, linked to"
+    private val titleLinking = "Device check $stamp, linking"
+    private val record = File(app.filesDir, "requests")
+
+    @Before fun setUp() {
+        assumeTrue("A live run only: pass liveRepoA, liveTokenA, liveRepoB and liveTokenB", a != null && b != null)
+        instrumentation.uiAutomation.grantRuntimePermission(app.packageName, Manifest.permission.POST_NOTIFICATIONS)
+        record.mkdirs()
+        File(record, "on").createNewFile()
+        runBlocking { listOf(a!!, b!!).forEach { it.branch = GitHubClient(http, it.token).repo(it.owner, it.name).defaultBranch } }
+    }
+
+    @After fun cleanUp() {
+        if (a == null || b == null) return
+        device.pressHome()
+        runBlocking {
+            for (blog in listOf(a, b)) {
+                val github = GitHubClient(http, blog.token)
+                // After the offline check the network may still be coming back: wait for it.
+                val files = (1..12).firstNotNullOfOrNull { runCatching { github.files(blog.owner, blog.name, blog.branch) }.getOrNull() ?: run { Thread.sleep(5_000); null } }.orEmpty()
+                // With an earlier run's post from the kill check, which the workflow only looks for.
+                files.filter { "device-check-$stamp" in it.path || "device-check-run-" in it.path }.forEach { entry ->
+                    // One file refused doesn't leave the rest on the public blog.
+                    runCatching {
+                        val sent = github.file(blog.owner, blog.name, blog.branch, entry.path) ?: return@runCatching
+                        github.commit(blog.owner, blog.name, blog.branch, "Delete post: device check", listOf(FileChange.delete(entry.path)), expect = mapOf(entry.path to sent.sha))
+                    }
+                }
+            }
+        }
+        // Kept for the audit; the orchestrator clears the app's own files after the test. Each
+        // test's record under its own name, as both run in one workflow.
+        File(record, "requests.jsonl").takeIf { it.exists() }?.let { file ->
+            TestStorage().openOutputFile("requests-$testName.jsonl").use { out -> file.inputStream().use { it.copyTo(out) } }
+        }
+    }
+
+    private fun waitFor(text: String, timeoutMs: Long = 30_000) =
+        compose.waitUntil(timeoutMs) { compose.onAllNodes(hasText(text, substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+
+    /** Waits for [condition] on GitHub, polling every few seconds. */
+    private fun waitUntil(what: String, timeoutMs: Long, condition: suspend () -> Boolean) {
+        val end = System.currentTimeMillis() + timeoutMs
+        while (!runBlocking { condition() }) {
+            check(System.currentTimeMillis() < end) { "Timed out waiting for $what" }
+            Thread.sleep(5_000)
+        }
+    }
+
+    private suspend fun hasPost(blog: Blog, slug: String) =
+        GitHubClient(http, blog.token).files(blog.owner, blog.name, blog.branch).any { it.path.endsWith("-$slug.md") }
+
+    /** The notification the writer would see, read from the shade; a Pages build takes a minute or two. */
+    private fun hearItIsLive(title: String) {
+        device.openNotification()
+        check(device.wait(Until.hasObject(By.textContains("“$title” is live")), TimeUnit.MINUTES.toMillis(12))) { "No “is live” notification for $title" }
+        device.pressBack()
+    }
+
+    private var testName = "test"
+
+    @Test fun twoBlogsUnderTwoSignInsPublishAndGoLive() {
+        testName = "two-blogs"
+        val a = a!!
+        val b = b!!
+        ActivityScenario.launch(MainActivity::class.java)
+        waitFor("Connect with a token")
+        compose.onNodeWithText("Token").performTextInput(a.token)
+        compose.onNodeWithText("Continue").performClick()
+        waitFor(a.fullName)
+        compose.onNodeWithText(a.fullName).performClick()
+        waitFor("New post")
+
+        compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
+        compose.waitUntil(20_000) { compose.onAllNodes(hasTestTag("title")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("title").performTextInput(titleA)
+        compose.onNodeWithTag("body").performTextInput("Posted from an emulator by the nightly device check, then deleted.")
+        compose.onNodeWithText("Publish").performClick()
+        waitUntil("the post on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, "device-check-$stamp") }
+
+        // A second sign-in, with its own token, added from Settings as a writer would. A blog
+        // added beside another opens its Blog & privacy first: its switches start off.
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Settings").performClick()
+        waitFor("+ Add a sign-in")
+        compose.onNodeWithText("+ Add a sign-in").performClick()
+        waitFor("Token")
+        compose.onNodeWithText("Token").performTextInput(b.token)
+        compose.onNodeWithText("Continue").performClick()
+        waitFor(b.fullName)
+        compose.onNodeWithText(b.fullName).performClick()
+        waitFor("Blog & privacy")
+        device.pressBack()
+        waitFor("${b.name} · @")
+
+        compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
+        compose.waitUntil(20_000) { compose.onAllNodes(hasTestTag("title")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("title").performTextInput(titleB)
+        compose.onNodeWithTag("body").performTextInput("The second blog's post, from the same run.")
+        compose.onNodeWithText("Publish").performClick()
+        waitUntil("the post on ${b.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(b, "device-check-$stamp-second-blog") }
+
+        // Back to the first blog, from Home's title.
+        waitFor("${b.name} · @")
+        compose.onNode(clickLabel("Switch blog")).performClick()
+        waitFor("Your blogs")
+        compose.onNode(clickLabel("Switch to this blog")).performClick()
+        waitFor("${a.name} · @")
+
+        hearItIsLive(titleA)
+        hearItIsLive(titleB)
+    }
+
+    /** A node whose click action is labelled [label], as TalkBack announces it. */
+    private fun clickLabel(label: String) = SemanticsMatcher("click label $label") {
+        it.config.getOrNull(SemanticsActions.OnClick)?.label == label
+    }
+
+    private fun shell(command: String): String =
+        ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command)).use { it.readBytes().decodeToString() }
+
+    private fun getJson(blog: Blog, path: String): JsonObject {
+        val request = Request.Builder().url("https://api.github.com/$path").header("Authorization", "Bearer ${blog.token}").header("Accept", "application/vnd.github+json").build()
+        return http.newCall(request).execute().use { Json.parseToJsonElement(it.body.string()).jsonObject }
+    }
+
+    /**
+     * Every switch "Set up for writing anonymously" turns on except the VPN, which has a test of its
+     * own. Then a link with tracking codes is shared in,
+     * published, and what GitHub kept of it is read back and written to `privacy-report.json`.
+     */
+    @Test fun atMostPrivacyGitHubKeepsOnlyTheAccountAndTheTimeItWentOut() {
+        testName = "most-private"
+        val a = a!!
+        val key = "${a.fullName}@${a.branch}"
+        signInToA()
+        // Set up for writing anonymously, tapped in Blog & privacy: the no-reply address is
+        // looked up from GitHub there, as for a writer.
+        ActivityScenario.launch(MainActivity::class.java)
+        waitFor("New post")
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Settings").performClick()
+        waitFor("Blog & privacy")
+        compose.onNodeWithText("Blog & privacy").performClick()
+        waitFor("Set up for writing anonymously")
+        compose.onNodeWithText("Set up for writing anonymously").performClick()
+        compose.onNodeWithText("Turn them on").performClick()
+        waitUntil("every switch on", 60_000) {
+            app.container.privacy.get(key).let { p ->
+                p.plainCommitMessages && p.sendAtRandomTime && p.datesByDayOnly && p.removeTrackingCodes && p.commitAsNoReply && p.onlyThroughVpn
+            }
+        }
+        // The VPN has a test of its own, with a real tunnel; here the post goes without one.
+        runBlocking { app.container.setOnlyThroughVpn(key, false) }
+        device.pressBack()
+        device.pressBack()
+
+        val link = "https://example.com/read?utm_source=feed&utm_medium=social&fbclid=abc123&id=7"
+        val started = shell("am start -W -a android.intent.action.SEND -t text/plain -p ${app.packageName} --es android.intent.extra.TEXT $link --es android.intent.extra.SUBJECT Good")
+        assertTrue(started, started.contains("Status: ok"))
+        compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("title")).fetchSemanticsNodes().isNotEmpty() }
+        waitFor("example.com/read")
+        compose.onNodeWithTag("title").performTextInput(titlePrivate)
+        compose.onNodeWithText("Publish").performClick()
+
+        // Sent at a random time: it waits, saying when. Stop and edit takes it back; Publish
+        // again picks a new time; Send now sends it at once. All from the screens. The editor
+        // says "a random time" too while it closes: wait for Home before tapping its row.
+        waitFor("On this phone")
+        waitFor("a random time")
+        compose.onNodeWithText(titlePrivate).performClick()
+        waitFor("Stop and edit")
+        compose.onNodeWithText("Stop and edit").performClick()
+        compose.waitUntil(30_000) { compose.onAllNodes(hasText("Publish")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("body").performTextInput("Taken back and sent again. ")
+        compose.onNodeWithText("Publish").performClick()
+        waitFor("On this phone")
+        waitFor("a random time")
+        val queued = runBlocking { app.container.drafts.list().first { it.title == titlePrivate && it.state == PostState.Queued } }
+        val randomDelay = (queued.sendAfter ?: 0) - System.currentTimeMillis()
+        assertTrue("Not given a random time: ${queued.sendAfter}", randomDelay > 0)
+        compose.onNodeWithText(titlePrivate).performClick()
+        waitFor("Send now")
+        compose.onNodeWithText("Send now").performClick()
+        waitUntil("the private post on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, "device-check-$stamp-private") }
+
+        val sha = run {
+            var published: Draft? = null
+            waitUntil("the post marked published", 60_000) { published = app.container.drafts.get(queued.id)?.takeIf { it.commitSha != null }; published != null }
+            published!!.commitSha!!
+        }
+        val commit = getJson(a, "repos/${a.fullName}/commits/$sha")
+        val details = commit["commit"]!!.jsonObject
+        val author = details["author"]!!.jsonObject
+        val committer = details["committer"]!!.jsonObject
+        val path = runBlocking { GitHubClient(http, a.token).files(a.owner, a.name, a.branch).first { it.path.endsWith("-device-check-$stamp-private.md") }.path }
+        val text = runBlocking { GitHubClient(http, a.token).text(a.owner, a.name, a.branch, path) }.orEmpty()
+        // The commit as Git keeps it, with its time zone offset, from the public patch.
+        val patchDate = http.newCall(Request.Builder().url("https://github.com/${a.fullName}/commit/$sha.patch").build()).execute()
+            .use { r -> r.body.string().lineSequence().firstOrNull { it.startsWith("Date: ") }?.removePrefix("Date: ") }
+
+        val report = buildJsonObject {
+            put("message", details["message"]!!.jsonPrimitive.content)
+            put("authorName", author["name"]!!.jsonPrimitive.content)
+            put("authorEmail", author["email"]!!.jsonPrimitive.content)
+            put("authorDate", author["date"]!!.jsonPrimitive.content)
+            put("committerName", committer["name"]!!.jsonPrimitive.content)
+            put("committerEmail", committer["email"]!!.jsonPrimitive.content)
+            put("committerDate", committer["date"]!!.jsonPrimitive.content)
+            put("patchDate", patchDate)
+            put("attributedTo", commit["author"]?.let { (it as? JsonObject)?.get("login")?.jsonPrimitive?.content })
+            put("verified", details["verification"]?.jsonObject?.get("verified")?.jsonPrimitive?.content)
+            put("path", path)
+            put("file", text)
+            put("randomDelayMinutes", randomDelay / 60_000)
+        }
+        TestStorage().openOutputFile("privacy-report.json").use { it.write(report.toString().toByteArray()) }
+
+        // What the switches promise; the report says what's left.
+        assertEquals("Update blog", details["message"]!!.jsonPrimitive.content)
+        assertTrue(author["email"]!!.jsonPrimitive.content, author["email"]!!.jsonPrimitive.content.endsWith("@users.noreply.github.com"))
+        assertTrue(text, Regex("""(?m)^date: \d{4}-\d{2}-\d{2}$""").containsMatchIn(text))
+        assertFalse(text, text.contains("utm_") || text.contains("fbclid"))
+        assertTrue(text, text.contains("example.com/read?id=7"))
+        // By the day alone with the no-reply address, the commit is dated by the post's day too:
+        // midnight UTC, which GitHub gives the committer as well. The API shows dates in UTC
+        // whatever Git keeps, so the stored offset is read from the patch.
+        val day = Regex("""(?m)^date: (\d{4}-\d{2}-\d{2})$""").find(text)!!.groupValues[1]
+        assertEquals("${day}T00:00:00Z", author["date"]!!.jsonPrimitive.content)
+        assertEquals(author["date"]!!.jsonPrimitive.content, committer["date"]!!.jsonPrimitive.content)
+        assertTrue(patchDate.orEmpty(), patchDate.orEmpty().endsWith("00:00:00 +0000"))
+    }
+
+    /**
+     * Only connect through a VPN, with a real one: the WireGuard app and a Proton config, which
+     * the workflow installs when it has the `PROTON_WG_CONF` secret and names as `vpnTunnel`.
+     * Without the tunnel the post waits and nothing reaches GitHub; with it up, the post goes out,
+     * and from another address than the phone's own.
+     */
+    @Test fun onlyThroughAVpnAPostWaitsThenGoesOutThroughIt() {
+        testName = "vpn"
+        val tunnel = args.getString("vpnTunnel").orEmpty()
+        assumeTrue("Needs the WireGuard tunnel the workflow sets up from PROTON_WG_CONF", tunnel.isNotBlank())
+        val a = a!!
+        val key = "${a.fullName}@${a.branch}"
+        setTunnel(tunnel, up = false)
+        val ownAddress = publicAddress()
+        try {
+            val id = runBlocking {
+                val login = GitHubClient(http, a.token).user().login
+                app.container.accounts.save(Account(login, a.token, a.owner, a.name, a.branch))
+                // Only the VPN switch: a random send time would hold the post back for its own reason.
+                app.container.privacy.update(key) { it.copy(onlyThroughVpn = true, sendAtRandomTime = false) }
+                app.container.drafts.insert(Draft(blog = key, title = titleVpn, body = "Sent through a VPN by the nightly device check, then deleted.", state = PostState.Queued))
+                    .also { app.container.publishQueue.enqueue(it, null) }
+            }
+            ActivityScenario.launch(MainActivity::class.java)
+            waitFor("Waiting for your VPN…")
+            // Long enough for a worker that ignored the switch to have sent it.
+            Thread.sleep(30_000)
+            assertFalse("Sent without the VPN", runBlocking { hasPost(a, "device-check-$stamp-through-the-vpn") })
+            val waiting = runBlocking { app.container.drafts.get(id) }!!
+            assertEquals(PostState.Queued, waiting.state)
+            assertEquals("Held for a random time, not the VPN", null, waiting.sendAfter)
+            // Home read the blog meanwhile, and the worker may have tried: none of it may have got
+            // a connection. The record sees only requests that did, each with GitHub's answer.
+            val reached = File(record, "requests.jsonl").takeIf { it.exists() }?.readLines().orEmpty()
+                .map { Json.parseToJsonElement(it).jsonObject }
+                .filter { it["outcome"]!!.jsonPrimitive.content.matches(Regex("""\d{3}""")) }
+                .map { "${it["method"]!!.jsonPrimitive.content} ${it["url"]!!.jsonPrimitive.content}" }
+            assertEquals("Reached GitHub without the VPN", emptyList<String>(), reached)
+
+            setTunnel(tunnel, up = true)
+            val vpnAddress = publicAddress()
+            assertTrue("The tunnel didn't change the address ($vpnAddress)", vpnAddress != ownAddress)
+            waitUntil("the post on ${a.fullName} through the VPN", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, "device-check-$stamp-through-the-vpn") }
+        } catch (e: Throwable) {
+            // The test's own failure is the one to report, not the tunnel's on the way out.
+            runCatching { setTunnel(tunnel, up = false) }.exceptionOrNull()?.let(e::addSuppressed)
+            throw e
+        }
+        setTunnel(tunnel, up = false)
+    }
+
+    /**
+     * Sign in with GitHub as far as a test can take it: the build has the GitHub App's client ID,
+     * so the button shows, and GitHub answers it with a device code, which proves the ID is one it
+     * knows with device flow on. Entering the code needs a browser signed in as the tester, which
+     * stays a person's check (docs/DEVICE-CHECKS.md). The code expires unused.
+     */
+    @Test fun signInWithGitHubGetsACodeFromGitHub() {
+        testName = "sign-in-with-github"
+        ActivityScenario.launch(MainActivity::class.java)
+        waitFor("Connect with a token")
+        compose.onNodeWithText("Sign in with GitHub").performClick()
+        waitFor("Enter this code on GitHub")
+        val deviceCode = SemanticsMatcher("a device code") { node ->
+            node.config.getOrNull(SemanticsProperties.Text).orEmpty().any { Regex("[A-Z0-9]{4}-[A-Z0-9]{4}").matches(it.text) }
+        }
+        assertTrue("No device code from GitHub on screen", compose.onAllNodes(deviceCode, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+    }
+
+    private fun signInToA(): Blog {
+        val a = a!!
+        runBlocking { app.container.accounts.save(Account(GitHubClient(http, a.token).user().login, a.token, a.owner, a.name, a.branch)) }
+        return a
+    }
+
+    private fun postPath(blog: Blog, slug: String) =
+        runBlocking { GitHubClient(http, blog.token).files(blog.owner, blog.name, blog.branch).firstOrNull { it.path.endsWith("-$slug.md") }?.path }
+
+    private fun text(blog: Blog, path: String) = runBlocking { GitHubClient(http, blog.token).text(blog.owner, blog.name, blog.branch, path) }
+
+    /** A file's bytes as GitHub serves them, for a photo. */
+    private fun bytes(blog: Blog, path: String): ByteArray {
+        val request = Request.Builder().url("https://api.github.com/repos/${blog.fullName}/contents/$path?ref=${blog.branch}")
+            .header("Authorization", "Bearer ${blog.token}").header("Accept", "application/vnd.github.raw").build()
+        return http.newCall(request).execute().use { check(it.isSuccessful) { "No $path: ${it.code}" }; it.body.bytes() }
+    }
+
+    /**
+     * Opens the blog's copy of [title] from Home, the row after the phone's own rows for it, which
+     * come first and may show before the blog's list has loaded.
+     */
+    private fun openFromTheBlog(title: String, search: Boolean = false) {
+        val rows = runBlocking { app.container.database.drafts().list() }.count { it.title == title } + 1
+        ActivityScenario.launch(MainActivity::class.java)
+        // Home lists the blog's drafts last, and composes only the rows on screen: search brings it up.
+        if (search) {
+            waitFor("New post")
+            compose.onNodeWithContentDescription("Search your posts").performClick()
+            compose.onNode(hasSetTextAction()).performTextInput(title)
+        }
+        compose.waitUntil(TimeUnit.MINUTES.toMillis(2)) { compose.onAllNodes(hasText(title), useUnmergedTree = true).fetchSemanticsNodes().size >= rows }
+        compose.onAllNodes(hasText(title), useUnmergedTree = true)[rows - 1].performClick()
+        compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("body")).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    /**
+     * A photo shared in from `:sender` with a location in it, published, then edited and deleted
+     * from the screens: the copy on GitHub has no location, the edit lands, and the delete removes
+     * the post.
+     */
+    @Test fun aPhotoPostIsEditedThenDeletedFromTheScreens() {
+        testName = "photo-edit-delete"
+        val a = signInToA()
+        val started = shell("am start -W -n com.app.jekyllposter.sender/.ShareActivity --es to ${app.packageName} --es what photo")
+        assertTrue(started, started.contains("Status: ok"))
+        waitFor("Describe the photo")
+        compose.onNodeWithTag("altText").performTextInput("A teal square")
+        compose.onNodeWithText("Done").performClick()
+        compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("title")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("title").performTextInput(titlePhoto)
+        compose.onNodeWithText("Publish").performClick()
+        val slug = "device-check-$stamp-photo"
+        waitUntil("the photo post on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, slug) }
+        val path = postPath(a, slug)!!
+        val photo = Regex("""\{\{ '/([^']+)' \| relative_url \}\}""").find(text(a, path)!!)!!.groupValues[1]
+        val exif = bytes(a, photo).inputStream().use { ExifInterface(it) }
+        assertEquals("The photo on GitHub has a location", null, exif.latLong)
+
+        openFromTheBlog(titlePhoto)
+        compose.onNodeWithTag("body").performTextInput("Edited from the screens. ")
+        compose.onNodeWithText("Update").performClick()
+        waitUntil("the edit on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { text(a, path)?.contains("Edited from the screens.") == true }
+
+        openFromTheBlog(titlePhoto)
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Delete from the blog").performClick()
+        compose.onNode(hasText("Delete") and hasAnyAncestor(isDialog())).performClick()
+        waitUntil("the post gone from ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { !hasPost(a, slug) }
+    }
+
+    /**
+     * A post scheduled from the editor's menu a few minutes ahead: nothing of it reaches GitHub
+     * before its time, then it goes out by itself, through WorkManager.
+     */
+    @Test fun aScheduledPostWaitsForItsTimeThenGoesOut() {
+        testName = "scheduled"
+        val a = signInToA()
+        ActivityScenario.launch(MainActivity::class.java)
+        waitFor("New post")
+        compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
+        compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("title")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("title").performTextInput(titleScheduled)
+        compose.onNodeWithTag("body").performTextInput("Scheduled from the screens.")
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Schedule…").performClick()
+        // Three whole minutes ahead, so the time typed is still ahead when Schedule is tapped.
+        val at = LocalDateTime.now().plusMinutes(3).truncatedTo(ChronoUnit.MINUTES)
+        waitFor("Tomorrow")
+        compose.onNodeWithText(if (at.toLocalDate() == LocalDate.now()) "Today" else "Tomorrow").performClick()
+        setTime(at.toLocalTime())
+        compose.onNodeWithText("Schedule").performClick()
+        waitFor("Scheduled for")
+
+        val due = at.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val slug = "device-check-$stamp-scheduled"
+        while (System.currentTimeMillis() < due - 20_000) {
+            assertFalse("The scheduled post reached GitHub before its time", runBlocking { hasPost(a, slug) })
+            Thread.sleep(15_000)
+        }
+        waitUntil("the scheduled post on ${a.fullName}", TimeUnit.MINUTES.toMillis(8)) { hasPost(a, slug) }
+        // The app's own record: its first write for the post came at or after the time chosen.
+        val firstWrite = File(record, "requests.jsonl").readLines().map { Json.parseToJsonElement(it).jsonObject }
+            .first { it["method"]?.jsonPrimitive?.content == "POST" && it["url"]?.jsonPrimitive?.content.orEmpty().endsWith("/git/blobs") }
+        val wrote = Instant.parse(firstWrite["at"]!!.jsonPrimitive.content).toEpochMilli()
+        assertTrue("Sent at $wrote, before its time $due", wrote >= due - 1_000)
+    }
+
+    /** Opens a new post from Home and writes [title], and [body] when given, in it. */
+    private fun newPost(title: String, body: String?) {
+        ActivityScenario.launch(MainActivity::class.java)
+        waitFor("New post")
+        compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
+        compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("title")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("title").performTextInput(title)
+        body?.let { compose.onNodeWithTag("body").performTextInput(it) }
+    }
+
+    /** Taps [item] in the editor's menu. */
+    private fun fromTheMenu(item: String) {
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText(item).performClick()
+    }
+
+    /**
+     * Hide from the site and Show on the site again, from the editor's menu, on a post published
+     * from the screens: the file stays, marked `published: false`, the site rebuilds without it,
+     * and showing takes the line out again.
+     */
+    @Test fun aPostIsHiddenFromTheSiteThenShownAgain() {
+        testName = "hide-show"
+        val a = signInToA()
+        newPost(titleHidden, "Hidden, then shown.")
+        compose.onNodeWithText("Publish").performClick()
+        val slug = "device-check-$stamp-hidden"
+        waitUntil("the post on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, slug) }
+        val path = postPath(a, slug)!!
+
+        openFromTheBlog(titleHidden)
+        fromTheMenu("Hide from the site")
+        waitUntil("published: false on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { text(a, path)?.contains("published: false") == true }
+        // The phone heard the site rebuild after the hide.
+        waitFor("Hidden from the site; the file stays on GitHub", TimeUnit.MINUTES.toMillis(12))
+
+        openFromTheBlog(titleHidden)
+        fromTheMenu("Show on the site again")
+        waitUntil("the post shown again on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { text(a, path)?.contains("published:") == false }
+    }
+
+    /**
+     * A Jekyll draft from the screens: saved to the blog's `_drafts`, updated there, then
+     * published to the site, which moves it into `_posts` in one commit.
+     */
+    @Test fun aJekyllDraftIsSavedUpdatedThenPublishedToTheSite() {
+        testName = "jekyll-draft"
+        val a = signInToA()
+        newPost(titleDraft, "First version.")
+        fromTheMenu("Save to the blog's _drafts")
+        val slug = "device-check-$stamp-draft"
+        val draft = "_drafts/$slug.md"
+        waitUntil("$draft on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { text(a, draft) != null }
+
+        openFromTheBlog(titleDraft, search = true)
+        compose.onNodeWithTag("body").performTextInput("Second version. ")
+        compose.onNodeWithText("Update draft").performClick()
+        waitUntil("the draft updated on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { text(a, draft)?.contains("Second version.") == true }
+
+        openFromTheBlog(titleDraft, search = true)
+        fromTheMenu("Publish to the site")
+        waitUntil("the draft published on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, slug) && text(a, draft) == null }
+        assertTrue(text(a, postPath(a, slug)!!)!!.contains("Second version."))
+    }
+
+    /**
+     * The phone offline when Publish is tapped: nothing goes, and once it's back online the post
+     * goes out, once.
+     */
+    @Test fun aPostPublishedOfflineGoesOutOnceWhenTheNetworkIsBack() {
+        testName = "offline"
+        val a = signInToA()
+        newPost(titleOffline, "Written on a train.")
+        shell("svc wifi disable")
+        shell("svc data disable")
+        try {
+            // The commands return before Android drops the network; Publish waits for that.
+            val connectivity = app.getSystemService(android.net.ConnectivityManager::class.java)
+            waitUntil("the network gone", 60_000) { connectivity.activeNetwork == null }
+            compose.onNodeWithText("Publish").performClick()
+            waitFor("Waiting to publish")
+            Thread.sleep(20_000)
+            assertEquals(PostState.Queued, runBlocking { app.container.drafts.list().first { it.title == titleOffline }.state })
+        } finally {
+            shell("svc wifi enable")
+            shell("svc data enable")
+        }
+        val slug = "device-check-$stamp-offline"
+        // The network comes back over some seconds: a check that can't reach GitHub yet is "not yet".
+        waitUntil("the offline post on ${a.fullName}", TimeUnit.MINUTES.toMillis(5)) { runCatching { hasPost(a, slug) }.getOrDefault(false) }
+        Thread.sleep(30_000)
+        val copies = runBlocking { GitHubClient(http, a.token).files(a.owner, a.name, a.branch) }.count { it.path.endsWith("-$slug.md") }
+        assertEquals("Published more than once", 1, copies)
+    }
+
+    /** A sign-in whose token stopped working (revoked, say): Publish fails and says to sign in again. */
+    @Test fun aRevokedTokenFailsThePublishAndSaysSo() {
+        testName = "bad-token"
+        val a = signInToA()
+        runBlocking {
+            val login = GitHubClient(http, a.token).user().login
+            app.container.accounts.save(Account(login, "github_pat_revoked0000000000000000000000", a.owner, a.name, a.branch))
+        }
+        newPost(titleBadToken, "Never goes.")
+        compose.onNodeWithText("Publish").performClick()
+        waitFor("Didn't publish", TimeUnit.MINUTES.toMillis(3))
+        val failed = runBlocking { app.container.drafts.list().first { it.title == titleBadToken } }
+        assertEquals(PostState.Failed, failed.state)
+        assertTrue(failed.error.orEmpty(), failed.error.orEmpty().contains("sign", ignoreCase = true) || failed.error.orEmpty().contains("token", ignoreCase = true))
+        assertFalse(runBlocking { hasPost(a, "device-check-$stamp-bad-token") })
+    }
+
+    /** The post changes on GitHub while its delete waits on the phone: the delete is refused, and the change stays. */
+    @Test fun aDeleteOfAPostThatChangedOnGitHubMeanwhileIsRefused() {
+        testName = "delete-conflict"
+        val a = signInToA()
+        val date = LocalDate.now(java.time.ZoneOffset.UTC)
+        val path = "_posts/$date-device-check-$stamp-delete-conflict.md"
+        val github = GitHubClient(http, a.token)
+        runBlocking { github.commit(a.owner, a.name, a.branch, "Add post: device check", listOf(FileChange.text(path, "---\ntitle: \"$titleDeleteConflict\"\n---\n\nFrom a laptop.\n")), expect = mapOf(path to null)) }
+
+        openFromTheBlog(titleDeleteConflict)
+        waitFor("From a laptop.")
+        val laptop = "---\ntitle: \"$titleDeleteConflict\"\n---\n\nFrom a laptop, changed again.\n"
+        runBlocking {
+            val sent = github.file(a.owner, a.name, a.branch, path)!!
+            github.commit(a.owner, a.name, a.branch, "Update post: device check", listOf(FileChange.text(path, laptop)), expect = mapOf(path to sent.sha))
+        }
+        fromTheMenu("Delete from the blog")
+        compose.onNode(hasText("Delete") and hasAnyAncestor(isDialog())).performClick()
+
+        waitFor("changed on GitHub since you opened it", TimeUnit.MINUTES.toMillis(2))
+        assertEquals(laptop, text(a, path))
+    }
+
+    /** The editor's tools on a real post: a new category from the picker, Bold from the toolbar, and Preview. */
+    @Test fun aPostWithACategoryBoldTextAndAPreviewGoesOutAsWritten() {
+        testName = "editor-tools"
+        val a = signInToA()
+        // The category before the body: typing there scrolls the categories out of view, where a
+        // tap lands on nothing.
+        newPost(titleTools, null)
+        compose.onNode(hasContentDescription("Add category")).performClick()
+        compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("termQuery")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("termQuery").performTextInput("device-check")
+        compose.onNodeWithText("Add “device-check” as a new category").performClick()
+        compose.onNodeWithText("Done").performClick()
+        // Bold at the cursor, then the word typed between its marks: no selection, whose text
+        // toolbar can take the next tap.
+        compose.onNodeWithTag("body").performTextInput("words.")
+        compose.onNodeWithTag("body").performTextInputSelection(TextRange(0))
+        compose.onNodeWithContentDescription("Bold").performClick()
+        compose.onNodeWithTag("body").performTextInput("Strong")
+        compose.onNodeWithContentDescription("Preview").performClick()
+        // The preview is a WebView, whose text Compose can't see; that it renders is unit-tested.
+        compose.waitUntil(30_000) { compose.onAllNodes(hasContentDescription("Preview of the post")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithContentDescription("Back to writing").performClick()
+        compose.onNodeWithText("Publish").performClick()
+
+        val slug = "device-check-$stamp-tools"
+        waitUntil("the post on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, slug) }
+        val text = text(a, postPath(a, slug)!!).orEmpty()
+        assertTrue(text, text.contains("categories: [device-check]"))
+        assertTrue(text, text.contains("**Strong**words."))
+    }
+
+    /**
+     * A `[[` link to a post the site builds, picked from the editor's suggestions: it goes out as
+     * a `post_url` link, which Jekyll resolves (a link to a post it doesn't build fails the build).
+     */
+    @Test fun aLinkToAnotherPostGoesOutAsAPostUrl() {
+        testName = "post-link"
+        val a = signInToA()
+        // Pushed as from a laptop, dated yesterday: a post in the future isn't one Jekyll builds.
+        val day = LocalDate.now(java.time.ZoneOffset.UTC).minusDays(1)
+        val target = "$day-device-check-$stamp-linked-to"
+        runBlocking {
+            GitHubClient(http, a.token).commit(
+                a.owner, a.name, a.branch, "Add post: device check",
+                listOf(FileChange.text("_posts/$target.md", "---\ntitle: \"$titleTarget\"\n---\n\nLinked to.\n")), expect = mapOf("_posts/$target.md" to null),
+            )
+        }
+        newPost(titleLinking, "See ")
+        compose.onNodeWithTag("body").performTextInput("[[Device check $stamp, lin")
+        compose.waitUntil(60_000) { compose.onAllNodes(hasText(titleTarget) and hasAnyAncestor(hasContentDescription("Posts to link")), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(hasText(titleTarget) and hasAnyAncestor(hasContentDescription("Posts to link")), useUnmergedTree = true)[0].performClick()
+        compose.onNodeWithText("Publish").performClick()
+
+        val slug = "device-check-$stamp-linking"
+        waitUntil("the linking post on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, slug) }
+        val text = text(a, postPath(a, slug)!!).orEmpty()
+        assertTrue(text, text.contains("{% post_url $target %}"))
+        hearItIsLive(titleLinking)
+    }
+
+    /** Types [time] into the schedule dialog's fields: hour, minute and, on a 12-hour clock, AM or PM. */
+    private fun setTime(time: LocalTime) {
+        val fields = compose.onAllNodes(hasSetTextAction() and hasAnyAncestor(isDialog()))
+        val twelveHour = compose.onAllNodes(hasText("AM")).fetchSemanticsNodes().isNotEmpty()
+        val hour = if (twelveHour) (time.hour % 12).let { if (it == 0) 12 else it } else time.hour
+        fields[0].performTextReplacement(hour.toString())
+        fields[1].performTextReplacement("%02d".format(time.minute))
+        if (twelveHour) compose.onNode(hasText(if (time.hour < 12) "AM" else "PM")).performClick()
+    }
+
+    /**
+     * The post changes on GitHub while it's open on the phone, as from a laptop: Update refuses,
+     * and the laptop's version stays.
+     */
+    @Test fun anEditOfAPostThatChangedOnGitHubMeanwhileIsRefused() {
+        testName = "edit-conflict"
+        val a = signInToA()
+        val date = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
+        val path = "_posts/$date-device-check-$stamp-conflict.md"
+        val github = GitHubClient(http, a.token)
+        runBlocking { github.commit(a.owner, a.name, a.branch, "Add post: device check", listOf(FileChange.text(path, "---\ntitle: \"$titleConflict\"\n---\n\nFrom a laptop.\n")), expect = mapOf(path to null)) }
+
+        openFromTheBlog(titleConflict)
+        waitFor("From a laptop.")
+        compose.onNodeWithTag("body").performTextInput("From the phone. ")
+        val laptop = "---\ntitle: \"$titleConflict\"\n---\n\nFrom a laptop, changed again.\n"
+        runBlocking {
+            val sent = github.file(a.owner, a.name, a.branch, path)!!
+            github.commit(a.owner, a.name, a.branch, "Update post: device check", listOf(FileChange.text(path, laptop)), expect = mapOf(path to sent.sha))
+        }
+        compose.onNodeWithText("Update").performClick()
+
+        waitFor("changed on GitHub since you opened it", TimeUnit.MINUTES.toMillis(2))
+        assertEquals(laptop, text(a, path))
+    }
+
+    // The first half of a check the workflow finishes: a post queued, the app's process ended,
+    // and the workflow looks on GitHub for it before anything starts the app again.
+    private val killRun = args.getString("killRun").orEmpty()
+    private val titleAfterKill = "Device check run $killRun, after the app was killed"
+
+    /** Queues a post for a minute from now, then ends, and the process with it. */
+    @Test fun aPostWaitsWhileTheAppIsKilled() {
+        assumeTrue("The workflow's first step only", args.getString("killStep") == "queue" && killRun.isNotBlank())
+        testName = "killed-queue"
+        val a = a!!
+        runBlocking {
+            val login = GitHubClient(http, a.token).user().login
+            app.container.accounts.save(Account(login, a.token, a.owner, a.name, a.branch))
+            val sendAfter = System.currentTimeMillis() + 60_000
+            val id = app.container.drafts.insert(
+                Draft(blog = "${a.fullName}@${a.branch}", title = titleAfterKill, body = "Queued, then the app was killed.", state = PostState.Queued, sendAfter = sendAfter),
+            )
+            app.container.publishQueue.enqueue(id, sendAfter)
+        }
+        assertFalse("Sent before its time", runBlocking { hasPost(a, "device-check-run-$killRun-after-the-app-was-killed") })
+    }
+
+    /**
+     * The address the internet sees this phone at, through whatever network is up. Tried a few
+     * times: just after Android says the tunnel is up, its first handshake may not be done.
+     */
+    private fun publicAddress(): String {
+        repeat(3) {
+            runCatching { http.newCall(Request.Builder().url("https://api.ipify.org").build()).execute().use { r -> r.body.string().trim().takeIf { r.isSuccessful } } }
+                .getOrNull()?.let { return it }
+            Thread.sleep(5_000)
+        }
+        error("Couldn't read this phone's public address")
+    }
+
+    /** Turns [tunnel] on or off in the WireGuard app's list, then waits for Android to agree. */
+    private fun setTunnel(tunnel: String, up: Boolean) {
+        shell("am start -W -n com.wireguard.android/.activity.MainActivity")
+        check(device.wait(Until.hasObject(By.text(tunnel)), 20_000)) { "WireGuard doesn't list $tunnel" }
+        val toggle = device.findObject(By.res("com.wireguard.android", "tunnel_switch"))
+            ?: device.findObject(By.clazz("android.widget.Switch"))
+            ?: error("No switch for $tunnel")
+        if (toggle.isChecked != up) toggle.click()
+        val end = System.currentTimeMillis() + 30_000
+        while ((AndroidVpn(app).current() != null) != up) {
+            check(System.currentTimeMillis() < end) { "The tunnel didn't come ${if (up) "up" else "down"}" }
+            Thread.sleep(500)
+        }
+        device.pressHome()
+    }
+}

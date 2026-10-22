@@ -6,6 +6,7 @@ import com.app.jekyllposter.core.github.CommitAuthor
 import com.app.jekyllposter.core.jekyll.parseJekyllDate
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Destination
+import com.app.jekyllposter.core.jekyll.PostWriter
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.DraftImage
 import com.app.jekyllposter.data.PostState
@@ -96,6 +97,23 @@ class PublisherTest {
         assertEquals("1001+sample@users.noreply.github.com", github.commits.getValue(github.head).authorEmail)
         // Signed with the login, never the profile's name, even one kept from before.
         assertEquals("sample", github.commits.getValue(github.head).authorName)
+    }
+
+    @Test fun byTheDayAloneTheCommitIsDatedByTheDayToo() = runBlocking {
+        c.privacy.update(SAMPLE_BLOG) { it.copy(datesByDayOnly = true) }
+        // Without the no-reply address there's no author to date: GitHub's own moment stays.
+        publisher.publish(queue(Draft(title = "Day only", body = "x")))
+        assertNull(github.commits.getValue(github.head).authorDate)
+        c.privacy.setCommitAsNoReply(SAMPLE_BLOG, "sample", CommitAuthor("sample", "1001+sample@users.noreply.github.com"))
+        publisher.publish(queue(Draft(title = "Day and no-reply", body = "x")))
+        // Sunday 22:15 in Los Angeles, already Monday in UTC: the post's own Sunday, not the UTC
+        // Monday, whose difference would say it went out late in the evening.
+        assertTrue(github.text("_posts/2026-10-04-day-and-no-reply.md")!!.contains("date: 2026-10-04\n"))
+        assertEquals("2026-10-04T00:00:00Z", github.commits.getValue(github.head).authorDate)
+        // A moment again once the switch is off.
+        c.privacy.update(SAMPLE_BLOG) { it.copy(datesByDayOnly = false) }
+        publisher.publish(queue(Draft(title = "To the minute", body = "x")))
+        assertNull(github.commits.getValue(github.head).authorDate)
     }
 
     @Test fun plainCommitMessagesNameNoPost() = runBlocking {
@@ -235,6 +253,19 @@ class PublisherTest {
         assertEquals(Publisher.Outcome.Done, publisher.publish(id))
         assertEquals(PostState.Published, c.drafts.get(id)!!.state)
         assertEquals(head, github.head)
+    }
+
+    @Test fun anEditThatWouldChangeKeysTheAppDoesntEditIsntSent() = runBlocking {
+        // Opened before the app checked, say: a `?` key the line editor doesn't see.
+        val path = "_posts/2025-05-05-odd-keys.md"
+        github.push("Laptop", mapOf(path to "---\ntitle: Odd keys\n? complex key\n: kept\n---\n\nText.\n"))
+        c.blogs.refresh()
+        val before = github.text(path)
+        val sha = c.database.posts().snapshot(SAMPLE_BLOG).first { it.path == path }.sha
+        val id = queue(Draft(title = "Odd keys, edited", body = "New words.", editingPath = path, baseSha = sha))
+        assertEquals(Publisher.Outcome.Failed(PostWriter.CANT_EDIT), publisher.publish(id))
+        assertEquals(before, github.text(path))
+        assertEquals(PostState.Failed, c.drafts.get(id)!!.state)
     }
 
     @Test fun twoPostsWithTheSameTitleBothLand() = runBlocking {

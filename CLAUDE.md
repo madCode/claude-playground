@@ -45,6 +45,10 @@ where you can. Don't feed code inputs it can never receive, or write a test only
 coverage. A test that waits for the screen or the database waits for the condition, not a fixed
 time. When a change has no behaviour to test, say so in the PR instead of inventing a test.
 
+In Kotlin, `withTimeoutOrNull` under `runTest` runs on virtual time, which jumps ahead while Room
+or other real threads work: the timeout fires at once and the code inside never runs. Test code
+that has a timeout under `runBlocking`, or read from the database before the timeout starts.
+
 Where the last step happens in another app or on a device (a share, a widget's host, an
 e-reader), a test can prove the hand-off but not what the other side does with it. A doc in the
 project says how a person checks the rest, and a change to that path says it's due; a test that

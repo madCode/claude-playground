@@ -20,6 +20,8 @@ import androidx.room.Update
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.app.jekyllposter.core.jekyll.extraFrontMatterProblem
+import com.app.jekyllposter.core.jekyll.hidesPost
+import com.app.jekyllposter.core.jekyll.withPostHidden
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -105,6 +107,8 @@ data class Draft(
      * the writer taps Publish, so a restart or a retry doesn't choose again.
      */
     val sendAfter: Long? = null,
+    /** [sendAfter] is a time the writer chose (Schedule…), not a random one. */
+    @ColumnInfo(defaultValue = "0") val scheduled: Boolean = false,
     val buildState: BuildState? = null,
     val error: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
@@ -112,7 +116,14 @@ data class Draft(
 ) {
     /** Why the "more front matter" can't be published, or null; only checked once it's changed. */
     val frontMatterProblem: String?
-        get() = extraFrontMatter?.takeIf { it != extraFrontMatterOpened }?.let { extraFrontMatterProblem(it) }
+        get() = extraFrontMatter
+            ?.takeIf { it != extraFrontMatterOpened }
+            // Hidden or shown and nothing else: the rest is as the blog has it, odd or not.
+            ?.takeIf { extraFrontMatterOpened == null || it != withPostHidden(extraFrontMatterOpened, hidesPost(it)) }
+            ?.let { extraFrontMatterProblem(it) }
+
+    /** The post says `published: false`: Jekyll leaves it off the site, though its file stays. */
+    val hidden: Boolean get() = hidesPost(extraFrontMatter)
 
     val isEmpty: Boolean get() = title.isBlank() && body.isBlank() && extraFrontMatter.isNullOrBlank() && images.isEmpty()
 
@@ -199,6 +210,10 @@ interface DraftDao {
     @Query("DELETE FROM drafts WHERE targetPath = :path AND blog = :blog AND state = 'Published'")
     suspend fun deletePublishedEditsOf(path: String, blog: String)
 
+    /** As [deletePublishedEditsOf], but for the records before [keep], the one just published. */
+    @Query("DELETE FROM drafts WHERE targetPath = :path AND blog = :blog AND state = 'Published' AND id != :keep")
+    suspend fun deleteEarlierPublishedEditsOf(path: String, blog: String, keep: Long)
+
     @Insert
     suspend fun insert(draft: Draft): Long
 
@@ -210,11 +225,11 @@ interface DraftDao {
      * tried for it ([Draft.canTakeBack]); the number of rows changed. A tried commit may have
      * landed unheard, and the post be live already.
      */
-    @Query("UPDATE drafts SET state = 'Draft', sendAfter = NULL, updatedAt = :now WHERE id = :id AND state = 'Queued' AND destination != 'Delete' AND sentShas = '[]'")
+    @Query("UPDATE drafts SET state = 'Draft', sendAfter = NULL, scheduled = 0, updatedAt = :now WHERE id = :id AND state = 'Queued' AND destination != 'Delete' AND sentShas = '[]'")
     suspend fun takeBack(id: Long, now: Long = System.currentTimeMillis()): Int
 
-    /** Clears a queued post's random time, so it goes now; the number of rows changed. */
-    @Query("UPDATE drafts SET sendAfter = NULL WHERE id = :id AND state = 'Queued'")
+    /** Clears a queued post's random or scheduled time, so it goes now; the number of rows changed. */
+    @Query("UPDATE drafts SET sendAfter = NULL, scheduled = 0 WHERE id = :id AND state = 'Queued'")
     suspend fun sendNow(id: Long): Int
 
     @Query("DELETE FROM drafts WHERE id = :id")
@@ -341,10 +356,18 @@ abstract class AccountDao {
     @Query("UPDATE drafts SET blog = :key WHERE blog IS NULL")
     abstract suspend fun adoptDrafts(key: String)
 
-    /** [signIn] posting to [blog], replacing any sign-in [blog] had; the sign-in's id. */
+    /** Sign-ins of [kind] made for [login], however GitHub cased it. */
+    @Query("SELECT * FROM sign_ins WHERE login = :login COLLATE NOCASE AND kind = :kind ORDER BY id")
+    abstract suspend fun signInsFor(login: String, kind: SignInKind): List<SignIn>
+
+    /**
+     * [signIn] posting to [blog], replacing any sign-in [blog] had; the sign-in's id. With [reuse],
+     * that sign-in takes [signIn]'s tokens instead of a new one being made, so one account isn't
+     * listed twice.
+     */
     @Transaction
-    open suspend fun signInTo(signIn: SignIn, blog: SavedBlog): Long {
-        val id = insert(signIn)
+    open suspend fun signInTo(signIn: SignIn, blog: SavedBlog, reuse: Long? = null): Long {
+        val id = reuse?.takeIf { update(signIn.copy(id = it)) == 1 } ?: insert(signIn)
         upsert(blog.copy(signInId = id, title = blog(blog.blogKey)?.title))
         deleteUnused()
         return id
@@ -391,7 +414,7 @@ class Converters {
     @TypeConverter fun toImages(json: String): List<DraftImage> = Json.decodeFromString(json)
 }
 
-@Database(entities = [Draft::class, CachedPost::class, SignIn::class, SavedBlog::class, BlogPrivacy::class], version = 8)
+@Database(entities = [Draft::class, CachedPost::class, SignIn::class, SavedBlog::class, BlogPrivacy::class], version = 10)
 @TypeConverters(Converters::class)
 abstract class PosterDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
@@ -402,7 +425,7 @@ abstract class PosterDatabase : RoomDatabase() {
     companion object {
         /** The app's database, brought up to date from any version a debug build has shipped. */
         fun create(context: Context): PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build()
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10).build()
     }
 }
 
@@ -489,5 +512,31 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
                 "`plainCommitMessages` INTEGER NOT NULL, `datesByDayOnly` INTEGER NOT NULL, `removeTrackingCodes` INTEGER NOT NULL, " +
                 "`isNew` INTEGER NOT NULL, PRIMARY KEY(`blogKey`))",
         )
+    }
+}
+
+/**
+ * One "Sign in with GitHub" sign-in per account: an account signed in to twice had two, listed
+ * twice. Its blogs move to the one renewed last (the latest expiry), whose refresh token is the
+ * likeliest to work, and the others go. Pasted tokens stay apart, since two tokens for one account
+ * can each reach different repositories.
+ */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TEMP TABLE sign_in_keep AS SELECT s.id AS id, (SELECT n.id FROM sign_ins n WHERE n.kind = 'GitHubApp' " +
+                "AND n.login = s.login COLLATE NOCASE ORDER BY n.expiresAt DESC, n.id DESC LIMIT 1) AS keeper " +
+                "FROM sign_ins s WHERE s.kind = 'GitHubApp'",
+        )
+        db.execSQL("UPDATE blogs SET signInId = (SELECT keeper FROM sign_in_keep k WHERE k.id = blogs.signInId) WHERE signInId IN (SELECT id FROM sign_in_keep)")
+        db.execSQL("DELETE FROM sign_ins WHERE id IN (SELECT id FROM sign_in_keep WHERE id != keeper)")
+        db.execSQL("DROP TABLE sign_in_keep")
+    }
+}
+
+/** Drafts can be scheduled: a send time the writer chose. */
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE drafts ADD COLUMN scheduled INTEGER NOT NULL DEFAULT 0")
     }
 }

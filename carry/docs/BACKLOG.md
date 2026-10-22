@@ -235,30 +235,42 @@ These are the open paths to one, hardest first.
   `aapt2 dump permissions` on the built APK said otherwise. `DESIGN.md`
   carries the table *(design:
   [new-session-notification](designs/new-session-notification.md))*
-- [ ] **Can two of WorkManager's four permissions be stripped?**
-  `ACCESS_NETWORK_STATE` and `FOREGROUND_SERVICE` are for features this app
-  does not use — no network constraint, no expedited work — so
-  `tools:node="remove"` in the manifest should drop them, leaving a set
-  that is entirely explicable. NOT done blind: removing a permission a
-  library expects fails at runtime, in a background worker, silently, which
-  is the worst failure shape this app has. Needs an install on a device and
-  a confirmed check actually running after a reboot before it is believed.
-  `WAKE_LOCK` and `RECEIVE_BOOT_COMPLETED` must stay — the work would stop
-  surviving reboots without them *(found by checking the built APK rather
-  than the source manifest)*
-- [ ] **Read the class from the phone's own calendar** — BLOCKED, and its
-  stated benefit is void. It justified itself as freeing the coach from its
-  own calendar config; that config works, demonstrated 2026-10-16 when the
-  laptop's trigger read the calendar and correctly reported no class. So
-  there is nothing to free. This only becomes work if the brain moves to
-  the phone, which is its own entry under *Feature proposals* with its own
-  preconditions — do not pick this up before that *(design:
+- [ ] **Read the class from the phone's own calendar** — *your call*.
+  Looked at again 2026-10-20, when you asked for it if possible. Nothing
+  useful can be built in Carry alone yet:
+  - The session file already carries the class and its start
+    (`starts_at`), from the coach's own calendar read. Carry reading the
+    phone's calendar would show nothing new.
+  - What it was for, the coach not needing its own calendar config, needs
+    the phone's answer to reach the coach before its trigger fires. That
+    is a new file in the synced folder, and gym-coach owns the schema, so
+    gym-coach changes first. And that config works (shown 2026-10-16), so
+    this pays off only once the brain moves to the phone.
+  - **The smallest real version**, about two cycles, one per repo:
+    gym-coach reads a `classes-<date>.json` (date, class tag, start time;
+    never event titles) when it's there, falling back to its ICS config.
+    Carry asks for `READ_CALENDAR`, reads today and the next two days for
+    events with the class tag, and writes that file. The test fixture has
+    a timed event and an all-day one, since the coach's own query once
+    found only all-day events. `READ_CALENDAR` would be the most invasive
+    permission Carry holds.
+  - **Something Carry could do alone**, if you want it: say on the Before
+    tab when the calendar has a class today and no sheet has arrived an
+    hour before it. That catches the coach's trigger not firing. It needs
+    `READ_CALENDAR` too.
+  Which, if either? *(design:
   [read-class-from-calendar](designs/read-class-from-calendar.md))*
-
-
-
-- [ ] **Say what to type when one row stands for several rounds**
-  *(you asked, 2026-10-18; needs gym-coach's half first)*. A board that
+- [x] **Say what to type when one row stands for several rounds**
+  *(you asked, 2026-10-18)*. **Done 2026-10-22:** the After tab's row says
+  "3 rounds · log your heaviest set", from gym-coach's `rounds` field
+  (gym-coach #73). Only on a row that takes a weight.
+- [ ] **What to log for a bodyweight ladder** — *your call*. `8 / 6 / 4 x
+  push-up` is one row too, but every round has the same load, so
+  "heaviest" picks nothing, and its reps box has no faint count (the
+  slash reads as a range). The first round, the last, or the total would
+  each be stored as a plain count, and nothing later can tell which. The
+  coach's own number for the row is its smallest rung. Which should the
+  row ask for? *(found by the review of the ladder hint)* A board that
   prescribes `8 / 6 / 4` is three sets of one movement, and Carry gives it
   one row. Nothing on either screen says what that row means, so the
   convention lives only in the owner's head: they record *"only my max
@@ -292,80 +304,50 @@ These are the open paths to one, hardest first.
   alone leaves the other half unexplained *(you asked)*
 
 ### Health and tidying
-- [ ] **Bring updates up to newspaperss's.** Carry's in-app update
-  (`DebugUpdates`, `UpdateInstaller`) is as safe as newspaperss's
-  (`SelfUpdate`) but needs more from the owner. Four gaps:
-  - **It waits for a tap.** newspaperss downloads a new test build on
-    Wi-Fi and installs it while the app is closed and nothing is running.
-  - **It only checks on a return to the app.** newspaperss also checks in
-    the background, every six hours.
-  - **It leaves the file checks to Android.** newspaperss checks the
-    package, a higher version code and the signing key itself, and gives
-    up on a build after three failed installs.
-  - **The installer and `REQUEST_INSTALL_PACKAGES` ship in every build.**
-    newspaperss keeps both in the debug source set, and `check` fails if a
-    release's merged manifest asks to install apps.
-  Keep Carry's own rule: never install over unsaved typing on the After
-  tab, so a background install waits for no draft and no save in progress.
-  A device check is owed with it, since the install itself happens in
-  Android's hands *(you approved, 2026-10-19)*
-- [ ] **A resume can put another session on screen over pending
-  typing.** The refresh on every resume shows the newest session; the
-  draft for the old one is then hidden, and the next keystroke replaces
-  it. Left for the brain-on-the-phone move, since the session file goes
-  then. Finishing an older session (cycle 68) has the same exposure: a
-  sync that briefly drops the old file from the listing puts the newest
-  back under the typing, and the pin goes with it *(the simple save
-  refusal, #136 closed; review of cycle 68)*
-- [ ] **Carry and gym-coach disagree about an old *hard*-only row.** An
-  old session whose only record is `hard` on bodyweight rows reaches
-  gym-coach's history, which still counts `hard` as an answer. Carry's
-  `Row.answered` ignores `hard` (Growth.kt), so the Since tab leaves that
-  session out. One side should change to match the other *(review of
-  #136)*
-- [ ] **Branch coverage is 67% while the Kover floor is 85% on
-  instructions.** The gate is real but it is counting the wrong thing for
-  a codebase this full of fail-closed guards — a third of branches have
-  never been taken. Not a demand for a second gate (a test written only to
-  lift a number is worse than the number), but worth one pass over the
-  classes with the widest gap: `SessionFolder` 78%, `CarryAppKt` 77%
-  *(audit: CI health)*
-- [ ] `MainActivity` is at **0%** and `LogBinding` at 0%. The first is the
-  SAF plumbing the emulator is honest about and unit tests are not, so it
-  is the one place a device check earns its keep; the second is a plain
-  data holder *(audit: CI health)*
+- [ ] **A blank screenshot fails `CarryAppScreenTest` now and then.**
+  *An unknown format label is quoted back* came back flat ("captured a
+  blank image") on 3 of 8 CI builds of #204, all with the same app code,
+  and passed 10 of 10 run alone locally. Its neighbours that flatten
+  every time already skip `shoot()`. Count it over 20 CI-like runs (the
+  whole class) before changing anything *(found by cycle 75)*
+- [ ] **`tools:node="remove"` drops `FOREGROUND_SERVICE` whoever asks for
+  it.** A library added later that really runs foreground work would
+  build, pass `check` and fail at run time. When a dependency is added,
+  look at its manifest *(review of cycle 75)*
+- [ ] **More journeys on the emulator job.** It exists now (cycle 74),
+  so the device-only rows of the journey map can each get a test with a
+  made-up sheet: rotation and a killed app on a half-filled After tab
+  with a real Activity, the share chooser opening with the preview's
+  text, a long session's last row above the navigation bar *(found by
+  cycle 74; the reboot check came in cycle 75)*
+
 ### Owed on a device
 
 Only a real phone can answer these.
 - [ ] **The After page v4 on a phone.** Tap an empty reps box: it should
   fill with the faint count, selected, and typing should replace it. With
-  TalkBack, the box should say "empty, tap for 10" and then the number.
+  TalkBack, the box should say "empty, prescribed 10" and offer a
+  "Fill in 10" action, then say the number once filled.
   Check a timed row's *done* tag, and the page at the largest font size
   *(due with #127 v4)*
 - [ ] **TalkBack reads "You typed: …" when it appears after Save.** The
   test proves the line is a polite live region, not that TalkBack speaks
   it. With TalkBack on: add a row, type a name, save, and listen *(due
   with the typed-name change)*
-- [ ] A persisted tree permission surviving `adb install -r`, which can revoke it
-  and look exactly like a first run. Partly done 2026-10-12 **on an emulator**: the
-  grant was taken through the real picker and held across a force-stop and
-  relaunch. **A phone and a reinstall are still owed** *(device)*
-- [ ] **Does tapping a notification preserve typed-but-unsaved numbers?**
-  The tap itself is confirmed — it opens the app on the Before tab. What is
-  NOT confirmed is the property the `SINGLE_TOP` fix exists for: that the
-  activity is brought forward rather than finished and rebuilt, so
-  `CarryViewModel`'s edits, added rows and in-flight save survive.
-
-  The 2026-10-16 test could not exercise it. The test sheet was blank and
-  nothing had been typed, so there was no state to lose and a broken
-  version would have looked identical. Worth saying plainly because "the
-  tap works" reads like the fix is proven, and it is not.
-
-  The sequence: type a weight on the After tab, do NOT save, background the
-  app, then tap a notification when one arrives. Numbers still there means
-  the fix holds; empty boxes mean the activity was rebuilt, which for this
-  app is the cardinal failure *(device)*
 - [ ] Bottom-edge insets against the navigation bar with a long session *(device)*
+- [ ] **Updates on a phone** *(due with cycles 71 and 72)*. Only a device
+  can show: the signing check reading a real downloaded APK; a background
+  install while Carry is closed (no dialog on Android 12+, once Carry has
+  installed itself); no install while the After tab holds unsaved typing,
+  or while the folder picker is open over Carry; a release build with no
+  "install unknown apps" entry. The steps are in DEVLOG.md, cycle 72.
+  **And the folder grant surviving it:** an update
+  replaces the installed app the way `adb install -r` does, which can
+  revoke a persisted tree grant and look exactly like a first run. After
+  the update, Carry should open on the sheet, not on *Pick your folder*
+  or *Lost the folder*. Held across a force-stop and relaunch on an
+  emulator (2026-10-12); a reinstall on a phone is still owed *(merged
+  with the reinstall check, which asked the same of the same moment)*
 - [x] ~~The round trip through Syncthing, end to end~~ **Confirmed on the
   owner's own phone, 2026-10-16.** A blank, labelled session file placed in
   the synced folder on the laptop reached the phone, parsed, appeared on the
@@ -459,6 +441,16 @@ Without that there is no way to tell a faithful port from one that has
 quietly lost a third of the lines, because the only witness is the
 owner's own training record months later.
 
+**Waits for this move**, because the session file goes with it:
+
+- A resume can put another session on screen over pending typing. The
+  refresh on every resume shows the newest session; the draft for the old
+  one is then hidden, and the next keystroke replaces it. Finishing an
+  older session (cycle 68) has the same exposure: a sync that briefly
+  drops the old file from the listing puts the newest back under the
+  typing, and the pin goes with it *(the simple save refusal, #136
+  closed; review of cycle 68)*
+
 Two smaller things it would also need: the `INTERNET` permission and
 stored Reddit credentials, which is a much bigger change to this app's
 stated properties than the one notification permission; and the history
@@ -470,6 +462,50 @@ Nothing exists for "the sheet is wrong and I know it now". Adding a row currentl
 means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
+
+- [x] **WorkManager's `FOREGROUND_SERVICE` removed.** Cycle 75 (#204):
+  CI's emulator job now reboots after the device tests
+  (`tools/reboot-check.sh`) and checks the hourly session check is
+  scheduled again without Carry being opened, and runs. It passed on
+  main's manifest first, then without the permission. `aapt2 dump
+  permissions` shows it gone from debug and release, and `check` fails if
+  it returns *(health)*
+- [x] **Tapping a notification keeps typed-but-unsaved numbers.**
+  Cycle 74 (#201): Carry's first device test, `NotificationTapTest`, run
+  on an emulator by the new `carry-device.yml` job on every PR touching
+  `carry/`. It puts a made-up sheet for today in a folder Carry holds,
+  types a weight on the After tab without saving, goes Home, taps the
+  real notification in the shade, and checks the weight is still in the
+  box. Falsified on CI: with `CLEAR_TOP` back in the notification's
+  intent the job went red with the box empty *(device, now CI)*
+- [x] **One pass of tests over the fail-closed guards, and `MainActivity`
+  off 0%.** Real behaviour tests, each falsified: the folder against a
+  provider (junk rows, a file over 1 MB, a trickling stream, a read-only
+  grant, re-picking), finishing a sheet the provider won't hand over, the
+  finishing strip over unsaved typing, and the Activity's picker and
+  notification ask. Branch coverage went from 72.9% to 74.5% overall (CI,
+  main against the PR): `SessionFolder` 45 to 61 of 72 branches,
+  `CarryAppKt` 150 to 159 of 178, `MainActivity` from 0 to 11 of 30, and
+  from almost no instructions run to 73% of them. The Activity test found
+  the whole-phone refusal being wiped by the resume after the picker;
+  fixed. What only a device shows (a grant surviving a reinstall, the real
+  picker) stays under *Owed on a device* *(audit: CI health)*
+- [x] **Bring updates up to newspaperss's** *(you approved, 2026-10-19)*.
+  Cycle 71 (#158): the installer, `REQUEST_INSTALL_PACKAGES` and
+  `INTERNET` are debug-only, `check` guards the release manifest, and
+  Carry checks the package, signing key and version itself and gives up
+  on a build after three failed installs. Cycle 72: a newer build
+  downloads on Wi-Fi and installs while Carry is closed with nothing
+  unsaved, and a check runs every six hours. Device checks owed: under
+  *Owed on a device*.
+
+- [x] **Carry and gym-coach agree about an old *hard*-only row.** Carry
+  moved to gym-coach's reading: its importer turns a row whose only
+  record is `hard` into a set in history (its #50 kept that on purpose),
+  so the Since tab now counts that day too, and a past session shows the
+  row with a *hard* mark rather than as done with nothing to say why.
+  Checked with gym-coach's own `to_history` on such a file: one entry
+  for the hard row, none for the untouched one *(review of #136)*
 
 - [x] **Finish an older session.** Built 2026-10-18: a *Finish this
   session* button on a past day in Since puts that sheet on the After tab,

@@ -21,12 +21,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-java@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           java-version: '21'
           distribution: temurin
           cache: gradle
+      - name: Validate the Gradle wrapper
+        uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      # Without them the published build has no Sign in with GitHub, and nothing else would say so.
+      - name: Check the GitHub App is configured
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          CLIENT_ID: ${{ vars.JEKYLL_POSTER_CLIENT_ID }}
+          APP_SLUG: ${{ vars.JEKYLL_POSTER_APP_SLUG }}
+        run: |
+          [ -n "$CLIENT_ID" ] && [ -n "$APP_SLUG" ] || { echo "::error::Set the repository variables JEKYLL_POSTER_CLIENT_ID and JEKYLL_POSTER_APP_SLUG (docs/GITHUB_APP.md): without them the build has no Sign in with GitHub."; exit 1; }
       - name: Build, unit tests and coverage
         # The GitHub App for "Sign in with GitHub" (docs/GITHUB_APP.md); without it, token sign-in only.
         env:
@@ -34,14 +46,14 @@ jobs:
           APP_SLUG: ${{ vars.JEKYLL_POSTER_APP_SLUG }}
         run: ./gradlew build koverXmlReport koverHtmlReport koverVerify "-PgithubClientId=$CLIENT_ID" "-PgithubAppSlug=$APP_SLUG"
       - name: Upload debug APK
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: jekyll-poster-debug-apk
           path: jekyll-poster/app/build/outputs/apk/debug/*.apk
           retention-days: 14
       - name: Upload test and coverage reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: jekyll-poster-reports
           path: |
@@ -59,14 +71,16 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # One at a time, and never cancelled: cancellation isn't instant, so two jobs overlap long
+    # enough to collide on the release's assets (newspaperss #210). A later push waits its turn.
     concurrency:
       group: jekyll-poster-debug
-      cancel-in-progress: true
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: .
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: jekyll-poster-debug-apk
       - name: Update the jekyll-poster-debug release
@@ -77,12 +91,20 @@ jobs:
           mv app-debug.apk jekyll-poster-debug.apk
           build="${{ github.run_number }}"
           short="${GITHUB_SHA::7}"
+          # The same build under a numbered name, so a download can't be mistaken for an older one,
+          # and the app's update check reads the build number from it.
+          numbered="jekyll-poster-debug-$build.apk"
+          cp jekyll-poster-debug.apk "$numbered"
           title="Jekyll Poster debug build $build · $short"
           notes="Build $build from main ($short). Installs as com.app.jekyllposter.debug."
           if gh release view jekyll-poster-debug > /dev/null 2>&1; then
-            gh release upload jekyll-poster-debug jekyll-poster-debug.apk --clobber
+            gh release upload jekyll-poster-debug jekyll-poster-debug.apk "$numbered" --clobber
             gh api -X PATCH "repos/$GH_REPO/git/refs/tags/jekyll-poster-debug" -f sha="$GITHUB_SHA" -F force=true > /dev/null
             gh release edit jekyll-poster-debug --title "$title" --notes "$notes"
+            # Only the newest numbered copy stays.
+            gh release view jekyll-poster-debug --json assets --jq '.assets[].name' \
+              | { grep -E '^jekyll-poster-debug-[0-9]+\.apk$' || true; } | { grep -vx "$numbered" || true; } \
+              | while read -r old; do gh release delete-asset jekyll-poster-debug "$old" -y; done
           else
-            gh release create jekyll-poster-debug jekyll-poster-debug.apk --prerelease --target "$GITHUB_SHA" --title "$title" --notes "$notes"
+            gh release create jekyll-poster-debug jekyll-poster-debug.apk "$numbered" --prerelease --target "$GITHUB_SHA" --title "$title" --notes "$notes"
           fi

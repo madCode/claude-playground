@@ -54,4 +54,14 @@ class NotifierTest {
         Notifier(app).buildFinished(live.copy(buildState = BuildState.Unknown))
         assertTrue(shadowOf(manager).allNotifications.isEmpty())
     }
+
+    @Test fun aHiddenPostSaysItIsOffTheSiteAndOpensTheApp() {
+        shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        Notifier(app).buildFinished(live.copy(extraFrontMatter = "image: /a.png\npublished: false"))
+        val n = shadowOf(manager).allNotifications.single()
+        assertEquals("“Bus notes” is off your site", shadowOf(n).contentTitle)
+        assertEquals("Your site rebuilt", n.publicVersion.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
+        // Its address no longer answers, so the tap opens the app instead.
+        assertEquals(null, shadowOf(n.contentIntent).savedIntent.dataString)
+    }
 }

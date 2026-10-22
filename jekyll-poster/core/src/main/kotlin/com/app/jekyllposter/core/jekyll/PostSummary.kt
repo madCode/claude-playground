@@ -21,7 +21,7 @@ data class PostSummary(
                 title = doc.string("title")?.takeIf { it.isNotBlank() } ?: titleFromSlug(path.slug),
                 categories = (path.folderCategories + frontCategories).distinct(),
                 tags = doc.terms("tag", "tags"),
-                published = doc.values()["published"] != false,
+                published = !hidesPost(doc.values()),
             )
         }
 

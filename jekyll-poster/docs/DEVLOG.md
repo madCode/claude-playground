@@ -7,21 +7,387 @@ Times are when each cycle landed, Pacific.
 
 ## Status
 
-- **Built so far:** night 1 built the app from nothing: sign-in two ways, the blog's own
-  categories, writing with a toolbar, photos without their location, publishing exactly once,
-  following the Pages build, safe edits and deletes, front matter, `_drafts`, a New post
-  shortcut, search and a zine look. Day 1 added the tag picker, Blog & privacy, posts from
-  Obsidian, `[[` links to posts, only connecting through a VPN, a one-tap setup for writing
-  anonymously, and three passes simplifying the code. Every code PR had a fresh-eyes review.
-- **Tried on a real blog:** posts from the phone land on the sample blog
-  ([madCode/sample-blog](https://github.com/madCode/sample-blog), live on Pages). The live check
-  workflow publishes and deletes one there through the app's own GitHub client.
-- **Used for real:** madCode has published to their own blog from the phone.
-- **Several blogs:** all three cycles are built: blogs under several accounts, a switcher from
-  the title, Remove, and privacy per blog (cycle 3 in its PR). Next, the audits: a log of a real
-  run's requests per account, and a UX pass on the switcher.
-- **Waiting on you:** the Android SDK in the environment's setup script. The GitHub App is
-  registered.
+- **Built:** sign-in two ways; several blogs and accounts; writing with photos stripped of their
+  location; notes from Obsidian; safe edits, deletes and Hide from the site; scheduled posts;
+  publishing exactly once. Privacy is per blog, Only connect through a VPN included. Debug builds
+  say when a newer build is out, and install it.
+- **Checked:** nearly every journey a writer takes is walked through the screens: on CI's
+  emulator with a pretend GitHub on every PR, or each night (and on PRs that change the app) on
+  the tester's real blogs, with a real VPN. The
+  [coverage page](https://claude.ai/artifact/F3gWC6RBgdtCwN5tgbPDdS) shows which.
+- **Used for real:** madCode publishes to their own blog from the phone.
+- **Waiting on you:** checks by a person ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)): Sign in with
+  GitHub, a TalkBack listen, updating itself, a scheduled post on a sleeping phone, and a
+  notification for the other blog. None has been run yet.
+
+## Thu 22 Oct
+
+### Cycle 64: close-out
+- **Built:** a test for Settings → Forget the vault folder, the last journey with no test that
+  doesn't need Android's folder picker.
+- **Updated:** the records, the journey coverage page and the morning page.
+
+### Cycles 62–63: the smaller journeys on every PR's emulator
+- **Built:** device tests, through the screens against the pretend GitHub:
+  - Delete draft, Discard changes and Remove from this list;
+  - a shared note's Use the publish day;
+  - the first Publish asking for notifications, and a failed build's notification opening the
+    app;
+  - removing a sign-in with a post still to go;
+  - Home's category pills, search and Read the blog again;
+  - two photos shared at once, a note as a text file, and Open with. The test sender app learnt
+    these three shares.
+- **Falsified on CI:** a pushed commit broke each journey; every new test went red, and nothing
+  else did. Then reverted.
+
+### Cycle 58: a notification names its blog; #137 closed
+- [#189](https://github.com/madCode/claude-playground/pull/189), cycle 55's PR, brought up to
+  date with main and merged. Its first build hung on CI and passed on a re-run. #137 is closed,
+  as madCode asked.
+
+### Cycles 59–61: the nightly live check through the screens
+- **Asked:** madCode wants the nightly check to click through every journey a writer takes.
+- **Built:** on the tester's real blogs, through the screens:
+  - Hide from the site, then Show again;
+  - a Jekyll draft saved, updated, then published to the site;
+  - blog B added from Settings → Add a sign-in, and a switch back from Home's title;
+  - Set up for writing anonymously tapped in Blog & privacy;
+  - the random time's Stop and edit and Send now;
+  - a post published offline going out once when the network is back;
+  - a revoked token failing and saying to sign in again;
+  - a delete refused when the post changed on GitHub;
+  - a category, Bold and Preview.
+- **Fixed in the docs:** DEVICE-CHECKS.md had said blog B was added, and the privacy setup
+  tapped, from the screens, when both were done in code. They now are done from the screens.
+- **Review caught:** the Preview check could never pass (a WebView's text isn't in Compose's
+  tree); the random-time steps could tap the closing editor instead of Home; the offline test
+  could publish before the network dropped, and its cleanup could leave a post behind. Fixed.
+- **Also built:** a `[[` link to a post pushed as from a laptop, picked from the suggestions;
+  the site builds with it.
+- **First runs:** three tests failed on their first live run, each in the test, not the app.
+  Home composes only the rows on screen, so a draft listed last was never found. A network
+  check threw while the emulator's network came back. A tap on Add category landed on nothing
+  after typing in the body had scrolled it away.
+
+### Cycle 57: scheduled posts
+- **Asked:** madCode asked for scheduled posts.
+- **Built:** **Schedule…** in the editor's menu picks today, tomorrow or another day, and a time.
+  The post waits on the phone ("Scheduled for 9:00 AM tomorrow") and goes out then, in place of
+  any random time; Send now and Stop and edit work as before. An alarm Android allows on an
+  idle phone wakes the app at the time, for random times too; WorkManager alone can be held
+  back for hours.
+- **Not a future-dated commit:** GitHub Pages' usual setup builds a future-dated post at once,
+  and a public repository would show it early.
+- **Review caught:** the hours-late wake-up; Send them now on removing a sign-in sending
+  scheduled posts early unannounced; the VPN line hiding the time; a time passing while the
+  dialog is open; Send now going once a post was late; TalkBack not hearing "That time has
+  passed". All fixed. Left: "tomorrow" isn't redrawn at midnight on a screen left open.
+- **Checked nightly:** the live check schedules a post three minutes ahead from the screens and
+  sees nothing reach GitHub before then.
+
+### Cycle 56: audit of Home's "double reads"
+- **Found:** the request record shows the blog read two or three times within seconds of a
+  publish. Each Home visit reads it once; the others are the publish's own: once before the
+  commit (file names and conflicts) and once after (the list). No change.
+
+## Wed 21 Oct
+
+### Cycle 55: a notification names its blog
+- **Asked for:** the last unbuilt line of the several-blogs design (#137): a notification for a
+  blog that isn't open names it, and its tap switches to that blog and says so.
+- **Changed:** "“Bus notes” is live on Night Notes" and "Night Notes didn't rebuild" when another
+  blog is open; the lock screen still shows neither. A failed or hidden post's tap opens the app
+  on its own blog, where Home lists it, with "Switched to Night Notes". A live post's tap still
+  opens the post on the site, without switching the app behind the writer's back.
+- **The review caught:** any app could have switched the blog through the exported activity;
+  the tap could switch under an editor still open beneath; a cancelled build watch could lose
+  the notification. Now the tap goes through an alias only the app can start and opens a fresh
+  task, and the notification is posted whatever the lookup does.
+### A full phone's build is tried again later
+- **Fixed:** since the entry below, Android's "storage" answer isn't counted, but nothing tried
+  the build again until the next six-hourly check. Now a downloaded build is tried again 30
+  minutes later, once storage isn't low.
+- **Review caught:** a retry at once could loop on a nearly full phone, since WorkManager's
+  "storage not low" holds while Android's installer still refuses; and keeping an existing run
+  could drop the retry. Now delayed, and replacing any earlier one.
+
+### Android saying there's no room isn't held against a build
+- **Fixed:** a failed copy into Android's installer already wasn't counted, but Android's own
+  "storage" answer after the hand-off still was: three of them gave up on the build for good.
+  Now neither counts, as DESIGN already said. Carry and newspaperss made the same change.
+
+### Cycle 54: a second documentation pass
+- **Fixed:** DESIGN's Updates section, cut to what a person needs and corrected (the background
+  retries further apart each time; not every failure offers the browser). DEVICE-CHECKS counts
+  three person checks. BACKLOG lists the cycles it skipped. This Status section, rewritten: it
+  stopped at day 1.
+
+### Cycle 52: debug builds say when a newer one is out, and install it
+- **Asked for:** the rule every app here follows (practices/android.md): the app says when a
+  newer debug build is out. Ported from Carry, installer and all.
+- **Changed:** a debug build from CI asks GitHub for the `jekyll-poster-debug` release when it
+  comes to the front (at most every three hours) and every six hours in the background. Home
+  says "Build N is out"; a tap installs it through Android's installer, with the browser as the
+  fallback. On Wi-Fi it downloads and installs by itself while the app is closed.
+- **Fitted to this app:** the check carries no token and follows *Only connect through a VPN*:
+  through the VPN if any blog asks, nothing sent without one. An install waits while a post is
+  going out, and for ten seconds after the app closes, so the editor's last save lands.
+- **The review caught:** a download refused for want of the VPN opened the browser around it;
+  a tap could restart the app under an open post, and the background under the camera or a
+  sign-in in the browser; a full phone gave up on a good build; the file host's `jwt` reached
+  the request record. All fixed: the editor and Connect now hold updates back, on disk too.
+- **Tests:** the check, the release read and the privacy rule on the JVM; the installer's
+  decisions under `testDebug`; the notice's taps. Each was broken on purpose and went red. A
+  Gradle check fails a release whose manifest could install apps. What Android's installer does
+  with the file can only be checked on a phone.
+### Cycle 53: a documentation pass
+- **Checked:** every doc against the code. Most claims held: labels, settings, numbers, test
+  names, scripts, secrets.
+- **Fixed:**
+  - The device live check runs on app PRs too, not only nightly.
+  - The numbered APK, Hide from the site and the killed-app guarantee were missing from some
+    docs.
+  - DESIGN had a plan and some history in it, and said one thing twice.
+  - The tester-account doc still asked for setup done on 20 Oct.
+  - BACKLOG's Done list now starts at cycle 40; DEVLOG has the rest.
+### Cycle 50: the update system, checked against Carry's and newspaperss's
+- **Found:** Jekyll Poster publishes a debug build that installs over the last, like the others,
+  but it never says a newer one is out; Carry and newspaperss check, download on Wi-Fi and
+  install. It also lacks the numbered APK, its publish job can cancel itself mid-upload, and its
+  actions aren't pinned. All four are in BACKLOG.md's Next.
+
+### Cycle 49: a photo, an edit, a delete and an edit conflict, against the real GitHub
+- **Why:** the last item in BACKLOG.md's Next that isn't waiting on madCode.
+- **Changed (tests and CI):** the nightly device live check shares a photo with a location into
+  the app, publishes it, and checks the copy on GitHub has none. It then edits the post and
+  deletes it from the screens. A second test changes a post on GitHub while it's open on the
+  phone: Update refuses, and the other change stays.
+
+### Cycle 48: per-blog templates, checked before building
+- **Found:** Jekyll's `defaults:` in `_config.yml` already gives every post its front matter, and
+  the app reads it. A phone template would add only starting tags, categories and a body. Asked
+  madCode whether to build that or drop it: #182.
+
+### Cycle 46: backlog grooming
+- **Found:** Unpublish already works by typing `published: false` in More front matter, so it
+  became a one-tap cycle. Collections and Hugo need madCode's call: issues #179 and #180. The
+  keep-private word list needs one too: replace a listed word, or block the publish?
+
+### Cycle 45: New post from the launcher, and the app killed while a post waits, on the emulator
+- **Why:** the last two device tests in BACKLOG.md's Next.
+- **Changed (tests and CI):** on every PR, a test long-presses the app's icon on the emulator's
+  home screen and taps New post. In the nightly live check, a post is queued a minute ahead and
+  the app's process ended; a later step finds it on the tester's blog, sent by Android alone.
+### Cycle 51: the debug release, as Carry's
+- **Why:** cycle 50's comparison with Carry and newspaperss.
+- **Changed (CI and README):**
+  - The debug release also carries `jekyll-poster-debug-<build>.apk`, numbered.
+  - Its publish job waits its turn rather than cancelling the one before mid-upload.
+  - The build's actions are pinned to commits, and the Gradle wrapper is checked.
+  - The README says how to update.
+
+### Cycle 47: Hide from the site
+- **Why:** taking a post off the site meant typing `published: false` into More front matter.
+- **Changed:** the editor's menu, while editing a post, has **Hide from the site** and, once
+  hidden, **Show on the site again**. Home marks the post Hidden; the notification says it's off
+  the site rather than live, and doesn't open its old address.
+- **Review caught:**
+  - Jekyll also hides on `no`, `off`, `False` and an empty `published:`; the blog list missed
+    those already.
+  - Hiding moved the post's other keys and could be refused over keys the writer never touched.
+    Now only the one line changes.
+  - A hide waited for a random time; now it goes out at once, like a delete.
+  - An earlier update of the post went on saying it was live.
+
+### Cycle 44: front matter the app can't follow, and Sign in with GitHub twice, on the emulator
+- **Asked for:** madCode's morning-page questions: can the emulator do these two laptop checks?
+- **Changed (tests):** two device tests on every PR. A post with a `?` key isn't opened, Home
+  says why, and GitHub is untouched. Signing in with GitHub again for a second blog keeps one
+  sign-in (the pretend GitHub approves the code).
+- **Found:** two different tokens for one account are two sign-ins by design: each fine-grained
+  token reaches its own blogs. So the check is Sign in with GitHub's, not the tokens'.
+
+### Cycle 43: Only connect through a VPN, with a real one
+- **Asked for:** the last laptop check, in CI, once madCode added the `PROTON_WG_CONF` secret.
+- **Changed (tests and CI):** the device live check installs the WireGuard app with the tester's
+  Proton config. Its VPN test publishes with *Only connect through a VPN* on: with the tunnel off
+  the post waits and nothing reaches GitHub; with it on, the phone's public address changes and
+  the post goes out.
+- **Checked:** the first run passed. Breaking the switch (the blog's gate ignoring it) first left
+  it green: the worker waits for the VPN by itself, before the gate. Checking the request record
+  too (nothing may reach GitHub before the tunnel) turned it red, naming Home's two reads of the
+  blog.
+- **The review caught:** a WireGuard problem would have failed the whole nightly; the scan before
+  the public artifact didn't look for the VPN's key or in the logcat.
+
+## Tue 20 Oct
+
+### Cycle 42: the laptop's device checks, on CI's emulator
+- **Asked for:** madCode: move the laptop checks into Actions; Sign in with GitHub and a TalkBack
+  listen stay with a person, now and then, not on a schedule.
+- **Changed (tests and CI):** five checks run on CI's emulator on every PR
+  ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)): a photo and a note shared from `:sender`, a second app
+  made for it; a photo from the emulator's camera app; rotation; the largest text in the dark,
+  through Android's accessibility checks, with pictures kept.
+- **Found a bug:** turning the phone closed the tag picker, losing its search, and closed the
+  delete confirmations. They survive now.
+- **Got in the way:** the shell that starts `:sender` splits its command at spaces with no
+  quoting, so a note's text goes as Base64; a new draft at the top of Home pushes the blog's posts
+  out of view at twice the text size.
+- **The review caught:** the camera check claimed the location was stripped, but CI's camera
+  has none to strip (the shared photo checks it); the rotation test didn't wait for the screen to
+  be made again; settings a crashed test left behind would carry into the next.
+
+### Cycle 41: by the day alone, the commit is dated by the day too
+- **Asked for:** madCode's answer to the audit's question (morning page).
+- **Changed:** with *Date posts by the day only* and the no-reply address both on (as Set up
+  for writing anonymously leaves them), commits are dated at midnight UTC, author and committer:
+  one adding a post by the post's own day, others (edits, deletes, the site's time zone) by the
+  day they go out. Without the no-reply address GitHub dates them to the second, since it takes
+  a date only with an author.
+- **The review caught:** dating by the UTC day of sending, beside the post's site-zone day, gave
+  away a 7-hour window whenever the two differed; the time zone commit wasn't dated; and the
+  live test checked the moment but not the stored offset. All fixed.
+- **Checked live:** the device live check's most-private test now asserts the real commit says
+  midnight UTC, for the committer too.
+
+### Cycle 39: what GitHub knows about the writer (audit)
+- **Asked for:** the several-blogs audit, and madCode's question of how much GitHub knows about
+  the sender with privacy at its most.
+- **Found:** written up in [What GitHub knows](research/what-github-knows.md), from the device
+  live check's records, not the code. Each request carries one sign-in's token, to its own
+  blogs only, and nothing about the phone (`User-Agent: okhttp/5.5.0`). Every switch did what it
+  says. What's left: the account, the address requests come from (the VPN switch's job), the
+  moment the commit was made with GitHub's own `-0700`, when the app is open, and that two
+  accounts on one phone came from one address at once.
+- **Waiting on you:** whether *Dates by the day only* should date the commit by the day too
+  (BACKLOG.md, *Your call*).
+
+### Cycle 38: a nightly device live check on the tester's blogs
+- **Asked for:** the plan's device live check, and the request record for the audit.
+- **Changed (tests and CI):** every night the app runs on an emulator against the real GitHub:
+  blog A signed in to and published from the screens, the organisation's blog added with its own
+  token, both heard live; then everything switched on for writing anonymously but the VPN, a
+  shared link published, and what GitHub kept read back into a report. The records and report
+  are an artifact, refused if a token is in any of them.
+- **Found on its first run:** choosing a blog failed on a phone (the fix above). Then the
+  workflow's own token scan let a `grep` error pass as clean; it now fails closed.
+
+### Fix: choosing a blog, or turning the VPN switch, failed on a phone
+- **Found by** the device live check (cycle 38), on its first run against the real GitHub: picking
+  the blog after signing in with a token threw `NetworkOnMainThreadException`, so the blog was
+  never opened. Turning Only connect through a VPN on or off went the same way.
+- **Why:** both close the old connections, and closing a TLS connection writes to it, which
+  Android refuses on the main thread. The fake GitHub speaks plain HTTP, so no test saw it.
+- **Changed:** the old connections close on OkHttp's own threads. They were never reused anyway:
+  a connection only serves the client it was made for.
+
+### Cycle 37: the live check on the tester's three blogs
+- **Asked for:** the Next item, now that madCode has made the tester account.
+- **Changed (CI only):** the live check runs nightly (03:37 Pacific) and by hand against the
+  tester's two blogs and its organisation's one, each with its own token; a missing variable or
+  secret is named in the run. By hand, it still takes one blog's `owner/name` with
+  `SAMPLE_BLOG_TOKEN`.
+- **Seen live:** the first run, from this cycle's branch, published, saw live and deleted a post
+  on all three, the organisation's included. Commits are attributed to the tester's account.
+
+### Cycle 36: device tests on an emulator, on every PR
+- **Asked for:** the Next item after the request record: the real app on an emulator in CI,
+  for what Robolectric only imitates.
+- **Changed (tests and CI only):** a "Jekyll Poster device tests" workflow runs the app on an
+  API 36 emulator on every PR. The fake GitHub runs on the device, serving the sample blog. Two
+  tests: sign in through the screens, write and publish with WorkManager's own worker, then read
+  the "is live" notification from the shade; and a link shared from outside the app (`am start`
+  from the shell) starts a post that publishes. Each test runs in a process of its own with the
+  app's data cleared. Debug builds allow plain HTTP to 127.0.0.1, where the fake GitHub listens.
+- **Getting it green:** two CI runs crashed the app at start with no stack trace; the workflow
+  now prints the crash and keeps logcat. It was the fake GitHub looking up "localhost", which
+  Android's resolver refused; it now listens on 127.0.0.1 by number.
+- **The review caught:** the emulator's default screen is small enough to hide the rows and
+  buttons the tests tap (now a Pixel 6); its screen could lock while Gradle built (now built
+  first, and kept awake); the test read the fake GitHub's maps without its lock (now taken).
+
+### Cycle 35: a request record in debug builds
+- **Asked for:** the first Next item, chosen by madCode for the several-blogs audit: what the
+  app sends to GitHub, per sign-in, collectable from an emulator, with no token in it.
+- **Changed:** debug builds can record every request as it goes on the wire, one JSON line each
+  in the app's private files: which blog (or sign-in, renewal, preview) it was for, the method,
+  address, headers, body and GitHub's answer code. It's off until a session turns it on over
+  adb, since debug builds are used for real. `Authorization` is `(hidden)`, named by a
+  fingerprint of its token so two sign-ins can be told apart; the device flow's codes, a
+  link's `?token=` and anything shaped like a GitHub token are hidden too. Release builds have
+  none of it. DESIGN.md says what it leaves out.
+- **The review caught:** a record that couldn't be written (a full disk) failed the request
+  after GitHub had answered, which could lose a renewal's new tokens for good; it's dropped
+  now. A preview photo from a private file had its `?token=` recorded. The renewal test passed
+  without its own rule (the token-shape backstop hid it); it now uses a refresh token of
+  another shape. All fixed, with tests.
+
+### Cycle 34: removing the open blog's sign-in never reads as signed out
+- **Asked for:** cycle 32's count found it: removing the open blog's sign-in could, for a moment,
+  read as signed out, which sends the app to the sign-in screen.
+- **Found:** Remove moves to the next blog first, then deletes the rows; but the database could
+  report the rows gone before the app heard about the move. With the store slowed down in a
+  test, it happened every time.
+- **Changed:** that moment's "nothing here" is ignored when another blog is already open; the
+  next blog follows. A real sign-out still reads as one.
+- **The review caught:** a store that can't be read at that moment would have crashed the app;
+  it now lets the sign-out through.
+
+### Cycle 33: front matter the app can't follow is left alone
+- **Asked for:** the Later item "keys like `c#:` read right, but other exotic YAML keys may still
+  not".
+- **Found:** a harness ran 38 front matter shapes through the real edit. Most were kept exactly,
+  including odd ones (`c#:`, quoted keys, anchors, merge keys, `og:image`, comments). Two kinds
+  lost keys: a `?` key, and front matter written as one `{…}`. The line editor doesn't see
+  them, and an edit wrote around them.
+- **Changed:** before opening a post, the app tries the edit; if any key it doesn't edit would
+  read differently after it, Home says why and the post isn't opened. Update checks the same
+  before it commits, for an edit opened earlier. A full YAML editor isn't needed for this.
+- **The review caught:** the check refused any change to "more front matter" (the writer's own
+  keys); a `!!binary` value was refused; a post with an alias inside itself crashed the app on
+  opening; and one message served both opening and publishing. All fixed, with tests.
+
+### Cycle 32: the Compose-test hang, found; the preview flake, counted and fixed
+- **Asked for:** two Next items: find the Compose-test "Room hang" (cycles 1, 11, 18), and
+  count the `PreviewScreenTest` flake before fixing it.
+- **Found:** it wasn't Room. Robolectric runs a test on the main thread, and Compose's
+  `waitUntil` turns the main looper only when its condition reads the screen. A wait on the
+  database, GitHub or a view model's state waited on work posted to the main thread that never
+  ran. A thread dump showed Room's threads idle. The preview flake was the same thing: its wait
+  read the view model's state.
+- **Changed (tests only):** `waitUntilLooped` turns the looper as it waits, used by the five
+  waits that don't read the screen. The edit flow cycle 1 couldn't test now has a test: open a
+  post on the blog, change it on the screen, Update, and the blog has it. `SharedPhotosTest`
+  waited for the text but not the screen's state, which failed once in the count.
+- **Counted:** full `:app:testDebugUnitTest` runs. Before, on main: PreviewScreenTest failed in
+  2 of 20 (runs 11 and 18, both at its wait), SharedPhotosTest in 1, ObsidianShareFlowTest in
+  1. After, with this change: PreviewScreenTest failed in 0 of 20; one run failed
+  `AccountStoreTest.removingTheOpenBlogsSignInNeverReadsAsSignedOut` (a separate race, now in
+  BACKLOG). Run on the class alone, 40 times in one JVM, it never failed.
+
+### Cycle 31: a UX pass on the blog switcher (audit)
+- **Asked for:** the UX half of the several-blogs audit.
+- **Found:** read from the rendered screens (Home with two blogs, the switcher, Your blogs,
+  Remove refused, the editor's "To", Settings, Add a sign-in): nothing needs changing. Each
+  blog shows its sign-in, posts waiting and switches; the open one is ticked and named for
+  TalkBack.
+- **Left:** the request-log half needs a log of a real run's requests per account, which a
+  cloud session can't make. How to get one is on the morning page.
+
+### Cycle 30: the same account signed in twice is one sign-in
+- **Asked for:** cycle 28 left it: signing in again as an account the app already had, to add
+  another of its blogs, listed that account twice in Your blogs.
+- **Changed:** signing in with GitHub again as the same account adds the blog to its existing
+  sign-in, with the newer token; so does pasting the same token again. A different pasted token
+  for the same account stays a sign-in of its own: each fine-grained token reaches only the
+  repositories it was made for, so one can't stand in for the other. Updating merges the
+  doubled "Sign in with GitHub" sign-ins already on the phone into the one renewed last
+  (database version 9). A "Sign in with GitHub" whose tokens don't expire is now known as one,
+  so it merges too.
+- **Kept, as for Add a blog:** two blogs under one sign-in share its token renewal, which goes
+  through the VPN if either blog asks for it.
+- **Also:** the several sign-ins and blogs item is done (cycles 27–29), and taken off Next.
 
 ## Sat 17 Oct
 

@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.jekyllposter.Shared
 import com.app.jekyllposter.testutil.TestApp
+import com.app.jekyllposter.testutil.waitUntilLooped
 import com.app.jekyllposter.ui.theme.PosterTheme
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -30,6 +31,6 @@ class ObsidianShareFlowTest {
         val note = "---\nfind: [Priya, Elm Street]\nreplace: [a friend]\n---\nPriya at Elm Street.\n"
         compose.setContent { PosterTheme { PosterNavHost(app.container, Shared(note, emptyList())) } }
         compose.waitFor("The note has 2 find: and 1 replace: entries; they go in pairs, so the note wasn't added.")
-        compose.waitUntil(3_000) { runBlocking { app.container.database.drafts().snapshotCount() } == 0 }
+        compose.waitUntilLooped(3_000) { runBlocking { app.container.database.drafts().snapshotCount() } == 0 }
     }
 }
