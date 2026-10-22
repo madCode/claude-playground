@@ -1,6 +1,7 @@
 package com.app.jekyllposter.core.testing
 
 import java.io.File
+import java.net.InetAddress
 import java.net.URLDecoder
 import java.security.MessageDigest
 import java.util.Base64
@@ -34,7 +35,7 @@ class FakeGitHub(
     var token: String = "good-token",
 ) : AutoCloseable {
     /** [authorEmail] is null when the commit named no author, and GitHub would use the account's. */
-    data class CommitRecord(val sha: String, val tree: String, val parent: String?, val message: String, val authorEmail: String? = null, val authorName: String? = null)
+    data class CommitRecord(val sha: String, val tree: String, val parent: String?, val message: String, val authorEmail: String? = null, val authorName: String? = null, val authorDate: String? = null)
 
     private val blobs = mutableMapOf<String, ByteArray>()
     private val trees = mutableMapOf<String, Map<String, String>>()
@@ -55,7 +56,16 @@ class FakeGitHub(
     val otherRuns = mutableMapOf<String, List<Triple<String, String, String?>>>()
 
     /** Whether the writer has entered the device-flow code on "github.com". */
-    var deviceApproved = false
+    @Volatile var deviceApproved = false
+
+    /**
+     * When set, each device-flow approval hands out a token of its own, as GitHub does, and every
+     * one is accepted. Otherwise each approval gives [token].
+     */
+    @Volatile var newTokenPerSignIn = false
+
+    // Shared with the repositories beside this one: a sign-in's token reaches them all.
+    private var issued = mutableListOf<String>()
 
     /** Set to make the tree listing say it was cut short, as GitHub does for huge repositories. */
     var truncated = false
@@ -74,7 +84,7 @@ class FakeGitHub(
      * reached through this one's [apiBase] and listed with this one's repositories.
      */
     fun addRepository(repo: String, files: Map<String, ByteArray>, owner: String = this.owner): FakeGitHub =
-        FakeGitHub(files, owner, repo, branch, token).also { others["$owner/$repo"] = it }
+        FakeGitHub(files, owner, repo, branch, token).also { it.issued = issued; others["$owner/$repo"] = it }
 
     /** Accounts served beside this one, by their token. */
     private val accounts = mutableMapOf<String, FakeGitHub>()
@@ -95,15 +105,18 @@ class FakeGitHub(
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse = synchronized(this@FakeGitHub) { handle(request) }
         }
-        server.start()
+        // 127.0.0.1 by number, never "localhost": on a device that name goes through Android's
+        // DNS, which can refuse it (an UnknownHostException as the app starts).
+        server.start(InetAddress.getByAddress("localhost", byteArrayOf(127, 0, 0, 1)), 0)
     }
 
-    val apiBase get() = server.url("/")
+    val apiBase get() = server.url("/").newBuilder().host("127.0.0.1").build()
 
-    val head: String get() = refs.getValue(branch)
+    // Under the server's lock: a device test reads these while a publish is landing.
+    val head: String get() = synchronized(this) { refs.getValue(branch) }
 
     /** The files on the branch now. */
-    fun files(): Map<String, ByteArray> = trees.getValue(commits.getValue(head).tree).mapValues { blobs.getValue(it.value) }
+    fun files(): Map<String, ByteArray> = synchronized(this) { trees.getValue(commits.getValue(head).tree).mapValues { blobs.getValue(it.value) } }
 
     fun text(path: String): String? = files()[path]?.toString(Charsets.UTF_8)
 
@@ -142,10 +155,14 @@ class FakeGitHub(
                     put("access_token", token); put("expires_in", 28800); put("refresh_token", "refresh-2")
                 })
                 !deviceApproved -> ok(buildJsonObject { put("error", "authorization_pending") })
-                else -> ok(buildJsonObject { put("access_token", token); put("expires_in", 28800); put("refresh_token", "refresh-1") })
+                else -> {
+                    val given = if (newTokenPerSignIn) "$token-${issued.size + 1}".also { issued += it } else token
+                    ok(buildJsonObject { put("access_token", given); put("expires_in", 28800); put("refresh_token", "refresh-1") })
+                }
             }
         }
-        if (request.headers["Authorization"] != "Bearer $token") return error(401, "Bad credentials")
+        val bearer = request.headers["Authorization"]?.removePrefix("Bearer ")
+        if (bearer != token && bearer !in issued) return error(401, "Bad credentials")
         val body = request.body?.utf8()
         val other = if (path == "graphql") {
             json.parseToJsonElement(body!!).jsonObject["variables"]?.jsonObject?.let { v ->
@@ -218,7 +235,7 @@ class FakeGitHub(
                 val message = obj.getValue("message").jsonPrimitive.content
                 val sha = sha("commit", "$tree $parent $message ${System.nanoTime()}")
                 val author = obj["author"]?.jsonObject
-                commits[sha] = CommitRecord(sha, tree, parent, message, author?.get("email")?.jsonPrimitive?.content, author?.get("name")?.jsonPrimitive?.content)
+                commits[sha] = CommitRecord(sha, tree, parent, message, author?.get("email")?.jsonPrimitive?.content, author?.get("name")?.jsonPrimitive?.content, author?.get("date")?.jsonPrimitive?.content)
                 ok(buildJsonObject { put("sha", sha) }, 201)
             }
             path == "$base/git/refs/heads/$branch" && request.method == "PATCH" -> {

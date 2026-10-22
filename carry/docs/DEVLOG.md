@@ -6,14 +6,21 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** the bars beside each family's heaviest gone, the number kept
+- **Lately:** the hourly sheet check proven to come back after a reboot,
+  and `FOREGROUND_SERVICE` gone (cycle 75); a device test on an emulator in CI, proving a tap on the
+  sheet's notification keeps unsaved typing (cycle 74); a debug build that updates itself on Wi-Fi while Carry is
+  closed, and checks the file itself (cycles 71–72); the bars beside each family's heaviest gone, the number kept
   (#116); a timed hold keeping its done chip whatever its duration says
   (#115); a newer debug build named at the top of the Since tab
   (#108) and installed from inside the app (#109); the sheet's notice timed
   to the class (#110); each debug build numbered (#106); an icon of its own
   (#105); the Since tab counting a file it couldn't read (#112) and taking
   its band from the sheet on screen (#113). Older entries are below.
-- **Watching:** a session logged entirely by hand is still not listed on the
+- **Watching:** typing in the few seconds after an update is handed to
+  Android, while it installs, can be lost: the After tab stays editable.
+  That holds for a background install too, if Carry is opened right then.
+  Making it read-only while an install is under way would close it
+  (review of cycle 71; older than that). a session logged entirely by hand is still not listed on the
   Since tab at all — it moves the screen's aggregates, so it is its own
   decision rather than a bug fix. A session logged only with markers *is*
   listed now (#77); that one was a wrong answer rather than a missing
@@ -27,6 +34,230 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-22 — a ladder's row says what to log
+
+- **"3 rounds · log your heaviest set"** under a ladder's name on the
+  After tab, which the owner asked for on 2026-10-18. The count comes from
+  gym-coach's new `rounds` field (gym-coach #73). Carry never reads a
+  ladder out of the board's words.
+- **A bad value costs the hint, not the row.** The field is read raw:
+  `null`, one rung, a string, a fraction, a zero or a count over 1000
+  shows no hint, and the row reads as before. A file from before the
+  field reads as it did.
+- **Only on a row that takes a weight.** The review found that a
+  bodyweight ladder has no heaviest set, so it gets no hint; what to log
+  there is a question in the backlog.
+- **Pairs with the sheet:** it now advises the first round, and this row
+  records the heaviest one.
+## 2026-10-22 — cycle 75: the hourly check survives a reboot, and one permission fewer
+
+- **After a reboot, the sheet check comes back on its own.** CI's
+  emulator now reboots after the device tests and checks, without
+  opening Carry, that the hourly check is scheduled again and runs. It
+  is: Android tells WorkManager the phone has started, and WorkManager
+  puts the check back.
+- **Carry asks for one permission fewer.** `FOREGROUND_SERVICE` came
+  with WorkManager for work Carry never does. It's removed, the reboot
+  check still passes without it, and the build fails if it comes back.
+  The debug build now holds six permissions, a release build four.
+- **Cycle 76 (the "N rounds · log your heaviest set" hint) was skipped
+  here:** it was built in another session at the same time, on its own
+  PR, once gym-coach's `rounds` field reached its main.
+- Nothing you see changed.
+
+## 2026-10-22 — cycle 74: Carry's first device test, on CI's emulator
+
+- **Tapping the sheet's notification keeps what you typed.** That was the
+  one thing the 16 October phone check couldn't show, because nothing had
+  been typed. Now a test shows it on every PR touching Carry: a made-up
+  sheet for today in a folder Carry holds, a weight typed on the After tab
+  and not saved, Home, a tap on the real notification, and the weight is
+  still in its box. With the old bug put back on purpose (`CLEAR_TOP`), the
+  same test went red with the box empty.
+- **Carry now has device tests at all.** `app/src/androidTest` runs on an
+  emulator in a new CI job, `carry-device.yml`, copied from Jekyll
+  Poster's with every action pinned. It takes about four minutes.
+- **The folder is a stand-in.** The test can't drive the system's folder
+  picker reliably, so a small provider in the test APK hands Carry the
+  same kind of lasting folder grant a pick does. Carry's own code reads
+  and writes it as it would your folder.
+- Nothing you see changed. The *Owed on a device* list is one shorter.
+
+## 2026-10-22 — a full phone's build is tried again later
+
+Ported from Jekyll Poster (claude-playground #193).
+
+- **Tried again in 30 minutes.** Android's own "not enough storage"
+  answer stopped counting against a build in the entry below, but nothing
+  tried the build again until the next six-hourly check. Now a downloaded
+  build is tried again 30 minutes later, once storage isn't low.
+- **Not at once, and not dropped.** WorkManager's "storage not low" can
+  hold while Android's installer still refuses, so an immediate retry
+  could copy and be refused over and over. And a retry queued while the
+  attempt that got the answer was still finishing would have been
+  ignored, so it replaces that one.
+
+## 2026-10-21 — updates wait for the folder picker, and a full phone isn't the build's fault
+
+Jekyll Poster's review of the self-update it took from Carry
+(claude-playground #187) found three problems in the shared design. Two
+were Carry's too.
+
+- **An update could end Carry under the folder picker.** Carry counted
+  itself closed whenever it wasn't on screen, and the picker covers it
+  just as leaving does: an install then lost the folder picked. Now it
+  waits while an answer from another app is due, kept on disk so a turn
+  or a dropped process doesn't let go of it.
+- **A full phone counted against the build.** Android failing to take the
+  copy for want of room was one of the three failures that give up on a
+  build for good, and the install wasn't held back while storage was low.
+  Now neither counts, and the install waits for room as the download did.
+- The third, a hold on a screen let go of when the phone turns, has no
+  counterpart here: the unsaved mark is on disk, set from the ViewModel,
+  which a turn keeps.
+
+## 2026-10-20 — cycle 73: tests for the guards, and the whole-phone refusal stays
+
+- Picking **Internal storage** instead of a folder now leaves *That's your
+  whole phone* on screen. It used to flash and give way to *Pick your
+  folder* at once, because Carry re-reads the folder every time it comes
+  back from the picker. Found by the first test of the Activity itself.
+- New tests for what the app refuses or holds back. Each was broken on
+  purpose to watch it go red:
+  - junk from the folder's provider, a file over 1 MB, a read-only grant;
+  - a re-pick handing back the old grant;
+  - a sheet being finished that won't load, and the strip over unsaved
+    typing;
+  - the folder picker's answer, and asking for notifications once.
+- Branch coverage went from 72.9% to 74.5% (Kover, on CI). `MainActivity`
+  went from untested to 73% of its instructions run.
+- Backlog: the check that the folder grant survives a reinstall is now
+  part of *Updates on a phone*, since an update is that reinstall.
+
+## 2026-10-20 — cycle 72: updates, part two: on Wi-Fi, while Carry is closed
+
+The second half of bringing updates up to newspaperss's, which closes the
+item.
+
+- **A new debug build arrives on its own.** Carry asks GitHub every six
+  hours, not only when you open it. It downloads a newer build on Wi-Fi,
+  checks it, and installs it once Carry is closed and nothing is unsaved.
+- **Unsaved typing still comes first.** Carry now keeps a small mark on
+  disk from your first keystroke until you save or discard. While it's
+  set, or Carry is on screen, the install waits and tries again later.
+- **No dialog out of nowhere.** If Android wants you to confirm, the
+  background attempt stops there, and a tap on the notice installs the
+  downloaded build without downloading it again.
+- **Permissions unchanged:** `aapt2 dump permissions` on the built APKs
+  lists the same seven for debug and five for release as cycle 71. The
+  Wi-Fi wait needs `ACCESS_NETWORK_STATE`, so the backlog question about
+  stripping WorkManager's permissions now asks about `FOREGROUND_SERVICE`
+  alone.
+- The review found four gaps, fixed here. A save still writing counted
+  as nothing unsaved. A tap during a background install did nothing
+  without saying why. A tapped download stayed in the cache. A build
+  already given up on could be downloaded again while the newest file
+  lagged.
+- Left: opening Carry and typing in the few seconds while a background
+  install finishes can lose that typing, as with a tapped install (see
+  *Watching*).
+- Nothing you see changed.
+
+**Checks only a phone or an emulator can do**, about 30 minutes on an
+emulator: any Google APIs image from API 33 up, built for the computer's
+own processor (arm64 on the laptop, where `np36` is API 36). Android 12+
+is what allows an install with no dialog, API 33+ is what asks for
+notifications, and the emulator's network counts as Wi-Fi.
+
+1. From a checkout of main with both PRs merged, build a debug APK that
+   calls itself build 1: `GITHUB_RUN_NUMBER=1 ./gradlew assembleDebug`.
+   The newest CI build on the `carry-debug` release is newer, and signed
+   with the same committed debug key.
+2. `adb install -r app/build/outputs/apk/debug/app-debug.apk`. Put a
+   made-up sheet for today in the device's Download folder, as
+   `session-<today>-2G.json` holding the `sheet` from
+   `CarryViewModelTest`, with the date changed to today. Open Carry, pick
+   that folder, and allow "install unknown apps" for Carry when asked.
+3. **The tap, and the signing check on a real file.** The Since tab says
+   "Build N is out — install it". Tap it. Pass: Android asks "Update this
+   app?" (the first in-app update always does), and after Update the Since
+   tab shows build N. A refusal here ("isn't a Carry this phone can
+   trust") means the key check misread a real APK.
+4. **The background attempt, without a dialog.** Reinstall build 1 with
+   adb, open Carry once, type nothing, and go Home. Find the jobs with
+   `adb shell dumpsys jobscheduler | grep -B2 -A2 com.app.carry.debug`, and
+   run each with `adb shell cmd jobscheduler run -f com.app.carry.debug
+   <id>`: the check, then the download, then the install. adb is now the
+   installer of record, so Android wants a yes. Pass: no dialog appears
+   and it's still build 1. Then a tap on the notice asks at once, with no
+   "Downloading…" wait, because the file is already there.
+5. **Not over typing.** Reinstall build 1, open Carry, type a weight on the
+   After tab without saving, go Home, and run the jobs again. Pass: still
+   build 1, and the weight is there when Carry opens again. Then save, go
+   Home, run the install job: now it installs.
+6. **A release build can't install.** `./gradlew assembleRelease`, then
+   `aapt2 dump permissions app/build/outputs/apk/release/app-release-unsigned.apk`.
+   Pass: neither `REQUEST_INSTALL_PACKAGES` nor `INTERNET` is listed.
+7. Shut the emulator down: `adb emu kill`, then `adb devices` should list
+   nothing.
+
+The silent background install itself needs Carry to have installed the
+build before, and a newer CI build after that. That only happens over
+days, so it's a phone check: after a merge to main, the phone should be on
+the new build by the next morning without having asked.
+
+## 2026-10-20 — cycle 71: updates, part one: debug-only, and checked
+
+The first half of bringing updates up to newspaperss's (you approved,
+#148).
+
+- **A release build can no longer install apps or reach the network.**
+  The installer, its result receiver, `REQUEST_INSTALL_PACKAGES` and
+  `INTERNET` moved to the debug source set. `aapt2 dump permissions` on
+  the built APKs: debug keeps the same seven; release went from seven to
+  five, and its code has no installer in it. `check` now fails if a
+  release build's merged manifest asks for either permission.
+- **Carry checks the download itself** before Android sees it: the same
+  app, signed with the same key, a newer build. Before, it checked the
+  package and version and left the key to Android, which only refuses
+  after asking you.
+- **It gives up on a build after three failed installs**, or at once when
+  the file fails the app or key check, or Android says it can never
+  install. The notice's tap then opens the download in a browser, the old
+  way. A newer build is tried again. Saying no to Android's question, or
+  a failed download, isn't counted.
+- The review found three older gaps, fixed here. Android's "Update this
+  app?" left with Home no longer leaves the notice stuck on
+  "Downloading…": five minutes on, your next return drops it and the
+  notice can be tapped again. A question that arrived while you were in
+  another app is shown when you come back, unless you've typed since,
+  when it's dropped. A late answer about an older install no longer ends
+  the one under way.
+- Left as it was: typing in the few seconds after the hand-off, while
+  Android installs, can still be lost. Under *Watching* above, with the
+  fix it would take.
+- Nothing you see changed. Still owed on a phone: the key check reading a
+  real APK, and a real install. Neither can be shown without a device.
+- Left for part two: the download on Wi-Fi, the install while Carry is
+  closed, and the check every six hours.
+## 2026-10-20 — cycle 70: an old *hard*-only row counts, as the coach counts it
+
+- A row whose only record is an old file's `hard` now counts as answered
+  on the Since tab, so its day is listed and counted. gym-coach's importer
+  has always turned that row into a set in history; Carry left the day
+  out, so the two disagreed about which classes happened.
+- A past session shows the row with a *hard* mark, so a row only it
+  answered says why it isn't blank. The sample past session's goblet
+  squat shows the mark too.
+- Checked with gym-coach's own `to_history` on such a file: one entry for
+  the hard row, none for an untouched one.
+- Left as is: the After tab has no *hard* chip, so finishing such a day
+  shows the row untouched there, and tapping *easy* clears the old mark.
+  Only files from before 2026-10-16 can say `hard`.
+- Backlog: the resume-over-typing item moved under *The brain moves to the
+  phone*, which it already said it waits for; a device check's TalkBack
+  wording now matches the code ("empty, prescribed 10").
 
 ## 2026-10-18 — cycle 69: Add takes you to the new row, and mod stays put
 

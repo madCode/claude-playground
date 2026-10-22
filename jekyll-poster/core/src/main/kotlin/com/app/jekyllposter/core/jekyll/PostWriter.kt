@@ -40,6 +40,28 @@ fun extraFrontMatterProblem(yaml: String): String? {
     }
 }
 
+/** Whether [yaml], a post's "more front matter", keeps it off the site: `published: false`. */
+fun hidesPost(yaml: String?): Boolean = yaml != null && hidesPost(FrontMatterDocument.parse("---\n$yaml\n---\n").values())
+
+/**
+ * Whether front matter [values] keep a post off the site. Jekyll reads YAML 1.1, where `no`, `off`
+ * and `False` are false too, and an empty `published:` is nil, which hides it as well.
+ */
+fun hidesPost(values: Map<String, Any?>): Boolean =
+    "published" in values && values["published"].let { it == null || it == false || it in YAML_1_1_FALSE_OR_NULL }
+
+private val YAML_1_1_FALSE_OR_NULL = setOf("no", "No", "NO", "off", "Off", "OFF", "False", "FALSE", "~", "Null", "NULL")
+
+/**
+ * [yaml] with `published: false`, so Jekyll leaves the post out of the site while its file stays,
+ * or, to show it again, without the key: Jekyll publishes by default. The rest is kept as written.
+ */
+fun withPostHidden(yaml: String, hidden: Boolean): String {
+    val doc = FrontMatterDocument.parse("---\n$yaml\n---\n")
+    doc.set("published", if (hidden) false else null)
+    return doc.render().removePrefix("---\n").removeSuffix("---\n").trimEnd('\n')
+}
+
 object PostWriter {
     /** Keys the editor writes itself; the rest is the writer's "more front matter". */
     val MANAGED = setOf("layout", "title", "date", "categories", "category", "tags", "tag")
@@ -86,9 +108,72 @@ object PostWriter {
             doc.set("tag", null)
             doc.set("tags", content.tags)
         }
-        // Only when the writer changed it: untouched, the other keys stay byte for byte.
-        if (content.extra != null && content.extra.trim() != doc.others(MANAGED).trim()) doc.replaceOthers(content.extra, MANAGED)
+        // Only when the writer changed it: untouched, the other keys stay byte for byte. Hiding or
+        // showing alone changes the one key in place, so the rest of the file doesn't move.
+        if (extraChanged(existing, content)) {
+            val hide = hidesPost(content.extra)
+            if (withPostHidden(existing.others(MANAGED), hide).trim() == content.extra!!.trim()) {
+                doc.set("published", if (hide) false else null)
+            } else {
+                doc.replaceOthers(content.extra, MANAGED)
+            }
+        }
         return doc
+    }
+
+    private fun extraChanged(existing: FrontMatterDocument, content: PostContent) =
+        content.extra != null && content.extra.trim() != existing.others(MANAGED).trim()
+
+    /** Why a post [canEdit] refuses isn't opened. */
+    const val CANT_OPEN = "The app can't change this post without changing front matter it doesn't edit: " +
+        "it's written in a way the app can't follow, like a `?` key or `{…}` around all of it. Edit it on GitHub instead."
+
+    /** Why an edit [keepsTheRest] refuses isn't published. */
+    const val CANT_EDIT = "Publishing this would change front matter the app doesn't edit, which the app can't " +
+        "follow (a `?` key, `{…}` around all of it, or an alias). Copy your text, discard this edit, and change the post on GitHub."
+
+    /** The keys [edit] writes; every other key must read the same after it. */
+    private val EDITED = setOf("title", "category", "categories", "tag", "tags")
+
+    /** What must still read the same when the writer's "more front matter" replaced the rest. */
+    private val KEPT_WHEN_EXTRA_CHANGES = MANAGED - EDITED
+
+    /**
+     * Whether [edited], made by [edit] from [existing], keeps what it should as YAML reads it:
+     * every key it doesn't write or, when the writer changed the "more front matter" (theirs to
+     * change), `layout` and `date`. The line editor doesn't see some YAML (a `?` key, front
+     * matter written as one `{…}` map), and writing around it can drop or change keys.
+     */
+    fun keepsTheRest(existing: FrontMatterDocument, edited: FrontMatterDocument, content: PostContent): Boolean = notCyclic {
+        val after = FrontMatterDocument.parse(edited.render())
+        if (!after.readable) return@notCyclic false
+        val kept: (String) -> Boolean =
+            if (extraChanged(existing, content)) { k -> k in KEPT_WHEN_EXTRA_CHANGES } else { k -> k !in EDITED }
+        same(after.values().filterKeys(kept), existing.values().filterKeys(kept))
+    }
+
+    /** Equal as YAML reads them; `!!binary` values are byte arrays, compared by content. */
+    private fun same(a: Any?, b: Any?): Boolean = when {
+        a is ByteArray && b is ByteArray -> a.contentEquals(b)
+        a is Map<*, *> && b is Map<*, *> -> a.keys == b.keys && a.keys.all { same(a[it], b[it]) }
+        a is List<*> && b is List<*> -> a.size == b.size && a.indices.all { same(a[it], b[it]) }
+        else -> a == b
+    }
+
+    /** Whether the app can edit [doc]'s post and leave what it doesn't edit as it is. */
+    fun canEdit(doc: FrontMatterDocument): Boolean = notCyclic {
+        val probe = PostContent("Edited: ${doc.string("title").orEmpty()}", doc.text, doc.terms("category", "categories"), doc.terms("tag", "tags"))
+        keepsTheRest(doc, edit(doc, probe), probe)
+    }
+
+    /**
+     * [check], or false when the front matter holds an alias inside itself (`r: &r [[*r]]`): reading
+     * or comparing it never ends, and the post can't be edited.
+     */
+    private inline fun notCyclic(check: () -> Boolean): Boolean = try {
+        check()
+    } catch (e: StackOverflowError) {
+        false
     }
 
     private fun create(content: PostContent, config: SiteConfig, date: String?): FrontMatterDocument {

@@ -15,7 +15,18 @@ claude-playground repository; run commands from this folder. The rules every pro
   MockWebServer serving a repository (or more, with `addRepository`), and `FakeVpn`; the app's tests use both.
 - `:app`: Android, Jetpack Compose, Room, WorkManager, DataStore. Manual DI through
   `AppContainer`. Test with Robolectric against `TestApp` (fake GitHub and VPN, a database file
-  of its own, publishing at once); `TestApp.signIn()` signs in.
+  of its own, publishing at once); `TestApp.signIn()` signs in. A Compose test that waits on
+  anything but the screen (the database, GitHub, a view model's state) uses `waitUntilLooped`:
+  Compose's own `waitUntil` doesn't turn the main looper, so that work never finishes.
+- `app/src/androidTest`: device tests, on an emulator in CI ("Jekyll Poster device tests"; a cloud
+  session has no KVM for one). `DeviceTestRunner` swaps in `DeviceTestApp`: the real app, with
+  `FakeGitHub` serving the sample blog on the device itself, over plain HTTP to localhost, which
+  only debug builds allow. Each test runs in a process of its own with the app's data cleared.
+  `LiveOnTheDeviceTest` runs only in "Jekyll Poster device live check" (nightly, by hand, and on
+  PRs that change the app's code): the real GitHub, two of the tester's blogs, the request record
+  kept as an artifact.
+- `sender/`: a test-only second app, installed beside the app in the device tests, so photos and
+  notes are shared into it from another process.
 - `sample-blog/`: a small Jekyll blog with every front matter shape the app reads. It is the
   tests' fixture and the blog to try the app on.
 
@@ -25,13 +36,20 @@ claude-playground repository; run commands from this folder. The rules every pro
     ./gradlew :app:testDebugUnitTest     # Robolectric tests
     ./gradlew build koverVerify          # everything CI runs (fails below 85% line coverage)
     ./gradlew :app:testDebugUnitTest --tests '*ScreenshotTest'   # PNGs in app/build/screenshots
+    ./gradlew :sender:installDebug :app:connectedDebugAndroidTest   # device tests, on a running emulator
+    tools/emulator-check.sh                    # an emulator for the checks a person runs: docs/DEVICE-CHECKS.md
 
 To try a change against a real blog, run the "Jekyll Poster live check" workflow on its branch:
-it publishes a post to the sample blog, waits for Pages, then deletes it. Run it from Actions, not
-from a cloud session: the session's GitHub proxy refuses the commit calls the app makes.
+it publishes a post to each of the tester's three blogs, waits for Pages, then deletes it. It also
+runs nightly. A cloud session starts
+it through the GitHub tools and reads its logs; it can't run it itself, since the session's
+GitHub proxy refuses the commit calls the app makes, and the container has no KVM for an
+emulator. The test blogs and their tokens: [docs/TESTER_ACCOUNT.md](docs/TESTER_ACCOUNT.md).
 
-JDK 21 and the Android SDK (compileSdk 37) are required; `tools/install-android-sdk.sh` installs
-the SDK for a cloud session. CI publishes main's debug APK to the `jekyll-poster-debug` release.
+JDK 21 and the Android SDK (compileSdk 37) are required. The cloud environment has the SDK at
+`/opt/android-sdk`: write `sdk.dir=/opt/android-sdk` into the gitignored `local.properties`;
+`tools/install-android-sdk.sh` installs it where it's missing. CI publishes main's debug APK to
+the `jekyll-poster-debug` release, beside a numbered copy, `jekyll-poster-debug-<run>.apk`.
 
 Debug builds are installed and in use, so changing a Room entity means bumping the database
 version, adding a Migration with a `MigrationTest` case, and committing the new schema JSON in

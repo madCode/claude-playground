@@ -24,10 +24,14 @@ import com.app.jekyllposter.data.Privacy
 import com.app.jekyllposter.data.key
 import java.io.File
 import java.io.IOException
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -59,9 +63,26 @@ class Publisher(
     private val lock = Mutex()
 
     /** Runs [block] between publishes, for another commit that a publish's plan relies on. */
-    suspend fun <T> betweenPublishes(block: suspend () -> T): T = lock.withLock { block() }
+    suspend fun <T> betweenPublishes(block: suspend () -> T): T = locked { block() }
 
-    suspend fun publish(id: Long): Outcome = lock.withLock {
+    private val active = MutableStateFlow(false)
+
+    /** [publishing], as it changes: an update held back by a post going out waits on it. */
+    val sending: StateFlow<Boolean> = active.asStateFlow()
+
+    private suspend inline fun <T> locked(block: () -> T): T = lock.withLock {
+        active.value = true
+        try {
+            block()
+        } finally {
+            active.value = false
+        }
+    }
+
+    /** Whether a post is being sent now: installing an update would end the app part way through. */
+    val publishing: Boolean get() = active.value
+
+    suspend fun publish(id: Long): Outcome = locked {
         repeat(3) { attempt(id)?.let { return it } }
         Outcome.Retry
     }
@@ -97,9 +118,15 @@ class Publisher(
             } catch (e: Privacy.NoAddress) {
                 return fail(draft, "GitHub didn't give your account's no-reply address. Turn it off in Blog & privacy to publish.")
             }
+            val switches = privacy.get(account.blogKey)
             // The title stays in the history after the post is deleted; a plain message names nothing.
-            val message = if (privacy.get(account.blogKey).plainCommitMessages) "Update blog" else plan.message
-            val sha = blog.commit(message, plan.changes, plan.expect, author)
+            val message = if (switches.plainCommitMessages) "Update blog" else plan.message
+            // By the day alone, the commit too, at midnight UTC: the post's own day when it adds or
+            // moves one (a different UTC day beside it would narrow down the hour it went out), else
+            // the day it goes out. GitHub only takes a date with an author: the no-reply address.
+            val day = plan.date?.let { plan.draft.publishDate }?.takeIf { dayOnly(plan.draft) }?.let { LocalDate.parse(it) }
+            val date = if (switches.datesByDayOnly && author != null) dayInUtc(day ?: now().withZoneSameInstant(ZoneOffset.UTC).toLocalDate()) else null
+            val sha = blog.commit(message, plan.changes, plan.expect, author, date)
             if (draft.destination == Destination.Delete) return deleted(draft, plan.path, blog)
             published(drafts.get(id) ?: draft, plan.path, sha, plan.date?.let { postUrl(index, plan.path, it, plan.draft) }, blog)
         } catch (e: GitHubException) {
@@ -140,7 +167,9 @@ class Publisher(
         // The same clock as a new post's date, so a photo lands in the year folder its post would.
         val year = (index.config.timezone?.let { now().withZoneSameInstant(it) } ?: now()).year
         val (ready, photos) = photos(draft, index, ours = emptySet(), PostPath(path).slug, year) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
-        val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content())
+        val existing = FrontMatterDocument.parse(current.text)
+        val doc = PostWriter.edit(existing, ready.content())
+        if (!PostWriter.keepsTheRest(existing, doc, ready.content())) return Plan.Finished(fail(ready, PostWriter.CANT_EDIT))
         val date = doc.string("date")?.let { parseJekyllDate(it, siteZone(index)) }
             ?: PostPath(path).date?.atStartOfDay(siteZone(index))
         val kind = if (PostPath(path).isDraft) "draft" else "post"
@@ -207,7 +236,9 @@ class Publisher(
         val target = fixed.targetPath!!
         // Named once the post's own name is known.
         val (ready, photos) = photos(fixed, index, ours = emptySet(), PostPath(target).slug, date.year) ?: return Plan.Finished(fail(draft, PHOTO_GONE))
-        val doc = PostWriter.edit(FrontMatterDocument.parse(current.text), ready.content())
+        val existing = FrontMatterDocument.parse(current.text)
+        val doc = PostWriter.edit(existing, ready.content())
+        if (!PostWriter.keepsTheRest(existing, doc, ready.content())) return Plan.Finished(fail(ready, PostWriter.CANT_EDIT))
         doc.setRaw("date", PostWriter.date(date, dayOnly(fixed)))
         drafts.update(ready.copy(sentShas = (ready.sentShas + gitBlobSha(doc.render())).distinct()))
         return Plan.Commit(
@@ -310,6 +341,8 @@ class Publisher(
                 error = null, updatedAt = System.currentTimeMillis(),
             ),
         )
+        // Earlier updates of the same post would go on saying what they said: live, when it's now hidden.
+        latest.blog?.let { drafts.deleteEarlierPublishedEditsOf(path, it, latest.id) }
         // The photos are on the blog now; the preview loads them from there.
         latest.images.forEach { File(it.file).delete() }
         runCatching { blogs.refresh(blog) }
@@ -371,5 +404,8 @@ private fun fixedDate(draft: Draft, index: SiteIndex): ZonedDateTime =
     if (dayOnly(draft)) LocalDate.parse(draft.publishDate).atStartOfDay(index.config.timezone ?: ZoneOffset.UTC)
     else ZonedDateTime.parse(draft.publishDate)
 
+
+/** Midnight UTC of [day]: a commit date that says the day and nothing of the hour. */
+fun dayInUtc(day: LocalDate): Instant = day.atStartOfDay(ZoneOffset.UTC).toInstant()
 
 fun Draft.content() = PostContent(title.trim(), body, categories, tags, extraFrontMatter)

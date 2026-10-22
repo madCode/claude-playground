@@ -91,6 +91,16 @@ when its reps fall below that number.
 added · anything untouched counts as not done". *hurt* on its own is not
 "noted": it is the commonest reason to leave a row.
 
+**A row of several rounds says what to log.** A ladder (`8 / 6 / 4 x`) is
+one row standing for three sets. Under its name the row says "3 rounds ·
+log your heaviest set": one true weight and count is what the coach's
+arithmetic uses, and saying so keeps a tired day from changing what the
+record means. Only on a row that takes a weight: on a bodyweight ladder
+every round has the same load, so "heaviest" picks nothing. The count
+comes from the coach's `rounds` field, never from
+the board's words, so a file without the field, or with a value of the
+wrong shape, shows no hint and loses nothing else.
+
 **Why a blank bodyweight row isn't "done".** A blank row can't be told
 apart from one not done. If blank meant done, movements skipped or
 forgotten would enter history as completed sets, and a wrong number in
@@ -111,9 +121,11 @@ and an untouched row, become nothing.
   Any edit to such a row clears the flag, so a row is never skipped and
   weighted at once.
 - ***hard*.** The coach treats a completed set as completed however it
-  felt (madCode's decision, 2026-10-16; gym-coach is changing to match).
-  An older file's `hard` still reads and is written back as it was. A
-  row only it answers reads as blank, and tapping *easy* clears it.
+  felt (madCode's decision, 2026-10-16). An older file's `hard` still
+  reads and is written back as it was. On this page a row only it
+  answers reads as blank, and tapping *easy* clears it. gym-coach's
+  importer still counts that row as a set, though, so a past session
+  shows it with a *hard* mark and the Since tab counts its day.
 - **A ✓ on every row** (mockups v2 and v3). Each row's own fields already
   say it, and tap-to-fill keeps a bodyweight row at one tap.
 - ***done* as a chip.** It moved into the timed row's reps slot.
@@ -206,7 +218,7 @@ wrong diagnosis sends someone to fix the wrong thing:
 | Can't read that session / Carry is out of date | a file that is there but truncated mid-sync, or written by a newer coach | the picker |
 | No format label / Unknown format label | a file that reads as JSON but has no `"schema"`, or one that isn't `gym-session/1` or a later `gym-session/N`; the message names the file and quotes an unknown label | the picker |
 | Folder isn't answering | the read passed 15 seconds; a provider can block forever with no timeout to set | the picker |
-| That's your whole phone | a whole volume picked rather than a folder | the picker |
+| That's your whole phone | a whole volume picked rather than a folder; kept through the read when Carry comes back from the picker, and gone at the next return to the app | the picker |
 
 **A past sheet is headed "No sheet for today"**, with "Showing the most
 recent" under it: on a rest day that is the ordinary state, not a failed
@@ -375,8 +387,9 @@ day is the whole session.
 
 A row with nothing on it at all reads as blank; a row carrying only a feel
 marker, or only *done*, does not, because for the movements that carry no
-weight the marker is the whole record. The same test decides whether the
-session appears on that screen at all.
+weight the marker is the whole record. An older file's *hard* is one of
+those markers here, since gym-coach's importer counts it. The same test
+decides whether the session appears on that screen at all.
 
 It is a **record, not a form**, and says so. There is nothing on it to type
 into, because two ways to write one file is how a wrong number gets in. A
@@ -530,25 +543,35 @@ activity and rebuilds it, taking the ViewModel — typed weights, added
 rows, an in-flight save — with it. Landing on a particular tab is not
 worth losing numbers for, so the intent is `SINGLE_TOP` and the folder is
 re-read on resume as it always was.
+A device test checks it on an emulator on every PR (`NotificationTapTest`):
+a weight typed and not saved is still in its box after a tap on the real
+notification.
 
-**The app holds seven Android permissions, and this feature brought five
-of them.** `aapt2 dump permissions` on the built APK is the only honest
+**A debug build holds six Android permissions, and this feature brought
+four of them; a release build holds four.** `aapt2 dump permissions` on the built APK is the only honest
 source for this, because a library brings its own. It also lists
 `<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which
 androidx.core defines for the app's own receivers; it grants nothing
 outside the app.
 
 Three are ours: `POST_NOTIFICATIONS`, required on API 33+ to post
-anything, and `INTERNET` and `REQUEST_INSTALL_PACKAGES`, for the update
-below. The other four arrive with
+anything, and, in a debug build only, `INTERNET` and
+`REQUEST_INSTALL_PACKAGES`, for the update below. `check` fails if a
+release build's merged manifest asks for either. Three more arrive with
 `androidx.work`, and the app can't opt out of them while using it:
 
 | permission | why WorkManager wants it |
 |---|---|
 | `WAKE_LOCK` | hold the device awake long enough to finish a check |
 | `RECEIVE_BOOT_COMPLETED` | re-register the periodic work after a reboot |
-| `ACCESS_NETWORK_STATE` | read connectivity, for network constraints |
-| `FOREGROUND_SERVICE` | run expedited work |
+| `ACCESS_NETWORK_STATE` | read connectivity, for network constraints: the debug build's update check and Wi-Fi download use them |
+
+WorkManager also asks for `FOREGROUND_SERVICE`, for expedited and
+foreground work. Carry has neither, so the manifest removes it and `check`
+fails if it comes back. What it might have broken is the check coming back
+after a reboot, so CI's emulator job reboots and checks
+(`tools/reboot-check.sh`): WorkManager's jobs aren't kept across a reboot,
+and its boot receiver schedules them again without Carry being opened.
 
 `ACCESS_NETWORK_STATE` permits *reading whether a network exists*, not
 using one. The notification text carries the class alone, because a lock
@@ -589,8 +612,9 @@ seen and was silently never announced.
 
 The app's only network use. The owner chose it on 2026-10-16
 ([#107](https://github.com/madCode/claude-playground/issues/107)) over
-routing the build number through the synced folder, so Carry declares
-`INTERNET` for this alone. `DebugUpdates` works like newspaperss's:
+routing the build number through the synced folder, so a debug build
+declares `INTERNET` for this alone, and a release build doesn't declare it.
+`DebugUpdates` works like newspaperss's:
 
 - **Only a CI debug build asks.** The installed build number comes from the
   version name (`0.1.0-debug.131+…`); a local or release build has none and
@@ -613,7 +637,9 @@ routing the build number through the synced folder, so Carry declares
   installed PR build is offered the next main build, which may not contain
   that PR.
 
-A tap installs it from inside the app (`UpdateInstaller`), in this order:
+A tap installs it from inside the app, in this order. The code
+(`LiveUpdates`, `UpdateInstaller`) and the permission to install apps are in
+the debug source set only; a release build has neither.
 
 1. **Not over unsaved typing.** Installing replaces the running app, and
    nothing promises its saved state survives that, so the draft could be
@@ -627,22 +653,83 @@ A tap installs it from inside the app (`UpdateInstaller`), in this order:
 3. **Downloads the fixed link** into the app's cache, following GitHub's
    redirect, with a 200 MB cap and five minutes in all. A partial file is
    never kept.
-4. **Checks the file** is this app at a higher version code, then hands it
-   to Android's `PackageInstaller`. The first in-app update always asks
-   "Update this app?". On Android 12 and later, once Carry has installed
-   itself, later ones may skip that, which is why it asks to. Android also
-   refuses an APK signed with another key, which every CI build shares. A
+4. **Checks the file itself**: the same package, signed with the same key
+   as the running app (every CI build shares the debug key), and a higher
+   version code. Android would refuse another key too, but only after
+   asking the owner. A file that fails the package or key check is given
+   up on at once. One that is only not newer yet isn't: CI uploads the
+   fixed-name file a moment after the numbered one, so a tap a few minutes
+   later can find it.
+5. **Hands it to Android's `PackageInstaller`.** The first in-app update
+   always asks "Update this app?". On Android 12 and later, once Carry has
+   installed itself, later ones may skip that, which is why it asks to. A
    session that fails before it's committed is abandoned, so nothing is
    left staged.
-5. **Failures are said.** A download or hand-off that fails says why in a
-   toast and opens the download link in a browser, so the old way still
-   works. A failure Android reports after the hand-off is a toast only.
+6. **Failures are said, and counted.** A download or hand-off that fails
+   says why in a toast and opens the download link in a browser, so the
+   old way still works. A failure Android reports after the hand-off is a
+   toast only. Three failed installs of one build, or one Android says can
+   never install (invalid, incompatible, a conflict), and Carry gives up on
+   that build: the notice's tap then opens the download in a browser
+   instead. A newer build is tried again. A failed download, the owner
+   saying no to Android's question, or a phone too full to take the copy
+   isn't counted. That last says to free some space and offers no link: a
+   browser's download needs the same room. If Android itself answers that
+   there isn't enough storage, a build the background downloaded is tried
+   again 30 minutes later, once storage isn't low; one a tap downloaded,
+   on the next tap or after the next check fetches it again.
 
 The notice reads "Downloading build N…" and can't be tapped again until
 Android's installer has answered, so a second tap can't start a second
 download. If that answer is a confirmation while Carry is behind another
 app, Android won't let it open there; it's shown when the owner comes
-back.
+back, once. If there's unsaved typing by then, the waiting install is
+dropped instead, and the notice can be tapped again. A question left with
+Home sends no answer, so an install still unanswered five minutes after
+the hand-off is dropped on the next return; asking again couldn't tell it
+from an approved install still finishing. An answer about an older
+session, from before a restart, doesn't end the attempt under way.
+Failures count against the build in the file, which can lag behind the
+newest one listed, so a newer build is never given up on untried, and a
+file already given up on isn't tried again.
+
+**In the background**, a debug build from CI also keeps itself current
+without a tap (`LiveUpdates`, `LiveWorkers`):
+
+- **A check every six hours**, on any connection, so a build arrives
+  without Carry being opened. The three-hour limit above still applies,
+  shared with the check on opening Carry.
+- **The download waits for Wi-Fi** (an unmetered network) and enough free
+  storage. It is checked like a tapped one, kept in the app's cache, and
+  given up on after five failed tries. A tap on the notice then installs
+  that file without downloading again.
+- **The install waits for Carry to be closed with nothing unsaved.** The
+  draft lives in saved instance state, which an install throws away, so
+  the ViewModel keeps a mark on disk (`UnsavedMark`) from the first
+  keystroke until a save or a discard, and while any save is writing. A fresh start with no draft
+  restored clears it, since that typing is already gone. While Carry is
+  on screen or the mark is set, the install is tried again later, 30
+  minutes further apart each time. Both are checked again after the copy
+  into Android's installer, just before the hand-off.
+- **Nor while the folder picker is out.** The picker pauses Carry just as
+  leaving it does, so an install then would end Carry under it and the
+  folder picked would arrive nowhere. `MainActivity` notes each answer it
+  sends another app for (`AwaitedAnswers`, on disk) and crosses it off
+  when the answer comes, so a turn of the phone or Android dropping the
+  process meanwhile doesn't let go of it. Only a fresh start of Carry, in
+  a task of its own, clears one left behind: a start on top of an
+  existing task (a launcher tap after the session notice opened Carry
+  gets one) may have the picker below it.
+- **And not while storage is low**, since Android's copy of the build
+  needs room as the download did.
+- **No question out of nowhere.** If Android wants the owner to confirm
+  (the first in-app update, or below Android 12), the background attempt
+  is dropped and the notice's tap installs it instead. A dialog appearing
+  on its own, perhaps while the owner glances at the sheet in the lobby,
+  would be worse than waiting. A failure in the background isn't toasted,
+  but it is counted toward giving up, unless it's for want of room.
+- Without "install unknown apps" allowed, nothing happens in the
+  background; the tap asks for it as before.
 
 The session files still leave only through the share sheet.
 

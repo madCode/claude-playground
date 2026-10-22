@@ -121,7 +121,7 @@ class ConnectViewModel(private val container: AppContainer) : ViewModel() {
                 addingTo = null
                 return@launch _state.update { it.copy(busy = false, repos = null) }
             }
-            addingToGitHubSignIn = account.refreshToken != null
+            addingToGitHubSignIn = account.withGitHub
             try {
                 listRepos(account.token)
             } catch (e: CancellationException) {

@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.app.jekyllposter.core.github.DeviceFlow
+import java.io.IOException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import androidx.datastore.preferences.preferencesDataStore
@@ -17,6 +18,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -35,6 +37,11 @@ data class Account(
     /** From "Sign in with GitHub": renews [token] before it expires at [expiresAt] (epoch ms). */
     val refreshToken: String? = null,
     val expiresAt: Long? = null,
+    /**
+     * Made with "Sign in with GitHub", not a pasted token. Its tokens may not expire, and then come
+     * with no [refreshToken].
+     */
+    val withGitHub: Boolean = refreshToken != null,
 ) {
     val repoName: String get() = "$owner/$repo"
 
@@ -55,6 +62,9 @@ data class BlogEntry(
     val withGitHub: Boolean,
 ) {
     val repoName: String get() = "$owner/$repo"
+
+    /** What the writer calls it: the site's title, or the repository before it's been read. */
+    val name: String get() = title?.takeIf { it.isNotBlank() } ?: repoName
 }
 
 /** What removing a sign-in did. */
@@ -97,7 +107,14 @@ class AccountStore(
 
     /** The open blog and its sign-in. */
     val account: Flow<Account?> = currentKey.flatMapLatest { key ->
-        if (key == null) flowOf(null) else dao.watch(key).map { it?.let(::read) }
+        if (key == null) {
+            flowOf(null)
+        } else {
+            dao.watch(key).map { it?.let(::read) }
+                // Removing the open blog moves the key first, but Room can report the row gone
+                // before the new key reaches this flow. That null isn't "signed out": the next blog follows.
+                .filter { it != null || stillOpen(key) }
+        }
     }
 
     /** Every blog, grouped by the sign-in it posts with. */
@@ -120,6 +137,13 @@ class AccountStore(
     private val lock = Mutex()
 
     suspend fun currentKey(): String? = currentKey.first()
+
+    /** Whether [key] is still the open blog; on a store that can't be read, taken as yes. */
+    private suspend fun stillOpen(key: String): Boolean = try {
+        store.data.first()[CURRENT] == key
+    } catch (e: IOException) {
+        true
+    }
 
     /**
      * The open blog's account, its token renewed first if it expires within five minutes. If
@@ -152,10 +176,18 @@ class AccountStore(
         }
     }
 
-    /** A fresh sign-in to [account]'s blog, which becomes the open one. */
+    /**
+     * A fresh sign-in to [account]'s blog, which becomes the open one. An account already signed
+     * in the same way keeps its one sign-in, with the new tokens: any "Sign in with GitHub" token
+     * reaches what the app was given, but a pasted token reaches only the repositories it was made
+     * for, so only the same token is the same sign-in.
+     */
     suspend fun save(account: Account) = lock.withLock {
         imported()
-        dao.signInTo(sealed(account), account.savedBlog())
+        val signIn = sealed(account)
+        val same = dao.signInsFor(account.login, signIn.kind)
+            .lastOrNull { signIn.kind == SignInKind.GitHubApp || unseal(it.sealedToken) == account.token }
+        dao.signInTo(signIn, account.savedBlog(), reuse = same?.id)
         store.edit { it[CURRENT] = account.blogKey }
         Unit
     }
@@ -224,8 +256,7 @@ class AccountStore(
 
     private fun sealed(account: Account) = SignIn(
         login = account.login,
-        // Only "Sign in with GitHub" gives a refresh token.
-        kind = if (account.refreshToken != null) SignInKind.GitHubApp else SignInKind.Token,
+        kind = if (account.withGitHub) SignInKind.GitHubApp else SignInKind.Token,
         sealedToken = seal(account.token),
         sealedRefreshToken = account.refreshToken?.let(::seal),
         expiresAt = account.expiresAt,
@@ -245,6 +276,7 @@ class AccountStore(
             siteUrl = blog.siteUrl,
             refreshToken = signIn.sealedRefreshToken?.let(::unseal),
             expiresAt = signIn.expiresAt,
+            withGitHub = signIn.kind == SignInKind.GitHubApp,
         )
     }
 
@@ -311,4 +343,5 @@ fun Account.withTokens(tokens: DeviceFlow.Tokens, now: Long) = copy(
     token = tokens.accessToken,
     refreshToken = tokens.refreshToken ?: refreshToken,
     expiresAt = tokens.expiresIn?.let { now + it * 1000 },
+    withGitHub = true,
 )

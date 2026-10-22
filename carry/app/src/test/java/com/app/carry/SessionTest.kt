@@ -59,6 +59,25 @@ class SessionTest {
     }
 
     @Test
+    fun `a ladder's rounds are read from the coach's field, and a bad one costs only the hint`() {
+        // gym-coach writes rounds: [8, 6, 4] on a ladder's row (2026-10-22),
+        // null for one round. The file comes from another machine, so every
+        // other shape has to read as "no ladder" without losing the row.
+        fun row(ref: Int, rounds: String) =
+            """{"ref": $ref, "line": "8 / 6 / 4 x squat", "prescribed_text": "8 / 6 / 4", "rounds": $rounds}"""
+        val shapes = listOf(
+            "[8, 6, 4]", "[6, 8, 10, 12]", "null", "[8]", "[]", "\"8 / 6 / 4\"", "[8, 0, 4]",
+            "[8, -6]", "[8, 6.5]", "[8, \"6\"]", "[8, true]", "[8, 1001]", "[[8], [6]]", "{\"8\": 6}",
+        )
+        val text = """{"schema": "gym-session/1", "sheet_id": "2026-10-22:2G", "date": "2026-10-22",
+            "sets": [${shapes.mapIndexed(::row).joinToString()}]}"""
+        val session = SessionFiles.parse(text)!!
+        assertEquals("no row is lost to its rounds", shapes.size, session.sets.size)
+        assertEquals(listOf(3, 4) + List(shapes.size - 2) { null }, session.sets.map { it.roundCount })
+        assertNull("an older file has no field at all", Session.json.decodeFromString<Session>(fromRunner).sets.single().roundCount)
+    }
+
+    @Test
     fun `an unknown field from a newer runner does not break the read`() {
         val session = Session.json.decodeFromString<Session>(fromRunner)
         assertEquals("bench press", session.sets.single().canonical)

@@ -91,6 +91,15 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
 
     val folder = SessionFolder(app)
 
+    /** Any draft at all, for a background install to wait on. A fresh start with none restored
+     *  clears a mark left by a process that died with typing: that typing is already gone. */
+    private val unsavedMark = UnsavedMark(app).also { it.set(handle.contains(DRAFT)) }
+
+    private fun clearDraft() {
+        handle.remove<String>(DRAFT)
+        unsavedMark.set(false)
+    }
+
     private val _state = mutableStateOf<CarryState>(CarryState.Loading)
     val state: State<CarryState> = _state
 
@@ -118,7 +127,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
 
     /** Whether a newer debug build is out. Null on a release or local build, which never asks. */
     val updates = DebugUpdates(
-        app.getSharedPreferences("debug-updates", android.content.Context.MODE_PRIVATE),
+        DebugUpdates.prefsOf(app),
         DebugUpdates.buildOf(BuildConfig.VERSION_NAME),
     )
     private var checking: Job? = null
@@ -127,7 +136,10 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      *  resumes can't both ask before the first has recorded that it did. */
     fun checkForUpdate() {
         if (checking?.isActive == true) return
-        checking = viewModelScope.launch { updates.checkIfDue() }
+        checking = viewModelScope.launch {
+            updates.checkIfDue()
+            updates.newer.value?.let(updater::newerBuild)
+        }
     }
 
     /** True while typing for the session on screen hasn't been saved: its draft is kept from
@@ -140,9 +152,11 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         return draft.sheetId == showing
     }
 
-    /** True from the tap until Android's installer has answered. Process-wide, because the
-     *  answer arrives at a receiver, not here. */
-    val installing: kotlinx.coroutines.flow.StateFlow<Boolean> = UpdateInstaller.installing
+    /** Installs a newer CI build; does nothing in a release build. Replaced in tests. */
+    internal var updater: SelfUpdater = selfUpdater(app)
+
+    /** True from the tap until Android's installer has answered. */
+    val installing: kotlinx.coroutines.flow.StateFlow<Boolean> get() = updater.installing
 
     /** Why the last attempt didn't install, for the screen to say once; [UpdateProblem.offerLink]
      *  when the download link in a browser would still help. */
@@ -150,70 +164,16 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     val updateProblem: State<UpdateProblem?> = _updateProblem
     fun updateProblemShown() { _updateProblem.value = null }
 
-    // Seams for the tests: the network, the archive check and the hand-off to Android.
-    internal var download: (String, java.io.File) -> Unit = { url, dest -> UpdateInstaller.download(url, dest) }
-    internal var isNewer: (java.io.File) -> Boolean =
-        { UpdateInstaller.isNewerSelf(getApplication(), it, BuildConfig.VERSION_CODE.toLong()) }
-    internal var stage: (java.io.File) -> Int = { UpdateInstaller.stage(getApplication(), it) }
-    internal var commit: (Int) -> Unit = { UpdateInstaller.commit(getApplication(), it) }
-    internal var abandon: (Int) -> Unit = { UpdateInstaller.abandon(getApplication(), it) }
-
     /**
-     * Downloads the newest build and hands it to Android's installer. The owner can type while
-     * it downloads, so unsaved typing is checked again on the main thread just before the
-     * hand-off, not only at the tap: an install started over it would lose it.
+     * Downloads [build] and hands it to Android's installer. The owner can type while it
+     * downloads, so [unsaved] is asked again on the main thread just before the hand-off, not
+     * only at the tap: an install started over it would lose it.
      */
-    fun installUpdate() {
-        if (!UpdateInstaller.start()) return
-        val app = getApplication<Application>()
-        var handedOver = false
+    fun installUpdate(build: Int) {
         viewModelScope.launch {
-            val problem = try {
-                val apk = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    val dir = java.io.File(app.cacheDir, "updates").apply { mkdirs() }
-                    java.io.File(dir, "carry-debug.apk").apply { delete(); download(DebugUpdates.DOWNLOAD, this) }
-                }
-                if (!withContext(kotlinx.coroutines.Dispatchers.IO) { isNewer(apk) }) {
-                    UpdateProblem("The download isn't a newer Carry, so it wasn't installed.", offerLink = false)
-                } else {
-                    val id = try {
-                        withContext(kotlinx.coroutines.Dispatchers.IO) { stage(apk) }
-                    } catch (e: java.io.IOException) {
-                        throw InstallFailed(e)
-                    }
-                    // Checked here, on the main thread, after the slow parts and immediately
-                    // before the commit, so nothing typed during them can be installed over.
-                    if (unsaved) {
-                        abandon(id)
-                        UpdateProblem("Save the After tab first, then tap the notice again. Updating restarts Carry.", offerLink = false)
-                    } else {
-                        commit(id)
-                        handedOver = true
-                        null
-                    }
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                // Once committed, Android's answer still comes; only an attempt that never got
-                // there is over.
-                if (!handedOver) UpdateInstaller.finish()
-                throw e
-            } catch (e: InstallFailed) {
-                UpdateProblem("Android couldn't take the update: ${e.cause?.message ?: "no room?"}.", offerLink = true)
-            } catch (e: java.io.IOException) {
-                UpdateProblem("Couldn't download the update: ${e.message ?: "no connection"}.", offerLink = true)
-            } catch (e: Exception) {
-                // Anything Android's installer or an archive parser throws: said, never a crash,
-                // because a crash takes unsaved typing with it.
-                UpdateProblem("Android wouldn't take the update: ${e.message ?: e.javaClass.simpleName}.", offerLink = true)
-            }
-            if (problem != null) {
-                UpdateInstaller.finish()
-                _updateProblem.value = problem
-            }
+            updater.install(build) { unsaved }?.let { _updateProblem.value = it }
         }
     }
-
-    private class InstallFailed(cause: Throwable) : Exception(cause)
 
     /** How the folder is read. Replaced in tests so the stall path and the
      *  keep-last-good path can be exercised without a real provider; there
@@ -281,9 +241,14 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      */
     fun refresh() {
         reading?.cancel()
+        // The resume right after the picker re-reads a folder that was never
+        // taken, and would replace the refusal before the owner had read it.
+        // Taken here, not in the read, so a read already in flight can't use it.
+        val holdRefusal = refusedPick.also { refusedPick = false }
         reading = viewModelScope.launch {
             val next = withTimeoutOrNull(STALL_AFTER_MS) { read() }
             _state.value = when {
+                holdRefusal -> _state.value
                 // A provider can block forever -- openInputStream has no
                 // timeout and runCatching never fires. Without this the
                 // owner sits on "Reading" with no button and no way out but
@@ -371,7 +336,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      *  so there has to be a way out of it that is not "uninstall". */
     fun forgetFolder() {
         folder.forget()
-        handle.remove<String>(DRAFT)
+        clearDraft()
         handle.remove<String>(FINISHING)
         _edits.value = emptyMap()
         _added.value = emptyList()
@@ -382,10 +347,12 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     /** The owner picked a whole volume; say so rather than holding it. */
     fun rejectedTooWide() {
         _state.value = CarryState.NeedsFolder(tooWide = true, holding = folder.label)
+        refusedPick = true
     }
+    private var refusedPick = false
 
     fun discardEdits() {
-        handle.remove<String>(DRAFT)
+        clearDraft()
         _fileMovedUnderEdits.value = false
         _saving.value = SaveState.Idle
         (_state.value as? CarryState.Ready)?.let { ready ->
@@ -442,6 +409,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         // point. It guards the ENCODE only: a draft too big for the
         // transaction fails later, when the system writes saved
         // instance state, and nothing here can catch that.
+        unsavedMark.set(true)
         runCatching {
             handle[DRAFT] = Session.json.encodeToString(
                 Draft(
@@ -512,6 +480,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
             ))
             return
         }
+        // A save under way counts as unsaved for a background install: killed mid-write,
+        // the file could be left damaged even with no draft. Cleared when the save ends.
+        unsavedMark.set(true)
         _saving.value = SaveState.Saving
         viewModelScope.launch {
             // Every row goes down, nameless ones included. This used to
@@ -531,7 +502,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                     if (text == null) {
                         // Already recorded. Clear the draft too, or it stays
                         // pinned to old bytes and poisons the next file.
-                        handle.remove<String>(DRAFT)
+                        clearDraft()
                         _fileMovedUnderEdits.value = false
                         _saving.value = SaveState.Saved
                         // Reached when the file already holds these
@@ -608,7 +579,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                             val now = _state.value as? CarryState.Ready
                             if (now != null && now.documentId == ready.documentId && now.raw == ready.raw) {
                                 _state.value = ready.copy(raw = text)
-                                handle.remove<String>(DRAFT)
+                                clearDraft()
                                 _fileMovedUnderEdits.value = false
                                 // Re-seed from what was actually written, so
                                 // the next refresh cannot blank the form by
@@ -638,6 +609,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                     if (_saving.value == SaveState.Saved) rereadHistory()
                 }
             }
+        }.invokeOnCompletion {
+            // Unless another save has started meanwhile: its own end clears the mark.
+            if (_saving.value != SaveState.Saving) unsavedMark.set(handle.contains(DRAFT))
         }
     }
 

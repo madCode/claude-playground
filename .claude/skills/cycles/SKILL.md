@@ -203,6 +203,12 @@ create it, modelled on an existing one, and say so. Never start a second page fo
   picked and why in a sentence, what changed for madCode in plain words (not the code), its PR,
   and anything that went wrong or was left, linked to the DEVLOG.md entry for the detail. Cards
   older than a few days come off; DEVLOG.md keeps them.
+- Every card has a question box, added by a script at the end of the page that keys each box
+  by the card's `data-q`, or else its heading, and saves to `questions/<key>`. Keep that script
+  when rebuilding the page. Read the questions with the decisions at the start of each run,
+  answer each in plain words by setting `answer` on its document (`ArtifactData` update; the
+  page shows it under the box), and act on any that changes the work. A question about a card
+  that comes off goes into the next run's summary instead.
 - Everything on it is also in BACKLOG.md or DEVLOG.md, so the page can always be rebuilt from
   them. An item answered or done comes off.
 - It is private, but it follows the project's privacy rules anyway: no figures about anyone's

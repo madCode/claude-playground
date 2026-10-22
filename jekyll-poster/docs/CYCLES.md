@@ -3,6 +3,180 @@
 For the next cycle: what to do differently, newest first. What each cycle built is in
 [DEVLOG.md](DEVLOG.md). Keep the last ten or so.
 
+**The run of 21 Oct (night)**, as madCode set it: cycles until everything in BACKLOG.md that isn't
+waiting on madCode is done, or 7am Pacific (14:00 UTC), whichever comes first. About 60% build,
+40% audit. Near the end, documentation cycles until the docs match the app. One of them checks
+that the app's update system (the `jekyll-poster-debug` release) matches the other apps' (Carry,
+newspaperss), and puts any difference in BACKLOG.md.
+
+**The run of 22 Oct (night)**, as madCode set it: the cycles proposed on 22 Oct (the double
+reads, scheduled posts, #189, the journey gaps nightly and on every PR, a close-out), until 7am
+Pacific (14:00 UTC), merging each PR once it's green.
+
+### Cycles 62–64 — build: the smaller journeys on every PR's emulator, and the close-out
+
+- Falsify device tests in one pushed commit and cancel the live run it queues: it touches the
+  app's code, and a live run on a break proves nothing and holds the queue for 15 minutes.
+
+### Cycles 59–61 — build: the nightly live check through the screens
+
+- A screen step that times out on the device, and works in the every-PR suite, is usually
+  something off screen: Home composes only the rows on screen, and typing in the body scrolls
+  the term rows away. Search for the row, or do the step before the typing.
+
+- Have a reviewer trace a live test against the screens before pushing: each live run costs 15
+  minutes, and the review found a check that could never pass (Preview is a WebView, read with
+  UiAutomator) and two that raced the screen.
+- A CI step that hangs past its time limit with no failing test, while the same tree passes
+  locally in 4 minutes, was a one-off (#189's build): re-run it once before digging.
+
+### Cycle 57 — build: scheduled posts
+
+- Ask the reviewer what Android does to background work on an idle phone: WorkManager's delay
+  was fine for a random time and wrong for a time the writer chose, and only the review saw it.
+- A Compose test helper that finds fields by `hasSetTextAction()` finds the screen's behind a
+  dialog too: scope it with `hasAnyAncestor(isDialog())`.
+
+### Cycle 56 — audit: Home's double reads
+
+- Read the caller list before calling a request redundant: the "second Home read" was the
+  publish's own read before its commit (`Publisher.kt`), which it needs.
+
+### Cycle 54 — audit: a second documentation pass
+
+- Run a docs pass again after a large feature lands: the self-update PR brought back a long,
+  partly wrong DESIGN section an hour after the first pass, and DEVLOG's Status had been stale
+  since day 1 without either pass flagging it until asked.
+
+### Cycle 53 — audit: documentation pass
+
+- Have the auditor check claims against the code, not only read for style: most of what it
+  found was a doc behind the code (a schedule, a key list), not wording.
+
+### Cycle 50 — audit: the update system, against Carry's and newspaperss's
+
+- Compare against the shared practice and the other apps, not only against the app's own docs:
+  the gap (no in-app update check) was in `practices/android.md` all along.
+
+### Cycle 48 — audit: per-blog templates, before building them
+
+- Look for what the platform already does before building a setting: Jekyll's `defaults:` gives
+  every post its front matter, and the app reads it. What's left was small enough to ask about.
+
+### Cycle 47 — build: Hide from the site
+
+- Falsify each fix alone. One test covering three fixes went red when all three were broken,
+  and stayed green when two of them were broken one at a time: the test app sends at once
+  whatever time is chosen, and the first odd YAML tried wasn't one the check refuses.
+- Read the JUnit XML, not `gradlew -q`'s silence: a loop whose restore failed printed nothing
+  either way.
+
+### Cycle 46 — audit: backlog grooming
+
+- Check each backlog item against the code before planning it: Unpublish was already possible
+  through More front matter, so the cycle became a one-tap action rather than a feature.
+- An item that needs madCode's call goes under "Waiting on madCode", with an issue for the long
+  ones, so a night run doesn't stall on it.
+
+### Cycle 45 — build: New post from the launcher, and the app killed while a post waits
+
+- Check a guard against what it reads: "SKIPPED" in Gradle's log matched Gradle's own task
+  lines, not a skipped test, and failed a run that had passed. Read the test results instead.
+- Each `connectedDebugAndroidTest` clears the last one's outputs, so the run whose files are kept
+  goes last.
+
+### Cycle 44 — build: the `?` key and Sign in with GitHub twice, on the emulator
+
+- Read the code a check is about before writing its test: two tokens for one account are two
+  sign-ins on purpose (`AccountStore.save` merges only the same token, or GitHub App sign-ins). A
+  live test written from the card's wording asserted the opposite.
+- A fake that hands out one token for every sign-in can't tell two merge rules apart. Make the
+  fake as distinct as the real thing where the rule under test depends on it.
+- A failure picture beats a guess: the sign-in test's failure was blamed on the notification
+  shade, but its picture showed the app on Blog & privacy, a screen the test didn't expect.
+
+### Cycle 43 — build: Only connect through a VPN, with a real one
+
+- The first falsification of the VPN test stayed green: the worker waits for the VPN before the
+  network gate ever sees a request. Break the layer the test claims to cover, not the nearest
+  one, and add an assertion at that layer (here, the request record).
+
+### Cycle 42 — build: the laptop's device checks on CI's emulator
+
+- `UiAutomation.executeShellCommand` splits at spaces and doesn't parse quotes: pass text to
+  another app as Base64.
+- At large text a `LazyColumn` composes only what fits: wait for what heads the list.
+
+### Cycle 39 — audit: what GitHub knows about the writer
+
+- Read the run's records, not the code: the commit's `-0700` and the blog read three times on
+  opening only show up there. Next audits start from the latest nightly artifact
+  (`jekyll-poster-device-live`), which a cloud session downloads with `actions_get`.
+
+### Cycle 38 — build: the device live check on the tester's blogs
+
+- The real GitHub found what the fake couldn't (TLS closed on the main thread). A change to
+  connections or threads wants the device live check run on its PR, not only the fake suite.
+- A scan that guards a public artifact must fail closed: test it against the failure (a missing
+  file, a name with spaces) as well as the leak.
+
+### Cycle 36 — build: device tests on an emulator, on every PR
+
+- A cloud session can't run an emulator (no KVM): the PR's own CI is the only run. Make the
+  first push print what a dead app leaves (`adb logcat -d -b crash`, logcat as an artifact),
+  or a crash at start reads only "Instrumentation did not complete".
+- Nothing on the device looks up "localhost": the fake GitHub is 127.0.0.1 by number.
+- Falsify device tests in one pushed commit that breaks each covered feature, then revert it.
+
+### Cycle 35 — build: a request record in debug builds
+
+- Android lint crashed (`Unexpected owner function: null`, in `ExperimentalDetector`) on a class
+  whose constructor declared `val dir: File`; a plain parameter assigned to a property passed.
+  When `lintAnalyzeDebug` crashes on a new file, try that before disabling a detector.
+- Two hiding rules over the same secret (a form field and a token shape) make each test pass
+  without its own rule. Give the test a secret only its rule can catch, then falsify each rule.
+
+### Cycle 34 — build: the open blog never reads as signed out while its sign-in goes
+
+- A race seen once in 20 full runs, and never in 200 runs of its own test, became certain with a
+  fixture: a DataStore whose `data` is 300 ms slow. When a timing failure won't repeat, slow down
+  one side on purpose rather than counting more runs.
+
+### Cycle 33 — build: front matter the line editor can't see
+
+- A harness that ran 38 front matter shapes through the real `PostWriter.edit` found what reading
+  the parser hadn't: a `?` key, or front matter written as one `{…}`, lost keys on an edit. Its
+  shapes are now the table in `EditKeepsTheRestTest`; add to it rather than reasoning about YAML.
+
+### Cycle 32 — build: the Compose-test hang, found, and the preview flake, counted
+
+- The "Room hang" of cycles 1, 11 and 18 was the main looper. Robolectric runs the test on the
+  main thread, and Compose's `waitUntil` turns the looper only when its condition reads the
+  screen. A wait on the database, GitHub or a view model's state uses `waitUntilLooped`
+  (`testutil/Idle.kt`); a thread dump showed Room's threads idle, not stuck. `runBlocking` on a
+  view model's suspend function hangs the same way: call it as the screen does.
+- Count a flake in full runs, not in its class alone: 40 runs of the class in one JVM never
+  failed, and 20 full runs failed it twice.
+- This container is shared. Exit 137 (out of memory) and another agent's `gradlew --stop` are
+  not test results: read "What went wrong" first. Run Gradle with `--max-workers=2`, one build
+  at a time, from this worktree only.
+- `git checkout -- .` to undo a falsification break also undid uncommitted docs, as cycle 27
+  warned about code. Commit everything, docs too, before a break.
+
+### Cycle 31 — audit: a UX pass on the blog switcher
+
+- Rendered with `ScreenshotTest` (21 to 28) and read as a writer with two blogs. Nothing needed
+  changing; the request-log half of the audit needs a real run's log, which a cloud session
+  can't make (a question for madCode on the morning page).
+
+### Cycle 30 — build: the same account signed in twice
+
+- No subagent tool again: the review ran through `code-review`, and its second look still found
+  a real gap (a "Sign in with GitHub" without a refresh token stored as a pasted token). Ask the
+  reviewer how each value is inferred, not only how it's used.
+- `pkill -f` with a pattern from your own command line kills your own shell (exit 144). Kill by
+  PID.
+
 ### Cycle 29 — build: privacy per blog
 
 - Two tests passed under their break because the test's own steps re-did the fix's work: turning

@@ -18,6 +18,12 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Each device test in a process of its own, with the app's data cleared, so one test's
+        // folder grant and record of seen sheets don't carry into the next.
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
+        // A failed test's screen and window hierarchy are pulled into the build's outputs.
+        testInstrumentationRunnerArguments["useTestStorageService"] = "true"
     }
 
     signingConfigs {
@@ -56,6 +62,7 @@ android {
     }
 
     testOptions {
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
@@ -91,6 +98,43 @@ androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
         ciRun?.let { run -> variant.outputs.forEach { it.versionCode.set(run) } }
     }
+    onVariants { variant ->
+        val name = variant.name.replaceFirstChar { it.uppercase() }
+        val manifestCheck = tasks.register<SelfUpdateManifestCheck>("check${name}SelfUpdateManifest") {
+            manifest.set(variant.artifacts.get(com.android.build.api.artifact.SingleArtifact.MERGED_MANIFEST))
+            selfUpdates.set(variant.buildType == "debug")
+        }
+        tasks.named("check") { dependsOn(manifestCheck) }
+    }
+}
+
+/**
+ * Fails when a variant's merged manifest disagrees about updating itself: the debug build installs
+ * newer CI builds (src/debug), and a release must not be able to install apps or reach the network.
+ * Checking debug as well keeps the release check from passing on a manifest it misread. Neither
+ * may ask for FOREGROUND_SERVICE, which WorkManager brings and Carry has no use for.
+ */
+abstract class SelfUpdateManifestCheck : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val manifest: RegularFileProperty
+
+    @get:Input
+    abstract val selfUpdates: Property<Boolean>
+
+    @TaskAction
+    fun check() {
+        val text = manifest.get().asFile.readText()
+        for (name in listOf("android.permission.REQUEST_INSTALL_PACKAGES", "android.permission.INTERNET", "UpdateInstaller\$Result")) {
+            if ((name in text) != selfUpdates.get()) {
+                throw GradleException("${manifest.get().asFile}: $name should " + if (selfUpdates.get()) "be there" else "not be there")
+            }
+        }
+        // Removed from WorkManager's in src/main: Carry runs no foreground work (docs/DESIGN.md).
+        if ("\"android.permission.FOREGROUND_SERVICE\"" in text) {
+            throw GradleException("${manifest.get().asFile}: android.permission.FOREGROUND_SERVICE should not be there")
+        }
+    }
 }
 
 dependencies {
@@ -109,10 +153,20 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.robolectric)
+    testImplementation(libs.work.testing)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.junit)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.espresso.core)
     testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.work.testing)
+
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.test.storage)
+    androidTestImplementation(libs.uiautomator)
+    androidTestUtil(libs.androidx.test.orchestrator)
+    androidTestUtil(libs.androidx.test.services)
 }

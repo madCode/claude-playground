@@ -51,6 +51,7 @@ import com.app.jekyllposter.data.BlogPrivacy
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.data.Removal
+import com.app.jekyllposter.ui.home.whenScheduled
 import com.app.jekyllposter.ui.theme.RowDivider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -270,8 +271,11 @@ fun RemoveDialog(removing: BlogsViewModel.Removing, onRemove: () -> Unit, onSend
             text = {
                 Text(
                     "These are waiting to go out with @${group.login}, and would fail without it:\n\n" +
-                        waiting.joinToString("\n") { "• “${it.title.ifBlank { "Untitled" }}” to ${blogs[it.blog] ?: it.blog}" } +
-                        "\n\nSend them now, or open their blog and Stop and edit them. Then remove the sign-in.",
+                        waiting.joinToString("\n") { post ->
+                        "• “${post.title.ifBlank { "Untitled" }}” to ${blogs[post.blog] ?: post.blog}" +
+                            (post.sendAfter?.takeIf { post.scheduled }?.let { ", scheduled for ${whenScheduled(it)}" } ?: "")
+                    } +
+                        "\n\nSend them now, scheduled ones too, or open their blog and Stop and edit them. Then remove the sign-in.",
                 )
             },
             confirmButton = { TextButton(onClick = onSendNow) { Text("Send them now") } },

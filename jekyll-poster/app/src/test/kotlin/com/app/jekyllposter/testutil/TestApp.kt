@@ -81,6 +81,8 @@ class TestApp : PosterApp() {
                 )
             },
             vpn = vpn,
+            // On CI the build has a run number, and would ask the real GitHub for a newer one.
+            installedBuild = null,
             publishQueue = object : PublishQueue {
                 override fun enqueue(id: Long, sendAfter: Long?) {
                     published += id

@@ -30,11 +30,19 @@ tells you when GitHub Pages has rebuilt the site.
   New post button, and every category in its own colour.
 - **Preview, and a nudge when it's live.** See the post as a page before publishing; get a
   notification with its address once GitHub Pages has rebuilt.
+- **Hide a post.** Take it off the site (`published: false`) and put it back, from the editor.
 - **Quick to start.** Long-press the app's icon for New post, or share text, a link or photos
   to it.
 
 **Install:** the newest build from main is
 [jekyll-poster-debug.apk](https://github.com/madCode/claude-playground/releases/download/jekyll-poster-debug/jekyll-poster-debug.apk).
+Android asks once to allow installing from your browser. It installs beside a release build, if
+you ever have one.
+
+**Update:** the app notices a newer build itself. Home says "Build N is out"; a tap installs it,
+and on Wi-Fi it installs on its own while the app is closed. Or open the same link and install
+over the app; your posts and sign-ins stay. Each build is numbered, so the release also has
+`jekyll-poster-debug-<build>.apk`: Settings shows which build you have.
 
 **Sign in:** make a fine-grained token for your blog's repository with Contents (read and
 write) and Actions (read); the app links to GitHub's form with these filled in. Or, once a
@@ -46,4 +54,6 @@ GitHub App is set up ([how](docs/GITHUB_APP.md)), "Sign in with GitHub".
 - [Architecture](docs/ARCHITECTURE.md): how the code fits together.
 - [Backlog](docs/BACKLOG.md): what's next.
 - [Devlog](docs/DEVLOG.md): what changed each cycle, and why.
+- [Device checks](docs/DEVICE-CHECKS.md): what's checked on a device, and how.
+- [Tester account](docs/TESTER_ACCOUNT.md): the test blogs and their tokens.
 - [Existing solutions](docs/research/existing-solutions.md): what else is out there.

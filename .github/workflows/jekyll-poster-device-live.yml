@@ -1,0 +1,154 @@
+name: Jekyll Poster device live check
+
+# The app on an emulator against the real GitHub: two of the tester's blogs under two sign-ins
+# (docs/TESTER_ACCOUNT.md), published to and heard live, then deleted. Keeps the request record
+# for the several-blogs audit. Nightly, and by hand on any branch.
+on:
+  schedule:
+    # 04:07 Pacific (summer time), after the live check's 03:37.
+    - cron: '7 11 * * *'
+  workflow_dispatch:
+  # A change to the check, or to the app's own code, runs it: privacy and the VPN are only
+  # proven against the real GitHub, so a PR that could break them waits for it.
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/jekyll-poster-device-live.yml'
+      - 'jekyll-poster/app/src/main/**'
+      - 'jekyll-poster/app/src/debug/**'
+      - 'jekyll-poster/core/src/main/**'
+      - 'jekyll-poster/*.gradle.kts'
+      - 'jekyll-poster/*/build.gradle.kts'
+      - 'jekyll-poster/gradle/**'
+      - 'jekyll-poster/app/src/androidTest/kotlin/com/app/jekyllposter/device/LiveOnTheDeviceTest.kt'
+      - 'jekyll-poster/app/src/androidTest/kotlin/com/app/jekyllposter/device/ScreenOnFailure.kt'
+      - 'jekyll-poster/tools/wireguard-on-emulator.sh'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: jekyll-poster
+
+jobs:
+  device-live:
+    # A fork's PR, or Dependabot's, gets no secrets: the check would only fail.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+    # One run at a time on the tester's blogs. On the job, not the workflow, so a skipped run
+    # doesn't take the one waiting place and cancel a run that would have run.
+    concurrency:
+      group: jekyll-poster-device-live
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # A blog under the tester's account and one under its organisation: two owners, two tokens.
+      REPO_A: ${{ vars.TEST_BLOG_A }}
+      # The kill check's post, named for this attempt: a re-run must not find the last one's.
+      KILL_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
+      TOKEN_A: ${{ secrets.TEST_BLOG_A_TOKEN }}
+      REPO_B: ${{ vars.TEST_BLOG_ORG }}
+      TOKEN_B: ${{ secrets.TEST_BLOG_ORG_TOKEN }}
+      # The GitHub App, as main's build has it: the sign-in check asks GitHub for a code with it.
+      CLIENT_ID: ${{ vars.JEKYLL_POSTER_CLIENT_ID }}
+      APP_SLUG: ${{ vars.JEKYLL_POSTER_APP_SLUG }}
+      # A WireGuard config from the tester's Proton account, for Only connect through a VPN.
+      # Without it that test is skipped.
+      WG_CONF: ${{ secrets.PROTON_WG_CONF }}
+    steps:
+      - name: Check the tester's blogs are configured
+        run: |
+          for v in REPO_A TOKEN_A REPO_B TOKEN_B; do
+            if [ -z "${!v}" ]; then echo "::error::$v is empty: see docs/TESTER_ACCOUNT.md (TEST_BLOG_A and TEST_BLOG_ORG)."; exit 1; fi
+          done
+        working-directory: .
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+      # KVM is off by default on the runner, and the emulator is unusably slow without it.
+      - name: Let the runner use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Build the app and its device tests
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest "-PgithubClientId=$CLIENT_ID" "-PgithubAppSlug=$APP_SLUG"
+      # A WireGuard problem skips only the VPN test: the rest of the check still runs.
+      - name: Fetch the WireGuard app
+        if: env.WG_CONF != ''
+        continue-on-error: true
+        run: |
+          apk=$(curl -fsSL https://download.wireguard.com/android-client/ | grep -o 'com\.wireguard\.android-[0-9.]*\.apk' | sort -uV | tail -1)
+          curl -fsSL -o "$RUNNER_TEMP/wireguard.apk" "https://download.wireguard.com/android-client/$apk"
+          echo "$apk: $(sha256sum "$RUNNER_TEMP/wireguard.apk" | cut -d' ' -f1)"
+      - name: Publish to two blogs from the emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          working-directory: jekyll-poster
+          script: |
+            adb shell svc power stayon true
+            # The photo is shared in from another app, as from a gallery.
+            ./gradlew :sender:installDebug
+            adb logcat -c
+            if [ -n "$WG_CONF" ]; then tools/wireguard-on-emulator.sh "$RUNNER_TEMP/wireguard.apk" && touch "$RUNNER_TEMP/wireguard-ready" || { echo "::error::WireGuard couldn't be set up, so the VPN test can't run."; touch "$RUNNER_TEMP/vpn-failed"; }; fi
+            # First, before the main run clears the app's data: a post queued for a minute ahead,
+            # and the app's process ended with the test. GitHub is then checked from here, before
+            # anything starts the app again, so only Android starting its work alone can have sent
+            # it. A failure is kept for the end, so the night's other checks still run.
+            ./gradlew :app:connectedDebugAndroidTest "-PgithubClientId=$CLIENT_ID" "-PgithubAppSlug=$APP_SLUG" -Pandroid.testInstrumentationRunnerArguments.class=com.app.jekyllposter.device.LiveOnTheDeviceTest#aPostWaitsWhileTheAppIsKilled -Pandroid.testInstrumentationRunnerArguments.killStep=queue "-Pandroid.testInstrumentationRunnerArguments.killRun=$KILL_RUN" -Pandroid.testInstrumentationRunnerArguments.clearPackageData=false -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true "-Pandroid.testInstrumentationRunnerArguments.liveRepoA=$REPO_A" "-Pandroid.testInstrumentationRunnerArguments.liveTokenA=$TOKEN_A" "-Pandroid.testInstrumentationRunnerArguments.liveRepoB=$REPO_B" "-Pandroid.testInstrumentationRunnerArguments.liveTokenB=$TOKEN_B" > "$RUNNER_TEMP/killed-queue.log" 2>&1; s=$?; cat "$RUNNER_TEMP/killed-queue.log"; [ $s = 0 ] && grep -rq '<testcase' app/build/outputs/androidTest-results/connected && ! grep -rq '<skipped' app/build/outputs/androidTest-results/connected || { echo "::error::The kill check's queue step failed or was skipped."; touch "$RUNNER_TEMP/kill-failed"; }
+            adb shell pidof com.app.jekyllposter.debug || echo "The app isn't running."; adb shell dumpsys jobscheduler | grep -c "com.app.jekyllposter.debug" || echo "No job of the app's is scheduled."
+            [ -f "$RUNNER_TEMP/kill-failed" ] || { found=; sleep 90; for i in $(seq 1 24); do curl -fsS -H "Authorization: Bearer $TOKEN_A" "https://api.github.com/repos/$REPO_A/contents/_posts" | grep -q "device-check-run-$KILL_RUN-after-the-app-was-killed" && { found=1; break; }; sleep 15; done; [ -n "$found" ] && echo "The post went out with the app's process ended." || { echo "::error::The post queued before the app was killed never went out."; touch "$RUNNER_TEMP/kill-failed"; }; }
+            # Last, so the report and kept files are its own: each run clears the one before. Its
+            # cleanup also deletes the kill check's post.
+            ./gradlew :app:connectedDebugAndroidTest "-PgithubClientId=$CLIENT_ID" "-PgithubAppSlug=$APP_SLUG" -Pandroid.testInstrumentationRunnerArguments.class=com.app.jekyllposter.device.LiveOnTheDeviceTest $([ -f "$RUNNER_TEMP/wireguard-ready" ] && echo -Pandroid.testInstrumentationRunnerArguments.vpnTunnel=proton) "-Pandroid.testInstrumentationRunnerArguments.liveRepoA=$REPO_A" "-Pandroid.testInstrumentationRunnerArguments.liveTokenA=$TOKEN_A" "-Pandroid.testInstrumentationRunnerArguments.liveRepoB=$REPO_B" "-Pandroid.testInstrumentationRunnerArguments.liveTokenB=$TOKEN_B" || { adb logcat -d > app/build/device-logcat.txt; adb logcat -d -b crash; exit 1; }
+            [ ! -f "$RUNNER_TEMP/kill-failed" ] && [ ! -f "$RUNNER_TEMP/vpn-failed" ] || exit 1
+      # The kept files (request records, the privacy report, a failed run's logcat) go into a
+      # public artifact: refuse them all if a token or the VPN's private key is anywhere in them.
+      - name: Check the kept files hold no secret
+        id: scan
+        if: always()
+        run: |
+          # File by file: the device's folder name has spaces. grep exits 1 for "not found";
+          # anything else (2: unreadable) fails the step rather than passing as clean.
+          secrets=(-e "$TOKEN_A" -e "$TOKEN_B")
+          key=$(printf '%s\n' "$WG_CONF" | sed -n 's/^[[:space:]]*PrivateKey[[:space:]]*=[[:space:]]*//p' | tr -d '\r[:space:]')
+          [ -n "$key" ] && secrets+=(-e "$key")
+          mkdir -p app/build/request-record
+          found=0
+          while IFS= read -r -d '' file; do
+            set +e; grep -qF "${secrets[@]}" "$file"; status=$?; set -e
+            if [ "$status" -ne 1 ]; then
+              rm -rf app/build/request-record app/build/device-logcat.txt
+              find app/build/outputs -path '*additional_output*' -type f -delete
+              echo "::error::A kept file holds a secret or couldn't be read ($status); none were uploaded."
+              exit 1
+            fi
+            [ "$(basename "$file")" = device-logcat.txt ] && continue
+            found=1
+            cp "$file" app/build/request-record/
+            echo "$(basename "$file"): $(wc -l < "$file") lines, no secret"
+          done < <(find app/build/outputs -path '*additional_output*' -type f \( -name '*.jsonl' -o -name '*.json' \) -print0; find app/build -maxdepth 1 -name device-logcat.txt -print0)
+          [ "$found" = 1 ] || echo "::warning::No request record or report came back."
+      - name: Keep the request record and the report
+        if: always() && steps.scan.outcome == 'success'
+        uses: actions/upload-artifact@v6
+        with:
+          name: jekyll-poster-device-live
+          path: |
+            jekyll-poster/app/build/request-record/
+            jekyll-poster/app/build/reports/androidTests/
+            jekyll-poster/app/build/device-logcat.txt
+          retention-days: 30

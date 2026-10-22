@@ -17,7 +17,9 @@ import javax.crypto.spec.SecretKeySpec
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -63,6 +65,16 @@ class AccountStoreTest {
         assertFalse(String(dbBytes(), Charsets.ISO_8859_1).contains("github_pat_secret"))
         store.remove(signInOf(account.blogKey))
         assertNull(store.current())
+    }
+
+    @Test fun signingInWithGitHubAgainWithTokensThatDontExpireKeepsOneSignIn() = runBlocking {
+        // A GitHub App can give tokens that never expire: no refresh token, and a new token each time.
+        val store = store()
+        store.save(account.copy(token = "ghu_first", withGitHub = true))
+        store.save(account.copy(token = "ghu_second", repo = "notes", withGitHub = true))
+        assertEquals(signInOf(account.blogKey), signInOf("writer/notes@main"))
+        assertEquals("ghu_second", store.forBlog(account.blogKey)!!.token)
+        assertTrue(store.forBlog(account.blogKey)!!.withGitHub)
     }
 
     @Test fun anExpiringTokenIsRenewedBeforeUse() = runBlocking {
@@ -157,6 +169,25 @@ class AccountStoreTest {
         idleUntilTrue { seen.lastOrNull()?.blogKey == account.blogKey }
         watching.cancel()
         // The screens read a null as signed out, and would leave for the sign-in screen.
+        assertTrue(seen.toString(), seen.none { it == null })
+    }
+
+    @Test fun removingTheOpenBlogsSignInNeverReadsAsSignedOutWhenTheNewKeyIsSlow() = runBlocking {
+        // The new open blog's key reaches the flow after the removed blog's row is gone.
+        val slow = object : DataStore<Preferences> {
+            override val data = this@AccountStoreTest.data.data.onEach { delay(300) }
+            override suspend fun updateData(transform: suspend (Preferences) -> Preferences) = this@AccountStoreTest.data.updateData(transform)
+        }
+        val store = AccountStore(slow, db.accounts(), testCipher())
+        store.save(account)
+        val inkwell = account.copy(login = "inkwell", token = "github_pat_inkwell", owner = "inkwell", repo = "night-notes")
+        store.save(inkwell)
+        val seen = java.util.concurrent.CopyOnWriteArrayList<Account?>()
+        val watching = launch(Dispatchers.IO) { store.account.collect { seen += it } }
+        idleUntilTrue { seen.lastOrNull()?.blogKey == inkwell.blogKey }
+        store.remove(signInOf(inkwell.blogKey))
+        idleUntilTrue { seen.lastOrNull()?.blogKey == account.blogKey }
+        watching.cancel()
         assertTrue(seen.toString(), seen.none { it == null })
     }
 

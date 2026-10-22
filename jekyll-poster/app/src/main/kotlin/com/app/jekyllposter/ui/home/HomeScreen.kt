@@ -100,6 +100,8 @@ fun HomeScreen(
     blogs: BlogsViewModel? = null,
     onAddBlog: (Long) -> Unit = {},
     onAddSignIn: () -> Unit = {},
+    /** A newer debug build's line, at the top of the list. */
+    updateNotice: @Composable () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val blogState = blogs?.state?.collectAsStateWithLifecycle()?.value
@@ -110,6 +112,9 @@ fun HomeScreen(
     var menu by remember { mutableStateOf(false) }
     LaunchedEffect(state.error) {
         state.error?.let { snackbar.showSnackbar(it); viewModel.dismissError() }
+    }
+    LaunchedEffect(state.notice) {
+        state.notice?.let { snackbar.showSnackbar(it); viewModel.dismissNotice() }
     }
     BackHandler(enabled = state.query != null, onBack = viewModel::stopSearch)
     Scaffold(
@@ -173,6 +178,7 @@ fun HomeScreen(
         }
         PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = viewModel::refresh, modifier = Modifier.padding(padding).fillMaxSize()) {
             LazyColumn(Modifier.fillMaxSize()) {
+                item { updateNotice() }
                 if (state.onPhone.isNotEmpty()) {
                     item { SectionHeading("On this phone") }
                     items(state.onPhone, key = { "d${it.id}" }) { draft ->
@@ -213,7 +219,7 @@ private fun DraftRow(draft: Draft, waitingForVpn: Boolean, onClick: () -> Unit) 
         Text(draft.title.ifBlank { "Untitled" }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         val whimsy = LocalWhimsy.current
         val (label, isError) = draft.status(whimsy.live, waitingForVpn, nowUntil(draft.sendAfter))
-        val shown = if (draft.state == PostState.Published && draft.buildState == BuildState.Live) label + whimsy.liveMark else label
+        val shown = if (draft.state == PostState.Published && draft.buildState == BuildState.Live && !draft.hidden) label + whimsy.liveMark else label
         Text(
             shown, style = MaterialTheme.typography.bodySmall,
             color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2,
@@ -230,7 +236,10 @@ private fun DraftRow(draft: Draft, waitingForVpn: Boolean, onClick: () -> Unit) 
 fun Draft.status(live: String = "live on the site", waitingForVpn: Boolean = false, now: Long = System.currentTimeMillis()): Pair<String, Boolean> = when (state) {
     PostState.Draft -> (if (editingPath != null) "Editing · not published yet" else "Draft") to false
     PostState.Queued -> when {
+        // The time it's due says more than the VPN until then: the VPN may well be back by then.
+        (sendAfter ?: 0) > now && scheduled -> "Scheduled for ${whenScheduled(sendAfter!!, now)}"
         waitingForVpn -> "Waiting for your VPN…"
+        scheduled && sendAfter != null -> "Scheduled for ${whenScheduled(sendAfter, now)}; sending…"
         (sendAfter ?: 0) > now -> "Going out at ${
             Instant.ofEpochMilli(sendAfter!!).atZone(ZoneId.systemDefault()).toLocalTime()
                 .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
@@ -239,7 +248,12 @@ fun Draft.status(live: String = "live on the site", waitingForVpn: Boolean = fal
         else -> "Waiting to publish…"
     } to false
     PostState.Failed -> (if (destination == Destination.Delete) "Didn't delete: " else "Didn't publish: ") + error.orEmpty() to true
-    PostState.Published -> if (targetPath?.let { PostPath(it).isDraft } == true) "Saved to the blog's _drafts" to false else when (buildState) {
+    PostState.Published -> if (targetPath?.let { PostPath(it).isDraft } == true) "Saved to the blog's _drafts" to false else if (hidden) when (buildState) {
+        BuildState.Building -> "Hidden · the site is rebuilding…" to false
+        BuildState.Live -> "Hidden from the site; the file stays on GitHub" to false
+        BuildState.Failed -> "Hidden on GitHub, but the site build failed. Check Actions on GitHub." to true
+        BuildState.Unknown, null -> "Hidden from the site" to false
+    } else when (buildState) {
         BuildState.Building -> "Published · the site is rebuilding…" to false
         BuildState.Live -> "Published · $live" to false
         BuildState.Failed -> "Published, but the site build failed. Check Actions on GitHub." to true
@@ -322,4 +336,16 @@ fun nowUntil(at: Long?): Long {
             value = System.currentTimeMillis()
         }
     }.value
+}
+
+/** [at] (epoch millis) as the writer reads it: "18:40 today", "9:00 tomorrow", "Fri 23 Oct, 9:00". */
+fun whenScheduled(at: Long, now: Long = System.currentTimeMillis(), zone: ZoneId = ZoneId.systemDefault()): String {
+    val time = Instant.ofEpochMilli(at).atZone(zone)
+    val clock = time.toLocalTime().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
+    val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    return when (time.toLocalDate()) {
+        today -> "$clock today"
+        today.plusDays(1) -> "$clock tomorrow"
+        else -> "${time.format(DateTimeFormatter.ofPattern("EEE d MMM"))}, $clock"
+    }
 }

@@ -5,6 +5,114 @@ differently. Newest first; read the top before starting. What was built is
 in [DEVLOG.md](DEVLOG.md). Kept to the last ten or so cycles; older lessons
 that hold become rules in CLAUDE.md or the cycles skill.
 
+## 2026-10-22 (cloud session, night run: cycles 74–76)
+
+Baseline: a cloud container, no emulator running, nothing in the
+background. madCode's PR #197 merged before the run.
+
+### Cycle 76 — skipped: the ladder hint was built in another session
+
+madCode's main session built it on its own branch once gym-coach #73
+merged, and asked this run not to start a second. Checked the branch
+before skipping. **Before building an item, look for an open branch or PR
+that already has it**, not only main.
+
+### Cycle 75 — build: a reboot check, then `FOREGROUND_SERVICE` removed
+
+- **WorkManager's jobs don't survive a reboot; its boot receiver
+  reschedules them** (2.12 only ever calls `setPersisted(false)`). So a
+  reboot check has to wait for Android to have *saved* that receiver as
+  enabled (`package-restrictions.xml`, a few seconds' delay). Rebooting
+  straight away made it look as if Carry's check never came back.
+- **A periodic job forced before its period is due is skipped**, not run.
+  Prove "it runs" from WorkManager's `period_count` (database in
+  `no_backup/`, readable with `run-as` on a debug build) after moving the
+  emulator's clock past the period.
+- **Read the library's bytecode before guessing its behaviour** (`javap`
+  on the AAR in `~/.gradle/caches`): two of this cycle's wrong turns were
+  guesses about WorkManager that one `javap` settled.
+- Emulator runs only on CI; nothing was started in this container.
+
+### Cycle 74 — build: Carry's first device test job
+
+- **The test APK's own process has no Kotlin runtime.** A provider or
+  activity declared in `src/androidTest` runs there, not in Carry's
+  process, so it dies on `kotlin.jvm.internal.Intrinsics`. Write those in
+  Java (`TestFolder.java`); test code that runs in Carry's process can
+  stay Kotlin.
+- **UiAutomator and Carry's number boxes:** `setText` doesn't reach them,
+  and the text sits on the `EditText` while the label is on a view inside
+  it. Tap the box, `input text`, and select
+  `By.clazz(EditText).hasChild(By.desc(label))`. The job's report keeps
+  the window hierarchy of a failed test, which is how both were found in
+  one look.
+- **Opening Carry runs the session check at once** (the periodic work's
+  first run), so a test needn't run the worker itself.
+
+## 2026-10-20 (cloud session, second Carry agent, later)
+
+### Cycle 73 — build: tests for the guards, and `MainActivity`
+
+- **Results from a script on a shared path are unproven** (cycle 71's
+  note on the scratchpad): rerun every falsification it touched.
+- **Drive the real Activity in Robolectric** with
+  `createAndroidComposeRule<MainActivity>()`, `shadowOf(activity)
+  .nextStartedActivityForResult` and `receiveResult`, then
+  `scenario.moveToState` for the resume. Before asserting a screen, wait
+  for the one read it depends on (wrap the ViewModel's `read` seam and
+  count).
+- **`compose.waitUntil` in an Activity test runs on `runTest`'s virtual
+  time**, the same trap CLAUDE.md names for `withTimeoutOrNull`: it timed
+  out with its condition already true, about one run in five, and on CI.
+  Wait on the real clock and call `compose.waitForIdle()` each pass
+  (`MainActivityTest.until`). A dump on timeout showed it: catch the flake
+  before guessing at it.
+
+## 2026-10-20 (cloud session, first Carry agent)
+
+### Cycle 72 — build: updates, part two (Wi-Fi download, background install)
+
+- **A review's fix can bring back a dialog the owner already answered.**
+  Re-asking Android's install question on every return looked like the fix
+  for one left with Home; the second look showed it would also re-ask
+  after Update, while the install finishes. Before keeping a held intent
+  around, ask what state the other side is in when you next see it.
+- **A test's counter can't see a call that throws first.** `staged`
+  counted only stagings that got past the injected failure, so "not staged
+  again" passed by construction. Count the call itself.
+
+### Cycle 71 — build: updates, part one (debug-only installer, its checks)
+
+- **AGP 9 makes unit tests for debug only.** There is no
+  `testReleaseUnitTest`, so code moved to `src/debug` can still be tested
+  from `src/test`; tests for it go in `src/testDebug` anyway, so a later
+  release unit test task can't break on them.
+- **This container's memory is shared with other agents' builds, and the
+  OOM killer takes the biggest JVM: the Gradle daemon.** "Daemon
+  disappeared" is that. `--max-workers=1 -Dorg.gradle.jvmargs="-Xmx2g
+  -XX:+UseSerialGC" -Pkotlin.compiler.execution.strategy=in-process`
+  compiled, and `-Xmx1g` ran the tests. A baseline built while the source
+  was being edited measured nothing: build it from a separate worktree
+  first.
+- **Two agents in one session share its scratchpad.** Both wrote
+  `falsify.sh` there; one run executed the other agent's script, in the
+  other agent's worktree. Keep scripts and logs in a folder of the
+  agent's own (`$S/<agent>/`), and have a script `cd` to its own tree and
+  check it.
+
+## 2026-10-20 (cloud session, second Carry agent)
+
+### Cycle 70 — build: an old *hard*-only row counts
+
+- **A "the other side is changing to match" note in DESIGN.md is a claim
+  to check.** #133 said gym-coach would stop counting `hard`; gym-coach
+  then chose to keep it. Read the other repo's code before trusting it.
+- **The machine is shared and loaded.** A full `testDebugUnitTest` took
+  23 minutes and a Compose idle timeout flaked under a load of 39; the
+  first build's daemon was killed for memory. Run the touched classes
+  with `--tests`, and take the baseline from main's CI artifact
+  (`carry-reports`), which is the number CI gates on.
+
 ## 2026-10-18 (cloud session)
 
 ### Cycle 69 — fix: Add takes you to the new row, and mod stays put

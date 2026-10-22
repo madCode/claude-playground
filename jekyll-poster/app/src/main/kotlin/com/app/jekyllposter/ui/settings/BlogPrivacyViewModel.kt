@@ -7,9 +7,12 @@ import com.app.jekyllposter.core.github.FileChange
 import com.app.jekyllposter.core.github.GitHubException
 import com.app.jekyllposter.core.jekyll.ConfigEdit
 import com.app.jekyllposter.data.BlogPrivacy
+import com.app.jekyllposter.publish.dayInUtc
 import com.app.jekyllposter.ui.catching
 import com.app.jekyllposter.ui.forWriter
+import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -189,11 +192,13 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
                 container.publisher.betweenPublishes {
                     val current = blog.file(CONFIG)
                     val author = container.privacy.commitAuthor(account.blogKey, account.login) { blog.user().noReplyAuthor }
+                    // Dated by the day alone, as a post's commit is; see Publisher.
+                    val date = if (container.privacy.get(account.blogKey).datesByDayOnly && author != null) dayInUtc(LocalDate.now(ZoneOffset.UTC)) else null
                     blog.commit(
                         // Not naming it: the commit list is read more than _config.yml is.
                         "Set the site's time zone",
                         listOf(FileChange.text(CONFIG, ConfigEdit.withTimezone(current?.text, zone))),
-                        mapOf(CONFIG to current?.sha), author,
+                        mapOf(CONFIG to current?.sha), author, date,
                     )
                 }
                 // On its own: the commit has landed even if reading the blog again fails, and

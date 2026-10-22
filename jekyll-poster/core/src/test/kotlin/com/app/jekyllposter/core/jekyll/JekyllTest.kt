@@ -156,4 +156,40 @@ class MoreFrontMatterTest {
         assertTrue(extraFrontMatterProblem("just words")!!.contains("isn't YAML"))
         assertTrue(extraFrontMatterProblem("title: Sneaky")!!.contains("`title`"))
     }
+
+    @Test fun hidingAPostSetsPublishedFalseAndShowingTakesItOut() {
+        val extra = "# card\nimage: /a.png\nexcerpt: |\n  Two\n  lines"
+        val hidden = withPostHidden(extra, hidden = true)
+        assertEquals("$extra\npublished: false", hidden)
+        assertTrue(hidesPost(hidden))
+        assertEquals(null, extraFrontMatterProblem(hidden))
+        assertEquals(extra, withPostHidden(hidden, hidden = false))
+        assertFalse(hidesPost(extra))
+        // A post with no other keys, and one already saying `published: true`.
+        assertEquals("published: false", withPostHidden("", hidden = true))
+        assertEquals("image: /a.png\npublished: false", withPostHidden("image: /a.png\npublished: true", hidden = true))
+        assertEquals("", withPostHidden("published: false", hidden = false))
+        // Jekyll hides only on the boolean: a quoted "false" is published.
+        assertFalse(hidesPost("published: \"false\""))
+        assertFalse(hidesPost(null))
+    }
+
+    @Test fun aPostIsHiddenTheWaysJekyllReadsIt() {
+        listOf("no", "off", "False", "FALSE", "", "~", "null").forEach { assertTrue(it, hidesPost("published: $it")) }
+        listOf("true", "yes", "\"false\"", "0", "n").forEach { assertFalse(it, hidesPost("published: $it")) }
+        // Jekyll's keys are case-sensitive, and a key under another isn't the post's.
+        assertFalse(hidesPost("Published: false"))
+        assertFalse(hidesPost("author:\n  published: false"))
+        assertFalse(PostSummary.of(PostPath("_posts/2025-01-01-a.md"), "sha", "---\ntitle: A\npublished: no\n---\n").published)
+    }
+
+    @Test fun hidingOrShowingAloneChangesOnlyThatLine() {
+        val text = "---\nlayout: post\ntitle: A\nimage: /a.png\ndate: 2025-01-01\ntags: [x]\n---\n\nBody\n"
+        val doc = FrontMatterDocument.parse(text)
+        val extra = doc.others(PostWriter.MANAGED)
+        val hidden = PostWriter.edit(doc, PostContent("A", "Body", listOf(), listOf("x"), withPostHidden(extra, true))).render()
+        assertEquals(text.replace("tags: [x]\n", "tags: [x]\npublished: false\n"), hidden)
+        val shown = PostWriter.edit(FrontMatterDocument.parse(hidden), PostContent("A", "Body", listOf(), listOf("x"), extra)).render()
+        assertEquals(text, shown)
+    }
 }

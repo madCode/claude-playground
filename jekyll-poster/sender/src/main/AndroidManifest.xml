@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="Sender">
+        <!-- Started by the device tests through the shell; it shares and finishes. -->
+        <activity android:name=".ShareActivity" android:exported="true" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.app.jekyllposter.sender.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/paths" />
+        </provider>
+    </application>
+</manifest>

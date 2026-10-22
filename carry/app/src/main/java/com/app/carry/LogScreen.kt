@@ -203,6 +203,10 @@ fun LogScreen(
                 LogRow(
                     name = set.displayName,
                     prescription = set.prescription,
+                    // Only where a weight is logged: on a bodyweight ladder every
+                    // round has the same load, so "heaviest" picks nothing, and
+                    // which count to log there is the owner's call.
+                    rounds = set.roundCount?.takeIf { !set.offersMod && !set.timed },
                     // A range has no single count to fill: its floor would
                     // go into history as the reps done.
                     prescribedReps = set.prescribedReps.takeIf { set.prescribedText?.isRange() != true },
@@ -288,8 +292,9 @@ private fun LazyListState.fullyShows(index: Int): Boolean {
  *
  * Not *hurt*: tapping it while deciding not to do a movement is the
  * commonest reason to tap it. Not an old file's `hard` or `skipped`
- * either; neither is shown any more. gym-coach's importer counts each of
- * these rows as a completed set, and an untouched row as nothing.
+ * either: this page has no chip for them, so a row only they answer
+ * looks untouched here. gym-coach's importer still counts a `hard` row
+ * as a set, which is why a past session on Since shows and counts it.
  */
 internal fun SessionPatch.Entry.noted(): Boolean =
     weight != null || reps != null || fractionalReps != null || done || easy || easier
@@ -302,6 +307,9 @@ private fun LogRow(
      *  of what the row is. Kept out of [name] so it stays out of the
      *  TalkBack labels on the number boxes, which name the movement. */
     prescription: String?,
+    /** [ExerciseSet.roundCount]: the row stands for several rounds, and the
+     *  record wants one true weight and count, so the row says which. */
+    rounds: Int?,
     /** The runner's rep count, shown faintly in an empty reps box. The
      *  coach's number, not the board's words: "10 total" is 5 a side, and
      *  the importer compares reps against this. Null for a range ("6-12"),
@@ -349,6 +357,13 @@ private fun LogRow(
             // At the end of the name line, beside the movement it's about.
             // On an untouched row it says why the row was left.
             Chip("hurt", entry.hurt, Look.Brick) { change(entry.copy(hurt = !entry.hurt)) }
+        }
+        rounds?.let {
+            Text(
+                "$it rounds \u00b7 log your heaviest set",
+                color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.After.Note,
+                modifier = Modifier.padding(start = 9.dp, top = 2.dp),
+            )
         }
         FlowRow(
             Modifier.fillMaxWidth().padding(start = 9.dp, top = 4.dp),
@@ -728,10 +743,13 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
  */
 @Composable
 private fun TypedBack(added: List<AddedSet>) {
-    // `(?U)` so `\\s` also folds U+2028 and friends, which would break the
-    // sentence across lines.
+    // Unicode separators as well as ASCII whitespace, so U+2028 and friends
+    // fold rather than breaking the sentence across lines. NOT `(?U)`: that
+    // inline flag compiles on the JVM and throws on Android, whose regex is
+    // ICU's, so every unit test passed and the app died on the phone -- on
+    // the recomposition after a save that had already written the file.
     val names = added.mapNotNull { row ->
-        row.name.readable().replace(Regex("(?U)\\s+"), " ").trim().takeIf { it.isNotEmpty() }?.let(::clip)
+        row.name.readable().replace(SPACES, " ").trim().takeIf { it.isNotEmpty() }?.let(::clip)
     }.distinct()
     if (names.isEmpty()) return
     Text(
@@ -852,3 +870,15 @@ private fun SaveButton(state: SaveState, onSave: () -> Unit, added: List<AddedSe
 private fun String.isRange(): Boolean = any { it == '-' || it == '/' }
 
 private fun Double?.asWeightField(): String = this?.let { asWeight() } ?: ""
+
+/**
+ * ASCII whitespace plus every Unicode separator, so a name carrying U+2028 or
+ * a non-breaking space folds to one ordinary space instead of breaking the
+ * sentence across lines.
+ *
+ * Built once rather than per row, and as a character class rather than the
+ * `(?U)` flag it replaces: Android's regex is ICU's, which rejects that inline
+ * flag outright, while the JVM accepts it — so unit tests and Robolectric both
+ * passed and the phone threw PatternSyntaxException instead.
+ */
+internal val SPACES = Regex("[\\p{Z}\\s]+")

@@ -40,6 +40,10 @@ doesn't want to open a laptop and make a commit for every post.
 - **Add a blog** lists a sign-in's repositories (with several sign-ins, the writer picks which
   first). **Add a sign-in** is the sign-in screen again, for another account or an organisation
   a token can't cover. Either opens the blog added.
+- **The same account twice** is one sign-in. Signing in with GitHub again as an account the app
+  has adds the blog to that sign-in, with the newer token; so does pasting the same token again.
+  A different pasted token for the same account stays a sign-in of its own, since each token
+  reaches only the repositories it was made for.
 - **Settings → Your blogs** is the same list, with **Remove** on each sign-in. Removing forgets
   it and its blogs and keeps their drafts; if the open blog went, another opens, and with none
   left the app returns to the sign-in screen. Remove is refused while a post is still waiting
@@ -49,6 +53,11 @@ doesn't want to open a laptop and make a commit for every post.
   post goes above its title: `To Night Notes · @inkwell`.
 - A post goes out under its own blog's sign-in, whichever blog is open. A sign-in whose blog
   isn't open makes no requests except for its own post going out and that post's build.
+- **Its notification names its blog** when another is open: "“Bus notes” is live on Night
+  Notes", "Night Notes didn't rebuild". A live post's tap opens it on the site. A tap that opens
+  the app (a failed build, a hidden post) opens it afresh on the post's blog, where Home lists
+  the post, and says "Switched to Night Notes"; if that blog has been removed since, it says so
+  instead. A locked phone shows neither the title nor the blog.
 - **Privacy is per blog.** Each blog has its own switches (Blog & privacy, below), and the
   switcher's rows show the ones that are on, so a pseudonymous blog looks different before it's
   picked. A blog added beside others starts with every switch off, not copied from the open
@@ -109,8 +118,9 @@ doesn't want to open a laptop and make a commit for every post.
   as a shared note's, so every retry sends the same text; one that matches no post (a post
   queued at the same moment, say) stays as written. An edit's hand-written `[[Exact title]]`
   becomes a link too. The preview shows them as links.
-- A post that others link to can't be deleted without failing the site's next build: Jekyll
-  can't find the `post_url`. The app doesn't check for links to it yet.
+- A post that others link to can't be deleted or renamed without failing the site's next build:
+  Jekyll can't find the `post_url`, Pages keeps the last good build, and the app says the build
+  failed. The app doesn't look for links to a post before deleting it.
 - Long-pressing the app's icon offers **New post**, straight into the editor.
 - A share starts one post: going back from it returns to the list.
 - A new post with nothing in it is dropped when you leave it. One left when the app closed under
@@ -152,12 +162,14 @@ doesn't want to open a laptop and make a commit for every post.
 - Obsidian comments, `%%like this%%`, go first, before the title, photos or links are read:
   they're the writer's notes to themselves, and Jekyll would show them. All of one goes, code
   inside included; one never closed runs to the end, as in Obsidian. In code, `%%` is text.
-- A note's `date:` is the post's date, in its file name and front matter. It's kept as written
-  and read when publishing, in the site's time zone as it is then: a bare day is midnight there,
-  as Jekyll reads it. Dating by the day only, it's that moment's day where Jekyll builds (UTC
-  without a site zone), which can be a day before the one the note shows. The editor shows it, and **Use the publish day** drops it (until a commit
-  was tried: then the post keeps its name and date, so it can't go out twice). A date the app
-  can't read is shown as such, and the post is dated when published.
+- A note's `date:` is the post's date, in its file name and front matter:
+  - Kept as written, and read when publishing in the site's time zone as it is then: a bare day
+    is midnight there, as Jekyll reads it.
+  - Dating by the day only, it's that moment's day where Jekyll builds (UTC without a site
+    zone), which can be a day before the one the note shows.
+  - The editor shows it. **Use the publish day** drops it, until a commit was tried: then the
+    post keeps its name and date, so it can't go out twice.
+  - A date the app can't read is shown as such, and the post is dated when published.
 - A future date is kept too: Jekyll won't show the post until then, though the app says live.
 - Saved to the blog's `_drafts` first, a note loses its date: drafts are undated, and Publish to
   the site dates them then.
@@ -169,8 +181,7 @@ doesn't want to open a laptop and make a commit for every post.
 - A site its own workflow builds with Jekyll 4 (its Gemfile says so, and a workflow runs
   `jekyll build`) gets a plain `post_url`: Jekyll 4 adds the baseurl itself.
 - The blog's post list is refreshed first: a `post_url` to a post that's gone fails the site's
-  build. So does deleting or renaming a post that others link to, later: Pages then keeps the
-  last good build and the app says the build failed.
+  build.
 - obyde's `find:` and `replace:` lists (Python regular expressions, in pairs) are taken out of
   the note first, then applied to everything else: title, text, tags, other front matter, and
   the file name the title may come from. So the words they hide don't reach the phone's draft
@@ -192,7 +203,7 @@ doesn't want to open a laptop and make a commit for every post.
   back byte for byte and not checked; changed, comments stay.
 - Changed text must be one `key: value` per line from the left edge. YAML the blog couldn't
   read, indented, `{…}`, `?` or `<<` keys, a `---` line, or a key the app sets (`title`,
-  `date`, `categories`, `tags`, `layout`) stops Publish, opens the section and says why.
+  `date`, `categories`, `category`, `tags`, `tag`, `layout`) stops Publish, opens the section and says why.
 - An edit opened before the app kept front matter shows it read-only: it can't know the
   post's other keys.
 
@@ -204,9 +215,25 @@ doesn't want to open a laptop and make a commit for every post.
   hours and the post waits for it, saying "Going out at 18:40, a random time"; nothing about
   this post is read from or sent to GitHub before then (opening the app still reads the blog). **Send now** in the editor sends it at once. The moment
   is kept with the post, so a restart doesn't pick again. Deleting is never delayed.
+- **Schedule…** in the editor's menu (a new post) picks a day and a time on the phone's clock;
+  a moment already past can't be chosen. The post waits on the phone, saying "Scheduled for
+  9:00 AM tomorrow", and goes out at that time, in place of any random one. Nothing about it
+  reaches GitHub before then, so a public repository doesn't show it early.
+  - It goes out only if the phone is on and online then; otherwise as soon as it is. An alarm
+    Android allows on an idle phone wakes the app at the time, so a phone asleep sends it within
+    minutes; WorkManager, which an idle phone can hold back for hours, is the backstop. A random
+    time is woken the same way. A restart clears the alarm, leaving WorkManager.
+  - It's dated when it goes out, like any post. **Send now** and **Stop and edit** work as for
+    the random time, and forget the schedule; Send now stays once it's late.
+  - Its time shows instead of "Waiting for your VPN…" until it's due. Removing a sign-in it
+    waits on names it and its time, and "Send them now" sends it early.
+  - Not a future-dated commit: GitHub Pages' usual setup builds a post dated in the future at
+    once, and the repository would show it before its time.
 - A queued post goes to the blog it was written for, with that blog's sign-in, even if another
   blog is open by the time it goes; so does the check that it's live. Signed out of its blog,
   it fails and says to sign in to that blog.
+- A queued post goes out even if the app is closed or killed: Android starts its background
+  work.
 - A post that hasn't gone out yet (waiting for its time, a connection or the VPN) opens
   read-only with **Stop and edit**, which takes it back to a draft: change it, then Publish
   again (with a new random time, if that's on).
@@ -242,12 +269,33 @@ doesn't want to open a laptop and make a commit for every post.
 
 - Tapping a post opens the blog's copy as it is on GitHub now. Closed without a change, it's
   dropped: it isn't listed under On this phone as well as on the blog. Front matter that isn't valid
-  YAML isn't opened: the app would write over what it couldn't read.
+  YAML isn't opened: the app would write over what it couldn't read. Nor is front matter the app
+  can't edit without changing other keys: a `?` key, or all of it inside one `{…}`. The app tries
+  the edit first, and opens the post only if every other key reads the same after it; Update
+  checks again before it commits.
 - Update rewrites title, categories, tags and body, and the other front matter only if it was
   changed. Every other key, comment and quote stays as written; a post that spells it
   `category:` keeps that key.
 - If the post changed on GitHub since it was opened, even in the moment of committing, Update
   refuses and says to discard and start from the new version.
+
+## Hiding a post from the site
+
+- **Hide from the site** (the menu, while editing a post) adds `published: false` to its front
+  matter and sends it as an Update, with the writer's other changes. Jekyll then leaves it out of
+  the site; the file stays on GitHub, and Home marks it Hidden.
+- Like a delete, a hide goes out at once, never at a random time: the writer wants it gone.
+- **Show on the site again** takes the key out: Jekyll publishes by default. It goes out like any
+  update.
+- Only that line changes in the file, even in front matter the field would refuse.
+- A post counts as hidden however Jekyll reads it: `published: false`, `no`, `off`, `False`, or
+  empty.
+- When the site has rebuilt, the notification says the post is off the site, and opens the app,
+  not the address that no longer answers. Earlier updates of the post leave Home's list then, so
+  none goes on saying it's live.
+- A public repository is still readable on GitHub: hiding is for the site, not for privacy.
+- Not offered for a Jekyll draft, which isn't on the site, or for an edit opened before the app
+  kept front matter, which doesn't know the post's other keys.
 
 ## Deleting a post from the blog
 
@@ -286,8 +334,6 @@ blog's switches, whichever blog is open when it goes.
     if any blog asks for it. Renewing a sign-in's token goes through it if any of that sign-in's
     blogs asks.
   - Switching blogs moves the preview to new connections, as turning the switch does.
-  - Switches kept for the whole app by an older version go to every blog on first use; signed
-    out, they wait for the next blog, and the VPN one still covers signing in meanwhile.
   - Each connection is bound to the VPN, and names are looked up through it: if the VPN drops
     mid-request, the request fails rather than going out over Wi-Fi. No SOCKS proxy is used
     (OkHttp would open it around the VPN); an HTTP proxy is reached through the VPN.
@@ -307,7 +353,11 @@ blog's switches, whichever blog is open when it goes.
   the login, never the profile's name, which may be a real one.
 - **Date posts by the day only**, off: new posts get the minute and an offset. On, they get
   `date: 2026-10-04`, so the post's date says neither the time it went out nor the writer's
-  time zone. (The commit that adds it still carries the time on GitHub.)
+  time zone. With the no-reply address on too, commits are dated by the day as well, at
+  midnight UTC: one adding a post by the post's own day (another day beside it would narrow
+  down the hour), others by the day they go out. Without the no-reply address GitHub dates the
+  commit to the second, since it takes a date only with an author. GitHub's own logs keep the
+  real moment either way.
   - The day is the site's (UTC without a site zone), where Jekyll builds, for a note's own date
     too: a post is never in its future, hidden until that day.
   - Fixed on the first try, like the file name: a retry writes the same date. A site zone set
@@ -347,6 +397,55 @@ blog's switches, whichever blog is open when it goes.
   matters.
 - The app's version, with the build's CI run and commit in a debug build. A tap or long press
   copies it, for a bug report.
+
+## Updates (debug builds)
+
+A debug build from CI notices a newer one and installs it. Release builds, and builds made on a
+laptop, do neither; a release carries no installer (`check` fails if its manifest asks for one).
+
+- **Asking:** when the app comes to the front, at most every three hours, and every six hours in
+  the background. It reads the `jekyll-poster-debug` release's public list; the newest build is
+  the highest `jekyll-poster-debug-<run>.apk` on it. Any answer counts as asked, so a rate limit
+  isn't spent again; no answer doesn't.
+- **Nothing of the writer's goes with it.** No token. It goes through the VPN when any blog asks
+  for one, like signing in; with no VPN up nothing is sent, and the browser isn't offered either.
+  The request record lists it as `updates`.
+- **Home says it:** "Build N is out", at the top of the list. A tap asks once for Android's
+  "Install unknown apps" switch, then downloads the build, checks it (this app, the same key, a
+  higher build) and hands it to Android's installer.
+- **What the key check proves:** little on its own. The debug key is in this public repository,
+  so anyone can sign with it; the real trust is TLS to GitHub and who can write the release.
+- **Never under the writer.** Installing ends the app, so it waits while a post is being sent and
+  while a post's editor or Connect is open (behind the camera or a picker too, and across a
+  rotation). A tap made then installs once the post is left and nothing is being sent.
+- **In the background**, a newer build downloads on Wi-Fi and installs once the app has been
+  closed for ten seconds and there's room; otherwise it's tried again later, 30 minutes further
+  apart each time. If Android wants the writer to confirm, the tap asks, not the background.
+- **Failures:** a tap's failure says why, and offers the download in a browser when that would
+  help (never around the VPN). A file that fails its checks, five failed downloads or three
+  failed installs of one build (at once, if Android says it can never install) and the app gives
+  up on it: the tap opens the browser instead, and a newer build is tried again. No room isn't
+  held against the build, whether copying it in ran out or Android said there isn't enough
+  storage. A build the background downloaded is tried again 30 minutes later, once there's
+  room; one a tap downloaded, on the next tap or after the next check fetches it again.
+
+## The request record (debug builds)
+
+For auditing what each sign-in sends. Release builds don't have it.
+
+- Off until a session turns it on, since debug builds are also used for real. Then every
+  request the app sends (to GitHub, and the preview's photos) is one JSON line in the app's
+  private files, as it went on the wire: when, which blog or what else it was for, method,
+  address, headers, body, and GitHub's answer code. `RequestRecord.kt` says how to turn it on
+  and read it with adb.
+- No secret is written. `Authorization` is `(hidden)`, with a fingerprint of its token so two
+  sign-ins' requests can be told apart; the device flow's codes and a link's `?token=` (a
+  private file's photo) are hidden; anything shaped like a GitHub token is hidden wherever it is.
+- Only what reached the network is there: not a request the VPN switch refused, a name lookup,
+  or a preview photo served from the cache.
+- Writing it never fails a request: an entry that can't be written is dropped.
+- Photo uploads and other large bodies are recorded by size only. The file starts again past
+  4 MB, keeping one older file. It's left out of backups.
 
 ## Not yet
 
