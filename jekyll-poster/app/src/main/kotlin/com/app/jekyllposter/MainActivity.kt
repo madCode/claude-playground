@@ -114,15 +114,15 @@ internal fun postToStart(intent: Intent?): Shared? {
     if (intent == null || intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return null
     if (intent.action == MainActivity.ACTION_NEW_POST) return Shared("", emptyList())
     // "Open with": the note to import is the intent's data, read like a shared file.
-    if (intent.action == Intent.ACTION_VIEW) return intent.data?.let { Shared("", emptyList(), it) }
+    if (intent.action == Intent.ACTION_VIEW) return null
     if (intent.action != Intent.ACTION_SEND && intent.action != Intent.ACTION_SEND_MULTIPLE) return null
     val streams = when (intent.action) {
         Intent.ACTION_SEND -> listOfNotNull(intent.parcelable<Uri>(Intent.EXTRA_STREAM))
-        else -> intent.parcelables<Uri>(Intent.EXTRA_STREAM)
+        else -> intent.parcelables<Uri>(Intent.EXTRA_STREAM).take(1)
     }
     val images = streams.filter { intent.type?.startsWith("image/") == true }
     // A note shared as a file (Markdown, or plain text), as Obsidian and file managers share them.
-    val note = streams.singleOrNull()?.takeIf { intent.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true }
+    val note = streams.singleOrNull()?.takeIf { intent.action == Intent.ACTION_SEND && intent.type == "text/markdown" }
     val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }?.let { text ->
         val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
         // A shared link becomes a Markdown link, titled by the page when the sharing app says it.
