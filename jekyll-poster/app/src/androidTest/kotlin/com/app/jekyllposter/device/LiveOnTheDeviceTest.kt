@@ -528,14 +528,14 @@ class LiveOnTheDeviceTest {
         assertTrue("Sent at $wrote, before its time $due", wrote >= due - 1_000)
     }
 
-    /** Opens a new post from Home and writes [title] and [body] in it. */
-    private fun newPost(title: String, body: String) {
+    /** Opens a new post from Home and writes [title], and [body] when given, in it. */
+    private fun newPost(title: String, body: String?) {
         ActivityScenario.launch(MainActivity::class.java)
         waitFor("New post")
         compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
         compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("title")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("title").performTextInput(title)
-        compose.onNodeWithTag("body").performTextInput(body)
+        body?.let { compose.onNodeWithTag("body").performTextInput(it) }
     }
 
     /** Taps [item] in the editor's menu. */
@@ -667,7 +667,9 @@ class LiveOnTheDeviceTest {
     @Test fun aPostWithACategoryBoldTextAndAPreviewGoesOutAsWritten() {
         testName = "editor-tools"
         val a = signInToA()
-        newPost(titleTools, "words.")
+        // The category before the body: typing there scrolls the categories out of view, where a
+        // tap lands on nothing.
+        newPost(titleTools, null)
         compose.onNode(hasContentDescription("Add category")).performClick()
         compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("termQuery")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("termQuery").performTextInput("device-check")
@@ -675,6 +677,7 @@ class LiveOnTheDeviceTest {
         compose.onNodeWithText("Done").performClick()
         // Bold at the cursor, then the word typed between its marks: no selection, whose text
         // toolbar can take the next tap.
+        compose.onNodeWithTag("body").performTextInput("words.")
         compose.onNodeWithTag("body").performTextInputSelection(TextRange(0))
         compose.onNodeWithContentDescription("Bold").performClick()
         compose.onNodeWithTag("body").performTextInput("Strong")
