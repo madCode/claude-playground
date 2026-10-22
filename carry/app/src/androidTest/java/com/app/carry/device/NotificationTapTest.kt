@@ -9,13 +9,11 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import com.app.carry.PrefsSeen
 import com.app.carry.SessionFolder
-import com.app.carry.SessionWatchWorker
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -49,6 +47,8 @@ class NotificationTapTest {
         assertTrue("Carry couldn't take the folder's grant", SessionFolder(carry).remember(TestFolder.tree()))
         // Seen before, but not this sheet: a phone that has run the check, so today's is news.
         PrefsSeen(carry).remember(emptySet())
+        // The check compares the file's date with its own clock: not across midnight.
+        while (LocalTime.now().isAfter(LocalTime.of(23, 58))) Thread.sleep(1_000)
         val today = LocalDate.now()
         // The class starts now, so the sheet is due whatever the hour the test runs.
         val startsAt = LocalDateTime.now().withNano(0)
@@ -82,9 +82,9 @@ class NotificationTapTest {
         weightBox().text = "42"
         assertEquals("42", weightBox().text)
 
-        // Not saved. The owner locks the phone or goes Home, and the sheet's notice arrives.
+        // Not saved. The owner goes Home and taps the sheet's notice. Opening Carry scheduled the
+        // hourly check, whose first run is at once: that run posted it, with the real intent.
         device.pressHome()
-        WorkManager.getInstance(carry).enqueue(OneTimeWorkRequestBuilder<SessionWatchWorker>().build())
         device.openNotification()
         val notice = device.wait(Until.findObject(By.text("3G sheet is ready")), 60_000)
         checkNotNull(notice) { "No notification for today's sheet" }
