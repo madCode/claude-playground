@@ -30,7 +30,17 @@ class CarryAppScreenTest {
 
     private fun shoot(name: String) {
         compose.waitForIdle()
-        val shot = compose.onRoot().captureToImage().asAndroidBitmap()
+        // On CI a capture of a screen that shoots fine elsewhere sometimes
+        // comes back flat: the two format-label screens, in about one Carry
+        // build in six, never in local runs. So a flat capture is retaken a
+        // frame later, a few times; a screen flat every time still fails below.
+        var shot = compose.onRoot().captureToImage().asAndroidBitmap()
+        repeat(4) {
+            if (!shot.isFlat()) return@repeat
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+            shot = compose.onRoot().captureToImage().asAndroidBitmap()
+        }
         // A capture that came back as one flat colour is not evidence. It
         // happens silently -- the test stays green and CI uploads the blank
         // as an artifact -- and it fooled me twice on this project, once
