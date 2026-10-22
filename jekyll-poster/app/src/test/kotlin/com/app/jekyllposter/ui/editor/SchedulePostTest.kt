@@ -131,6 +131,46 @@ class SchedulePostTest {
         compose.onNodeWithText("Schedule").performClick()
         assertEquals(LocalDate.now().atTime(13, 15).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(), chosen)
     }
+
+    @Test fun aTimeThatPassesWhileTheDialogIsOpenCantBeScheduled() {
+        var clock = LocalDate.now().atTime(11, 58).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        var chosen: Long? = null
+        compose.mainClock.autoAdvance = false
+        compose.setContent { PosterTheme { ScheduleDialog(onDismiss = {}, onSchedule = { chosen = it }, now = { clock }) } }
+        compose.onNodeWithText("Today").performClick()
+        setTime(compose, LocalTime.of(12, 0))
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.onNodeWithText("Goes out at ", substring = true).assertExists()
+
+        clock += 3 * 60_000
+        compose.mainClock.advanceTimeBy(6_000)
+        compose.onNodeWithText("That time has passed.").assertExists()
+        compose.onNodeWithText("Schedule").performClick()
+        assertNull(chosen)
+    }
+
+    @Test fun aScheduledPostPastItsTimeStillOffersSendNow() {
+        app.publishNow = false
+        val id = runBlocking {
+            app.signIn()
+            c.drafts.insert(Draft(blog = SAMPLE_BLOG, title = "Late", body = "x", state = PostState.Queued, sendAfter = System.currentTimeMillis() - 60_000, scheduled = true))
+        }
+        val editor = EditorViewModel(c, id).also { e -> idleUntil { e.text != null && e.state.value.draft != null } }
+        compose.setContent { PosterTheme { EditorScreen(editor) {} } }
+        compose.waitFor("; sending…")
+        compose.onNodeWithText("Send now").performClick()
+        compose.waitUntilLooped { id in app.sentNow }
+    }
+
+    @Test fun aScheduledPostSaysWhenEvenWhileItsVpnIsOffAndSaysWhenItsLate() {
+        val now = System.currentTimeMillis()
+        val ahead = Draft(title = "Later", state = PostState.Queued, sendAfter = now + 3_600_000, scheduled = true)
+        assertTrue(ahead.status(waitingForVpn = true, now = now).first.startsWith("Scheduled for "))
+        val late = ahead.copy(sendAfter = now - 60_000)
+        assertTrue(late.status(now = now).first, late.status(now = now).first.endsWith("; sending…"))
+        // A random time is no promise: past it, the post just waits to go, VPN first.
+        assertEquals("Waiting for your VPN…", ahead.copy(scheduled = false).status(waitingForVpn = true, now = now).first)
+    }
 }
 
 /**

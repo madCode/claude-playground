@@ -233,8 +233,10 @@ private fun DraftRow(draft: Draft, waitingForVpn: Boolean, onClick: () -> Unit) 
 fun Draft.status(live: String = "live on the site", waitingForVpn: Boolean = false, now: Long = System.currentTimeMillis()): Pair<String, Boolean> = when (state) {
     PostState.Draft -> (if (editingPath != null) "Editing · not published yet" else "Draft") to false
     PostState.Queued -> when {
-        waitingForVpn -> "Waiting for your VPN…"
+        // The time it's due says more than the VPN until then: the VPN may well be back by then.
         (sendAfter ?: 0) > now && scheduled -> "Scheduled for ${whenScheduled(sendAfter!!, now)}"
+        waitingForVpn -> "Waiting for your VPN…"
+        scheduled && sendAfter != null -> "Scheduled for ${whenScheduled(sendAfter, now)}; sending…"
         (sendAfter ?: 0) > now -> "Going out at ${
             Instant.ofEpochMilli(sendAfter!!).atZone(ZoneId.systemDefault()).toLocalTime()
                 .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))

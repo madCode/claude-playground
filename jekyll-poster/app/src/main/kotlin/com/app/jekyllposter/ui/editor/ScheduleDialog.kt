@@ -20,15 +20,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.app.jekyllposter.ui.home.whenScheduled
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -51,7 +55,14 @@ fun ScheduleDialog(onDismiss: () -> Unit, onSchedule: (Long) -> Unit, now: () ->
     var pickingDay by rememberSaveable { mutableStateOf(false) }
     val time = rememberTimePickerState(suggested.hour, suggested.minute, is24Hour = DateFormat.is24HourFormat(LocalContext.current))
     val at = LocalDate.ofEpochDay(day).atTime(time.hour, time.minute).atZone(zone).toInstant().toEpochMilli()
-    val ahead = at > now()
+    // Read again every few seconds: a time chosen just ahead can pass while the dialog is open.
+    val clock by produceState(now()) {
+        while (true) {
+            delay(5_000)
+            value = now()
+        }
+    }
+    val ahead = at > clock
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -71,13 +82,14 @@ fun ScheduleDialog(onDismiss: () -> Unit, onSchedule: (Long) -> Unit, now: () ->
                 Text("Time", style = MaterialTheme.typography.labelLarge, modifier = Modifier.semantics { heading() })
                 TimeInput(state = time)
                 Text(
-                    if (ahead) "Goes out at ${whenScheduled(at, now())}, if the phone is on and online then; otherwise as soon as it is."
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                    text = if (ahead) "Goes out at ${whenScheduled(at, now())}, if the phone is on and online then; otherwise as soon as it is."
                     else "That time has passed.",
                     color = if (ahead) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
                 )
             }
         },
-        confirmButton = { TextButton(enabled = ahead, onClick = { onSchedule(at) }) { Text("Schedule") } },
+        confirmButton = { TextButton(enabled = ahead, onClick = { if (at > now()) onSchedule(at) }) { Text("Schedule") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 

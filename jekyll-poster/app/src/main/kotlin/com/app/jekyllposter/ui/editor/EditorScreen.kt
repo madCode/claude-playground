@@ -166,8 +166,9 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                             },
                         ) { send(if (jekyllDraft) Destination.Drafts else Destination.Posts) }
                     }
-                    // Waiting for its random or scheduled time: the writer can still send it at once.
-                    if (state.draft?.state == PostState.Queued && (state.draft?.sendAfter ?: 0) > nowUntil(state.draft?.sendAfter)) {
+                    // Waiting for its random or scheduled time, or a scheduled one Android hasn't
+                    // woken yet: the writer can still send it at once.
+                    if (state.draft?.state == PostState.Queued && ((state.draft?.sendAfter ?: 0) > nowUntil(state.draft?.sendAfter) || state.draft?.scheduled == true)) {
                         InkButton("Send now", onClick = viewModel::sendNow)
                     }
                     // A queued post may be mid-commit; deleting it then would lose the phone's record
