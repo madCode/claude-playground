@@ -156,6 +156,21 @@ class MigrationTest {
         }
     }
 
+    @Test fun version9QueuedPostsStayUnscheduled() {
+        helper.createDatabase(DB, 9).use { db ->
+            db.execSQL("INSERT INTO drafts (id, title, body, categories, tags, state, sendAfter, createdAt, updatedAt) VALUES (7, 'Kept', 'b', '[]', '[]', 'Queued', 99, 0, 0)")
+        }
+        helper.runMigrationsAndValidate(DB, 10, true, MIGRATION_9_10).use { db ->
+            db.query("SELECT title, sendAfter, scheduled FROM drafts WHERE id = 7").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("Kept", c.getString(0))
+                // A post waiting for its random time keeps it, and still reads as random.
+                assertEquals(99L, c.getLong(1))
+                assertEquals(0, c.getInt(2))
+            }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
     }

@@ -91,6 +91,16 @@ when its reps fall below that number.
 added · anything untouched counts as not done". *hurt* on its own is not
 "noted": it is the commonest reason to leave a row.
 
+**A row of several rounds says what to log.** A ladder (`8 / 6 / 4 x`) is
+one row standing for three sets. Under its name the row says "3 rounds ·
+log your heaviest set": one true weight and count is what the coach's
+arithmetic uses, and saying so keeps a tired day from changing what the
+record means. Only on a row that takes a weight: on a bodyweight ladder
+every round has the same load, so "heaviest" picks nothing. The count
+comes from the coach's `rounds` field, never from
+the board's words, so a file without the field, or with a value of the
+wrong shape, shows no hint and loses nothing else.
+
 **Why a blank bodyweight row isn't "done".** A blank row can't be told
 apart from one not done. If blank meant done, movements skipped or
 forgotten would enter history as completed sets, and a wrong number in
@@ -533,9 +543,12 @@ activity and rebuilds it, taking the ViewModel — typed weights, added
 rows, an in-flight save — with it. Landing on a particular tab is not
 worth losing numbers for, so the intent is `SINGLE_TOP` and the folder is
 re-read on resume as it always was.
+A device test checks it on an emulator on every PR (`NotificationTapTest`):
+a weight typed and not saved is still in its box after a tap on the real
+notification.
 
-**A debug build holds seven Android permissions, and this feature brought
-five of them; a release build holds five.** `aapt2 dump permissions` on the built APK is the only honest
+**A debug build holds six Android permissions, and this feature brought
+four of them; a release build holds four.** `aapt2 dump permissions` on the built APK is the only honest
 source for this, because a library brings its own. It also lists
 `<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which
 androidx.core defines for the app's own receivers; it grants nothing
@@ -544,7 +557,7 @@ outside the app.
 Three are ours: `POST_NOTIFICATIONS`, required on API 33+ to post
 anything, and, in a debug build only, `INTERNET` and
 `REQUEST_INSTALL_PACKAGES`, for the update below. `check` fails if a
-release build's merged manifest asks for either. The other four arrive with
+release build's merged manifest asks for either. Three more arrive with
 `androidx.work`, and the app can't opt out of them while using it:
 
 | permission | why WorkManager wants it |
@@ -552,7 +565,13 @@ release build's merged manifest asks for either. The other four arrive with
 | `WAKE_LOCK` | hold the device awake long enough to finish a check |
 | `RECEIVE_BOOT_COMPLETED` | re-register the periodic work after a reboot |
 | `ACCESS_NETWORK_STATE` | read connectivity, for network constraints: the debug build's update check and Wi-Fi download use them |
-| `FOREGROUND_SERVICE` | run expedited work |
+
+WorkManager also asks for `FOREGROUND_SERVICE`, for expedited and
+foreground work. Carry has neither, so the manifest removes it and `check`
+fails if it comes back. What it might have broken is the check coming back
+after a reboot, so CI's emulator job reboots and checks
+(`tools/reboot-check.sh`): WorkManager's jobs aren't kept across a reboot,
+and its boot receiver schedules them again without Carry being opened.
 
 `ACCESS_NETWORK_STATE` permits *reading whether a network exists*, not
 using one. The notification text carries the class alone, because a lock
@@ -652,8 +671,13 @@ the debug source set only; a release build has neither.
    toast only. Three failed installs of one build, or one Android says can
    never install (invalid, incompatible, a conflict), and Carry gives up on
    that build: the notice's tap then opens the download in a browser
-   instead. A newer build is tried again. A failed download, or the owner
-   saying no to Android's question, isn't counted.
+   instead. A newer build is tried again. A failed download, the owner
+   saying no to Android's question, or a phone too full to take the copy
+   isn't counted. That last says to free some space and offers no link: a
+   browser's download needs the same room. If Android itself answers that
+   there isn't enough storage, a build the background downloaded is tried
+   again 30 minutes later, once storage isn't low; one a tap downloaded,
+   on the next tap or after the next check fetches it again.
 
 The notice reads "Downloading build N…" and can't be tapped again until
 Android's installer has answered, so a second tap can't start a second
@@ -687,12 +711,23 @@ without a tap (`LiveUpdates`, `LiveWorkers`):
   on screen or the mark is set, the install is tried again later, 30
   minutes further apart each time. Both are checked again after the copy
   into Android's installer, just before the hand-off.
+- **Nor while the folder picker is out.** The picker pauses Carry just as
+  leaving it does, so an install then would end Carry under it and the
+  folder picked would arrive nowhere. `MainActivity` notes each answer it
+  sends another app for (`AwaitedAnswers`, on disk) and crosses it off
+  when the answer comes, so a turn of the phone or Android dropping the
+  process meanwhile doesn't let go of it. Only a fresh start of Carry, in
+  a task of its own, clears one left behind: a start on top of an
+  existing task (a launcher tap after the session notice opened Carry
+  gets one) may have the picker below it.
+- **And not while storage is low**, since Android's copy of the build
+  needs room as the download did.
 - **No question out of nowhere.** If Android wants the owner to confirm
   (the first in-app update, or below Android 12), the background attempt
   is dropped and the notice's tap installs it instead. A dialog appearing
   on its own, perhaps while the owner glances at the sheet in the lobby,
   would be worse than waiting. A failure in the background isn't toasted,
-  but it is counted toward giving up.
+  but it is counted toward giving up, unless it's for want of room.
 - Without "install unknown apps" allowed, nothing happens in the
   background; the tap asks for it as before.
 

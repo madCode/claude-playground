@@ -107,6 +107,8 @@ data class Draft(
      * the writer taps Publish, so a restart or a retry doesn't choose again.
      */
     val sendAfter: Long? = null,
+    /** [sendAfter] is a time the writer chose (Schedule…), not a random one. */
+    @ColumnInfo(defaultValue = "0") val scheduled: Boolean = false,
     val buildState: BuildState? = null,
     val error: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
@@ -223,11 +225,11 @@ interface DraftDao {
      * tried for it ([Draft.canTakeBack]); the number of rows changed. A tried commit may have
      * landed unheard, and the post be live already.
      */
-    @Query("UPDATE drafts SET state = 'Draft', sendAfter = NULL, updatedAt = :now WHERE id = :id AND state = 'Queued' AND destination != 'Delete' AND sentShas = '[]'")
+    @Query("UPDATE drafts SET state = 'Draft', sendAfter = NULL, scheduled = 0, updatedAt = :now WHERE id = :id AND state = 'Queued' AND destination != 'Delete' AND sentShas = '[]'")
     suspend fun takeBack(id: Long, now: Long = System.currentTimeMillis()): Int
 
-    /** Clears a queued post's random time, so it goes now; the number of rows changed. */
-    @Query("UPDATE drafts SET sendAfter = NULL WHERE id = :id AND state = 'Queued'")
+    /** Clears a queued post's random or scheduled time, so it goes now; the number of rows changed. */
+    @Query("UPDATE drafts SET sendAfter = NULL, scheduled = 0 WHERE id = :id AND state = 'Queued'")
     suspend fun sendNow(id: Long): Int
 
     @Query("DELETE FROM drafts WHERE id = :id")
@@ -412,7 +414,7 @@ class Converters {
     @TypeConverter fun toImages(json: String): List<DraftImage> = Json.decodeFromString(json)
 }
 
-@Database(entities = [Draft::class, CachedPost::class, SignIn::class, SavedBlog::class, BlogPrivacy::class], version = 9)
+@Database(entities = [Draft::class, CachedPost::class, SignIn::class, SavedBlog::class, BlogPrivacy::class], version = 10)
 @TypeConverters(Converters::class)
 abstract class PosterDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
@@ -423,7 +425,7 @@ abstract class PosterDatabase : RoomDatabase() {
     companion object {
         /** The app's database, brought up to date from any version a debug build has shipped. */
         fun create(context: Context): PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9).build()
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10).build()
     }
 }
 
@@ -529,5 +531,12 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         db.execSQL("UPDATE blogs SET signInId = (SELECT keeper FROM sign_in_keep k WHERE k.id = blogs.signInId) WHERE signInId IN (SELECT id FROM sign_in_keep)")
         db.execSQL("DELETE FROM sign_ins WHERE id IN (SELECT id FROM sign_in_keep WHERE id != keeper)")
         db.execSQL("DROP TABLE sign_in_keep")
+    }
+}
+
+/** Drafts can be scheduled: a send time the writer chose. */
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE drafts ADD COLUMN scheduled INTEGER NOT NULL DEFAULT 0")
     }
 }

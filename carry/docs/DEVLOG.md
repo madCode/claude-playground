@@ -6,7 +6,9 @@
 — rebuilt on every merge to main, installs beside anything else as
 `com.app.carry.debug`. The build number is also on the Since tab, tap to copy.
 
-- **Lately:** a debug build that updates itself on Wi-Fi while Carry is
+- **Lately:** the hourly sheet check proven to come back after a reboot,
+  and `FOREGROUND_SERVICE` gone (cycle 75); a device test on an emulator in CI, proving a tap on the
+  sheet's notification keeps unsaved typing (cycle 74); a debug build that updates itself on Wi-Fi while Carry is
   closed, and checks the file itself (cycles 71–72); the bars beside each family's heaviest gone, the number kept
   (#116); a timed hold keeping its done chip whatever its duration says
   (#115); a newer debug build named at the top of the Since tab
@@ -32,6 +34,88 @@
 The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
+
+## 2026-10-22 — a ladder's row says what to log
+
+- **"3 rounds · log your heaviest set"** under a ladder's name on the
+  After tab, which the owner asked for on 2026-10-18. The count comes from
+  gym-coach's new `rounds` field (gym-coach #73). Carry never reads a
+  ladder out of the board's words.
+- **A bad value costs the hint, not the row.** The field is read raw:
+  `null`, one rung, a string, a fraction, a zero or a count over 1000
+  shows no hint, and the row reads as before. A file from before the
+  field reads as it did.
+- **Only on a row that takes a weight.** The review found that a
+  bodyweight ladder has no heaviest set, so it gets no hint; what to log
+  there is a question in the backlog.
+- **Pairs with the sheet:** it now advises the first round, and this row
+  records the heaviest one.
+## 2026-10-22 — cycle 75: the hourly check survives a reboot, and one permission fewer
+
+- **After a reboot, the sheet check comes back on its own.** CI's
+  emulator now reboots after the device tests and checks, without
+  opening Carry, that the hourly check is scheduled again and runs. It
+  is: Android tells WorkManager the phone has started, and WorkManager
+  puts the check back.
+- **Carry asks for one permission fewer.** `FOREGROUND_SERVICE` came
+  with WorkManager for work Carry never does. It's removed, the reboot
+  check still passes without it, and the build fails if it comes back.
+  The debug build now holds six permissions, a release build four.
+- **Cycle 76 (the "N rounds · log your heaviest set" hint) was skipped
+  here:** it was built in another session at the same time, on its own
+  PR, once gym-coach's `rounds` field reached its main.
+- Nothing you see changed.
+
+## 2026-10-22 — cycle 74: Carry's first device test, on CI's emulator
+
+- **Tapping the sheet's notification keeps what you typed.** That was the
+  one thing the 16 October phone check couldn't show, because nothing had
+  been typed. Now a test shows it on every PR touching Carry: a made-up
+  sheet for today in a folder Carry holds, a weight typed on the After tab
+  and not saved, Home, a tap on the real notification, and the weight is
+  still in its box. With the old bug put back on purpose (`CLEAR_TOP`), the
+  same test went red with the box empty.
+- **Carry now has device tests at all.** `app/src/androidTest` runs on an
+  emulator in a new CI job, `carry-device.yml`, copied from Jekyll
+  Poster's with every action pinned. It takes about four minutes.
+- **The folder is a stand-in.** The test can't drive the system's folder
+  picker reliably, so a small provider in the test APK hands Carry the
+  same kind of lasting folder grant a pick does. Carry's own code reads
+  and writes it as it would your folder.
+- Nothing you see changed. The *Owed on a device* list is one shorter.
+
+## 2026-10-22 — a full phone's build is tried again later
+
+Ported from Jekyll Poster (claude-playground #193).
+
+- **Tried again in 30 minutes.** Android's own "not enough storage"
+  answer stopped counting against a build in the entry below, but nothing
+  tried the build again until the next six-hourly check. Now a downloaded
+  build is tried again 30 minutes later, once storage isn't low.
+- **Not at once, and not dropped.** WorkManager's "storage not low" can
+  hold while Android's installer still refuses, so an immediate retry
+  could copy and be refused over and over. And a retry queued while the
+  attempt that got the answer was still finishing would have been
+  ignored, so it replaces that one.
+
+## 2026-10-21 — updates wait for the folder picker, and a full phone isn't the build's fault
+
+Jekyll Poster's review of the self-update it took from Carry
+(claude-playground #187) found three problems in the shared design. Two
+were Carry's too.
+
+- **An update could end Carry under the folder picker.** Carry counted
+  itself closed whenever it wasn't on screen, and the picker covers it
+  just as leaving does: an install then lost the folder picked. Now it
+  waits while an answer from another app is due, kept on disk so a turn
+  or a dropped process doesn't let go of it.
+- **A full phone counted against the build.** Android failing to take the
+  copy for want of room was one of the three failures that give up on a
+  build for good, and the install wasn't held back while storage was low.
+  Now neither counts, and the install waits for room as the download did.
+- The third, a hold on a screen let go of when the phone turns, has no
+  counterpart here: the unsaved mark is on disk, set from the ViewModel,
+  which a turn keeps.
 
 ## 2026-10-20 — cycle 73: tests for the guards, and the whole-phone refusal stays
 

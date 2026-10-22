@@ -62,6 +62,9 @@ data class BlogEntry(
     val withGitHub: Boolean,
 ) {
     val repoName: String get() = "$owner/$repo"
+
+    /** What the writer calls it: the site's title, or the repository before it's been read. */
+    val name: String get() = title?.takeIf { it.isNotBlank() } ?: repoName
 }
 
 /** What removing a sign-in did. */

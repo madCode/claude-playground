@@ -235,22 +235,6 @@ These are the open paths to one, hardest first.
   `aapt2 dump permissions` on the built APK said otherwise. `DESIGN.md`
   carries the table *(design:
   [new-session-notification](designs/new-session-notification.md))*
-- [ ] **Can WorkManager's `FOREGROUND_SERVICE` be stripped?** It is
-  for expedited or foreground work, and Carry has none: no
-  `setExpedited`, no `setForeground`. The built APK still lists it, with
-  WorkManager's `SystemForegroundService`, so `tools:node="remove"` should
-  drop it. `ACCESS_NETWORK_STATE` is no longer a candidate: the debug
-  build's update download waits for Wi-Fi (an unmetered constraint) and
-  its six-hourly check for any connection, and WorkManager needs it to
-  see either. Checked with `aapt2 dump permissions` on the built APKs
-  (cycle 72): debug and release both list it. NOT done blind: removing a
-  permission a library expects fails at runtime, in a background worker,
-  silently, which is the worst failure shape this app has. Needs an
-  install on a device and a session check confirmed running after a
-  reboot before it is believed. `WAKE_LOCK` and `RECEIVE_BOOT_COMPLETED`
-  must stay: the work would stop surviving reboots without them *(found by
-  checking the built APK rather than the source manifest; reworded in
-  cycle 72)*
 - [ ] **Read the class from the phone's own calendar** — *your call*.
   Looked at again 2026-10-20, when you asked for it if possible. Nothing
   useful can be built in Carry alone yet:
@@ -276,8 +260,17 @@ These are the open paths to one, hardest first.
     `READ_CALENDAR` too.
   Which, if either? *(design:
   [read-class-from-calendar](designs/read-class-from-calendar.md))*
-- [ ] **Say what to type when one row stands for several rounds**
-  *(you asked, 2026-10-18; needs gym-coach's half first)*. A board that
+- [x] **Say what to type when one row stands for several rounds**
+  *(you asked, 2026-10-18)*. **Done 2026-10-22:** the After tab's row says
+  "3 rounds · log your heaviest set", from gym-coach's `rounds` field
+  (gym-coach #73). Only on a row that takes a weight.
+- [ ] **What to log for a bodyweight ladder** — *your call*. `8 / 6 / 4 x
+  push-up` is one row too, but every round has the same load, so
+  "heaviest" picks nothing, and its reps box has no faint count (the
+  slash reads as a range). The first round, the last, or the total would
+  each be stored as a plain count, and nothing later can tell which. The
+  coach's own number for the row is its smallest rung. Which should the
+  row ask for? *(found by the review of the ladder hint)* A board that
   prescribes `8 / 6 / 4` is three sets of one movement, and Carry gives it
   one row. Nothing on either screen says what that row means, so the
   convention lives only in the owner's head: they record *"only my max
@@ -311,6 +304,23 @@ These are the open paths to one, hardest first.
   alone leaves the other half unexplained *(you asked)*
 
 ### Health and tidying
+- [ ] **A blank screenshot fails `CarryAppScreenTest` now and then.**
+  *An unknown format label is quoted back* came back flat ("captured a
+  blank image") on 3 of 8 CI builds of #204, all with the same app code,
+  and passed 10 of 10 run alone locally. Its neighbours that flatten
+  every time already skip `shoot()`. Count it over 20 CI-like runs (the
+  whole class) before changing anything *(found by cycle 75)*
+- [ ] **`tools:node="remove"` drops `FOREGROUND_SERVICE` whoever asks for
+  it.** A library added later that really runs foreground work would
+  build, pass `check` and fail at run time. When a dependency is added,
+  look at its manifest *(review of cycle 75)*
+- [ ] **More journeys on the emulator job.** It exists now (cycle 74),
+  so the device-only rows of the journey map can each get a test with a
+  made-up sheet: rotation and a killed app on a half-filled After tab
+  with a real Activity, the share chooser opening with the preview's
+  text, a long session's last row above the navigation bar *(found by
+  cycle 74; the reboot check came in cycle 75)*
+
 ### Owed on a device
 
 Only a real phone can answer these.
@@ -324,28 +334,14 @@ Only a real phone can answer these.
   test proves the line is a polite live region, not that TalkBack speaks
   it. With TalkBack on: add a row, type a name, save, and listen *(due
   with the typed-name change)*
-- [ ] **Does tapping a notification preserve typed-but-unsaved numbers?**
-  The tap itself is confirmed — it opens the app on the Before tab. What is
-  NOT confirmed is the property the `SINGLE_TOP` fix exists for: that the
-  activity is brought forward rather than finished and rebuilt, so
-  `CarryViewModel`'s edits, added rows and in-flight save survive.
-
-  The 2026-10-16 test could not exercise it. The test sheet was blank and
-  nothing had been typed, so there was no state to lose and a broken
-  version would have looked identical. Worth saying plainly because "the
-  tap works" reads like the fix is proven, and it is not.
-
-  The sequence: type a weight on the After tab, do NOT save, background the
-  app, then tap a notification when one arrives. Numbers still there means
-  the fix holds; empty boxes mean the activity was rebuilt, which for this
-  app is the cardinal failure *(device)*
 - [ ] Bottom-edge insets against the navigation bar with a long session *(device)*
 - [ ] **Updates on a phone** *(due with cycles 71 and 72)*. Only a device
   can show: the signing check reading a real downloaded APK; a background
   install while Carry is closed (no dialog on Android 12+, once Carry has
-  installed itself); no install while the After tab holds unsaved typing;
-  a release build with no "install unknown apps" entry. The steps are in
-  DEVLOG.md, cycle 72. **And the folder grant surviving it:** an update
+  installed itself); no install while the After tab holds unsaved typing,
+  or while the folder picker is open over Carry; a release build with no
+  "install unknown apps" entry. The steps are in DEVLOG.md, cycle 72.
+  **And the folder grant surviving it:** an update
   replaces the installed app the way `adb install -r` does, which can
   revoke a persisted tree grant and look exactly like a first run. After
   the update, Carry should open on the sheet, not on *Pick your folder*
@@ -467,6 +463,21 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **WorkManager's `FOREGROUND_SERVICE` removed.** Cycle 75 (#204):
+  CI's emulator job now reboots after the device tests
+  (`tools/reboot-check.sh`) and checks the hourly session check is
+  scheduled again without Carry being opened, and runs. It passed on
+  main's manifest first, then without the permission. `aapt2 dump
+  permissions` shows it gone from debug and release, and `check` fails if
+  it returns *(health)*
+- [x] **Tapping a notification keeps typed-but-unsaved numbers.**
+  Cycle 74 (#201): Carry's first device test, `NotificationTapTest`, run
+  on an emulator by the new `carry-device.yml` job on every PR touching
+  `carry/`. It puts a made-up sheet for today in a folder Carry holds,
+  types a weight on the After tab without saving, goes Home, taps the
+  real notification in the shade, and checks the weight is still in the
+  box. Falsified on CI: with `CLEAR_TOP` back in the notification's
+  intent the job went red with the box empty *(device, now CI)*
 - [x] **One pass of tests over the fail-closed guards, and `MainActivity`
   off 0%.** Real behaviour tests, each falsified: the folder against a
   provider (junk rows, a file over 1 MB, a trickling stream, a read-only

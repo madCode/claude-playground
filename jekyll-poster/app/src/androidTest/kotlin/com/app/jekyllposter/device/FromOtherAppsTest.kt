@@ -129,6 +129,51 @@ class FromOtherAppsTest {
         assertFalse("The Obsidian comment went out", text.contains("bread") || text.contains("%%"))
     }
 
+    @Test fun twoPhotosSharedAtOnceBothGoOutWithoutTheirLocation() {
+        share("photos")
+        // One description at a time, a dialog for each photo.
+        listOf("A teal square", "A pink square").forEach { alt ->
+            waitFor("Describe the photo")
+            compose.onNodeWithTag("altText").performTextInput(alt)
+            compose.onNodeWithText("Done").performClick()
+            compose.waitUntil(20_000) { compose.onAllNodes(hasText(alt, substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        }
+        waitForTag("title")
+        publish("Two from the gallery")
+
+        waitUntil("the post on GitHub") { postFile("two-from-the-gallery") != null }
+        val post = postFile("two-from-the-gallery")!!
+        val text = github.text(post)!!
+        assertTrue(text, text.contains("![A teal square](") && text.contains("![A pink square]("))
+        Regex("""\{\{ '(/assets/images/[^']+)' \| relative_url \}\}""").findAll(text).map { it.groupValues[1] }.toList().also { assertEquals(2, it.distinct().size) }.forEach { path ->
+            val exif = ExifInterface(github.files().getValue(path.removePrefix("/")).inputStream())
+            assertNull("A photo on GitHub has a location", exif.latLong)
+        }
+    }
+
+    @Test fun aNoteSharedAsAPlainTextFileIsReadAsANote() {
+        share("notetext", "---\ntags: [lunch]\n---\nSoup. %%ask about the bread%%\n")
+        waitForTag("title")
+        waitFor("Soup.")
+        compose.onNodeWithText("Lunch at the market").assertExists()
+        publish(null)
+
+        waitUntil("the note's post on GitHub") { postFile("lunch-at-the-market") != null }
+        val text = github.text(postFile("lunch-at-the-market")!!)!!
+        assertTrue(text, text.contains("lunch"))
+        assertFalse("The Obsidian comment went out", text.contains("bread") || text.contains("%%"))
+    }
+
+    @Test fun aNoteOpenedWithTheAppStartsAPostFromIt() {
+        share("open", "Opened from a file manager.\n")
+        waitForTag("title")
+        waitFor("Opened from a file manager.")
+        compose.onNodeWithText("Lunch at the market").assertExists()
+        publish(null)
+        waitUntil("the opened note's post on GitHub") { postFile("lunch-at-the-market") != null }
+        assertTrue(github.text(postFile("lunch-at-the-market")!!)!!.contains("Opened from a file manager."))
+    }
+
     // The camera has no location to give on CI's emulator: the shared photo above covers that.
     @Test fun aPhotoFromTheCameraAppIsAddedAndItsOriginalDeleted() {
         // Since Android 11 only a camera app that came with the phone answers the app's request.
