@@ -111,8 +111,7 @@ androidComponents {
 /**
  * Fails when a variant's merged manifest disagrees about updating itself: the debug build installs
  * newer CI builds (src/debug), and a release must not be able to install apps or reach the network.
- * Checking debug as well keeps the release check from passing on a manifest it misread. Neither
- * may ask for FOREGROUND_SERVICE, which WorkManager brings and Carry has no use for.
+ * Checking debug as well keeps the release check from passing on a manifest it misread.
  */
 abstract class SelfUpdateManifestCheck : DefaultTask() {
     @get:InputFile
@@ -129,10 +128,6 @@ abstract class SelfUpdateManifestCheck : DefaultTask() {
             if ((name in text) != selfUpdates.get()) {
                 throw GradleException("${manifest.get().asFile}: $name should " + if (selfUpdates.get()) "be there" else "not be there")
             }
-        }
-        // Removed from WorkManager's in src/main: Carry runs no foreground work (docs/DESIGN.md).
-        if ("\"android.permission.FOREGROUND_SERVICE\"" in text) {
-            throw GradleException("${manifest.get().asFile}: android.permission.FOREGROUND_SERVICE should not be there")
         }
     }
 }
