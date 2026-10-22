@@ -52,6 +52,7 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -452,6 +453,45 @@ class LogScreenTest {
         reach("Send it")
         compose.onNode(hasText("- 10 x squat", substring = true)).assertIsDisplayed()
         shoot("38-post-bodyweight")
+    }
+
+    private val ladder = Session(
+        sheetId = "2026-10-22:2G", date = "2026-10-22", classTag = "2G",
+        sets = listOf(
+            ExerciseSet(
+                ref = 0, line = "8 / 6 / 4 x hip hinge swing", canonical = "hip hinge swing",
+                prescribedReps = 4, prescribedText = "8 / 6 / 4", rounds = Json.parseToJsonElement("[8, 6, 4]"),
+                suggested = "first round: ~30 lb for 8 reps", suggestedWeight = 30.0, family = "legs",
+            ),
+            ExerciseSet(
+                ref = 1, line = "10 x bicep curl", canonical = "bicep curl", prescribedReps = 10,
+                prescribedText = "10", suggestedWeight = 20.0, family = "pull",
+            ),
+        ),
+    )
+
+    @Test
+    fun `a row of several rounds says so, and says what to log`() {
+        // The owner logs one true weight and count for a ladder, the
+        // heaviest set (2026-10-18). The row says that, from the coach's
+        // rounds, and a row of one round says nothing.
+        show(session = ladder)
+        compose.onAllNodesWithText("rounds", substring = true).assertCountEquals(1)
+        val hint = compose.onNodeWithText("3 rounds \u00b7 log your heaviest set").assertIsDisplayed()
+            .getUnclippedBoundsInRoot()
+        val name = compose.onNodeWithText("hip hinge swing", substring = true).getUnclippedBoundsInRoot()
+        val box = compose.onNodeWithContentDescription("hip hinge swing, lb").getUnclippedBoundsInRoot()
+        assertTrue("under its own name and above its boxes: $name, $hint, $box", name.bottom <= hint.top && hint.bottom <= box.top)
+        shoot("43-ladder-row")
+    }
+
+    @Test
+    fun `the same ladder without the coach's rounds gets no hint, whatever its text says`() {
+        // Never read out of prescribed_text: a file from before the field
+        // reads exactly as it did.
+        show(session = ladder.copy(sets = ladder.sets.map { it.copy(rounds = null) }))
+        compose.onNodeWithText("hip hinge swing", substring = true).assertIsDisplayed()
+        compose.onAllNodesWithText("rounds", substring = true).assertCountEquals(0)
     }
 
     private fun bodyweight(ref: Int, name: String, asked: String, reps: Int?, weight: Double? = null) = ExerciseSet(

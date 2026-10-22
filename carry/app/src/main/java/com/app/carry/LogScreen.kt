@@ -203,6 +203,7 @@ fun LogScreen(
                 LogRow(
                     name = set.displayName,
                     prescription = set.prescription,
+                    rounds = set.roundCount,
                     // A range has no single count to fill: its floor would
                     // go into history as the reps done.
                     prescribedReps = set.prescribedReps.takeIf { set.prescribedText?.isRange() != true },
@@ -303,6 +304,9 @@ private fun LogRow(
      *  of what the row is. Kept out of [name] so it stays out of the
      *  TalkBack labels on the number boxes, which name the movement. */
     prescription: String?,
+    /** [ExerciseSet.roundCount]: the row stands for several rounds, and the
+     *  record wants one true weight and count, so the row says which. */
+    rounds: Int?,
     /** The runner's rep count, shown faintly in an empty reps box. The
      *  coach's number, not the board's words: "10 total" is 5 a side, and
      *  the importer compares reps against this. Null for a range ("6-12"),
@@ -350,6 +354,13 @@ private fun LogRow(
             // At the end of the name line, beside the movement it's about.
             // On an untouched row it says why the row was left.
             Chip("hurt", entry.hurt, Look.Brick) { change(entry.copy(hurt = !entry.hurt)) }
+        }
+        rounds?.let {
+            Text(
+                "$it rounds \u00b7 log your heaviest set",
+                color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.After.Note,
+                modifier = Modifier.padding(start = 9.dp, top = 2.dp),
+            )
         }
         FlowRow(
             Modifier.fillMaxWidth().padding(start = 9.dp, top = 4.dp),
