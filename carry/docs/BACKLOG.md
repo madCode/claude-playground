@@ -340,7 +340,7 @@ Only a real phone can answer these.
   the fix holds; empty boxes mean the activity was rebuilt, which for this
   app is the cardinal failure *(device)*
 - [ ] Bottom-edge insets against the navigation bar with a long session *(device)*
-- [ ] **Updates on a phone** *(due with cycles 71 and 72)*. Only a device
+- [ ] **Updates on a phone** *(due with cycles 71 and 72, and the no-room change)*. Only a device
   can show: the signing check reading a real downloaded APK; a background
   install while Carry is closed (no dialog on Android 12+, once Carry has
   installed itself); no install while the After tab holds unsaved typing;
