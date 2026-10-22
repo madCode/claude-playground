@@ -31,11 +31,14 @@ deleted after, and its request record is kept for the privacy audit.
 
 | Check | It proves |
 |---|---|
-| Two blogs, two sign-ins | Blog A signed in to and published from the screens, the organisation's blog added as a second sign-in; both posts go live on Pages and their notifications show |
-| Privacy at its most | Every switch of Set up for writing anonymously but the VPN: the commit says "Update blog", names the no-reply address, and is dated by the day; tracking codes are gone; a random send time is set. What GitHub kept goes in `privacy-report.json` |
+| Two blogs, two sign-ins | Blog A signed in to and published from the screens; the organisation's blog added from Settings → Add a sign-in and published to; a switch back from Home's title; both posts go live on Pages and their notifications show |
+| Privacy at its most | Set up for writing anonymously tapped in Blog & privacy turns every switch on; the VPN is then turned off, as it has a check of its own. The commit says "Update blog", names the no-reply address, and is dated by the day; tracking codes are gone; a random send time is set. What GitHub kept goes in `privacy-report.json` |
 | The app killed while a post waits | A post queued for a minute ahead, then the app's process ended: Android starts its background work alone, and the post goes out |
 | A photo, an edit and a delete | A photo shared in from another app goes out without its location; the post is then edited and deleted from the screens |
 | An edit conflict | The post changes on GitHub while it's open on the phone: Update refuses, and the other change stays |
+| Hide and show | A post hidden from the editor's menu gets `published: false`, the site rebuilds without it, and Show on the site again takes the line out |
+| A Jekyll draft | Saved to `_drafts` from the menu, updated there, then Publish to the site moves it into `_posts` |
+| A scheduled post | Scheduled from the menu three minutes ahead: nothing reaches GitHub before then, and it goes out after |
 | Only connect through a VPN | With the WireGuard app's Proton tunnel off, a post waits and no request reaches GitHub; with it on, the phone's public address changes and the post goes out |
 
 "Jekyll Poster live check", a separate workflow with no emulator, publishes to and deletes from

@@ -2,6 +2,7 @@ package com.app.jekyllposter.device
 
 import android.Manifest
 import android.os.ParcelFileDescriptor
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -186,19 +187,42 @@ class LiveOnTheDeviceTest {
         compose.onNodeWithText("Publish").performClick()
         waitUntil("the post on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, "device-check-$stamp") }
 
-        // A second sign-in, with its own token, and a post for its blog sent in the background.
-        runBlocking {
-            val login = GitHubClient(http, b.token).user().login
-            app.container.accounts.save(Account(login, b.token, b.owner, b.name, b.branch))
-            val id = app.container.drafts.insert(
-                Draft(blog = "${b.fullName}@${b.branch}", title = titleB, body = "The second blog's post, from the same run.", state = PostState.Queued),
-            )
-            app.container.publishQueue.enqueue(id, null)
-        }
+        // A second sign-in, with its own token, added from Settings as a writer would. A blog
+        // added beside another opens its Blog & privacy first: its switches start off.
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Settings").performClick()
+        waitFor("+ Add a sign-in")
+        compose.onNodeWithText("+ Add a sign-in").performClick()
+        waitFor("Token")
+        compose.onNodeWithText("Token").performTextInput(b.token)
+        compose.onNodeWithText("Continue").performClick()
+        waitFor(b.fullName)
+        compose.onNodeWithText(b.fullName).performClick()
+        waitFor("Blog & privacy")
+        device.pressBack()
+        waitFor("${b.name} · @")
+
+        compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
+        compose.waitUntil(20_000) { compose.onAllNodes(hasTestTag("title")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("title").performTextInput(titleB)
+        compose.onNodeWithTag("body").performTextInput("The second blog's post, from the same run.")
+        compose.onNodeWithText("Publish").performClick()
         waitUntil("the post on ${b.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(b, "device-check-$stamp-second-blog") }
+
+        // Back to the first blog, from Home's title.
+        waitFor("${b.name} · @")
+        compose.onNode(clickLabel("Switch blog")).performClick()
+        waitFor("Your blogs")
+        compose.onNode(clickLabel("Switch to this blog")).performClick()
+        waitFor("${a.name} · @")
 
         hearItIsLive(titleA)
         hearItIsLive(titleB)
+    }
+
+    /** A node whose click action is labelled [label], as TalkBack announces it. */
+    private fun clickLabel(label: String) = SemanticsMatcher("click label $label") {
+        it.config.getOrNull(SemanticsActions.OnClick)?.label == label
     }
 
     private fun shell(command: String): String =
@@ -218,15 +242,27 @@ class LiveOnTheDeviceTest {
         testName = "most-private"
         val a = a!!
         val key = "${a.fullName}@${a.branch}"
-        runBlocking {
-            val github = GitHubClient(http, a.token)
-            val user = github.user()
-            app.container.accounts.save(Account(user.login, a.token, a.owner, a.name, a.branch))
-            app.container.privacy.update(key) {
-                it.copy(plainCommitMessages = true, sendAtRandomTime = true, datesByDayOnly = true, removeTrackingCodes = true)
+        signInToA()
+        // Set up for writing anonymously, tapped in Blog & privacy: the no-reply address is
+        // looked up from GitHub there, as for a writer.
+        ActivityScenario.launch(MainActivity::class.java)
+        waitFor("New post")
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Settings").performClick()
+        waitFor("Blog & privacy")
+        compose.onNodeWithText("Blog & privacy").performClick()
+        waitFor("Set up for writing anonymously")
+        compose.onNodeWithText("Set up for writing anonymously").performClick()
+        compose.onNodeWithText("Turn them on").performClick()
+        waitUntil("every switch on", 60_000) {
+            app.container.privacy.get(key).let { p ->
+                p.plainCommitMessages && p.sendAtRandomTime && p.datesByDayOnly && p.removeTrackingCodes && p.commitAsNoReply && p.onlyThroughVpn
             }
-            app.container.privacy.setCommitAsNoReply(key, user.login, user.noReplyAuthor)
         }
+        // The VPN has a test of its own, with a real tunnel; here the post goes without one.
+        runBlocking { app.container.setOnlyThroughVpn(key, false) }
+        device.pressBack()
+        device.pressBack()
 
         val link = "https://example.com/read?utm_source=feed&utm_medium=social&fbclid=abc123&id=7"
         val started = shell("am start -W -a android.intent.action.SEND -t text/plain -p ${app.packageName} --es android.intent.extra.TEXT $link --es android.intent.extra.SUBJECT Good")
