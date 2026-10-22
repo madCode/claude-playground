@@ -5,26 +5,37 @@ and moves it to Done.
 
 ## Next
 
+- [ ] The nightly live check through the screens, where it now sets things in code or skips them:
+  Hide and Show again, and Jekyll drafts; blog B's sign-in added from Settings and a switch from
+  Home's title, and Set up for writing anonymously tapped; the random time with Send now, Stop
+  and edit, offline then back, a bad token, a delete that meets a change, and a category, the
+  toolbar, a `[[` link and Preview.
+- [ ] On every PR's emulator: delete a local draft, Discard changes, Remove from this list; a
+  note's Use the publish day; the first Publish asking for notifications, and its tap; Remove a
+  sign-in and Send them now; search and category pills; Read the blog again; Forget the vault
+  folder; several photos at once, a note as text, Open with.
 - [ ] Sign in with GitHub, a TalkBack listen, and updating itself on a phone, by a person, now and then
   ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)).
 
-## Waiting on madCode
+## Not doing
 
-- [ ] Per-blog templates for new posts: Jekyll's `defaults:` already covers front matter for every
-  post. Build a small "New posts start with" (tags, categories, a body), or drop it?
-  ([#182](https://github.com/madCode/claude-playground/issues/182))
-- [ ] A "keep private" word list per blog, checked before every publish (obyde's find/replace,
-  for posts not from Obsidian): should a listed word be replaced, or block the publish until
-  it's taken out?
-- [ ] Collections other than posts, and `collections_dir`: worth building?
-  ([#179](https://github.com/madCode/claude-playground/issues/179))
-- [ ] Hugo, or other static site generators on GitHub: keep, narrow or drop?
-  ([#180](https://github.com/madCode/claude-playground/issues/180))
+madCode decided these on the morning page, 21 Oct. Each comes back if a writer asks for it.
+
+- Per-blog templates for new posts
+  ([#182](https://github.com/madCode/claude-playground/issues/182)): Jekyll's `defaults:` already
+  sets front matter for every post, and the app follows it.
+- A "keep private" word list per blog.
+- Collections other than posts, and `collections_dir`
+  ([#179](https://github.com/madCode/claude-playground/issues/179)).
+- Hugo, or other static site generators
+  ([#180](https://github.com/madCode/claude-playground/issues/180)): it stays a Jekyll app.
 
 ## Done
 
 Cycles 40 on, newest first. Earlier cycles, and what madCode set up, are in [DEVLOG.md](DEVLOG.md).
 
+- [x] Cycle 57: scheduled posts (Schedule… in the editor), woken by an alarm at their time
+- [x] Cycle 56: audit: Home's "double reads" in the request record are the publish's own reads, kept
 - [x] Cycle 55: a post's notification names its blog when another is open; a tap opens the app on that blog (#137)
 - [x] Cycle 54: a second documentation pass
 - [x] Cycle 53: a documentation pass

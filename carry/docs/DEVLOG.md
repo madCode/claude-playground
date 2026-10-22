@@ -33,6 +33,20 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-22 — a full phone's build is tried again later
+
+Ported from Jekyll Poster (claude-playground #193).
+
+- **Tried again in 30 minutes.** Android's own "not enough storage"
+  answer stopped counting against a build in the entry below, but nothing
+  tried the build again until the next six-hourly check. Now a downloaded
+  build is tried again 30 minutes later, once storage isn't low.
+- **Not at once, and not dropped.** WorkManager's "storage not low" can
+  hold while Android's installer still refuses, so an immediate retry
+  could copy and be refused over and over. And a retry queued while the
+  attempt that got the answer was still finishing would have been
+  ignored, so it replaces that one.
+
 ## 2026-10-21 — updates wait for the folder picker, and a full phone isn't the build's fault
 
 Jekyll Poster's review of the self-update it took from Carry
