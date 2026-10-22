@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!--
+          The folder a device test hands Carry, in the test APK, so in a process and package of
+          its own: it can grant Carry the same persistable tree grant the system picker would.
+        -->
+        <provider
+            android:name="com.app.carry.device.TestFolder"
+            android:authorities="com.app.carry.device.folder"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+        <!--
+          How a test drives that folder. Carry's process can't reach the folder itself until it
+          holds a grant, as the folder needs MANAGE_DOCUMENTS, so the grant is asked for here.
+        -->
+        <provider
+            android:name="com.app.carry.device.TestFolder$Control"
+            android:authorities="com.app.carry.device.control"
+            android:exported="true" />
+    </application>
+</manifest>
