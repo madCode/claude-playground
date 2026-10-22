@@ -214,10 +214,14 @@ doesn't want to open a laptop and make a commit for every post.
   a moment already past can't be chosen. The post waits on the phone, saying "Scheduled for
   9:00 AM tomorrow", and goes out at that time, in place of any random one. Nothing about it
   reaches GitHub before then, so a public repository doesn't show it early.
-  - It goes out only if the phone is on and online then; otherwise as soon as it is. A phone
-    asleep may send it a few minutes late: Android batches background work.
+  - It goes out only if the phone is on and online then; otherwise as soon as it is. An alarm
+    Android allows on an idle phone wakes the app at the time, so a phone asleep sends it within
+    minutes; WorkManager, which an idle phone can hold back for hours, is the backstop. A random
+    time is woken the same way. A restart clears the alarm, leaving WorkManager.
   - It's dated when it goes out, like any post. **Send now** and **Stop and edit** work as for
-    the random time, and forget the schedule.
+    the random time, and forget the schedule; Send now stays once it's late.
+  - Its time shows instead of "Waiting for your VPN…" until it's due. Removing a sign-in it
+    waits on names it and its time, and "Send them now" sends it early.
   - Not a future-dated commit: GitHub Pages' usual setup builds a post dated in the future at
     once, and the repository would show it before its time.
 - A queued post goes to the blog it was written for, with that blog's sign-in, even if another
