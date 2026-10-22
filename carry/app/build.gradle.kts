@@ -18,6 +18,12 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Each device test in a process of its own, with the app's data cleared, so one test's
+        // folder grant and record of seen sheets don't carry into the next.
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
+        // A failed test's screen and window hierarchy are pulled into the build's outputs.
+        testInstrumentationRunnerArguments["useTestStorageService"] = "true"
     }
 
     signingConfigs {
@@ -56,6 +62,7 @@ android {
     }
 
     testOptions {
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
@@ -149,4 +156,12 @@ dependencies {
     testImplementation(libs.espresso.core)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.work.testing)
+
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.test.storage)
+    androidTestImplementation(libs.uiautomator)
+    androidTestUtil(libs.androidx.test.orchestrator)
+    androidTestUtil(libs.androidx.test.services)
 }
