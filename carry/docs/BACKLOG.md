@@ -276,8 +276,10 @@ These are the open paths to one, hardest first.
     `READ_CALENDAR` too.
   Which, if either? *(design:
   [read-class-from-calendar](designs/read-class-from-calendar.md))*
-- [ ] **Say what to type when one row stands for several rounds**
-  *(you asked, 2026-10-18; needs gym-coach's half first)*. A board that
+- [x] **Say what to type when one row stands for several rounds**
+  *(you asked, 2026-10-18)*. **Done 2026-10-22:** the After tab's row says
+  "3 rounds · log your heaviest set", from gym-coach's `rounds` field
+  (gym-coach #73). A board that
   prescribes `8 / 6 / 4` is three sets of one movement, and Carry gives it
   one row. Nothing on either screen says what that row means, so the
   convention lives only in the owner's head: they record *"only my max

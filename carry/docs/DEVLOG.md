@@ -33,6 +33,19 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-22 — a ladder's row says what to log
+
+- **"3 rounds · log your heaviest set"** under a ladder's name on the
+  After tab, which the owner asked for on 2026-10-18. The count comes from
+  gym-coach's new `rounds` field (gym-coach #73). Carry never reads a
+  ladder out of the board's words.
+- **A bad value costs the hint, not the row.** The field is read raw:
+  `null`, one rung, a string, a fraction, a zero or a count over 1000
+  shows no hint, and the row reads as before. A file from before the
+  field reads as it did.
+- **Pairs with the sheet:** it now advises the first round, and this row
+  records the heaviest one.
+
 ## 2026-10-22 — a full phone's build is tried again later
 
 Ported from Jekyll Poster (claude-playground #193).
