@@ -32,6 +32,7 @@ Cycles 40 on, newest first. Earlier cycles, and what madCode set up, are in [DEV
 - [x] Cycles 59–61: the nightly live check walks the journeys through the screens: Hide and Show, Jekyll drafts, blog B added from Settings and a switch, Set up for writing anonymously, the random time's Stop and edit and Send now, offline, a revoked token, a delete conflict, the editor's tools
 - [x] Cycle 57: scheduled posts (Schedule… in the editor), woken by an alarm at their time
 - [x] Cycle 56: audit: Home's "double reads" in the request record are the publish's own reads, kept
+- [x] Cycle 55: a post's notification names its blog when another is open; a tap opens the app on that blog (#137)
 - [x] Cycle 54: a second documentation pass
 - [x] Cycle 53: a documentation pass
 - [x] Cycle 52: debug builds say when a newer one is out, and install it

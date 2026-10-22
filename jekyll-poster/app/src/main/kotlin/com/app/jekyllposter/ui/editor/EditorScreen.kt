@@ -411,7 +411,7 @@ private fun plainField() = TextFieldDefaults.colors(
 @Composable
 private fun ToLine(blog: BlogEntry) {
     Text(
-        "To ${blog.title ?: blog.repoName} · @${blog.login}",
+        "To ${blog.name} · @${blog.login}",
         style = MaterialTheme.typography.labelLarge,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,

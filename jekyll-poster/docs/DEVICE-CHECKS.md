@@ -21,6 +21,11 @@ photos and notes arrive from another process with a real URI grant.
 | A note from Obsidian | `FromOtherAppsTest` | The post takes the note's name as its title, `[[links]]` to the blog's posts become `post_url` links, `%%comments%%` are gone |
 | The camera | `FromOtherAppsTest` | A photo from the emulator's own camera app is added, and the original is deleted from the app's cache |
 | Rotation | `ScreensOnTheDeviceTest` | Text typed, the tag picker and its search survive turning the phone, and the post isn't made twice |
+| Throwing away on the phone | `JourneysOnTheDeviceTest` | Delete draft, Discard changes and Remove from this list each clear the phone's copy and leave the blog as it was |
+| A note's own date | `JourneysOnTheDeviceTest` | Use the publish day drops a shared note's date, and the post is dated when it goes out |
+| Notifications | `JourneysOnTheDeviceTest` | The first Publish asks for them and goes ahead; a failed build's notification, tapped, opens the app on the post |
+| Removing a sign-in | `JourneysOnTheDeviceTest` | With a post still to go it's refused and names the post; Send them now sends it; then it's removed and the app asks to sign in |
+| Finding posts | `JourneysOnTheDeviceTest` | A category pill and search narrow Home's list; Read the blog again picks up a post pushed meanwhile |
 | Large text and dark theme | `ScreensOnTheDeviceTest` | Home, the editor and Blog & privacy at twice the text size, in the dark, pass Android's accessibility checks (labels, touch targets, contrast). Their pictures are kept in the run's report, under `screens/` |
 
 ## On CI's emulator, against real GitHub

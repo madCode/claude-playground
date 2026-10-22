@@ -113,6 +113,9 @@ fun HomeScreen(
     LaunchedEffect(state.error) {
         state.error?.let { snackbar.showSnackbar(it); viewModel.dismissError() }
     }
+    LaunchedEffect(state.notice) {
+        state.notice?.let { snackbar.showSnackbar(it); viewModel.dismissNotice() }
+    }
     BackHandler(enabled = state.query != null, onBack = viewModel::stopSearch)
     Scaffold(
         topBar = {
