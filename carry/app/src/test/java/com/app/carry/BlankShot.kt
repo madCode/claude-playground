@@ -2,7 +2,6 @@ package com.app.carry
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.view.View
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.ComposeTestRule
@@ -34,10 +33,13 @@ internal fun ComposeTestRule.shoot(out: File, name: String) {
 private fun drawnInSoftware(): Bitmap? {
     val activity = ActivityLifecycleMonitorRegistry.getInstance()
         .getActivitiesInStage(Stage.RESUMED).firstOrNull() ?: return null
-    val content = activity.findViewById<View>(android.R.id.content)
-    if (content.width <= 0 || content.height <= 0) return null
-    return Bitmap.createBitmap(content.width, content.height, Bitmap.Config.ARGB_8888)
-        .also { content.draw(Canvas(it)) }
+    // The whole window, not just the content view: captureToImage includes
+    // the window background, and drawing the decor view gives the same
+    // picture pixel for pixel.
+    val window = activity.window.decorView
+    if (window.width <= 0 || window.height <= 0) return null
+    return Bitmap.createBitmap(window.width, window.height, Bitmap.Config.ARGB_8888)
+        .also { window.draw(Canvas(it)) }
 }
 
 /** True when every pixel is the same colour. */
