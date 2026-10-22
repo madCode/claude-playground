@@ -152,7 +152,6 @@ class BlogsViewModel(private val container: AppContainer) : ViewModel() {
     fun sendWaitingNow() {
         val waiting = removing.value?.waiting.orEmpty()
         removing.value = null
-        container.appScope.launch { waiting.forEach { container.sendNow(it.id) } }
     }
 }
 

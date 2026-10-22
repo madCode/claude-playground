@@ -96,7 +96,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     /** Filters the blog's posts to [category], or shows them all again when it's already the filter. */
-    fun filter(category: String?) = status.update { it.copy(category = if (it.category.equals(category, ignoreCase = true)) null else category) }
+    fun filter(category: String?) = Unit
 
     fun dismissError() = status.update { it.copy(error = null) }
 
