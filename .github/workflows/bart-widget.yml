@@ -29,14 +29,14 @@ jobs:
       - name: Build, lint, tests and coverage
         run: ./gradlew build koverXmlReport koverHtmlReport koverVerify
       - name: Upload debug APK
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: bart-widget-debug-apk
           path: bart-widget/app/build/outputs/apk/debug/*.apk
           retention-days: 14
       - name: Upload test reports, coverage and screenshots
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: bart-widget-reports
           path: |
