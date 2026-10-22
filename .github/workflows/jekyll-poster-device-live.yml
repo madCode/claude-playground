@@ -103,7 +103,7 @@ jobs:
             # The photo is shared in from another app, as from a gallery.
             ./gradlew :sender:installDebug
             adb logcat -c
-            if [ -n "$WG_CONF" ] && [ -s "$RUNNER_TEMP/wireguard.apk" ]; then tools/wireguard-on-emulator.sh "$RUNNER_TEMP/wireguard.apk" && touch "$RUNNER_TEMP/wireguard-ready" || echo "::warning::WireGuard couldn't be set up, so the VPN test is skipped."; fi
+            if [ -n "$WG_CONF" ]; then tools/wireguard-on-emulator.sh "$RUNNER_TEMP/wireguard.apk" && touch "$RUNNER_TEMP/wireguard-ready" || { echo "::error::WireGuard couldn't be set up, so the VPN test can't run."; touch "$RUNNER_TEMP/vpn-failed"; }; fi
             # First, before the main run clears the app's data: a post queued for a minute ahead,
             # and the app's process ended with the test. GitHub is then checked from here, before
             # anything starts the app again, so only Android starting its work alone can have sent
@@ -114,7 +114,7 @@ jobs:
             # Last, so the report and kept files are its own: each run clears the one before. Its
             # cleanup also deletes the kill check's post.
             ./gradlew :app:connectedDebugAndroidTest "-PgithubClientId=$CLIENT_ID" "-PgithubAppSlug=$APP_SLUG" -Pandroid.testInstrumentationRunnerArguments.class=com.app.jekyllposter.device.LiveOnTheDeviceTest $([ -f "$RUNNER_TEMP/wireguard-ready" ] && echo -Pandroid.testInstrumentationRunnerArguments.vpnTunnel=proton) "-Pandroid.testInstrumentationRunnerArguments.liveRepoA=$REPO_A" "-Pandroid.testInstrumentationRunnerArguments.liveTokenA=$TOKEN_A" "-Pandroid.testInstrumentationRunnerArguments.liveRepoB=$REPO_B" "-Pandroid.testInstrumentationRunnerArguments.liveTokenB=$TOKEN_B" || { adb logcat -d > app/build/device-logcat.txt; adb logcat -d -b crash; exit 1; }
-            [ ! -f "$RUNNER_TEMP/kill-failed" ] || exit 1
+            [ ! -f "$RUNNER_TEMP/kill-failed" ] && [ ! -f "$RUNNER_TEMP/vpn-failed" ] || exit 1
       # The kept files (request records, the privacy report, a failed run's logcat) go into a
       # public artifact: refuse them all if a token or the VPN's private key is anywhere in them.
       - name: Check the kept files hold no secret

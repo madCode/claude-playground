@@ -8,7 +8,9 @@ apk="$1"
 pkg=com.wireguard.android
 : "${WG_CONF:?WG_CONF is empty}"
 
-adb root >/dev/null
+# The emulator sometimes closes the connection on the first `adb root` ("unable to connect for
+# root: closed"), so it is asked again once the device is back.
+for i in $(seq 5); do adb root >/dev/null && break; [ "$i" = 5 ] && exit 1; adb wait-for-device; sleep 2; done
 # adbd restarts as root, and wait-for-device can answer before it has.
 for _ in $(seq 30); do [ "$(adb shell id -u 2>/dev/null | tr -d '\r')" = 0 ] && break; sleep 1; done
 [ "$(adb shell id -u | tr -d '\r')" = 0 ] || { echo "adb didn't come back as root"; exit 1; }
