@@ -1,15 +1,12 @@
 package com.app.carry
 
-import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.navigationevent.DirectNavigationEventInput
 import androidx.navigationevent.NavigationEventDispatcher
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
@@ -21,7 +18,6 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -471,12 +467,5 @@ class PastSessionScreenTest {
         assertTrue("nothing was asked, got $back", back == 0)
     }
 
-    private fun shoot(name: String) {
-        compose.waitForIdle()
-        val shot = compose.onRoot().captureToImage().asAndroidBitmap()
-        check(!shot.isFlat()) { "$name captured a blank image, so it proves nothing" }
-        File(out, "$name.png").outputStream().use {
-            shot.compress(Bitmap.CompressFormat.PNG, 100, it)
-        }
-    }
+    private fun shoot(name: String) = compose.shoot(out, name)
 }

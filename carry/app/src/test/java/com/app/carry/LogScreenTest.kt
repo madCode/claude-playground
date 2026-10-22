@@ -1,16 +1,13 @@
 package com.app.carry
 
-import android.graphics.Bitmap
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.hasContentDescription
@@ -22,7 +19,6 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -1061,16 +1057,5 @@ class LogScreenTest {
         assertTrue(shared!!, shared!!.contains("ybell deadlift 26"))
     }
 
-    private fun shoot(name: String) {
-        compose.waitForIdle()
-        val shot = compose.onRoot().captureToImage().asAndroidBitmap()
-        // A capture that came back as one flat colour is not evidence. It
-        // happens silently -- the test stays green and CI uploads the blank
-        // as an artifact -- and it fooled me twice on this project, once
-        // into thinking the fonts had broken rendering entirely.
-        check(!shot.isFlat()) { "$name captured a blank image, so it proves nothing" }
-        File(out, "$name.png").outputStream().use {
-            shot.compress(Bitmap.CompressFormat.PNG, 100, it)
-        }
-    }
+    private fun shoot(name: String) = compose.shoot(out, name)
 }

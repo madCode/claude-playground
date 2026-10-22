@@ -1,13 +1,9 @@
 package com.app.carry
 
-import android.graphics.Bitmap
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -31,18 +27,7 @@ class TodayScreenTest {
 
     private val out = File(System.getProperty("screenshotDir") ?: "build/screenshots").apply { mkdirs() }
 
-    private fun shoot(name: String) {
-        compose.waitForIdle()
-        val shot = compose.onRoot().captureToImage().asAndroidBitmap()
-        // A capture that came back as one flat colour is not evidence. It
-        // happens silently -- the test stays green and CI uploads the blank
-        // as an artifact -- and it fooled me twice on this project, once
-        // into thinking the fonts had broken rendering entirely.
-        check(!shot.isFlat()) { "$name captured a blank image, so it proves nothing" }
-        File(out, "$name.png").outputStream().use {
-            shot.compress(Bitmap.CompressFormat.PNG, 100, it)
-        }
-    }
+    private fun shoot(name: String) = compose.shoot(out, name)
 
     @Test
     fun `today shows the change, the held weights and the tail`() {
@@ -218,10 +203,7 @@ class TodayScreenTest {
         // the clock moving past it turns the screen into "No sheet for today".
         compose.setContent { TodayScreen(empty, today = java.time.LocalDate.parse(empty.date)) }
         compose.onNodeWithText("Carry these in").assertIsDisplayed()
-        // No shoot() here: Robolectric's capture comes back flat for this
-        // screen and the blank check would fail. The assertions above are
-        // the test; the picture was never the evidence. Tracked in
-        // docs/BACKLOG.md.
+        shoot("03-empty")
     }
 
     @Test

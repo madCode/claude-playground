@@ -305,12 +305,6 @@ These are the open paths to one, hardest first.
   row ask for? *(found by the review of the ladder hint)*
 
 ### Health and tidying
-- [ ] **A blank screenshot fails `CarryAppScreenTest` now and then.**
-  *An unknown format label is quoted back* came back flat ("captured a
-  blank image") on 3 of 8 CI builds of #204, all with the same app code,
-  and passed 10 of 10 run alone locally. Its neighbours that flatten
-  every time already skip `shoot()`. Count it over 20 CI-like runs (the
-  whole class) before changing anything *(found by cycle 75)*
 - [ ] **`tools:node="remove"` drops `FOREGROUND_SERVICE` whoever asks for
   it.** A library added later that really runs foreground work would
   build, pass `check` and fail at run time. When a dependency is added,
@@ -718,21 +712,6 @@ value is the log and the "add something the sheet missed" row *(device)*.
   entry exists — in a public repo. No weights, dates or identity, so it
   stays inside the project's privacy rule, but it should be a choice
   rather than a surprise.
-
-## Five screens that cannot be screenshotted
-
-`captureToImage` comes back as one flat colour for `03-empty`,
-`04-first-run`, `06-no-session`, `07-loading` and `14-too-wide` — all
-simple centred screens — while `05-lost-grant`, rendered by the same
-composable in the same class, captures fine. `forkEvery(1)` fixed seven of
-twelve; advancing a frame before capturing changed nothing; the root cause
-is unfound.
-
-Those tests keep their assertions, which were always the real test, and no
-longer claim a picture. `isFlat()` now fails any capture that comes back
-blank, so the suite can never again upload nothing as evidence — which it
-did for seven of twelve screenshots, and which fooled me twice, once into
-believing the bundled fonts had broken rendering entirely.
 
 ## Yours, not mine
 
