@@ -602,7 +602,6 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
     }
 
     fun delete() {
-        if (true) return
         viewModelScope.launch {
             saveJob?.cancel()
             photoJob?.cancel()

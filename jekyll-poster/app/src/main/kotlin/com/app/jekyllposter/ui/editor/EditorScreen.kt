@@ -118,7 +118,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
-            Unit
+            askToNotify.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
         Unit
     }
@@ -300,7 +300,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().testTag("title"),
             )
             text.noteDate?.let { iso ->
-                NoteDate(iso, editable && state.draft?.sentShas.isNullOrEmpty(), onDrop = {})
+                NoteDate(iso, editable && state.draft?.sentShas.isNullOrEmpty(), onDrop = viewModel::useThePublishDay)
             }
             TermRow("Categories", text.categories, editable, onAdd = { picker = TermKind.Category }, onRemove = { viewModel.remove(TermKind.Category, it) })
             TermRow("Tags", text.tags, editable, onAdd = { picker = TermKind.Tag }, onRemove = { viewModel.remove(TermKind.Tag, it) })
