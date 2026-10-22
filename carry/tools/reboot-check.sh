@@ -77,6 +77,9 @@ run() {
   done
 }
 
+# Root, to read JobScheduler's saved jobs and, later, to move the clock. Google APIs images allow it.
+adb root > /dev/null
+adb wait-for-device
 adb install -r -g "$apk" > /dev/null
 adb shell am start -W -n "$pkg/com.app.carry.MainActivity" > /dev/null
 before=$(await_jobs 60) || { show_jobs; fail "opening Carry scheduled no session check"; }
@@ -86,6 +89,13 @@ await_period 0 60 || { show_jobs; fail "the session check didn't run before the 
 done_before=$(periods)
 echo "Periods done before the reboot: $done_before"
 adb shell input keyevent KEYCODE_HOME
+
+# JobScheduler saves a persisted job to disk a moment after it is scheduled, and a reboot before
+# then loses it. A phone that reboots hours later has long saved it, so wait for the save.
+i=0
+until adb shell "cat /data/system/job/*.xml" 2>/dev/null | grep -aq "$pkg"; do
+  sleep 2; i=$((i + 2)); [ "$i" -lt 60 ] || fail "JobScheduler never saved the session check to disk"
+done
 
 boot=$(adb shell cat /proc/sys/kernel/random/boot_id)
 adb reboot
@@ -101,7 +111,8 @@ adb shell svc power stayon true
 after=$(await_jobs 180) || { show_jobs; fail "no session check scheduled after the reboot"; }
 echo "Scheduled after the reboot: $after"
 
-# Two hours on, so the next period is due, then the job as JobScheduler would start it.
+# Two hours on, so the next period is due, then the job as JobScheduler would start it. Root
+# again: adbd restarts unprivileged after a reboot.
 adb root > /dev/null
 adb wait-for-device
 adb shell settings put global auto_time 0
