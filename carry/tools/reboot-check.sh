@@ -90,11 +90,21 @@ done_before=$(periods)
 echo "Periods done before the reboot: $done_before"
 adb shell input keyevent KEYCODE_HOME
 
-# JobScheduler saves a persisted job to disk a moment after it is scheduled, and a reboot before
-# then loses it. A phone that reboots hours later has long saved it, so wait for the save.
+# WorkManager's jobs aren't persisted: after a reboot, WorkManager's RescheduleReceiver hears
+# BOOT_COMPLETED and schedules the work again. WorkManager enables that receiver while work is
+# unfinished, and Android saves the change to disk a few seconds later; a reboot before then
+# loses it. A phone that reboots hours later has long saved it, so wait for the save.
+receiver_saved() {
+  adb shell "abx2xml /data/system/users/0/package-restrictions.xml - 2>/dev/null || cat /data/system/users/0/package-restrictions.xml" | python3 -c '
+import sys, xml.etree.ElementTree as ET
+pkg = ET.fromstring(sys.stdin.read()).find("pkg[@name=\"%s\"]" % sys.argv[1])
+names = [] if pkg is None else [i.get("name") for i in pkg.iterfind("enabled-components/item")]
+sys.exit(0 if "androidx.work.impl.background.systemalarm.RescheduleReceiver" in names else 1)
+' "$pkg"
+}
 i=0
-until adb shell "cat /data/system/job/*.xml" 2>/dev/null | grep -aq "$pkg"; do
-  sleep 2; i=$((i + 2)); [ "$i" -lt 60 ] || fail "JobScheduler never saved the session check to disk"
+until receiver_saved; do
+  sleep 2; i=$((i + 2)); [ "$i" -lt 60 ] || fail "Android never saved WorkManager's boot receiver as enabled"
 done
 
 boot=$(adb shell cat /proc/sys/kernel/random/boot_id)
