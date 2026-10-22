@@ -12,6 +12,8 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
@@ -42,6 +44,7 @@ import com.app.jekyllposter.ui.settings.SettingsScreen
 import com.app.jekyllposter.ui.settings.Visibility
 import com.app.jekyllposter.ui.theme.PosterTheme
 import java.io.File
+import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -412,6 +415,29 @@ class ScreenshotTest {
         val vm = BlogPrivacyViewModel(c) { ZoneId.of("Europe/Lisbon") }
         shoot("28-blog-privacy-new-blog", ready = { vm.state.value.isNew && vm.state.value.title == "Night Notes" && vm.state.value.visibility != Visibility.Loading }) {
             BlogPrivacyScreen(vm) {}
+        }
+    }
+
+    @Test fun scheduleDialog() {
+        signIn()
+        val id = runBlocking { c.drafts.insert(Draft(title = "Morning pages", body = "Written the night before.")) }
+        val vm = EditorViewModel(c, id)
+        shoot(
+            "31-schedule", ready = { vm.text != null && vm.state.value.draft != null },
+            act = {
+                compose.onNodeWithContentDescription("More").performClick()
+                compose.onNodeWithText("Schedule…").performClick()
+            },
+        ) { EditorScreen(vm) {} }
+    }
+
+    @Test fun homeWithAScheduledPost() {
+        signIn()
+        val tomorrow = LocalDate.now().plusDays(1).atTime(9, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        runBlocking { c.drafts.insert(Draft(title = "Morning pages", state = PostState.Queued, sendAfter = tomorrow, scheduled = true)) }
+        val vm = HomeViewModel(c)
+        shoot("32-home-scheduled", ready = { vm.state.value.onPhone.isNotEmpty() && !vm.state.value.refreshing }) {
+            HomeScreen(vm, onOpenDraft = {}, onSettings = {})
         }
     }
 }

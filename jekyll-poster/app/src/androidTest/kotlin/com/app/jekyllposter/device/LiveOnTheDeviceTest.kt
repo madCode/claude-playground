@@ -5,6 +5,7 @@ import android.os.ParcelFileDescriptor
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.exifinterface.media.ExifInterface
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -16,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -32,6 +34,12 @@ import com.app.jekyllposter.data.AndroidVpn
 import com.app.jekyllposter.data.Draft
 import com.app.jekyllposter.data.PostState
 import java.io.File
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -99,6 +107,7 @@ class LiveOnTheDeviceTest {
     private val titleVpn = "Device check $stamp, through the VPN"
     private val titlePhoto = "Device check $stamp, photo"
     private val titleConflict = "Device check $stamp, conflict"
+    private val titleScheduled = "Device check $stamp, scheduled"
     private val record = File(app.filesDir, "requests")
 
     @Before fun setUp() {
@@ -415,6 +424,53 @@ class LiveOnTheDeviceTest {
         compose.onNodeWithText("Delete from the blog").performClick()
         compose.onNode(hasText("Delete") and hasAnyAncestor(isDialog())).performClick()
         waitUntil("the post gone from ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { !hasPost(a, slug) }
+    }
+
+    /**
+     * A post scheduled from the editor's menu a few minutes ahead: nothing of it reaches GitHub
+     * before its time, then it goes out by itself, through WorkManager.
+     */
+    @Test fun aScheduledPostWaitsForItsTimeThenGoesOut() {
+        testName = "scheduled"
+        val a = signInToA()
+        ActivityScenario.launch(MainActivity::class.java)
+        waitFor("New post")
+        compose.onNodeWithText("New post", useUnmergedTree = true).performClick()
+        compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("title")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("title").performTextInput(titleScheduled)
+        compose.onNodeWithTag("body").performTextInput("Scheduled from the screens.")
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Schedule…").performClick()
+        // Three whole minutes ahead, so the time typed is still ahead when Schedule is tapped.
+        val at = LocalDateTime.now().plusMinutes(3).truncatedTo(ChronoUnit.MINUTES)
+        waitFor("Tomorrow")
+        compose.onNodeWithText(if (at.toLocalDate() == LocalDate.now()) "Today" else "Tomorrow").performClick()
+        setTime(at.toLocalTime())
+        compose.onNodeWithText("Schedule").performClick()
+        waitFor("Scheduled for")
+
+        val due = at.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val slug = "device-check-$stamp-scheduled"
+        while (System.currentTimeMillis() < due - 20_000) {
+            assertFalse("The scheduled post reached GitHub before its time", runBlocking { hasPost(a, slug) })
+            Thread.sleep(15_000)
+        }
+        waitUntil("the scheduled post on ${a.fullName}", TimeUnit.MINUTES.toMillis(8)) { hasPost(a, slug) }
+        // The app's own record: its first write for the post came at or after the time chosen.
+        val firstWrite = File(record, "requests.jsonl").readLines().map { Json.parseToJsonElement(it).jsonObject }
+            .first { it["method"]?.jsonPrimitive?.content == "POST" && it["url"]?.jsonPrimitive?.content.orEmpty().endsWith("/git/blobs") }
+        val wrote = Instant.parse(firstWrite["at"]!!.jsonPrimitive.content).toEpochMilli()
+        assertTrue("Sent at $wrote, before its time $due", wrote >= due - 1_000)
+    }
+
+    /** Types [time] into the schedule dialog's fields: hour, minute and, on a 12-hour clock, AM or PM. */
+    private fun setTime(time: LocalTime) {
+        val fields = compose.onAllNodes(hasSetTextAction() and hasAnyAncestor(isDialog()))
+        val twelveHour = compose.onAllNodes(hasText("AM")).fetchSemanticsNodes().isNotEmpty()
+        val hour = if (twelveHour) (time.hour % 12).let { if (it == 0) 12 else it } else time.hour
+        fields[0].performTextReplacement(hour.toString())
+        fields[1].performTextReplacement("%02d".format(time.minute))
+        if (twelveHour) compose.onNode(hasText(if (time.hour < 12) "AM" else "PM")).performClick()
     }
 
     /**
