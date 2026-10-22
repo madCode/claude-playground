@@ -13,6 +13,14 @@ newspaperss), and puts any difference in BACKLOG.md.
 reads, scheduled posts, #189, the journey gaps nightly and on every PR, a close-out), until 7am
 Pacific (14:00 UTC), merging each PR once it's green.
 
+### Cycles 59–61 — build: the nightly live check through the screens
+
+- Have a reviewer trace a live test against the screens before pushing: each live run costs 15
+  minutes, and the review found a check that could never pass (Preview is a WebView, read with
+  UiAutomator) and two that raced the screen.
+- A CI step that hangs past its time limit with no failing test, while the same tree passes
+  locally in 4 minutes, was a one-off (#189's build): re-run it once before digging.
+
 ### Cycle 57 — build: scheduled posts
 
 - Ask the reviewer what Android does to background work on an idle phone: WorkManager's delay

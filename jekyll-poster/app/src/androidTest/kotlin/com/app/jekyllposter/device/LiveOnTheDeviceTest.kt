@@ -134,8 +134,10 @@ class LiveOnTheDeviceTest {
         runBlocking {
             for (blog in listOf(a, b)) {
                 val github = GitHubClient(http, blog.token)
+                // After the offline check the network may still be coming back: wait for it.
+                val files = (1..12).firstNotNullOfOrNull { runCatching { github.files(blog.owner, blog.name, blog.branch) }.getOrNull() ?: run { Thread.sleep(5_000); null } }.orEmpty()
                 // With an earlier run's post from the kill check, which the workflow only looks for.
-                github.files(blog.owner, blog.name, blog.branch).filter { "device-check-$stamp" in it.path || "device-check-run-" in it.path }.forEach { entry ->
+                files.filter { "device-check-$stamp" in it.path || "device-check-run-" in it.path }.forEach { entry ->
                     // One file refused doesn't leave the rest on the public blog.
                     runCatching {
                         val sent = github.file(blog.owner, blog.name, blog.branch, entry.path) ?: return@runCatching
@@ -280,7 +282,9 @@ class LiveOnTheDeviceTest {
         compose.onNodeWithText("Publish").performClick()
 
         // Sent at a random time: it waits, saying when. Stop and edit takes it back; Publish
-        // again picks a new time; Send now sends it at once. All from the screens.
+        // again picks a new time; Send now sends it at once. All from the screens. The editor
+        // says "a random time" too while it closes: wait for Home before tapping its row.
+        waitFor("On this phone")
         waitFor("a random time")
         compose.onNodeWithText(titlePrivate).performClick()
         waitFor("Stop and edit")
@@ -288,6 +292,7 @@ class LiveOnTheDeviceTest {
         compose.waitUntil(30_000) { compose.onAllNodes(hasText("Publish")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("body").performTextInput("Taken back and sent again. ")
         compose.onNodeWithText("Publish").performClick()
+        waitFor("On this phone")
         waitFor("a random time")
         val queued = runBlocking { app.container.drafts.list().first { it.title == titlePrivate && it.state == PostState.Queued } }
         val randomDelay = (queued.sendAfter ?: 0) - System.currentTimeMillis()
@@ -591,6 +596,9 @@ class LiveOnTheDeviceTest {
         shell("svc wifi disable")
         shell("svc data disable")
         try {
+            // The commands return before Android drops the network; Publish waits for that.
+            val connectivity = app.getSystemService(android.net.ConnectivityManager::class.java)
+            waitUntil("the network gone", 60_000) { connectivity.activeNetwork == null }
             compose.onNodeWithText("Publish").performClick()
             waitFor("Waiting to publish")
             Thread.sleep(20_000)
@@ -659,7 +667,8 @@ class LiveOnTheDeviceTest {
         compose.onNodeWithText("Add “device-check” as a new category").performClick()
         compose.onNodeWithText("Done").performClick()
         compose.onNodeWithContentDescription("Preview").performClick()
-        waitFor("Strong")
+        // A WebView: its text is outside Compose's tree, but the system's accessibility sees it.
+        assertTrue("The preview didn't show the bold text", device.wait(Until.hasObject(By.textContains("Strong")), 30_000))
         compose.onNodeWithContentDescription("Back to writing").performClick()
         compose.onNodeWithText("Publish").performClick()
 
