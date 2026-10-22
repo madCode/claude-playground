@@ -57,5 +57,6 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/camera_paths" />
         </provider>
+        <receiver android:name=".publish.SendTimeAlarm" android:exported="false" />
     </application>
 </manifest>

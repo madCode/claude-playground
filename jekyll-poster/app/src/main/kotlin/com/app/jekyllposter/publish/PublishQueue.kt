@@ -4,7 +4,7 @@ import android.content.Context
 
 /** Where queued posts are handed over to be sent: WorkManager in the app, the publisher at once in tests. */
 interface PublishQueue {
-    /** Publishes post [id], not before [sendAfter] (epoch millis) when it has one. */
+    /** Publishes post [id], not before [sendAfter] (epoch millis) when it has one, and as near it as Android allows. */
     fun enqueue(id: Long, sendAfter: Long?)
 
     /** Starts [id]'s publish again now, past WorkManager's backoff, still not before [sendAfter]. */
@@ -18,8 +18,15 @@ interface PublishQueue {
 }
 
 class WorkManagerQueue(private val context: Context) : PublishQueue {
-    override fun enqueue(id: Long, sendAfter: Long?) = PublishWorker.enqueue(context, id, sendAfter)
+    override fun enqueue(id: Long, sendAfter: Long?) {
+        PublishWorker.enqueue(context, id, sendAfter)
+        sendAfter?.let { SendTimeAlarm.set(context, id, it) }
+    }
+
     override fun retryNow(id: Long, sendAfter: Long?) = PublishWorker.retryNow(context, id, sendAfter)
     override fun sendNow(id: Long) = PublishWorker.sendNow(context, id)
-    override fun cancel(id: Long) = PublishWorker.cancel(context, id)
+    override fun cancel(id: Long) {
+        PublishWorker.cancel(context, id)
+        SendTimeAlarm.cancel(context, id)
+    }
 }

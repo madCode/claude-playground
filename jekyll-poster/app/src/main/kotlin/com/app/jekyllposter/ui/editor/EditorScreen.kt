@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Drafts
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -95,6 +96,7 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var confirmDeleteFromBlog by rememberSaveable { mutableStateOf(false) }
+    var scheduling by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.closed) { if (state.closed) onClose() }
     BackHandler(onBack = viewModel::close)
     val editable = state.editable
@@ -164,8 +166,9 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                             },
                         ) { send(if (jekyllDraft) Destination.Drafts else Destination.Posts) }
                     }
-                    // Waiting for its random time: the writer can still send it at once.
-                    if (state.draft?.state == PostState.Queued && (state.draft?.sendAfter ?: 0) > nowUntil(state.draft?.sendAfter)) {
+                    // Waiting for its random or scheduled time, or a scheduled one Android hasn't
+                    // woken yet: the writer can still send it at once.
+                    if (state.draft?.state == PostState.Queued && ((state.draft?.sendAfter ?: 0) > nowUntil(state.draft?.sendAfter) || state.draft?.scheduled == true)) {
                         InkButton("Send now", onClick = viewModel::sendNow)
                     }
                     // A queued post may be mid-commit; deleting it then would lose the phone's record
@@ -187,6 +190,21 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                                     },
                                     leadingIcon = { Icon(Icons.Default.Drafts, null) },
                                     onClick = { menu = false; send(Destination.Drafts) },
+                                )
+                            }
+                            if (editable && text?.editingPath == null) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text("Schedule…")
+                                            Text(
+                                                "Publish at a time you choose",
+                                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Schedule, null) },
+                                    onClick = { menu = false; scheduling = true },
                                 )
                             }
                             if (editable && jekyllDraft) {
@@ -348,6 +366,12 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
             },
             confirmButton = { TextButton(onClick = { confirmDelete = false; viewModel.delete() }) { Text(if (published) "Remove" else if (text?.editingPath != null) "Discard" else "Delete") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Keep") } },
+        )
+    }
+    if (scheduling) {
+        ScheduleDialog(
+            onDismiss = { scheduling = false },
+            onSchedule = { at -> scheduling = false; askForNotifications(); viewModel.publish(Destination.Posts, at = at) },
         )
     }
     if (confirmDeleteFromBlog) {

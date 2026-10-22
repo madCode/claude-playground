@@ -9,6 +9,22 @@ waiting on madCode is done, or 7am Pacific (14:00 UTC), whichever comes first. A
 that the app's update system (the `jekyll-poster-debug` release) matches the other apps' (Carry,
 newspaperss), and puts any difference in BACKLOG.md.
 
+**The run of 22 Oct (night)**, as madCode set it: the cycles proposed on 22 Oct (the double
+reads, scheduled posts, #189, the journey gaps nightly and on every PR, a close-out), until 7am
+Pacific (14:00 UTC), merging each PR once it's green.
+
+### Cycle 57 — build: scheduled posts
+
+- Ask the reviewer what Android does to background work on an idle phone: WorkManager's delay
+  was fine for a random time and wrong for a time the writer chose, and only the review saw it.
+- A Compose test helper that finds fields by `hasSetTextAction()` finds the screen's behind a
+  dialog too: scope it with `hasAnyAncestor(isDialog())`.
+
+### Cycle 56 — audit: Home's double reads
+
+- Read the caller list before calling a request redundant: the "second Home read" was the
+  publish's own read before its commit (`Publisher.kt`), which it needs.
+
 ### Cycle 54 — audit: a second documentation pass
 
 - Run a docs pass again after a large feature lands: the self-update PR brought back a long,

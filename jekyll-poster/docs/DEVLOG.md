@@ -16,9 +16,31 @@ Times are when each cycle landed, Pacific.
   a live check on the tester's real blogs covers two sign-ins, privacy at its most, a photo, an
   edit, a delete, an edit conflict and a real VPN.
 - **Used for real:** madCode publishes to their own blog from the phone.
-- **Waiting on you:** four questions in [BACKLOG.md](BACKLOG.md), and three checks by a person
-  ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)): Sign in with GitHub, a TalkBack listen, and updating
-  itself on a phone. None has been run yet.
+- **Waiting on you:** three checks by a person ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)): Sign in
+  with GitHub, a TalkBack listen, and updating itself on a phone. None has been run yet.
+
+## Thu 22 Oct
+
+### Cycle 57: scheduled posts
+- **Asked:** madCode asked for scheduled posts.
+- **Built:** **Schedule…** in the editor's menu picks today, tomorrow or another day, and a time.
+  The post waits on the phone ("Scheduled for 9:00 AM tomorrow") and goes out then, in place of
+  any random time; Send now and Stop and edit work as before. An alarm Android allows on an
+  idle phone wakes the app at the time, for random times too; WorkManager alone can be held
+  back for hours.
+- **Not a future-dated commit:** GitHub Pages' usual setup builds a future-dated post at once,
+  and a public repository would show it early.
+- **Review caught:** the hours-late wake-up; Send them now on removing a sign-in sending
+  scheduled posts early unannounced; the VPN line hiding the time; a time passing while the
+  dialog is open; Send now going once a post was late; TalkBack not hearing "That time has
+  passed". All fixed. Left: "tomorrow" isn't redrawn at midnight on a screen left open.
+- **Checked nightly:** the live check schedules a post three minutes ahead from the screens and
+  sees nothing reach GitHub before then.
+
+### Cycle 56: audit of Home's "double reads"
+- **Found:** the request record shows the blog read two or three times within seconds of a
+  publish. Each Home visit reads it once; the others are the publish's own: once before the
+  commit (file names and conflicts) and once after (the list). No change.
 
 ## Wed 21 Oct
 
