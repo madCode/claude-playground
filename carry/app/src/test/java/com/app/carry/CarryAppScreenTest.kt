@@ -30,10 +30,6 @@ class CarryAppScreenTest {
 
     private fun shoot(name: String) {
         compose.waitForIdle()
-        // On CI a capture of a screen that shoots fine elsewhere sometimes
-        // comes back flat: the two format-label screens, in about one Carry
-        // build in six, never in local runs. So a flat capture is retaken a
-        // frame later, a few times; a screen flat every time still fails below.
         var shot = compose.onRoot().captureToImage().asAndroidBitmap()
         repeat(4) {
             if (!shot.isFlat()) return@repeat
@@ -41,11 +37,34 @@ class CarryAppScreenTest {
             compose.waitForIdle()
             shot = compose.onRoot().captureToImage().asAndroidBitmap()
         }
-        // A capture that came back as one flat colour is not evidence. It
-        // happens silently -- the test stays green and CI uploads the blank
-        // as an artifact -- and it fooled me twice on this project, once
-        // into thinking the fonts had broken rendering entirely.
-        check(!shot.isFlat()) { "$name captured a blank image, so it proves nothing" }
+        // DIAGNOSTIC (temporary, claude/carry-blank-capture): when the capture
+        // is flat, say what it was and try a software draw of the window.
+        if (shot.isFlat()) {
+            val root = compose.onRoot().fetchSemanticsNode()
+            val activity = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().let {
+                var found: android.app.Activity? = null
+                it.runOnMainSync {
+                    found = androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+                        .getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).firstOrNull()
+                }
+                found
+            }
+            val decor = activity?.window?.decorView
+            var soft: Bitmap? = null
+            if (decor != null && decor.width > 0 && decor.height > 0) {
+                soft = Bitmap.createBitmap(decor.width, decor.height, Bitmap.Config.ARGB_8888)
+                decor.draw(android.graphics.Canvas(soft))
+                File(out, "$name-SOFTWARE.png").outputStream().use { soft.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            }
+            File(out, "$name-FLAT.png").outputStream().use { shot.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            val info = "BLANKDIAG $name: shot ${shot.width}x${shot.height} pixel=#${Integer.toHexString(shot.getPixel(0, 0))} " +
+                "root=${root.size} boundsInWindow=${root.boundsInWindow} activity=${activity?.javaClass?.simpleName} " +
+                "decor=${decor?.width}x${decor?.height} attached=${decor?.isAttachedToWindow} " +
+                "hasFocus=${activity?.hasWindowFocus()} soft=${soft?.let { if (it.isFlat()) "flat" else "drawn" }} " +
+                "nodes=${compose.onAllNodes(androidx.compose.ui.test.isRoot()).fetchSemanticsNodes().size}"
+            println(info)
+            error(info)
+        }
         File(out, "$name.png").outputStream().use {
             shot.compress(Bitmap.CompressFormat.PNG, 100, it)
         }
