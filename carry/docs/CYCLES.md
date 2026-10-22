@@ -5,6 +5,27 @@ differently. Newest first; read the top before starting. What was built is
 in [DEVLOG.md](DEVLOG.md). Kept to the last ten or so cycles; older lessons
 that hold become rules in CLAUDE.md or the cycles skill.
 
+## 2026-10-22 (cloud session, night run: cycles 74–76)
+
+Baseline: a cloud container, no emulator running, nothing in the
+background. madCode's PR #197 merged before the run.
+
+### Cycle 74 — build: Carry's first device test job
+
+- **The test APK's own process has no Kotlin runtime.** A provider or
+  activity declared in `src/androidTest` runs there, not in Carry's
+  process, so it dies on `kotlin.jvm.internal.Intrinsics`. Write those in
+  Java (`TestFolder.java`); test code that runs in Carry's process can
+  stay Kotlin.
+- **UiAutomator and Carry's number boxes:** `setText` doesn't reach them,
+  and the text sits on the `EditText` while the label is on a view inside
+  it. Tap the box, `input text`, and select
+  `By.clazz(EditText).hasChild(By.desc(label))`. The job's report keeps
+  the window hierarchy of a failed test, which is how both were found in
+  one look.
+- **Opening Carry runs the session check at once** (the periodic work's
+  first run), so a test needn't run the worker itself.
+
 ## 2026-10-20 (cloud session, second Carry agent, later)
 
 ### Cycle 73 — build: tests for the guards, and `MainActivity`

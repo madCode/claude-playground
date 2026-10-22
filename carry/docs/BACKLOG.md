@@ -311,6 +311,14 @@ These are the open paths to one, hardest first.
   alone leaves the other half unexplained *(you asked)*
 
 ### Health and tidying
+- [ ] **More journeys on the emulator job.** It exists now (cycle 74),
+  so the device-only rows of the journey map can each get a test with a
+  made-up sheet: rotation and a killed app on a half-filled After tab
+  with a real Activity, the share chooser opening with the preview's
+  text, a long session's last row above the navigation bar. The reboot
+  check comes first, as the `FOREGROUND_SERVICE` item waits on it
+  *(found by cycle 74)*
+
 ### Owed on a device
 
 Only a real phone can answer these.
@@ -324,21 +332,6 @@ Only a real phone can answer these.
   test proves the line is a polite live region, not that TalkBack speaks
   it. With TalkBack on: add a row, type a name, save, and listen *(due
   with the typed-name change)*
-- [ ] **Does tapping a notification preserve typed-but-unsaved numbers?**
-  The tap itself is confirmed — it opens the app on the Before tab. What is
-  NOT confirmed is the property the `SINGLE_TOP` fix exists for: that the
-  activity is brought forward rather than finished and rebuilt, so
-  `CarryViewModel`'s edits, added rows and in-flight save survive.
-
-  The 2026-10-16 test could not exercise it. The test sheet was blank and
-  nothing had been typed, so there was no state to lose and a broken
-  version would have looked identical. Worth saying plainly because "the
-  tap works" reads like the fix is proven, and it is not.
-
-  The sequence: type a weight on the After tab, do NOT save, background the
-  app, then tap a notification when one arrives. Numbers still there means
-  the fix holds; empty boxes mean the activity was rebuilt, which for this
-  app is the cardinal failure *(device)*
 - [ ] Bottom-edge insets against the navigation bar with a long session *(device)*
 - [ ] **Updates on a phone** *(due with cycles 71 and 72)*. Only a device
   can show: the signing check reading a real downloaded APK; a background
@@ -468,6 +461,14 @@ means the After tab, which is a form built for afterwards. Unsketched.
 
 ## Done
 
+- [x] **Tapping a notification keeps typed-but-unsaved numbers.**
+  Cycle 74 (#201): Carry's first device test, `NotificationTapTest`, run
+  on an emulator by the new `carry-device.yml` job on every PR touching
+  `carry/`. It puts a made-up sheet for today in a folder Carry holds,
+  types a weight on the After tab without saving, goes Home, taps the
+  real notification in the shade, and checks the weight is still in the
+  box. Falsified on CI: with `CLEAR_TOP` back in the notification's
+  intent the job went red with the box empty *(device, now CI)*
 - [x] **One pass of tests over the fail-closed guards, and `MainActivity`
   off 0%.** Real behaviour tests, each falsified: the folder against a
   provider (junk rows, a file over 1 MB, a trickling stream, a read-only

@@ -533,6 +533,9 @@ activity and rebuilds it, taking the ViewModel — typed weights, added
 rows, an in-flight save — with it. Landing on a particular tab is not
 worth losing numbers for, so the intent is `SINGLE_TOP` and the folder is
 re-read on resume as it always was.
+A device test checks it on an emulator on every PR (`NotificationTapTest`):
+a weight typed and not saved is still in its box after a tap on the real
+notification.
 
 **A debug build holds seven Android permissions, and this feature brought
 five of them; a release build holds five.** `aapt2 dump permissions` on the built APK is the only honest
