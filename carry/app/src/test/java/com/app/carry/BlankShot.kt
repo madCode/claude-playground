@@ -1,16 +1,46 @@
 package com.app.carry
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.view.View
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.onRoot
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
+import java.io.File
 
 /**
- * True when every pixel is the same colour.
+ * Saves the screen as `<name>.png` in [out], failing if the picture is blank.
  *
- * Robolectric's `captureToImage` can return a flat bitmap instead of the
- * screen, without failing. Seven of twelve screenshots were that image
- * before `forkEvery(1)`, and five still are — so the capture is checked
- * rather than trusted. A green test that produced no picture is worse
- * than a red one, because the picture gets reviewed.
+ * Robolectric's `captureToImage` copies the window's surface, and that copy
+ * sometimes holds only the window background, with the screen fully drawn
+ * behind it: on CI, about one build in two lost a simple centred screen this
+ * way, and locally it never happened. Waiting for more frames didn't help.
+ * Drawing the view onto a bitmap ourselves doesn't go through the surface,
+ * so a flat capture falls back to that. The blank check stays after it: a
+ * green test that produced no picture is worse than a red one, because the
+ * picture gets reviewed.
  */
+internal fun ComposeTestRule.shoot(out: File, name: String) {
+    waitForIdle()
+    var shot = onRoot().captureToImage().asAndroidBitmap()
+    if (shot.isFlat()) shot = runOnIdle { drawnInSoftware() } ?: shot
+    check(!shot.isFlat()) { "$name captured a blank image, so it proves nothing" }
+    File(out, "$name.png").outputStream().use { shot.compress(Bitmap.CompressFormat.PNG, 100, it) }
+}
+
+private fun drawnInSoftware(): Bitmap? {
+    val activity = ActivityLifecycleMonitorRegistry.getInstance()
+        .getActivitiesInStage(Stage.RESUMED).firstOrNull() ?: return null
+    val content = activity.findViewById<View>(android.R.id.content)
+    if (content.width <= 0 || content.height <= 0) return null
+    return Bitmap.createBitmap(content.width, content.height, Bitmap.Config.ARGB_8888)
+        .also { content.draw(Canvas(it)) }
+}
+
+/** True when every pixel is the same colour. */
 internal fun Bitmap.isFlat(): Boolean {
     val first = getPixel(0, 0)
     var x = 0

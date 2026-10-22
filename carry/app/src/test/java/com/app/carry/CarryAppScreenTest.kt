@@ -1,16 +1,12 @@
 package com.app.carry
 
-import android.graphics.Bitmap
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -28,57 +24,14 @@ class CarryAppScreenTest {
     @get:Rule val compose = createComposeRule()
     private val out = File(System.getProperty("screenshotDir") ?: "build/screenshots").apply { mkdirs() }
 
-    private fun shoot(name: String) {
-        compose.waitForIdle()
-        var shot = compose.onRoot().captureToImage().asAndroidBitmap()
-        repeat(4) {
-            if (!shot.isFlat()) return@repeat
-            compose.mainClock.advanceTimeByFrame()
-            compose.waitForIdle()
-            shot = compose.onRoot().captureToImage().asAndroidBitmap()
-        }
-        // DIAGNOSTIC (temporary, claude/carry-blank-capture): when the capture
-        // is flat, say what it was and try a software draw of the window.
-        if (shot.isFlat()) {
-            val root = compose.onRoot().fetchSemanticsNode()
-            val activity = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().let {
-                var found: android.app.Activity? = null
-                it.runOnMainSync {
-                    found = androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
-                        .getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).firstOrNull()
-                }
-                found
-            }
-            val decor = activity?.window?.decorView
-            var soft: Bitmap? = null
-            if (decor != null && decor.width > 0 && decor.height > 0) {
-                soft = Bitmap.createBitmap(decor.width, decor.height, Bitmap.Config.ARGB_8888)
-                decor.draw(android.graphics.Canvas(soft))
-                File(out, "$name-SOFTWARE.png").outputStream().use { soft.compress(Bitmap.CompressFormat.PNG, 100, it) }
-            }
-            File(out, "$name-FLAT.png").outputStream().use { shot.compress(Bitmap.CompressFormat.PNG, 100, it) }
-            val info = "BLANKDIAG $name: shot ${shot.width}x${shot.height} pixel=#${Integer.toHexString(shot.getPixel(0, 0))} " +
-                "root=${root.size} boundsInWindow=${root.boundsInWindow} activity=${activity?.javaClass?.simpleName} " +
-                "decor=${decor?.width}x${decor?.height} attached=${decor?.isAttachedToWindow} " +
-                "hasFocus=${activity?.hasWindowFocus()} soft=${soft?.let { if (it.isFlat()) "flat" else "drawn" }} " +
-                "nodes=${compose.onAllNodes(androidx.compose.ui.test.isRoot()).fetchSemanticsNodes().size}"
-            println(info)
-            error(info)
-        }
-        File(out, "$name.png").outputStream().use {
-            shot.compress(Bitmap.CompressFormat.PNG, 100, it)
-        }
-    }
+    private fun shoot(name: String) = compose.shoot(out, name)
 
     @Test
     fun `the first run explains what the folder is for`() {
         compose.setContent { CarryApp(CarryState.NeedsFolder(), onChooseFolder = {}) }
         compose.onNodeWithText("Pick your folder").assertIsDisplayed()
         compose.onNodeWithText("Choose folder").assertIsDisplayed()
-        // No shoot() here: Robolectric's capture comes back flat for this
-        // screen and the blank check would fail. The assertions above are
-        // the test; the picture was never the evidence. Tracked in
-        // docs/BACKLOG.md.
+        shoot("04-first-run")
     }
 
     @Test
@@ -92,10 +45,7 @@ class CarryAppScreenTest {
     fun `an empty folder says the session has not arrived`() {
         compose.setContent { CarryApp(CarryState.NoSession, onChooseFolder = {}) }
         compose.onNodeWithText("Nothing to carry").assertIsDisplayed()
-        // No shoot() here: Robolectric's capture comes back flat for this
-        // screen and the blank check would fail. The assertions above are
-        // the test; the picture was never the evidence. Tracked in
-        // docs/BACKLOG.md.
+        shoot("06-no-session")
     }
 
     @Test
@@ -110,10 +60,7 @@ class CarryAppScreenTest {
     fun `the first read says what it is doing rather than showing nothing`() {
         compose.setContent { CarryApp(CarryState.Loading, onChooseFolder = {}) }
         compose.onNodeWithText("Reading").assertIsDisplayed()
-        // No shoot() here: Robolectric's capture comes back flat for this
-        // screen and the blank check would fail. The assertions above are
-        // the test; the picture was never the evidence. Tracked in
-        // docs/BACKLOG.md.
+        shoot("07-loading")
     }
 
     @Test
@@ -178,10 +125,7 @@ class CarryAppScreenTest {
         }
         compose.onNodeWithText("That's your whole phone").assertIsDisplayed()
         compose.onNodeWithText("not everything on the phone", substring = true).assertIsDisplayed()
-        // No shoot() here: Robolectric's capture comes back flat for this
-        // screen and the blank check would fail. The assertions above are
-        // the test; the picture was never the evidence. Tracked in
-        // docs/BACKLOG.md.
+        shoot("14-too-wide")
     }
 
     @Test

@@ -35,6 +35,22 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-22 — every screen has a picture, and a blank one no longer fails CI
+
+- **Why screenshots came back blank.** Robolectric's `captureToImage` copies
+  the window's surface, and on CI that copy sometimes held only the window
+  background (`#fafafa`) while the screen behind it was fully drawn: a
+  software draw of the same window, taken at the same moment, showed the
+  whole screen. It failed about one Carry build in two on CI and never
+  locally, and waiting extra frames before capturing didn't help.
+- **The fix.** `shoot()` lives once, in `BlankShot.kt`, and a flat capture
+  falls back to drawing the content view onto a bitmap. The blank check
+  still runs after it, and fails every shooting test when the fallback
+  draws nothing.
+- **Six screens shot again.** `03-empty`, `04-first-run`, `06-no-session`,
+  `07-loading`, `14-too-wide` and a new `44-since-empty` had dropped their
+  pictures because of this.
+
 ## 2026-10-22 — a ladder's row says what to log
 
 - **"3 rounds · log your heaviest set"** under a ladder's name on the
