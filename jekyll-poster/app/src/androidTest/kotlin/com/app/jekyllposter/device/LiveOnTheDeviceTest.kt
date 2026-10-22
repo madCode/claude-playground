@@ -6,6 +6,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.exifinterface.media.ExifInterface
@@ -18,6 +19,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextInputSelection
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -111,6 +114,10 @@ class LiveOnTheDeviceTest {
     private val titleScheduled = "Device check $stamp, scheduled"
     private val titleHidden = "Device check $stamp, hidden"
     private val titleDraft = "Device check $stamp, draft"
+    private val titleOffline = "Device check $stamp, offline"
+    private val titleBadToken = "Device check $stamp, bad token"
+    private val titleDeleteConflict = "Device check $stamp, delete conflict"
+    private val titleTools = "Device check $stamp, tools"
     private val record = File(app.filesDir, "requests")
 
     @Before fun setUp() {
@@ -272,15 +279,22 @@ class LiveOnTheDeviceTest {
         compose.onNodeWithTag("title").performTextInput(titlePrivate)
         compose.onNodeWithText("Publish").performClick()
 
-        // Sent at a random time: queued with a time ahead, then sent now, as Send now does.
-        val queued = run {
-            var draft: Draft? = null
-            waitUntil("the post queued", 30_000) { draft = app.container.drafts.list().firstOrNull { it.title == titlePrivate && it.state == PostState.Queued }; draft != null }
-            draft!!
-        }
+        // Sent at a random time: it waits, saying when. Stop and edit takes it back; Publish
+        // again picks a new time; Send now sends it at once. All from the screens.
+        waitFor("a random time")
+        compose.onNodeWithText(titlePrivate).performClick()
+        waitFor("Stop and edit")
+        compose.onNodeWithText("Stop and edit").performClick()
+        compose.waitUntil(30_000) { compose.onAllNodes(hasText("Publish")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("body").performTextInput("Taken back and sent again. ")
+        compose.onNodeWithText("Publish").performClick()
+        waitFor("a random time")
+        val queued = runBlocking { app.container.drafts.list().first { it.title == titlePrivate && it.state == PostState.Queued } }
         val randomDelay = (queued.sendAfter ?: 0) - System.currentTimeMillis()
         assertTrue("Not given a random time: ${queued.sendAfter}", randomDelay > 0)
-        runBlocking { app.container.sendNow(queued.id) }
+        compose.onNodeWithText(titlePrivate).performClick()
+        waitFor("Send now")
+        compose.onNodeWithText("Send now").performClick()
         waitUntil("the private post on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, "device-check-$stamp-private") }
 
         val sha = run {
@@ -564,6 +578,96 @@ class LiveOnTheDeviceTest {
         fromTheMenu("Publish to the site")
         waitUntil("the draft published on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, slug) && text(a, draft) == null }
         assertTrue(text(a, postPath(a, slug)!!)!!.contains("Second version."))
+    }
+
+    /**
+     * The phone offline when Publish is tapped: nothing goes, and once it's back online the post
+     * goes out, once.
+     */
+    @Test fun aPostPublishedOfflineGoesOutOnceWhenTheNetworkIsBack() {
+        testName = "offline"
+        val a = signInToA()
+        newPost(titleOffline, "Written on a train.")
+        shell("svc wifi disable")
+        shell("svc data disable")
+        try {
+            compose.onNodeWithText("Publish").performClick()
+            waitFor("Waiting to publish")
+            Thread.sleep(20_000)
+            assertEquals(PostState.Queued, runBlocking { app.container.drafts.list().first { it.title == titleOffline }.state })
+        } finally {
+            shell("svc wifi enable")
+            shell("svc data enable")
+        }
+        val slug = "device-check-$stamp-offline"
+        waitUntil("the offline post on ${a.fullName}", TimeUnit.MINUTES.toMillis(5)) { hasPost(a, slug) }
+        Thread.sleep(30_000)
+        val copies = runBlocking { GitHubClient(http, a.token).files(a.owner, a.name, a.branch) }.count { it.path.endsWith("-$slug.md") }
+        assertEquals("Published more than once", 1, copies)
+    }
+
+    /** A sign-in whose token stopped working (revoked, say): Publish fails and says to sign in again. */
+    @Test fun aRevokedTokenFailsThePublishAndSaysSo() {
+        testName = "bad-token"
+        val a = signInToA()
+        runBlocking {
+            val login = GitHubClient(http, a.token).user().login
+            app.container.accounts.save(Account(login, "github_pat_revoked0000000000000000000000", a.owner, a.name, a.branch))
+        }
+        newPost(titleBadToken, "Never goes.")
+        compose.onNodeWithText("Publish").performClick()
+        waitFor("Didn't publish", TimeUnit.MINUTES.toMillis(3))
+        val failed = runBlocking { app.container.drafts.list().first { it.title == titleBadToken } }
+        assertEquals(PostState.Failed, failed.state)
+        assertTrue(failed.error.orEmpty(), failed.error.orEmpty().contains("sign", ignoreCase = true) || failed.error.orEmpty().contains("token", ignoreCase = true))
+        assertFalse(runBlocking { hasPost(a, "device-check-$stamp-bad-token") })
+    }
+
+    /** The post changes on GitHub while its delete waits on the phone: the delete is refused, and the change stays. */
+    @Test fun aDeleteOfAPostThatChangedOnGitHubMeanwhileIsRefused() {
+        testName = "delete-conflict"
+        val a = signInToA()
+        val date = LocalDate.now(java.time.ZoneOffset.UTC)
+        val path = "_posts/$date-device-check-$stamp-delete-conflict.md"
+        val github = GitHubClient(http, a.token)
+        runBlocking { github.commit(a.owner, a.name, a.branch, "Add post: device check", listOf(FileChange.text(path, "---\ntitle: \"$titleDeleteConflict\"\n---\n\nFrom a laptop.\n")), expect = mapOf(path to null)) }
+
+        openFromTheBlog(titleDeleteConflict)
+        waitFor("From a laptop.")
+        val laptop = "---\ntitle: \"$titleDeleteConflict\"\n---\n\nFrom a laptop, changed again.\n"
+        runBlocking {
+            val sent = github.file(a.owner, a.name, a.branch, path)!!
+            github.commit(a.owner, a.name, a.branch, "Update post: device check", listOf(FileChange.text(path, laptop)), expect = mapOf(path to sent.sha))
+        }
+        fromTheMenu("Delete from the blog")
+        compose.onNode(hasText("Delete") and hasAnyAncestor(isDialog())).performClick()
+
+        waitFor("changed on GitHub since you opened it", TimeUnit.MINUTES.toMillis(2))
+        assertEquals(laptop, text(a, path))
+    }
+
+    /** The editor's tools on a real post: a new category from the picker, Bold from the toolbar, and Preview. */
+    @Test fun aPostWithACategoryBoldTextAndAPreviewGoesOutAsWritten() {
+        testName = "editor-tools"
+        val a = signInToA()
+        newPost(titleTools, "Strong words.")
+        compose.onNodeWithTag("body").performTextInputSelection(TextRange(0, 6))
+        compose.onNodeWithContentDescription("Bold").performClick()
+        compose.onNode(hasContentDescription("Add category")).performClick()
+        compose.waitUntil(30_000) { compose.onAllNodes(hasTestTag("termQuery")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("termQuery").performTextInput("device-check")
+        compose.onNodeWithText("Add “device-check” as a new category").performClick()
+        compose.onNodeWithText("Done").performClick()
+        compose.onNodeWithContentDescription("Preview").performClick()
+        waitFor("Strong")
+        compose.onNodeWithContentDescription("Back to writing").performClick()
+        compose.onNodeWithText("Publish").performClick()
+
+        val slug = "device-check-$stamp-tools"
+        waitUntil("the post on ${a.fullName}", TimeUnit.MINUTES.toMillis(3)) { hasPost(a, slug) }
+        val text = text(a, postPath(a, slug)!!).orEmpty()
+        assertTrue(text, text.contains("categories: [device-check]"))
+        assertTrue(text, text.contains("**Strong** words."))
     }
 
     /** Types [time] into the schedule dialog's fields: hour, minute and, on a 12-hour clock, AM or PM. */
