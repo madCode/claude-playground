@@ -9,7 +9,7 @@
 #
 # "Runs" is read from WorkManager's own record, the periods the work has completed, since a job
 # forced before its period is due is only rescheduled, and WorkManager logs nothing at the
-# default level. The debug build is debuggable, so run-as can read the database.
+# default level. The debug build is debuggable, so run-as can read the database (in no_backup/).
 #
 # Usage, from carry/ with one emulator attached: tools/reboot-check.sh app/build/outputs/apk/debug/app-debug.apk
 set -eu
@@ -47,7 +47,7 @@ await_jobs() {
 # How many periods of the session check WorkManager has recorded as done.
 periods() {
   for f in androidx.work.workdb androidx.work.workdb-wal androidx.work.workdb-shm; do
-    adb exec-out run-as "$pkg" cat "databases/$f" > "$work/$f" 2>/dev/null || rm -f "$work/$f"
+    adb exec-out run-as "$pkg" cat "no_backup/$f" > "$work/$f" 2>/dev/null || rm -f "$work/$f"
   done
   python3 - "$work/androidx.work.workdb" "$worker" <<'PY'
 import sqlite3, sys
