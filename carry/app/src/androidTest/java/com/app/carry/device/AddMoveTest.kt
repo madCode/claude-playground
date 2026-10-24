@@ -75,14 +75,28 @@ class AddMoveTest {
         device.wait(Until.hasObject(By.pkg(pkg).depth(0)), 5_000),
     )
 
+    /**
+     * Types [text] into the box [label] that has the cursor, through the keyboard. A keystroke sent
+     * while the keyboard is still changing over (letters to digits) can be dropped, so it waits for
+     * the box to have the cursor and tries again, cleared, if the text didn't land.
+     */
+    private fun typeInto(label: String, text: String) {
+        assertNotNull("$label never took the cursor", device.wait(Until.findObject(focused(label)), 10_000))
+        repeat(3) {
+            device.waitForIdle()
+            shell("input text $text")
+            if (device.wait(Until.hasObject(focused(label).text(text)), 5_000)) return
+            repeat(12) { shell("input keyevent KEYCODE_DEL") }
+        }
+        error("couldn't type $text into $label")
+    }
+
     @Test fun addMovesTheCursorToTheNewNameAndKeepsWhatWasTyped() {
         add()
         assertNotNull("the first Add didn't put the cursor in the new name", device.wait(Until.findObject(focused(NAME)), 10_000))
-        shell("input text popsquat")
-        assertTrue(device.wait(Until.hasObject(box(NAME).text("popsquat")), 10_000))
+        typeInto(NAME, "popsquat")
         device.findObject(box(LB)).click()
-        shell("input text 12")
-        assertTrue(device.wait(Until.hasObject(box(LB).text("12")), 10_000))
+        typeInto(LB, "12")
 
         // madCode's report: the cursor stayed in the weight box, and the form emptied.
         add()
@@ -93,8 +107,7 @@ class AddMoveTest {
         assertTrue("the first row lost its name", device.hasObject(box(NAME).text("popsquat")))
         assertTrue("the first row lost its weight", device.hasObject(box(LB).text("12")))
 
-        shell("input text plankjack")
-        assertTrue(device.wait(Until.hasObject(box(NAME).text("plankjack")), 10_000))
+        typeInto(NAME, "plankjack")
         alive()
 
         device.wait(Until.findObject(By.text("Save")), 10_000)?.click()
@@ -108,11 +121,9 @@ class AddMoveTest {
     @Test fun aRestoredFormSaves() {
         add()
         device.wait(Until.findObject(box(NAME)), 10_000)!!.click()
-        shell("input text popsquat")
-        assertTrue(device.wait(Until.hasObject(box(NAME).text("popsquat")), 10_000))
+        typeInto(NAME, "popsquat")
         device.findObject(box(LB)).click()
-        shell("input text 12")
-        assertTrue(device.wait(Until.hasObject(box(LB).text("12")), 10_000))
+        typeInto(LB, "12")
         add()
         assertTrue(device.wait(Until.hasObject(box(NAME).text("")), 10_000))
 
