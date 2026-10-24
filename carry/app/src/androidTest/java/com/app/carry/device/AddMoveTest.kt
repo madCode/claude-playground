@@ -101,6 +101,36 @@ class AddMoveTest {
         alive()
     }
 
+    /** madCode's steps 5 and 6: Android ended Carry with typing on screen, and the save after. */
+    @Test fun aRestoredFormSaves() {
+        add()
+        device.wait(Until.findObject(box(NAME)), 10_000)!!.click()
+        shell("input text popsquat")
+        assertTrue(device.wait(Until.hasObject(box(NAME).text("popsquat")), 10_000))
+        device.findObject(box(LB)).click()
+        shell("input text 12")
+        assertTrue(device.wait(Until.hasObject(box(LB).text("12")), 10_000))
+        add()
+        assertTrue(device.wait(Until.hasObject(box(NAME).text("")), 10_000))
+
+        // Stopped (so the draft is in saved state), then the process ended the way Android ends a
+        // backgrounded app; the launcher brings the task back, restored.
+        device.pressHome()
+        device.waitForIdle()
+        shell("am kill $pkg")
+        carry.startActivity(carry.packageManager.getLaunchIntentForPackage(pkg)!!.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        assertTrue("Carry didn't come back", device.wait(Until.hasObject(By.pkg(pkg).depth(0)), 20_000))
+        device.wait(Until.findObject(By.text("After")), 20_000)?.click()
+        assertTrue("the typing didn't come back", device.wait(Until.hasObject(box(NAME).text("popsquat")), 20_000))
+        assertTrue(device.hasObject(box(LB).text("12")))
+
+        device.wait(Until.findObject(By.text("Save")), 5_000)?.click()
+            ?: device.findObject(By.scrollable(true)).scrollUntil(androidx.test.uiautomator.Direction.DOWN, Until.findObject(By.text("Save")))!!.click()
+        alive()
+        assertTrue("the save didn't land", device.wait(Until.hasObject(By.text("Saved")), 20_000))
+        alive()
+    }
+
     private companion object {
         const val ADD = "+ Add what you did"
         const val NAME = "added exercise name"
