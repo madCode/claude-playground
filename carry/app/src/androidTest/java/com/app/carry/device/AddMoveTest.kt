@@ -95,7 +95,7 @@ class AddMoveTest {
         add()
         assertNotNull("the first Add didn't put the cursor in the new name", device.wait(Until.findObject(focused(NAME)), 10_000))
         typeInto(NAME, "popsquat")
-        device.findObject(box(LB)).click()
+        tapInto(LB)
         typeInto(LB, "12")
 
         // madCode's report: the cursor stayed in the weight box, and the form emptied.
@@ -126,10 +126,20 @@ class AddMoveTest {
             ?: error("no $label")
     }
 
+    /** Puts the cursor in [label]. A slow emulator can take a tap for a long press, which opens
+     *  the Autofill menu instead, so the tap is tried again. */
+    private fun tapInto(label: String) {
+        repeat(3) {
+            reach(label).click()
+            if (device.wait(Until.hasObject(focused(label)), 3_000)) return
+            device.findObject(By.text("Autofill"))?.let { device.pressBack() }
+        }
+    }
+
     /** The sheet's rows filled first, as on a day the borrowed block was partly what the class did. */
     @Test fun addKeepsTheSheetRowsTypedAbove() {
         for (k in 0 until 6) {
-            reach("move $k, lb").click()
+            tapInto("move $k, lb")
             typeInto("move $k, lb", "${k + 21}")
         }
         val list = device.findObject(By.scrollable(true))
@@ -153,9 +163,9 @@ class AddMoveTest {
     /** madCode's steps 5 and 6: Android ended Carry with typing on screen, and the save after. */
     @Test fun aRestoredFormSaves() {
         add()
-        device.wait(Until.findObject(box(NAME)), 10_000)!!.click()
+        device.wait(Until.findObject(box(NAME)), 10_000); tapInto(NAME)
         typeInto(NAME, "popsquat")
-        device.findObject(box(LB)).click()
+        tapInto(LB)
         typeInto(LB, "12")
         add()
         assertTrue(device.wait(Until.hasObject(box(NAME).text("")), 10_000))
