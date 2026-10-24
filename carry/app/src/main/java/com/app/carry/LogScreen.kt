@@ -58,12 +58,12 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import kotlinx.coroutines.flow.first
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -168,23 +168,26 @@ fun LogScreen(
         // keyboard with it. Plain `remember`, so it is spent by the one tap:
         // a rotation or a restored draft composes afresh and moves nothing.
         var focusLast by remember { mutableStateOf(false) }
-        val nameFocus = remember { FocusRequester() }
         val focusId = if (focusLast) added.lastOrNull()?.id else null
         val add = { onAdd(); focusLast = true }
+        val setKeys = rowKeys("$sessionKey/set", session.sets.map { it.ref })
+        val addedKeys = rowKeys("$sessionKey/added", added.map { it.id })
         LaunchedEffect(focusId) {
-            val id = focusId ?: return@LaunchedEffect
-            val i = added.indexOfLast { it.id == id }
+            if (focusId == null) return@LaunchedEffect
             // Mirrors the items below: the warning and the button lead on
             // a borrowed day, the sheet's rows on a normal one.
-            val index = (if (borrowed != null) 2 else session.sets.size) + i
+            val index = (if (borrowed != null) 2 else session.sets.size) + added.lastIndex
+            // An effect runs before the frame that lays the new row out, so
+            // the layout on hand is the old one, where this index still
+            // belonged to the row the new one pushed down.
+            withFrameNanos {}
             if (!list.fullyShows(index)) list.scrollToItem(index)
-            snapshotFlow { list.layoutInfo.visibleItemsInfo.any { it.index == index } }.first { it }
-            nameFocus.requestFocus()
-            focusLast = false
+            // The row asks for the focus itself, once it is composed and its
+            // box can take it; see [AddedRow].
         }
         LazyColumn(Modifier.weight(1f), state = list) {
             if (borrowed != null) {
-                item {
+                item(key = "borrowed") {
                     Text(
                         "\u26a0 No ${session.classTag ?: "intel"} intel \u2014 these are the " +
                             "$borrowed rows. Add what you actually did.",
@@ -192,14 +195,15 @@ fun LogScreen(
                         modifier = Modifier.padding(bottom = 8.dp),
                     )
                 }
-                item { AddRow(add, loud = true) }
-                itemsIndexed(added, sessionKey, onEditAdded, focusId, nameFocus)
+                item(key = "add") { AddRow(add, loud = true) }
+                itemsIndexed(added, addedKeys, sessionKey, onEditAdded, focusId) { focusLast = false }
             }
-            // No key: a file with two rows sharing a ref is real enough
-            // that SessionPatch refuses it by name, and LazyColumn throws
-            // on a duplicate key -- which would crash this tab before the
-            // refusal could ever be shown.
-            items(session.sets) { set ->
+            // Keyed by row, so a row's typing (saved while it is scrolled
+            // off) stays with it when an added row above pushes it down.
+            // Keyed by index, the box came back with the text of whichever
+            // row had been in that place: blank, or another row's number.
+            items(session.sets.size, key = { setKeys[it] }) { i ->
+                val set = session.sets[i]
                 LogRow(
                     name = set.displayName,
                     prescription = set.prescription,
@@ -223,16 +227,16 @@ fun LogScreen(
             // borrowed day the added rows ARE the session and lead, on a
             // normal day they are the afterthought the name suggests.
             if (borrowed == null) {
-                itemsIndexed(added, sessionKey, onEditAdded, focusId, nameFocus)
-                item { AddRow(add, loud = false) }
+                itemsIndexed(added, addedKeys, sessionKey, onEditAdded, focusId) { focusLast = false }
+                item(key = "add") { AddRow(add, loud = false) }
             }
-            item { SaveButton(saving, onSave, added, onDiscard) }
+            item(key = "save") { SaveButton(saving, onSave, added, onDiscard) }
             // Only once it is written down. Before that the post would be
             // offering to publish numbers that are not yet anywhere, and
             // the moment to hand intel over is when the logging is done.
             if (saving is SaveState.Saved) {
                 IntelPost.compose(session, entries, added)?.let { post ->
-                    item { ShareIntel(session.classTag, post, onShare) }
+                    item(key = "share") { ShareIntel(session.classTag, post, onShare) }
                 }
             }
         }
@@ -257,23 +261,42 @@ private fun AddRow(onAdd: () -> Unit, loud: Boolean) {
 
 private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexed(
     added: List<AddedSet>,
+    keys: List<String>,
     sessionKey: String,
     onEditAdded: (Int, AddedSet) -> Unit,
     focusId: String?,
-    nameFocus: FocusRequester,
+    onFocused: () -> Unit,
 ) {
-    items(added.size) { i ->
+    items(added.size, key = { keys[it] }) { i ->
         val row = added[i]
-        val focus = nameFocus.takeIf { focusId != null && row.id == focusId && i == added.lastIndex }
+        val focus = focusId != null && row.id == focusId && i == added.lastIndex
         // Keyed by the row's own id, not by $i. Keyed by index, a box
         // kept its text when the list shrank under it -- save a session
         // where the first added row was left blank and it is dropped,
         // the second slides into slot 0, and its weight box renders the
         // blank row's empty string while the file holds 30. The screen
         // says "Saved" and shows a number that is not there.
-        AddedRow(row, "$sessionKey-added-${row.id}", focus) { onEditAdded(i, it) }
+        AddedRow(row, "$sessionKey-added-${row.id}", focus, onFocused) { onEditAdded(i, it) }
     }
 }
+
+/**
+ * A key per row, unique even where the file repeats a ref or an id: a
+ * file with two rows sharing a ref is real enough that SessionPatch
+ * refuses it by name, and LazyColumn throws on a duplicate key -- which
+ * would crash this tab before the refusal could be shown. The count
+ * leads, so no id can spell another row's key.
+ */
+private fun rowKeys(kind: String, ids: List<Any>): List<String> {
+    val seen = HashMap<Any, Int>()
+    return ids.map { id ->
+        val n = seen.merge(id, 1, Int::plus)!!
+        "$kind:$n:$id"
+    }
+}
+
+/** Frames the new row's name box is given to take the focus. */
+private const val FOCUS_TRIES = 10
 
 /** Partly on screen is not enough: the box being focused may be the half cut off. */
 private fun LazyListState.fullyShows(index: Int): Boolean {
@@ -443,7 +466,25 @@ private fun FieldLabel(text: String) {
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
-private fun AddedRow(row: AddedSet, key: String, focus: FocusRequester?, onChange: (AddedSet) -> Unit) {
+private fun AddedRow(
+    row: AddedSet, key: String,
+    /** Add just made this row, or went back to it: its name box takes the focus. */
+    focus: Boolean, onFocused: () -> Unit,
+    onChange: (AddedSet) -> Unit,
+) {
+    val nameFocus = remember { FocusRequester() }
+    if (focus) {
+        LaunchedEffect(Unit) {
+            // From the row, not the list: a request made before the row
+            // is composed finds no box and is dropped without a word.
+            // A few frames' grace for a box still being attached.
+            repeat(FOCUS_TRIES) {
+                if (nameFocus.requestFocus(FocusDirection.Enter)) return@LaunchedEffect onFocused()
+                withFrameNanos {}
+            }
+            onFocused()
+        }
+    }
     val weightProblem = LogCheck.row(row.weight, null, null).firstOrNull()
     val repsProblem = LogCheck.row(null, row.reps, row.fractionalReps).firstOrNull()
     // Same two-line shape as a sheet row, for the same reason: a name the
@@ -476,7 +517,7 @@ private fun AddedRow(row: AddedSet, key: String, focus: FocusRequester?, onChang
                     inner()
                 },
                 modifier = Modifier.weight(1f)
-                    .then(if (focus != null) Modifier.focusRequester(focus) else Modifier)
+                    .focusRequester(nameFocus)
                     .semantics { contentDescription = "added exercise name" },
             )
             Chip("hurt", row.hurt, Look.Brick) { onChange(row.copy(hurt = !row.hurt)) }

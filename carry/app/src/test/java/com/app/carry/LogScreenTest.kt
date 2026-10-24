@@ -682,6 +682,66 @@ class LogScreenTest {
         assertTrue("the keyboard opens on the name", keyboard.isSoftInputVisible)
     }
 
+    /** The weight box's text for [name], scrolling to it first. */
+    private fun weightShown(name: String): String? {
+        compose.onNode(hasScrollAction()).performScrollToNode(hasContentDescription("$name, lb"))
+        return compose.onNodeWithContentDescription("$name, lb").fetchSemanticsNode().config
+            .getOrNull(SemanticsProperties.EditableText)?.text
+    }
+
+    private val weighted = SampleSession.today.sets.filter { !it.timed }.map { it.displayName }
+
+    /** A made-up weight in every sheet row, and two rows added from the button above them. */
+    private fun fillThenAddTwice() {
+        weighted.forEachIndexed { k, name ->
+            compose.onNode(hasScrollAction()).performScrollToNode(hasContentDescription("$name, lb"))
+            compose.onNodeWithContentDescription("$name, lb").performTextReplacement("${k + 11}")
+        }
+        tapAdd("+ Add what you did")
+        waitForFocusedName()
+        focusedName().performTextReplacement("pop squat")
+        tapAdd("+ Add what you did")
+        compose.waitUntil(5_000) { added.value.size == 2 }
+    }
+
+    @Test
+    fun `on a borrowed day Add keeps every sheet row's number in its own box`() {
+        // madCode's report (#210): Add cleared the form. Each added row
+        // pushes the sheet's rows down one place, and a box scrolled off
+        // screen came back with the text of whichever row had held that
+        // place -- blank, or the number of the row above.
+        show(session = SampleSession.today.copy(borrowedFrom = "3G"))
+        fillThenAddTwice()
+        weighted.forEachIndexed { k, name ->
+            assertEquals(name, "${k + 11}", weightShown(name))
+            assertEquals(name, k + 11.0, edits.value[k]?.weight)
+        }
+    }
+
+    @Test
+    fun `on a borrowed day the boxes come back right after a restore`() {
+        // Process death after the Add, then the restored form: the saved
+        // boxes have to come back to their own rows, or the save that
+        // follows writes what the model holds under boxes showing otherwise.
+        val restorer = StateRestorationTester(compose)
+        val borrowed = SampleSession.today.copy(borrowedFrom = "3G")
+        restorer.setContent {
+            LogScreen(
+                session = borrowed, entries = edits.value, added = added.value,
+                onEdit = { ref, e -> edits.value = edits.value + (ref to e) },
+                onAdd = { added.value = added.value.withRowAdded() },
+                onEditAdded = { i, row -> added.value = added.value.toMutableList().also { it[i] = row } },
+                onSave = {}, saving = SaveState.Idle,
+            )
+        }
+        fillThenAddTwice()
+        restorer.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+        weighted.forEachIndexed { k, name -> assertEquals(name, "${k + 11}", weightShown(name)) }
+        reach("pop squat")
+        compose.onNodeWithText("pop squat").assertIsDisplayed()
+    }
+
     @Test
     fun `a second Add while the new row is still empty adds nothing and goes back to it`() {
         show()
