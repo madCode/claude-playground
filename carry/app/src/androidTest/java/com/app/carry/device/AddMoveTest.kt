@@ -117,6 +117,39 @@ class AddMoveTest {
         alive()
     }
 
+    /** Scrolls the After tab until the box [label] is on screen, either way. */
+    private fun reach(label: String): androidx.test.uiautomator.UiObject2 {
+        device.findObject(box(label))?.let { return it }
+        val list = device.findObject(By.scrollable(true))
+        return list.scrollUntil(androidx.test.uiautomator.Direction.DOWN, Until.findObject(box(label)))
+            ?: list.scrollUntil(androidx.test.uiautomator.Direction.UP, Until.findObject(box(label)))
+            ?: error("no $label")
+    }
+
+    /** The sheet's rows filled first, as on a day the borrowed block was partly what the class did. */
+    @Test fun addKeepsTheSheetRowsTypedAbove() {
+        for (k in 0 until 6) {
+            reach("move $k, lb").click()
+            typeInto("move $k, lb", "${k + 21}")
+        }
+        val list = device.findObject(By.scrollable(true))
+        list.scrollUntil(androidx.test.uiautomator.Direction.UP, Until.findObject(By.text(ADD)))
+        add()
+        alive()
+        assertNotNull("Add didn't move the cursor", device.wait(Until.findObject(focused(NAME)), 10_000))
+        typeInto(NAME, "popsquat")
+        for (k in 0 until 6) assertEquals("move $k", "${k + 21}", reach("move $k, lb").text)
+        list.scrollUntil(androidx.test.uiautomator.Direction.UP, Until.findObject(By.text(ADD)))
+        add()
+        alive()
+        for (k in 0 until 6) assertEquals("move $k after a second Add", "${k + 21}", reach("move $k, lb").text)
+        list.scrollUntil(androidx.test.uiautomator.Direction.DOWN, Until.findObject(By.text("Save")))!!.click()
+        alive()
+        assertTrue("the save didn't land", device.wait(Until.hasObject(By.text("Saved")), 20_000))
+        alive()
+        for (k in 0 until 6) assertEquals("move $k after the save", "${k + 21}", reach("move $k, lb").text)
+    }
+
     /** madCode's steps 5 and 6: Android ended Carry with typing on screen, and the save after. */
     @Test fun aRestoredFormSaves() {
         add()
