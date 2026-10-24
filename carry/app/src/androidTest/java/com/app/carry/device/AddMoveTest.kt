@@ -1,5 +1,6 @@
 package com.app.carry.device
 
+import android.Manifest
 import android.content.Intent
 import android.os.ParcelFileDescriptor
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -38,6 +39,8 @@ class AddMoveTest {
 
     /** A made-up borrowed sheet: the rows are another class's, so the session is what gets added. */
     @Before fun aBorrowedSheetInTheFolder() {
+        // Granted, so the one question Carry asks doesn't cover the screen.
+        shell("pm grant $pkg ${Manifest.permission.POST_NOTIFICATIONS}")
         TestFolder.grantTo(carry, pkg)
         assertTrue("Carry couldn't take the folder's grant", SessionFolder(carry).remember(TestFolder.tree()))
         val today = LocalDate.now()
