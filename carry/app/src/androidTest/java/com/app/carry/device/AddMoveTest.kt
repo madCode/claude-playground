@@ -21,8 +21,8 @@ import org.junit.runner.RunWith
 
 /**
  * The After tab's Add on a borrowed day, typed through the real keyboard (#210). Robolectric runs
- * effects and layout in an order of its own, so a request for focus made before the new row was
- * laid out passed there and did nothing on a phone.
+ * effects and layout in an order of its own and has no keyboard to shrink the screen, so where the
+ * new row lands and whether its box takes the cursor is checked here, on an emulator.
  */
 @RunWith(AndroidJUnit4::class)
 class AddMoveTest {

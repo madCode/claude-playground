@@ -168,12 +168,16 @@ fun LogScreen(
         // keyboard with it. Plain `remember`, so it is spent by the one tap:
         // a rotation or a restored draft composes afresh and moves nothing.
         var focusLast by remember { mutableStateOf(false) }
+        // Counts taps, so the scroll below runs for each one and isn't
+        // cancelled by the row taking the focus first.
+        var adds by remember { mutableStateOf(0) }
         val focusId = if (focusLast) added.lastOrNull()?.id else null
-        val add = { onAdd(); focusLast = true }
-        val setKeys = rowKeys("$sessionKey/set", session.sets.map { it.ref })
-        val addedKeys = rowKeys("$sessionKey/added", added.map { it.id })
-        LaunchedEffect(focusId) {
-            if (focusId == null) return@LaunchedEffect
+        val add = { onAdd(); adds += 1; focusLast = true }
+        val setKeys = remember(sessionKey, session.sets) { rowKeys("$sessionKey/set", session.sets.map { it.ref }) }
+        val addedIds = added.map { it.id }
+        val addedKeys = remember(sessionKey, addedIds) { rowKeys("$sessionKey/added", addedIds) }
+        LaunchedEffect(adds) {
+            if (adds == 0) return@LaunchedEffect
             // Mirrors the items below: the warning and the button lead on
             // a borrowed day, the sheet's rows on a normal one.
             val index = (if (borrowed != null) 2 else session.sets.size) + added.lastIndex
@@ -183,7 +187,11 @@ fun LogScreen(
             withFrameNanos {}
             if (!list.fullyShows(index)) list.scrollToItem(index)
             // The row asks for the focus itself, once it is composed and its
-            // box can take it; see [AddedRow].
+            // box can take it; see [AddedRow]. Spent here as well, in case
+            // the row never got the chance (flung away at once), so it can't
+            // take the cursor whenever it is next scrolled past.
+            repeat(FOCUS_TRIES + 2) { withFrameNanos {} }
+            focusLast = false
         }
         LazyColumn(Modifier.weight(1f), state = list) {
             if (borrowed != null) {
@@ -199,9 +207,8 @@ fun LogScreen(
                 itemsIndexed(added, addedKeys, sessionKey, onEditAdded, focusId) { focusLast = false }
             }
             // Keyed by row, so a row's typing (saved while it is scrolled
-            // off) stays with it when an added row above pushes it down.
-            // Keyed by index, the box came back with the text of whichever
-            // row had been in that place: blank, or another row's number.
+            // off) stays with it when an added row above pushes it down;
+            // keyed by place, it would come back in another row's box.
             items(session.sets.size, key = { setKeys[it] }) { i ->
                 val set = session.sets[i]
                 LogRow(
