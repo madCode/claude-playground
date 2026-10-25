@@ -83,6 +83,7 @@ import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.ui.editor.EditorViewModel.TermKind
 import com.app.jekyllposter.ui.home.nowUntil
 import com.app.jekyllposter.ui.home.status
+import com.app.jekyllposter.ui.home.summary
 import com.app.jekyllposter.ui.theme.InkButton
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -300,8 +301,16 @@ fun EditorScreen(viewModel: EditorViewModel, onClose: () -> Unit) {
                         }
                     }
                 }
+                draft.webmentions.summary()?.let {
+                    Text(
+                        it, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("webmentions"),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             state.to?.let { ToLine(it) }
+            val mentions by viewModel.mentions.collectAsStateWithLifecycle()
+            mentions?.let { MentionsSection(it) }
             if (state.vaultPhotos > 0) {
                 VaultBanner(state.vaultPhotos, onChoose = { chooseVault.launch(null) }, onSkip = viewModel::skipVault)
             }

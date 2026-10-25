@@ -14,8 +14,10 @@ import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.TextRange
@@ -27,6 +29,7 @@ import com.app.jekyllposter.core.obsidian.ObsidianNote
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.BuildState
 import com.app.jekyllposter.data.Draft
+import com.app.jekyllposter.data.Mention
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.testutil.SAMPLE_BLOG
 import com.app.jekyllposter.testutil.TestApp
@@ -455,5 +458,48 @@ class ScreenshotTest {
         shoot("32-home-scheduled", ready = { vm.state.value.onPhone.isNotEmpty() && !vm.state.value.refreshing }) {
             HomeScreen(vm, onOpenDraft = {}, onSettings = {})
         }
+    }
+
+    @Test fun blogPrivacyWebmentions() {
+        signIn()
+        runBlocking { c.privacy.update(SAMPLE_BLOG) { it.copy(sendWebmentions = true) } }
+        val vm = BlogPrivacyViewModel(c) { ZoneId.of("Europe/Lisbon") }
+        shoot(
+            "34-blog-privacy-webmentions", ready = { vm.state.value.sendWebmentions && vm.state.value.visibility != Visibility.Loading },
+            act = { compose.onNodeWithText("Show mentions from webmention.io").performScrollTo() },
+        ) { BlogPrivacyScreen(vm) {} }
+    }
+
+    @Test fun publishedPostWithWebmentions() {
+        signIn()
+        runBlocking { c.privacy.update(SAMPLE_BLOG) { it.copy(sendWebmentions = true, showWebmentions = true) } }
+        app.webmentionIo.enqueue(
+            mockwebserver3.MockResponse.Builder().body(
+                """{"children":[
+                    {"author":{"name":"Ada"},"url":"https://ada.example/notes/1","wm-property":"in-reply-to","content":{"text":"We walked it last spring. Go at dawn."}},
+                    {"author":{"name":"Bo"},"url":"https://bo.example/likes/9","wm-property":"like-of"},
+                    {"author":{"name":"Cy"},"url":"https://cy.example/links/","wm-property":"mention-of"}
+                ]}""",
+            ).build(),
+        )
+        val id = runBlocking {
+            c.drafts.insert(
+                Draft(
+                    blog = SAMPLE_BLOG, title = "A walk to the lighthouse", body = "Out past the harbour wall at low tide.", categories = listOf("travel"),
+                    state = PostState.Published, buildState = BuildState.Live,
+                    postUrl = "https://sample.github.io/sample-blog/travel/2026/10/04/a-walk-to-the-lighthouse/",
+                    webmentions = listOf(
+                        Mention("https://tides.example/harbour", Mention.State.Sent),
+                        Mention("https://lighthouses.example/north", Mention.State.Sent),
+                        Mention("https://maps.example/coast", Mention.State.NoEndpoint),
+                    ),
+                ),
+            )
+        }
+        val vm = EditorViewModel(c, id)
+        shoot(
+            "33-published-webmentions", ready = { vm.text != null && vm.mentions.value is EditorViewModel.Mentions.Loaded },
+            act = { compose.onNodeWithTag("mentions").performClick() },
+        ) { EditorScreen(vm) {} }
     }
 }

@@ -44,6 +44,8 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
         val noReplyEmail: String? = null,
         val commitAsNoReply: Boolean = false,
         val removeTrackingCodes: Boolean = false,
+        val sendWebmentions: Boolean = false,
+        val showWebmentions: Boolean = false,
         val datesByDayOnly: Boolean = false,
         val sendAtRandomTime: Boolean = false,
         val plainCommitMessages: Boolean = false,
@@ -82,7 +84,7 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
         s.copy(
             commitAsNoReply = p.commitAsNoReply, removeTrackingCodes = p.removeTrackingCodes, onlyThroughVpn = p.onlyThroughVpn,
             datesByDayOnly = p.datesByDayOnly, sendAtRandomTime = p.sendAtRandomTime, plainCommitMessages = p.plainCommitMessages,
-            isNew = p.isNew, waitingForVpn = waiting, title = config.title,
+            sendWebmentions = p.sendWebmentions, showWebmentions = p.showWebmentions, isNew = p.isNew, waitingForVpn = waiting, title = config.title,
             siteZone = s.committedZone?.takeIf { config.timezone?.id == s.zoneBefore } ?: config.timezone?.id,
             repoName = account?.repoName, branch = account?.branch, login = account?.login,
         )
@@ -140,6 +142,10 @@ class BlogPrivacyViewModel(private val container: AppContainer, private val phon
     fun setRemoveTrackingCodes(on: Boolean) = set { it.copy(removeTrackingCodes = on) }
 
     fun setDatesByDayOnly(on: Boolean) = set { it.copy(datesByDayOnly = on) }
+
+    fun setSendWebmentions(on: Boolean) = set { it.copy(sendWebmentions = on) }
+
+    fun setShowWebmentions(on: Boolean) = set { it.copy(showWebmentions = on) }
 
     /**
      * Turns on every switch for writing anonymously. The no-reply address is looked up first:

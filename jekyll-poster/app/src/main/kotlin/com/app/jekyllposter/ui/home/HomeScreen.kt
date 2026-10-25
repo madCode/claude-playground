@@ -78,6 +78,7 @@ import com.app.jekyllposter.ui.blogs.BlogsViewModel
 import com.app.jekyllposter.data.CachedPost
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.Draft
+import com.app.jekyllposter.data.Mention
 import com.app.jekyllposter.data.PostState
 import com.app.jekyllposter.ui.theme.LocalWhimsy
 import com.app.jekyllposter.ui.theme.PosterFab
@@ -90,6 +91,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlinx.coroutines.delay
+import java.net.IDN
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -259,6 +262,23 @@ fun Draft.status(live: String = "live on the site", waitingForVpn: Boolean = fal
         BuildState.Failed -> "Published, but the site build failed. Check Actions on GitHub." to true
         BuildState.Unknown, null -> "Published to GitHub" to false
     }
+}
+
+/** How a live post's webmentions went, in a line: the sites told by name, the rest counted. Null with none. */
+fun List<Mention>.summary(): String? {
+    if (isEmpty()) return null
+    fun count(vararg states: Mention.State) = count { it.state in states }
+    fun sites(n: Int) = if (n == 1) "1 site" else "$n sites"
+    val told = filter { it.state == Mention.State.Sent }.map { m -> m.target.toHttpUrlOrNull()?.host?.let { IDN.toUnicode(it) } ?: m.target }.distinct()
+    val parts = listOfNotNull(
+        told.takeIf { it.isNotEmpty() }?.let { hosts ->
+            "told " + if (hosts.size <= 3) hosts.joinToString(", ") else hosts.take(2).joinToString(", ") + " and ${hosts.size - 2} more"
+        },
+        count(Mention.State.Waiting).takeIf { it > 0 }?.let { "telling ${sites(it)}…" },
+        count(Mention.State.NoEndpoint).takeIf { it > 0 }?.let { "${sites(it)} ${if (it == 1) "doesn't" else "don't"} take them" },
+        count(Mention.State.Refused, Mention.State.Failed).takeIf { it > 0 }?.let { "${sites(it)} couldn't be told" },
+    )
+    return "Webmentions: " + parts.joinToString(" · ")
 }
 
 /** The top bar's search: focused when it opens, so the keyboard comes up ready. */
