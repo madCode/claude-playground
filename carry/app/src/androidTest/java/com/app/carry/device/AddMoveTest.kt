@@ -7,7 +7,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
-import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import com.app.carry.SessionFolder
@@ -124,23 +123,25 @@ class AddMoveTest {
     }
 
     /**
-     * Scrolls the After tab a step at a time, down and then up, until [what] is on screen. Step by
-     * step because `scrollUntil` can call the end of a list reached while the keyboard is resizing it.
+     * Swipes the After tab a step at a time, down and then up, until [what] is on screen. By hand:
+     * `scrollUntil` can call the end of the list reached while the keyboard is resizing it, and a
+     * one-line text box is scrollable too, so "the scrollable thing" isn't always the list.
      */
     private fun find(what: BySelector): androidx.test.uiautomator.UiObject2 {
         device.findObject(what)?.let { return it }
-        for (direction in listOf(Direction.DOWN, Direction.UP)) {
+        // A third of the screen per swipe, right of the boxes and chips: up the screen to see
+        // further down the list, then back.
+        val x = device.displayWidth * 4 / 5
+        val (low, high) = device.displayHeight * 2 / 3 to device.displayHeight / 3
+        for (down in listOf(true, false)) {
             repeat(15) {
-                list()?.scroll(direction, 0.5f)
+                if (down) device.swipe(x, low, x, high, 20) else device.swipe(x, high, x, low, 20)
                 device.waitForIdle()
                 device.findObject(what)?.let { return it }
             }
         }
         error("nothing on screen matches $what")
     }
-
-    /** The After tab's list: the tallest thing that scrolls, since a one-line text box scrolls too. */
-    private fun list() = device.findObjects(By.scrollable(true)).maxByOrNull { it.visibleBounds.height() }
 
     /** Scrolls the After tab until the box [label] is on screen, either way. */
     private fun reach(label: String) = find(box(label))
