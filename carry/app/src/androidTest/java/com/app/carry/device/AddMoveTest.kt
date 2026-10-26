@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
+import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import com.app.carry.SessionFolder
@@ -110,20 +111,35 @@ class AddMoveTest {
         typeInto(NAME, "plankjack")
         alive()
 
-        device.wait(Until.findObject(By.text("Save")), 10_000)?.click()
-            ?: run { device.findObject(By.scrollable(true)).scrollUntil(androidx.test.uiautomator.Direction.DOWN, Until.findObject(By.text("Save")))!!.click() }
+        tapSave("Save")
         alive()
-        assertTrue("the save didn't land", device.wait(Until.hasObject(By.text("Saved")), 20_000))
+        assertTrue("the save didn't land", saved())
         alive()
     }
 
+    /**
+     * Scrolls the After tab a step at a time, down and then up, until [what] is on screen. Step by
+     * step because `scrollUntil` can call the end of a list reached while the keyboard is resizing it.
+     */
+    private fun find(what: BySelector): androidx.test.uiautomator.UiObject2 {
+        device.findObject(what)?.let { return it }
+        for (direction in listOf(Direction.DOWN, Direction.UP)) {
+            repeat(15) {
+                device.findObject(By.scrollable(true))?.scroll(direction, 0.5f)
+                device.waitForIdle()
+                device.findObject(what)?.let { return it }
+            }
+        }
+        error("nothing on screen matches $what")
+    }
+
     /** Scrolls the After tab until the box [label] is on screen, either way. */
-    private fun reach(label: String): androidx.test.uiautomator.UiObject2 {
-        device.findObject(box(label))?.let { return it }
-        val list = device.findObject(By.scrollable(true))
-        return list.scrollUntil(androidx.test.uiautomator.Direction.DOWN, Until.findObject(box(label)))
-            ?: list.scrollUntil(androidx.test.uiautomator.Direction.UP, Until.findObject(box(label)))
-            ?: error("no $label")
+    private fun reach(label: String) = find(box(label))
+
+    /** The keyboard covers the bottom of the list, where Save is. */
+    private fun keyboardDown() {
+        if (shell("dumpsys input_method").contains("mInputShown=true")) device.pressBack()
+        device.waitForIdle()
     }
 
     /** Puts the cursor in [label]. A slow emulator can take a tap for a long press, which opens
@@ -142,20 +158,19 @@ class AddMoveTest {
             tapInto("move $k, lb")
             typeInto("move $k, lb", "${k + 21}")
         }
-        val list = device.findObject(By.scrollable(true))
-        list.scrollUntil(androidx.test.uiautomator.Direction.UP, Until.findObject(By.text(ADD)))
+        find(By.text(ADD))
         add()
         alive()
         assertNotNull("Add didn't move the cursor", device.wait(Until.findObject(focused(NAME)), 10_000))
         typeInto(NAME, "popsquat")
         for (k in 0 until 6) assertEquals("move $k", "${k + 21}", reach("move $k, lb").text)
-        list.scrollUntil(androidx.test.uiautomator.Direction.UP, Until.findObject(By.text(ADD)))
+        find(By.text(ADD))
         add()
         alive()
         for (k in 0 until 6) assertEquals("move $k after a second Add", "${k + 21}", reach("move $k, lb").text)
-        list.scrollUntil(androidx.test.uiautomator.Direction.DOWN, Until.findObject(By.text("Save")))!!.click()
+        tapSave("Save")
         alive()
-        assertTrue("the save didn't land", device.wait(Until.hasObject(By.text("Saved")), 20_000))
+        assertTrue("the save didn't land", saved())
         alive()
         for (k in 0 until 6) assertEquals("move $k after the save", "${k + 21}", reach("move $k, lb").text)
     }
@@ -181,34 +196,40 @@ class AddMoveTest {
         assertTrue("the typing didn't come back", device.wait(Until.hasObject(box(NAME).text("popsquat")), 20_000))
         assertTrue(device.hasObject(box(LB).text("12")))
 
-        device.wait(Until.findObject(By.text("Save")), 5_000)?.click()
-            ?: device.findObject(By.scrollable(true)).scrollUntil(androidx.test.uiautomator.Direction.DOWN, Until.findObject(By.text("Save")))!!.click()
+        tapSave("Save")
         alive()
-        assertTrue("the save didn't land", device.wait(Until.hasObject(By.text("Saved")), 20_000))
+        assertTrue("the save didn't land", saved())
         alive()
+    }
+
+    /** Whether the button says Saved within a while, looked for below the keyboard too. */
+    private fun saved(): Boolean {
+        keyboardDown()
+        val end = System.currentTimeMillis() + 20_000
+        while (System.currentTimeMillis() < end) {
+            if (runCatching { find(By.text("Saved")) }.isSuccess) return true
+        }
+        return false
     }
 
     /** The Save button, whatever it says now, scrolled to and tapped. */
     private fun tapSave(label: String) {
-        val list = device.findObject(By.scrollable(true))
-        (device.findObject(By.text(label))
-            ?: list.scrollUntil(androidx.test.uiautomator.Direction.DOWN, Until.findObject(By.text(label)))
-            ?: error("no $label button")).click()
+        keyboardDown()
+        find(By.text(label)).click()
     }
 
     /** madCode on #211: a second save after the first one closed the app. */
     @Test fun savingTwiceInARow() {
         tapInto("move 0, lb")
         typeInto("move 0, lb", "21")
-        device.findObject(By.scrollable(true))
-            .scrollUntil(androidx.test.uiautomator.Direction.UP, Until.findObject(By.text(ADD)))
+        find(By.text(ADD))
         add()
         tapInto(NAME)
         typeInto(NAME, "popsquat")
         tapInto(LB)
         typeInto(LB, "12")
         tapSave("Save")
-        assertTrue("the first save didn't land", device.wait(Until.hasObject(By.text("Saved")), 20_000))
+        assertTrue("the first save didn't land", saved())
         alive()
         // Straight away, on the button that now says Saved, and then once more.
         tapSave("Saved")
@@ -220,7 +241,7 @@ class AddMoveTest {
         repeat(4) { shell("input keyevent KEYCODE_DEL") }
         typeInto("move 0, lb", "30")
         tapSave("Save")
-        assertTrue("the save after a change didn't land", device.wait(Until.hasObject(By.text("Saved")), 20_000))
+        assertTrue("the save after a change didn't land", saved())
         alive()
         tapSave("Saved")
         alive()
