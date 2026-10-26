@@ -2,6 +2,9 @@ package com.app.carry
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -243,19 +246,45 @@ class TodayScreenTest {
     }
 
     @Test
-    fun `where a row is short of room, qualifiers go whole, the prescription first`() {
-        // An ellipsis cuts between letters: "20 total" cut to "2…" is a
-        // wrong number. So at large text a qualifier is there or not at all.
+    fun `where the qualifiers don't fit beside the name, they go under it`() {
+        // Moved rather than dropped (madCode on #216): what makes the row
+        // harder is the reason it's on the sheet at all.
         compose.setContent {
             CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale = 2f)) {
                 TodayScreen(qualified(), java.time.LocalDate.of(2026, 10, 17))
             }
         }
-        compose.onNodeWithText("goblet squat · 1 leg · bosu").assertIsDisplayed()
+        compose.onNodeWithText("goblet squat").assertIsDisplayed()
+        compose.onNodeWithText("1 leg · bosu · 20 total").assertIsDisplayed()
+        // A row that still fits keeps it all on one line.
         compose.onNodeWithText("deadlift · 12 reps").assertIsDisplayed()
-        // TalkBack still hears everything the row would say.
+        // TalkBack hears the row once, from the name, not the line under it again.
         compose.onNodeWithContentDescription("goblet squat, 1 leg, bosu, 20 total").assertIsDisplayed()
+        compose.onNodeWithText("1 leg · bosu · 20 total")
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.HideFromAccessibility))
         shoot("46-before-qualifiers-large-text")
+    }
+
+    @Test
+    fun `a line under the name that still doesn't fit loses whole qualifiers, the prescription first`() {
+        // An ellipsis cuts between letters, and "20 total" cut to "2…" is a
+        // wrong number, so a qualifier is there or not at all.
+        val long = qualified().let { sheet ->
+            sheet.copy(sets = listOf(sheet.sets[0].copy(variant = Session.json.parseToJsonElement(
+                """{"stance":"single","arms":"single","stability":"bosu","position":"low_plank","tempo":"explosive","difficulty":"harder"}"""
+            ))))
+        }
+        compose.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale = 2f)) {
+                TodayScreen(long, java.time.LocalDate.of(2026, 10, 17))
+            }
+        }
+        compose.onNodeWithText("goblet squat").assertIsDisplayed()
+        compose.onNodeWithText("1 leg · 1 arm", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("20", substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription(
+            "goblet squat, 1 leg, 1 arm, bosu, low plank, explosive, harder, 20 total"
+        ).assertIsDisplayed()
     }
 
     private fun qualified(): Session {

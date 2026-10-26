@@ -51,6 +51,10 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   qualifiers that don't fit now go whole. Variant values that aren't a
   word or two of letters are refused, a word the name says in another
   form ("lunges", "paused") counts as said, and "0" is no prescription.
+- **Under the name when they don't fit** (madCode on #216). Rather than
+  dropping qualifiers beside a long name or at large text, the row moves
+  them all to a second line under the name. Only a second line that is
+  still too short drops any, whole, from its end.
 
 ## 2026-10-22 — every screen has a picture, and a blank one no longer fails CI
 

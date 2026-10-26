@@ -73,10 +73,13 @@ lighter number than usual otherwise reads as a mistake.
   fields, never from the line.
 - **Not twice**: a word the name already says is left out, so
   "single-arm row" gets no "1 arm" and a lunge no "split stance".
-- **One line.** Qualifiers that don't fit are dropped whole, from the
-  end: the prescription first, then the variant words, which are what
-  explain a lighter weight. Only the name is ever ellipsized, because a
-  cut "20 total" reads as "2…".
+- **Beside the name, or under it.** When everything fits on one line the
+  qualifiers sit beside the name; when not (a long name, large text), all
+  of them move to a line under it (madCode on #216). The weight stays put.
+- **Never cut through a number.** If even that line is too short,
+  qualifiers are dropped whole from its end, the prescription first, then
+  the variant words, which are what explain a lighter weight. An ellipsis
+  would turn "20 total" into "2…".
 - **TalkBack** reads the name, then each qualifier as its own phrase.
 
 **After** — what you did (madCode approved the minimum page in #127,

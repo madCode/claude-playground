@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
@@ -168,14 +169,15 @@ private fun SheetRow(set: ExerciseSet) {
 }
 
 /**
- * `goblet squat · 1 leg · bosu · 20 total` on one line: the name, then the
- * variant words, then the prescription, dim.
+ * `goblet squat · 1 leg · bosu · 20 total`: the name, then the variant
+ * words, then the prescription, dim. Beside the name when it all fits on one
+ * line; otherwise the qualifiers move, together, to a line under the name.
  *
- * Qualifiers that don't fit are dropped whole, from the end, rather than
- * ellipsized: an ellipsis cuts between letters, and "20 total" cut to "2…"
- * is a wrong number on a sheet read in one glance. So the prescription gives
- * way first, and the variant words, which explain a weight lighter than the
- * plain move's, last. Only the name itself is ever ellipsized.
+ * On that line, qualifiers that still don't fit are dropped whole from the
+ * end rather than ellipsized: an ellipsis cuts between letters, and "20
+ * total" cut to "2…" is a wrong number on a sheet read in one glance. So the
+ * prescription gives way first, and the variant words, which explain a
+ * weight lighter than the plain move's, last.
  */
 @Composable
 private fun NameLine(set: ExerciseSet, ink: Color, modifier: Modifier) {
@@ -183,21 +185,36 @@ private fun NameLine(set: ExerciseSet, ink: Color, modifier: Modifier) {
     val qualifiers = set.variantWords + listOfNotNull(set.sheetPrescription)
     val style = LocalTextStyle.current.merge(TextStyle(fontFamily = Look.Name, fontSize = Look.NameSize))
     val measurer = rememberTextMeasurer()
-    BoxWithConstraints(modifier) {
-        val shown = (qualifiers.size downTo 1).firstOrNull { n ->
-            measurer.measure(line(name, qualifiers.take(n)), style, maxLines = 1, softWrap = false)
-                .size.width <= constraints.maxWidth
-        } ?: 0
-        Text(
-            line(name, qualifiers.take(shown)), color = ink, style = style,
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.semantics {
-                // All of it, in pauses: commas where the dots are, which
-                // would otherwise be read out as "middle dot".
-                contentDescription = (listOf(name.replace(" · ", ", ")) + qualifiers).joinToString(", ")
-            },
-        )
+    // All of it, in pauses: commas where the dots are, which would
+    // otherwise be read out as "middle dot". Said once, on the name, however
+    // the qualifiers are laid out.
+    val spoken = Modifier.semantics {
+        contentDescription = (listOf(name.replace(" · ", ", ")) + qualifiers).joinToString(", ")
     }
+    BoxWithConstraints(modifier) {
+        fun fits(text: AnnotatedString) =
+            measurer.measure(text, style, maxLines = 1, softWrap = false).size.width <= constraints.maxWidth
+
+        if (qualifiers.isEmpty() || fits(line(name, qualifiers))) {
+            Text(
+                line(name, qualifiers), color = ink, style = style,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = spoken,
+            )
+        } else {
+            val shown = (qualifiers.size downTo 1).firstOrNull { n -> fits(below(qualifiers.take(n))) } ?: 1
+            Column {
+                Text(name, color = ink, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = spoken)
+                Text(
+                    below(qualifiers.take(shown)), style = style, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.semantics { hideFromAccessibility() },
+                )
+            }
+        }
+    }
+}
+
+private fun below(qualifiers: List<String>): AnnotatedString = buildAnnotatedString {
+    withStyle(SpanStyle(color = Look.ChalkDim)) { append(qualifiers.joinToString(" · ")) }
 }
 
 private fun line(name: String, qualifiers: List<String>): AnnotatedString = buildAnnotatedString {
