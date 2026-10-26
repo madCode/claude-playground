@@ -87,9 +87,15 @@ class AddMoveTest {
             device.waitForIdle()
             shell("input text $text")
             if (device.wait(Until.hasObject(focused(label).text(text)), 5_000)) return
-            repeat(12) { shell("input keyevent KEYCODE_DEL") }
+            clear()
         }
         error("couldn't type $text into $label")
+    }
+
+    /** Empties the box with the cursor: to its end first, since a tap can leave the cursor at the start. */
+    private fun clear() {
+        shell("input keyevent KEYCODE_MOVE_END")
+        repeat(12) { shell("input keyevent KEYCODE_DEL") }
     }
 
     @Test fun addMovesTheCursorToTheNewNameAndKeepsWhatWasTyped() {
@@ -234,7 +240,7 @@ class AddMoveTest {
         alive()
         // A change after the save, and two more saves.
         tapInto("move 0, lb")
-        repeat(4) { shell("input keyevent KEYCODE_DEL") }
+        clear()
         typeInto("move 0, lb", "30")
         tapSave("Save")
         assertTrue("the save after a change didn't land", saved())
