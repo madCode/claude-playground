@@ -1,9 +1,13 @@
 package com.app.carry
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -216,5 +220,60 @@ class TodayScreenTest {
         compose.setContent { TodayScreen(unknown) }
         compose.onNodeWithText("45 lb").assertIsDisplayed()
         assertTrue(Look.family("nonsense") == null)
+    }
+
+    @Test
+    fun `a row says what it asks for, and what makes it harder than the plain move`() {
+        // A harder version of a move takes a lighter weight than the plain
+        // one, and with only the name beside it the number reads as a
+        // mistake. Invented rows and weights.
+        val sheet = qualified()
+        compose.setContent { TodayScreen(sheet, java.time.LocalDate.of(2026, 10, 17)) }
+
+        // Variant words before the prescription, so the prescription is
+        // the first to give way.
+        compose.onNodeWithText("goblet squat · 1 leg · bosu · 20 total").assertIsDisplayed()
+        // A plain row gets only its prescription, and a row with neither
+        // reads as it always did.
+        compose.onNodeWithText("deadlift · 12 reps").assertIsDisplayed()
+        compose.onNodeWithText("farmer carry").assertIsDisplayed()
+        // TalkBack hears the name first, then each qualifier as its own phrase.
+        compose.onNodeWithContentDescription("goblet squat, 1 leg, bosu, 20 total").assertIsDisplayed()
+        shoot("45-before-qualifiers")
+    }
+
+    @Test
+    fun `where a row is short of room, qualifiers go whole, the prescription first`() {
+        // An ellipsis cuts between letters: "20 total" cut to "2…" is a
+        // wrong number. So at large text a qualifier is there or not at all.
+        compose.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale = 2f)) {
+                TodayScreen(qualified(), java.time.LocalDate.of(2026, 10, 17))
+            }
+        }
+        compose.onNodeWithText("goblet squat · 1 leg · bosu").assertIsDisplayed()
+        compose.onNodeWithText("deadlift · 12 reps").assertIsDisplayed()
+        // TalkBack still hears everything the row would say.
+        compose.onNodeWithContentDescription("goblet squat, 1 leg, bosu, 20 total").assertIsDisplayed()
+        shoot("46-before-qualifiers-large-text")
+    }
+
+    private fun qualified(): Session {
+        val base = SampleSession.today.sets.first().copy(previousWeight = null, family = "legs")
+        return SampleSession.today.copy(
+            sets = listOf(
+                base.copy(
+                    ref = 0, canonical = "goblet squat", suggestedWeight = 15.0, prescribedText = "20 total",
+                    variant = Session.json.parseToJsonElement(
+                        """{"stance":"single","arms":"both","stability":"bosu","implement":"single_dumbbell","tempo":"normal"}"""
+                    ),
+                ),
+                base.copy(
+                    ref = 1, canonical = "deadlift", suggestedWeight = 25.0, prescribedText = "12",
+                    variant = Session.json.parseToJsonElement("""{"stance":"both","implement":"double_dumbbell"}"""),
+                ),
+                base.copy(ref = 2, canonical = "farmer carry", suggestedWeight = 30.0, prescribedText = null, variant = null),
+            ),
+        )
     }
 }

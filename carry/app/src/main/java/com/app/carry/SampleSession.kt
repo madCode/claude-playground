@@ -1,6 +1,9 @@
 package com.app.carry
 
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * Invented exercises and weights, for previews and tests. The repository is
@@ -16,9 +19,9 @@ object SampleSession {
         // without it shows a screen nobody will ever see. `prescribedReps`
         // stays the runner's math number: "10 total" is 5 a side.
         asked: String? = "10", seconds: Int? = null, reps: Int? = 10,
-        related: String? = null,
+        related: String? = null, variant: JsonElement = JsonNull,
     ) = ExerciseSet(
-        ref = ref, line = "${asked ?: seconds} x $name", canonical = name, variant = JsonNull,
+        ref = ref, line = "${asked ?: seconds} x $name", canonical = name, variant = variant,
         prescribedReps = reps, prescribedText = asked, prescribedDurationSec = seconds,
         family = family, suggestedWeight = weight,
         previousWeight = previous, streakDone = done, streakNeeded = needed,
@@ -33,7 +36,12 @@ object SampleSession {
             set(0, "bench press", "push", 45.0, previous = 40.0),
             set(1, "single-arm row · split stance", "pull", 40.0, done = 2, needed = 3),
             set(2, "torso rotation · seated", "core", 30.0, done = 1, needed = 3),
-            set(3, "goblet squat · harder", "legs", 25.0),
+            // The coach's variant, so the sheet shows what makes this one
+            // harder than the plain move; "harder" is in the name already.
+            set(3, "goblet squat · harder", "legs", 25.0, variant = buildJsonObject {
+                put("implement", "single_dumbbell"); put("stance", "single")
+                put("stability", "bosu"); put("difficulty", "harder")
+            }),
             set(4, "deadlift", "legs", 25.0, done = 2, needed = 3, asked = "10 total", reps = 5),
             set(5, "bicep curl · seated", "combo", 15.0, asked = "6-12", reps = 6),
             set(6, "lateral raise", "push", null, asked = "8 each", reps = 8,
