@@ -15,6 +15,7 @@ dependencies {
     implementation(libs.commonmark)
     implementation(libs.commonmark.gfm.tables)
     implementation(libs.commonmark.gfm.strikethrough)
+    implementation(libs.jsoup)
     testFixturesImplementation(libs.okhttp.mockwebserver)
     testFixturesImplementation(libs.coroutines.core)
     testFixturesImplementation(libs.okhttp)

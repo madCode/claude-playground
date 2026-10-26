@@ -171,6 +171,27 @@ class MigrationTest {
         }
     }
 
+    @Test fun version10PostsHaveNoWebmentionsAndBlogsNeitherSendNorShowThem() {
+        helper.createDatabase(DB, 10).use { db ->
+            db.execSQL("INSERT INTO drafts (id, title, body, categories, tags, state, buildState, createdAt, updatedAt) VALUES (7, 'Kept', 'b', '[]', '[]', 'Published', 'Live', 0, 0)")
+            db.execSQL(
+                "INSERT INTO blog_privacy (blogKey, onlyThroughVpn, commitAsNoReply, sendAtRandomTime, plainCommitMessages, datesByDayOnly, removeTrackingCodes, isNew) " +
+                    "VALUES ('a/b@main', 1, 0, 0, 0, 0, 1, 0)",
+            )
+        }
+        helper.runMigrationsAndValidate(DB, 11, true, MIGRATION_10_11).use { db ->
+            db.query("SELECT webmentions FROM drafts WHERE id = 7").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(emptyList<Mention>(), Converters().toMentions(c.getString(0)))
+            }
+            // The switches already set stay; the new one is off.
+            db.query("SELECT onlyThroughVpn, removeTrackingCodes, sendWebmentions, showWebmentions FROM blog_privacy").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(listOf(1, 1, 0, 0), (0..3).map { c.getInt(it) })
+            }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test.db"
     }

@@ -305,6 +305,49 @@ doesn't want to open a laptop and make a commit for every post.
   and the app says so. Already gone counts as done.
 - Its photos stay: another post may use them. The repository's history keeps the text.
 
+## Webmentions
+
+Both are per blog, off by default, under Blog & privacy → Links in your posts.
+
+- **Send webmentions.** Once Pages says a post is live, and ten minutes on (Pages' cache can
+  serve the page as it was until then), each page it links to is told, by
+  [Webmention](https://www.w3.org/TR/webmention/): the app finds the page's endpoint and sends it
+  the post's address and the page's. The receiver reads the post to check the link, so not before.
+  - The links are the body's absolute `http` and `https` ones, in Markdown or HTML, each page once
+    (a `#fragment` or a trailing `/` doesn't make another), at most 50. Links to the blog's own
+    site, with or without `www.`, aren't sent.
+  - A build that ended unknown, usually cancelled by a newer push that carries the post too,
+    counts as live: a receiver that can't find the link just says no.
+  - The endpoint is found as the spec says: a `Link` header first, then the first `<link>` or
+    `<a>` with `rel="webmention"`, resolved where any redirects ended. HTML and XHTML pages, in the
+    charset they say; only the first megabyte is read. A site gets a minute for its page and
+    endpoint together.
+  - Nothing goes to `localhost` or an address on the phone's own network or the VPN's
+    (`192.168.…`, `10.…`, `100.64.…`, `fd00::`, and the same inside IPv6), named by its number,
+    in any of the forms resolvers read (`127.1`, `2130706433`): a page can't point the app at the
+    writer's router. Each redirect is checked before it's followed, and an endpoint follows only
+    307 and 308. A name that looks up to such an address is still sent to.
+  - Each page's result is kept with the post. A site that's down, or says to try later (429), is
+    tried again, five times in all, about half an hour; waiting for the VPN isn't a try. The others
+    aren't sent twice. The editor says how it went: "Webmentions: told tides.example · 1 site
+    doesn't take them".
+  - An Update sends again for the links the post has then; a link taken out isn't told, and a
+    deleted post's pages aren't either.
+  - Not for a hidden post, a Jekyll draft, or a build that failed. Turning the switch off stops
+    any still waiting.
+  - Through the blog's connections: its VPN switch covers them, and the request record lists them
+    under the blog.
+- **Show mentions from webmention.io.** For a site whose endpoint is
+  [webmention.io](https://webmention.io), the editor of a post on the site (published from the
+  phone, or opened to edit) has a Mentions line: "2 replies · 5 likes", opening to who replied,
+  liked, reposted or linked, each opening their page.
+  - Asked once as the post opens, by its address, with no token: webmention.io's per-page list is
+    public. It learns which post was opened; nothing is asked with the switch off.
+  - An edit's address is worked out as Publish does, from the file's day: a post whose own
+    `permalink:` or `date:` puts it elsewhere shows none.
+  - Names and replies are anyone's: shown as one line, without control or direction-changing
+    characters, a reply cut at 280 characters. Only web addresses open.
+
 ## The blog's _drafts
 
 - **Save to the blog's _drafts** (the editor's menu) commits a new post to `_drafts/<slug>.md`,
@@ -376,6 +419,8 @@ blog's switches, whichever blog is open when it goes.
   name, from the title, and its text are still in the history.
 - **Send at a random time**, off (see Publishing): commit times otherwise trace the writer's day.
 - **Remove tracking codes** from shared links, off.
+- **Send webmentions** and **Show mentions from webmention.io**, off (see Webmentions). Neither
+  is part of writing anonymously; the VPN switch covers both.
 - Whether the repository is public (so `_drafts` and earlier versions are readable), and that
   edits and deletes stay in its history, each linking to GitHub.
 - **Beyond the app**, what no switch can do: an account of its own, made with an email and name

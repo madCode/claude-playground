@@ -29,6 +29,9 @@
     `post_url`, image embeds listed and resolved against the vault's files as Obsidian does. The
     editor's `[[` completion uses it too.
   - `text/`: `Tracking` takes tracking and share codes out of links.
+  - `webmention/`: `Webmention` (a post's targets from its Markdown, endpoint discovery with
+    jsoup, sending, and the local-network refusal) and `WebmentionIo` (a page's received mentions
+    from webmention.io's public API).
   - `images/` and `io/`: `Gif` (a GIF without its metadata blocks), `readAtMost`.
   - `blog/`: `Blog` ties one repository and branch together: `index()` reads the posts,
     taxonomy, config and image folder, reusing summaries for unchanged blobs.
@@ -66,7 +69,8 @@
     `PublishQueue` (where queued posts are handed over; `WorkManagerQueue` in the app),
     `PublishWorker` (WorkManager: needs a network, waits for a post's random time and the VPN,
     exponential backoff), `BuildWatcher` and `BuildWatchWorker` (polls the post's blog's Pages
-    run for its commit), `Notifier`.
+    run for its commit), `Notifier`. `Webmentions` and `WebmentionWorker` tell a live post's
+    linked pages, keeping each one's outcome in `Draft.webmentions`.
   - `ui/`: Compose screens with a ViewModel each: `connect`, `home`, `editor` (the screen, its
     fields, toolbar, preview with `PreviewFetcher`, and term picker in their own files),
     `settings` (with `BlogPrivacyScreen`), `blogs` (the switcher's list, Your blogs and Remove, shared by
@@ -105,7 +109,8 @@
    date, commits, marks `Published` with the commit sha and `BuildState.Building`, refreshes
    the post cache. The VPN coming back, or Send now, starts a second worker beside a waiting
    one; the publisher's lock and the post's state keep it to one commit.
-4. `BuildWatchWorker` turns `Building` into `Live`, `Failed` or `Unknown`.
+4. `BuildWatchWorker` turns `Building` into `Live`, `Failed` or `Unknown`. On `Live`, with the
+   blog's switch on, its links go into `webmentions` and `WebmentionWorker` sends them.
 5. A failure the writer must fix (sign-in, access, an edit conflict) is state `Failed` with an
    `error`; they edit and publish again.
 6. Delete from the blog is the same queue with `Destination.Delete`: the path is recorded in

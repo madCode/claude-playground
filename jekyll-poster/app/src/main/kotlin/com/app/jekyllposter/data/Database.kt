@@ -110,6 +110,8 @@ data class Draft(
     /** [sendAfter] is a time the writer chose (Schedule…), not a random one. */
     @ColumnInfo(defaultValue = "0") val scheduled: Boolean = false,
     val buildState: BuildState? = null,
+    /** The pages a live post links to, each told of it by a webmention or waiting to be. */
+    @ColumnInfo(defaultValue = "[]") val webmentions: List<Mention> = emptyList(),
     val error: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
@@ -160,6 +162,15 @@ data class DraftImage(
     /** The prepared file in the app's storage. */
     val file: String,
 )
+
+/**
+ * A page a published post links to, and whether it has been told by a webmention; [tries] counts
+ * the times its site couldn't be reached.
+ */
+@Serializable
+data class Mention(val target: String, val state: State = State.Waiting, val tries: Int = 0) {
+    enum class State { Waiting, Sent, NoEndpoint, Refused, Failed }
+}
 
 /** A post already on a blog, as last read, keyed by blob sha so unchanged posts aren't fetched again. */
 // By path, not sha: two posts with identical bytes share a blob sha.
@@ -231,6 +242,14 @@ interface DraftDao {
     /** Clears a queued post's random or scheduled time, so it goes now; the number of rows changed. */
     @Query("UPDATE drafts SET sendAfter = NULL, scheduled = 0 WHERE id = :id AND state = 'Queued'")
     suspend fun sendNow(id: Long): Int
+
+    /** The webmentions column alone: the editor or the publisher may be writing the rest of the row. */
+    @Query("UPDATE drafts SET webmentions = :mentions WHERE id = :id")
+    suspend fun setWebmentions(id: Long, mentions: List<Mention>)
+
+    /** [mentions] as the post's first; the number of rows changed: none when it has some already. */
+    @Query("UPDATE drafts SET webmentions = :mentions WHERE id = :id AND webmentions = '[]'")
+    suspend fun startWebmentions(id: Long, mentions: List<Mention>): Int
 
     @Query("DELETE FROM drafts WHERE id = :id")
     suspend fun delete(id: Long)
@@ -412,9 +431,11 @@ class Converters {
     @TypeConverter fun toList(json: String): List<String> = Json.decodeFromString(json)
     @TypeConverter fun fromImages(list: List<DraftImage>): String = Json.encodeToString(list)
     @TypeConverter fun toImages(json: String): List<DraftImage> = Json.decodeFromString(json)
+    @TypeConverter fun fromMentions(list: List<Mention>): String = Json.encodeToString(list)
+    @TypeConverter fun toMentions(json: String): List<Mention> = Json.decodeFromString(json)
 }
 
-@Database(entities = [Draft::class, CachedPost::class, SignIn::class, SavedBlog::class, BlogPrivacy::class], version = 10)
+@Database(entities = [Draft::class, CachedPost::class, SignIn::class, SavedBlog::class, BlogPrivacy::class], version = 11)
 @TypeConverters(Converters::class)
 abstract class PosterDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
@@ -425,7 +446,7 @@ abstract class PosterDatabase : RoomDatabase() {
     companion object {
         /** The app's database, brought up to date from any version a debug build has shipped. */
         fun create(context: Context): PosterDatabase = Room.databaseBuilder(context, PosterDatabase::class.java, "poster.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10).build()
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11).build()
     }
 }
 
@@ -538,5 +559,13 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
 val MIGRATION_9_10 = object : Migration(9, 10) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE drafts ADD COLUMN scheduled INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE drafts ADD COLUMN webmentions TEXT NOT NULL DEFAULT '[]'")
+        db.execSQL("ALTER TABLE blog_privacy ADD COLUMN sendWebmentions INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE blog_privacy ADD COLUMN showWebmentions INTEGER NOT NULL DEFAULT 0")
     }
 }
