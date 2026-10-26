@@ -125,7 +125,7 @@ class AddMoveTest {
         device.findObject(what)?.let { return it }
         for (direction in listOf(Direction.DOWN, Direction.UP)) {
             repeat(15) {
-                device.findObject(By.scrollable(true))?.scroll(direction, 0.5f)
+                list()?.scroll(direction, 0.5f)
                 device.waitForIdle()
                 device.findObject(what)?.let { return it }
             }
@@ -133,20 +133,18 @@ class AddMoveTest {
         error("nothing on screen matches $what")
     }
 
+    /** The After tab's list: the tallest thing that scrolls, since a one-line text box scrolls too. */
+    private fun list() = device.findObjects(By.scrollable(true)).maxByOrNull { it.visibleBounds.height() }
+
     /** Scrolls the After tab until the box [label] is on screen, either way. */
     private fun reach(label: String) = find(box(label))
-
-    /** The keyboard covers the bottom of the list, where Save is. */
-    private fun keyboardDown() {
-        if (shell("dumpsys input_method").contains("mInputShown=true")) device.pressBack()
-        device.waitForIdle()
-    }
 
     /** Puts the cursor in [label]. A slow emulator can take a tap for a long press, which opens
      *  the Autofill menu instead, so the tap is tried again. */
     private fun tapInto(label: String) {
         repeat(3) {
-            reach(label).click()
+            // The list can recompose under the tap's lookup; a stale box is looked up again.
+            runCatching { reach(label).click() }
             if (device.wait(Until.hasObject(focused(label)), 3_000)) return
             device.findObject(By.text("Autofill"))?.let { device.pressBack() }
         }
@@ -204,7 +202,6 @@ class AddMoveTest {
 
     /** Whether the button says Saved within a while, looked for below the keyboard too. */
     private fun saved(): Boolean {
-        keyboardDown()
         val end = System.currentTimeMillis() + 20_000
         while (System.currentTimeMillis() < end) {
             if (runCatching { find(By.text("Saved")) }.isSuccess) return true
@@ -214,7 +211,6 @@ class AddMoveTest {
 
     /** The Save button, whatever it says now, scrolled to and tapped. */
     private fun tapSave(label: String) {
-        keyboardDown()
         find(By.text(label)).click()
     }
 
