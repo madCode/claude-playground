@@ -188,6 +188,46 @@ class AddMoveTest {
         alive()
     }
 
+    /** The Save button, whatever it says now, scrolled to and tapped. */
+    private fun tapSave(label: String) {
+        val list = device.findObject(By.scrollable(true))
+        (device.findObject(By.text(label))
+            ?: list.scrollUntil(androidx.test.uiautomator.Direction.DOWN, Until.findObject(By.text(label)))
+            ?: error("no $label button")).click()
+    }
+
+    /** madCode on #211: a second save after the first one closed the app. */
+    @Test fun savingTwiceInARow() {
+        tapInto("move 0, lb")
+        typeInto("move 0, lb", "21")
+        device.findObject(By.scrollable(true))
+            .scrollUntil(androidx.test.uiautomator.Direction.UP, Until.findObject(By.text(ADD)))
+        add()
+        tapInto(NAME)
+        typeInto(NAME, "popsquat")
+        tapInto(LB)
+        typeInto(LB, "12")
+        tapSave("Save")
+        assertTrue("the first save didn't land", device.wait(Until.hasObject(By.text("Saved")), 20_000))
+        alive()
+        // Straight away, on the button that now says Saved, and then once more.
+        tapSave("Saved")
+        alive()
+        tapSave("Saved")
+        alive()
+        // A change after the save, and two more saves.
+        tapInto("move 0, lb")
+        repeat(4) { shell("input keyevent KEYCODE_DEL") }
+        typeInto("move 0, lb", "30")
+        tapSave("Save")
+        assertTrue("the save after a change didn't land", device.wait(Until.hasObject(By.text("Saved")), 20_000))
+        alive()
+        tapSave("Saved")
+        alive()
+        assertEquals("30", reach("move 0, lb").text)
+        assertTrue(device.hasObject(box(NAME).text("popsquat")))
+    }
+
     private companion object {
         const val ADD = "+ Add what you did"
         const val NAME = "added exercise name"
