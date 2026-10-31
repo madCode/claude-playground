@@ -168,8 +168,7 @@ data class ExerciseSet(
      *  null when the variant is not an object or the key is missing or not
      *  a string. */
     val implement: String?
-        get() = ((variant as? JsonObject)?.get("implement") as? JsonPrimitive)
-            ?.takeIf { it.isString }?.content
+        get() = (variant as? JsonObject)?.string("implement")
 
     /**
      * Whether the After page offers *mod* ("I did the easier version"),
@@ -199,9 +198,96 @@ data class ExerciseSet(
      * asks, and "10 total" means five a side.
      */
     val prescription: String?
-        get() = prescribedDurationSec?.takeIf { it in 1..MAX_DURATION_SEC }?.let { "${durationText(it)} of" }
-            ?: prescribedText?.asScheme()?.let { "$it x" }
+        get() = duration?.let { "$it of" } ?: prescribedText?.asScheme()?.let { "$it x" }
+
+    /**
+     * [prescription] as the Before sheet shows it beside the name: "20 total",
+     * "45 sec", and "12 reps" for a bare count, which next to a weight would
+     * otherwise read as a second weight. The trailing "x" / "of" only reads
+     * as a sentence leading into the name, as it does on the Log row.
+     */
+    val sheetPrescription: String?
+        get() = duration ?: prescribedText?.asScheme()
+            // "0 reps" is a writer's slip, not an ask, and this is on every row.
+            ?.takeIf { s -> s.any { it in '1'..'9' } }
+            ?.let { if (it.last().isDigit()) "$it reps" else it }
+
+    private val duration: String?
+        get() = prescribedDurationSec?.takeIf { it in 1..MAX_DURATION_SEC }?.let(::durationText)
+
+    /**
+     * The variant's words that make this row differ from the plain move,
+     * "1 leg", "bosu", in a fixed order, for the Before sheet: they are what
+     * explains a weight lighter than the owner expects.
+     *
+     * Read from the coach's own [variant] fields, never from [line], and only
+     * where a field differs from the coach's default for it. A word the name
+     * already says is left out, so "single-arm row" does not also get "1 arm".
+     */
+    val variantWords: List<String>
+        get() {
+            val fields = variant as? JsonObject ?: return emptyList()
+            val name = " " + displayName.asWords() + " "
+            return VARIANT_FIELDS.mapNotNull { field ->
+                val value = fields.string(field.key)?.trim()
+                    ?.takeIf { it != field.default && VARIANT_VALUE.matches(it) }
+                    ?: return@mapNotNull null
+                val word = field.words[value] ?: VariantWord(value.asWords())
+                // From the start of a word, so "paused" and "lunges" count too.
+                word.shown.takeIf { word.said.none { " ${it.asWords()}" in name } }
+            }
+        }
 }
+
+private fun JsonObject.string(key: String): String? =
+    (get(key) as? JsonPrimitive)?.takeIf { it.isString }?.content
+
+/** Lower case, with hyphens, underscores and dots as single spaces. */
+private fun String.asWords(): String = lowercase().replace(NOT_A_WORD, " ").trim()
+
+/** How a variant value reads on the sheet, and the phrases that mean the
+ *  name already says it. */
+private class VariantWord(val shown: String, val said: List<String> = listOf(shown))
+
+/** A variant field the Before sheet names, with the coach's default for it. */
+private class VariantField(val key: String, val default: String, val words: Map<String, VariantWord> = emptyMap())
+
+/**
+ * The fields the Before sheet names, with gym-coach's defaults
+ * (`variants._DEFAULTS`). A value not listed in `words` is shown as stored,
+ * underscores as spaces.
+ *
+ * Not shown: `implement` (which dumbbell is the figure's job), `mode`,
+ * `intensity` and `grip`, which are not among the ones the owner approved
+ * for this line (#213).
+ */
+private val VARIANT_FIELDS = listOf(
+    VariantField(
+        "stance", "both", mapOf(
+            "single" to VariantWord("1 leg", listOf("1 leg", "single leg", "one leg")),
+            // Every lunge is split stance; the coach leaves it unsaid too.
+            "split" to VariantWord("split stance", listOf("split", "lunge")),
+            "staggered" to VariantWord("staggered stance", listOf("staggered")),
+            "sumo" to VariantWord("sumo stance", listOf("sumo")),
+            "wide" to VariantWord("wide stance"),
+        ),
+    ),
+    VariantField("arms", "both", mapOf("single" to VariantWord("1 arm", listOf("1 arm", "single arm", "one arm", "singlearm")))),
+    VariantField("stability", "stable"),
+    VariantField("position", "none"),
+    VariantField("tempo", "normal"),
+    VariantField("difficulty", "none"),
+)
+
+/**
+ * The coach's variant values are a word or two of letters ("bosu",
+ * "low_plank"). Anything else came from some other writer: digits would
+ * read as a rep count beside the prescription, a line break would hide the
+ * rest of the row, and a long value would push the prescription off it.
+ */
+private val VARIANT_VALUE = Regex("""\p{L}[\p{L}_ -]{0,23}""")
+
+private val NOT_A_WORD = Regex("""[^\p{L}\p{N}]+""")
 
 /**
  * Strips the characters that can make text render in an order other than

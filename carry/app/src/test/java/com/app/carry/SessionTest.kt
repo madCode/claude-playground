@@ -175,4 +175,80 @@ class SessionTest {
         assertFalse(set("""{"implement":"kettlebell"}""").offersMod)
         assertTrue("no implement, no weight: the fallback", set("""{"implement":3}""").offersMod)
     }
+
+    private fun row(name: String, variant: String) = Session.json.decodeFromString<ExerciseSet>(
+        """{"ref":0,"line":"10 x whatever","canonical":"$name","variant":$variant}"""
+    )
+
+    @Test
+    fun `the sheet names only the variant fields that differ from the plain move`() {
+        // The coach writes the whole variant, defaults and all; showing those
+        // would put "both legs · stable · normal" on every row of a sheet
+        // read in one glance.
+        assertEquals(
+            emptyList<String>(),
+            row("deadlift", """{"stability":"stable","stance":"both","arms":"both","implement":"double_dumbbell",
+                "mode":"reps","tempo":"normal","position":"none","difficulty":"none","intensity":"none","grip":"none"}""")
+                .variantWords,
+        )
+        assertEquals(
+            listOf("1 leg", "1 arm", "bosu", "low plank", "pause", "harder"),
+            row("press", """{"stance":"single","arms":"single","stability":"bosu","position":"low_plank",
+                "tempo":"pause","difficulty":"harder","intensity":"heavier","grip":"wide","mode":"hold"}""")
+                .variantWords,
+        )
+    }
+
+    @Test
+    fun `a word the name already says is not said again`() {
+        assertEquals(emptyList<String>(), row("single-arm row", """{"arms":"single"}""").variantWords)
+        assertEquals(emptyList<String>(), row("reverse lunge", """{"stance":"split"}""").variantWords)
+        assertEquals(emptyList<String>(), row("bicep curl · seated", """{"stance":"seated"}""").variantWords)
+        assertEquals(emptyList<String>(), row("bench press", """{"position":"bench"}""").variantWords)
+        // From the start of a word, so another form of it counts too.
+        assertEquals(emptyList<String>(), row("reverse lunges", """{"stance":"split"}""").variantWords)
+        assertEquals(emptyList<String>(), row("paused squat", """{"tempo":"pause"}""").variantWords)
+        assertEquals(emptyList<String>(), row("half-kneeling chop", """{"stance":"half_kneeling"}""").variantWords)
+        // A lunge is split by definition; a squat is not.
+        assertEquals(listOf("split stance"), row("goblet squat", """{"stance":"split"}""").variantWords)
+    }
+
+    @Test
+    fun `variant words come only from string fields of an object variant`() {
+        // From another machine, so anything odd is no word rather than a guess.
+        assertEquals(emptyList<String>(), row("curl", "null").variantWords)
+        assertEquals(emptyList<String>(), row("curl", "\"single\"").variantWords)
+        assertEquals(emptyList<String>(), row("curl", """{"stance":3,"arms":null,"tempo":{"a":"slow"}}""").variantWords)
+        assertEquals(emptyList<String>(), row("curl", """{"stance":"","tempo":"${"x".repeat(200)}"}""").variantWords)
+        // Not a word or two of letters, so not from the coach: digits would
+        // read as a count, a line break would hide the rest of the row.
+        assertEquals(
+            emptyList<String>(),
+            row("curl", """{"tempo":"3-1-1","position":"2","stability":"bosu\nball"}""").variantWords,
+        )
+        assertEquals(listOf("low plank"), row("curl", """{"position":"low_plank"}""").variantWords)
+        // The line says single leg; the variant does not, and only it counts.
+        assertEquals(
+            emptyList<String>(),
+            Session.json.decodeFromString<ExerciseSet>(
+                """{"ref":0,"line":"10 x single leg deadlift","canonical":"deadlift","variant":{"stance":"both"}}"""
+            ).variantWords,
+        )
+    }
+
+    @Test
+    fun `the sheet's prescription drops the Log row's lead-in, and a bare count says reps`() {
+        val plain = SampleSession.today.sets.first()
+        assertEquals("12 reps", plain.copy(prescribedText = "12").sheetPrescription)
+        assertEquals("6-12 reps", plain.copy(prescribedText = "6-12").sheetPrescription)
+        assertEquals("20 total", plain.copy(prescribedText = "20 total").sheetPrescription)
+        assertEquals("8 each", plain.copy(prescribedText = "8 each").sheetPrescription)
+        assertEquals("45 sec", plain.copy(prescribedText = null, prescribedDurationSec = 45).sheetPrescription)
+        assertNull(plain.copy(prescribedText = "try 45 lb").sheetPrescription)
+        assertNull(plain.copy(prescribedText = null).sheetPrescription)
+        assertNull("a writer's slip, not an ask", plain.copy(prescribedText = "0").sheetPrescription)
+        // The Log row keeps its own wording.
+        assertEquals("20 total x", plain.copy(prescribedText = "20 total").prescription)
+        assertEquals("45 sec of", plain.copy(prescribedText = null, prescribedDurationSec = 45).prescription)
+    }
 }
