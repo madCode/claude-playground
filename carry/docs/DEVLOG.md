@@ -35,6 +35,25 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-10-24 — Add on a borrowed day keeps every row's typing (#210)
+
+- **What the owner saw.** Tapping *+ Add what you did* after filling in
+  the form emptied it, and the cursor stayed where it was.
+- **Why the form emptied.** The After tab's list had no keys, so each row
+  held its place by position. On a borrowed day the added rows sit above
+  the sheet's, so every Add pushed the sheet's rows down one place, and a
+  box scrolled off screen came back with the saved text of whichever row
+  had been in that place: blank, or the number of the row above. The model
+  still held the right numbers, so what the screen showed and what a save
+  would write disagreed. Every row is now keyed by itself.
+- **Why the cursor stayed.** The list asked for the new name box's focus
+  as soon as the index it expected looked visible, which on a phone could
+  be the old layout's row in that place; the request then found no box and
+  was dropped without a word. The new row now asks for the focus itself,
+  once it is composed.
+- **A device test** (`AddMoveTest`) fills the sheet's rows through the
+  keyboard on CI's emulator, adds, and saves. On main it failed: Add left
+  the new row off screen and the cursor out of sight.
 ## 2026-10-26 — the Before sheet says what each row asks for (#213)
 
 - **Why.** A harder version of a move showed only its name beside a

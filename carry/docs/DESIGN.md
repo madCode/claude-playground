@@ -167,6 +167,8 @@ is off screen: below the button on a borrowed day, above it on a normal
 one. While the last added row is still completely empty, Add makes no
 second one and goes back to that row instead. The focus is spent by the
 tap: a rotation or a restored draft brings the row back, not the cursor.
+Every row on the page is keyed by the row itself, so an added row pushing
+the sheet's rows down never hands one row's typing to the box of another.
 An empty added row is harmless: the save leaves it out of the file and
 never refuses over it.
 
