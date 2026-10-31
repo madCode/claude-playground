@@ -1,9 +1,16 @@
 package com.app.carry
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -216,5 +223,86 @@ class TodayScreenTest {
         compose.setContent { TodayScreen(unknown) }
         compose.onNodeWithText("45 lb").assertIsDisplayed()
         assertTrue(Look.family("nonsense") == null)
+    }
+
+    @Test
+    fun `a row says what it asks for, and what makes it harder than the plain move`() {
+        // A harder version of a move takes a lighter weight than the plain
+        // one, and with only the name beside it the number reads as a
+        // mistake. Invented rows and weights.
+        val sheet = qualified()
+        compose.setContent { TodayScreen(sheet, java.time.LocalDate.of(2026, 10, 17)) }
+
+        // Variant words before the prescription, so the prescription is
+        // the first to give way.
+        compose.onNodeWithText("goblet squat · 1 leg · bosu · 20 total").assertIsDisplayed()
+        // A plain row gets only its prescription, and a row with neither
+        // reads as it always did.
+        compose.onNodeWithText("deadlift · 12 reps").assertIsDisplayed()
+        compose.onNodeWithText("farmer carry").assertIsDisplayed()
+        // TalkBack hears the name first, then each qualifier as its own phrase.
+        compose.onNodeWithContentDescription("goblet squat, 1 leg, bosu, 20 total").assertIsDisplayed()
+        shoot("45-before-qualifiers")
+    }
+
+    @Test
+    fun `where the qualifiers don't fit beside the name, they go under it`() {
+        // Moved rather than dropped (madCode on #216): what makes the row
+        // harder is the reason it's on the sheet at all.
+        compose.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale = 2f)) {
+                TodayScreen(qualified(), java.time.LocalDate.of(2026, 10, 17))
+            }
+        }
+        compose.onNodeWithText("goblet squat").assertIsDisplayed()
+        compose.onNodeWithText("1 leg · bosu · 20 total").assertIsDisplayed()
+        // A row that still fits keeps it all on one line.
+        compose.onNodeWithText("deadlift · 12 reps").assertIsDisplayed()
+        // TalkBack hears the row once, from the name, not the line under it again.
+        compose.onNodeWithContentDescription("goblet squat, 1 leg, bosu, 20 total").assertIsDisplayed()
+        compose.onNodeWithText("1 leg · bosu · 20 total")
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.HideFromAccessibility))
+        shoot("46-before-qualifiers-large-text")
+    }
+
+    @Test
+    fun `a line under the name that still doesn't fit loses whole qualifiers, the prescription first`() {
+        // An ellipsis cuts between letters, and "20 total" cut to "2…" is a
+        // wrong number, so a qualifier is there or not at all.
+        val long = qualified().let { sheet ->
+            sheet.copy(sets = listOf(sheet.sets[0].copy(variant = Session.json.parseToJsonElement(
+                """{"stance":"single","arms":"single","stability":"bosu","position":"low_plank","tempo":"explosive","difficulty":"harder"}"""
+            ))))
+        }
+        compose.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale = 2f)) {
+                TodayScreen(long, java.time.LocalDate.of(2026, 10, 17))
+            }
+        }
+        compose.onNodeWithText("goblet squat").assertIsDisplayed()
+        compose.onNodeWithText("1 leg · 1 arm", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("20", substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription(
+            "goblet squat, 1 leg, 1 arm, bosu, low plank, explosive, harder, 20 total"
+        ).assertIsDisplayed()
+    }
+
+    private fun qualified(): Session {
+        val base = SampleSession.today.sets.first().copy(previousWeight = null, family = "legs")
+        return SampleSession.today.copy(
+            sets = listOf(
+                base.copy(
+                    ref = 0, canonical = "goblet squat", suggestedWeight = 15.0, prescribedText = "20 total",
+                    variant = Session.json.parseToJsonElement(
+                        """{"stance":"single","arms":"both","stability":"bosu","implement":"single_dumbbell","tempo":"normal"}"""
+                    ),
+                ),
+                base.copy(
+                    ref = 1, canonical = "deadlift", suggestedWeight = 25.0, prescribedText = "12",
+                    variant = Session.json.parseToJsonElement("""{"stance":"both","implement":"double_dumbbell"}"""),
+                ),
+                base.copy(ref = 2, canonical = "farmer carry", suggestedWeight = 30.0, prescribedText = null, variant = null),
+            ),
+        )
     }
 }

@@ -3,6 +3,7 @@ package com.app.carry
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,12 +15,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
@@ -142,11 +151,7 @@ private fun SheetRow(set: ExerciseSet) {
         Look.family(set.family)?.let { hue ->
             Box(Modifier.width(3.dp).height(22.dp).clip(RoundedCornerShape(2.dp)).background(hue))
         }
-        Text(
-            set.displayName, color = if (change != null) Look.AmberInk else Look.Chalk,
-            fontFamily = Look.Name, fontSize = Look.NameSize, maxLines = 1,
-            overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-        )
+        NameLine(set, if (change != null) Look.AmberInk else Look.Chalk, Modifier.weight(1f))
         if (change != null) ChangeChip(change) else StreakPips(set)
         Text(
             // One text node, two weights of emphasis: the figure is the
@@ -161,6 +166,62 @@ private fun SheetRow(set: ExerciseSet) {
         )
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Look.Rule))
+}
+
+/**
+ * `goblet squat · 1 leg · bosu · 20 total`: the name, then the variant
+ * words, then the prescription, dim. Beside the name when it all fits on one
+ * line; otherwise the qualifiers move, together, to a line under the name.
+ *
+ * On that line, qualifiers that still don't fit are dropped whole from the
+ * end rather than ellipsized: an ellipsis cuts between letters, and "20
+ * total" cut to "2…" is a wrong number on a sheet read in one glance. So the
+ * prescription gives way first, and the variant words, which explain a
+ * weight lighter than the plain move's, last.
+ */
+@Composable
+private fun NameLine(set: ExerciseSet, ink: Color, modifier: Modifier) {
+    val name = set.displayName
+    val qualifiers = set.variantWords + listOfNotNull(set.sheetPrescription)
+    val style = LocalTextStyle.current.merge(TextStyle(fontFamily = Look.Name, fontSize = Look.NameSize))
+    val measurer = rememberTextMeasurer()
+    // All of it, in pauses: commas where the dots are, which would
+    // otherwise be read out as "middle dot". Said once, on the name, however
+    // the qualifiers are laid out.
+    val spoken = Modifier.semantics {
+        contentDescription = (listOf(name.replace(" · ", ", ")) + qualifiers).joinToString(", ")
+    }
+    BoxWithConstraints(modifier) {
+        fun fits(text: AnnotatedString) =
+            measurer.measure(text, style, maxLines = 1, softWrap = false).size.width <= constraints.maxWidth
+
+        if (qualifiers.isEmpty() || fits(line(name, qualifiers))) {
+            Text(
+                line(name, qualifiers), color = ink, style = style,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = spoken,
+            )
+        } else {
+            val shown = (qualifiers.size downTo 1).firstOrNull { n -> fits(below(qualifiers.take(n))) } ?: 1
+            Column {
+                Text(name, color = ink, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = spoken)
+                Text(
+                    below(qualifiers.take(shown)), style = style, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.semantics { hideFromAccessibility() },
+                )
+            }
+        }
+    }
+}
+
+private fun below(qualifiers: List<String>): AnnotatedString = buildAnnotatedString {
+    withStyle(SpanStyle(color = Look.ChalkDim)) { append(qualifiers.joinToString(" · ")) }
+}
+
+private fun line(name: String, qualifiers: List<String>): AnnotatedString = buildAnnotatedString {
+    append(name)
+    withStyle(SpanStyle(color = Look.ChalkDim)) {
+        qualifiers.forEach { append(" · "); append(it) }
+    }
 }
 
 /** Names the change rather than leaving it to be subtracted. */

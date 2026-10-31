@@ -14,10 +14,13 @@ import com.app.jekyllposter.data.VaultFile
 import com.app.jekyllposter.data.VaultImages
 import com.app.jekyllposter.publish.PublishQueue
 import java.io.File
+import java.net.InetAddress
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.crypto.spec.SecretKeySpec
 import kotlinx.coroutines.runBlocking
+import mockwebserver3.MockWebServer
+import okhttp3.Dns
 
 /** The sample blog's key ([com.app.jekyllposter.data.Account.blogKey]), as [TestApp.signIn] opens it. */
 const val SAMPLE_BLOG = "sample/sample-blog@main"
@@ -48,6 +51,17 @@ class TestApp : PosterApp() {
 
     /** Signs in to the sample blog, as most tests begin. */
     suspend fun signIn() = container.accounts.save(Account("sample", "good-token", "sample", "sample-blog", "main"))
+
+    /** Posts whose webmentions the app asked to send; a test sends them with `container.webmentions`. */
+    val webmentionsQueued = CopyOnWriteArrayList<Long>()
+
+    /** Stands in for webmention.io; a test enqueues its answers. */
+    val webmentionIo = MockWebServer().apply { start() }
+
+    override fun onTerminate() {
+        webmentionIo.close()
+        super.onTerminate()
+    }
 
     /** When set, a publish request runs the publisher straight away, as the worker would. */
     var publishNow = true
@@ -83,6 +97,10 @@ class TestApp : PosterApp() {
             vpn = vpn,
             // On CI the build has a run number, and would ask the real GitHub for a newer one.
             installedBuild = null,
+            // Pages a post links to are named `*.example`, served by a test's own server.
+            blogDns = { host -> if (host.endsWith(".example")) listOf(InetAddress.getLoopbackAddress()) else Dns.SYSTEM.lookup(host) },
+            sendWebmentions = { webmentionsQueued += it },
+            webmentionIo = webmentionIo.url("/"),
             publishQueue = object : PublishQueue {
                 override fun enqueue(id: Long, sendAfter: Long?) {
                     published += id

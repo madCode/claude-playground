@@ -22,6 +22,7 @@ import com.app.jekyllposter.core.jekyll.Taxonomy
 import com.app.jekyllposter.core.jekyll.Term
 import com.app.jekyllposter.core.jekyll.withPostHidden
 import com.app.jekyllposter.core.obsidian.ObsidianNote
+import com.app.jekyllposter.core.webmention.WebmentionIo
 import com.app.jekyllposter.data.CachedPost
 import com.app.jekyllposter.data.Destination
 import com.app.jekyllposter.data.BlogEntry
@@ -617,11 +618,37 @@ class EditorViewModel(private val container: AppContainer, private val id: Long)
 
     // Last in the class, so every property is set first: the launch runs at once on the main
     // thread, and when the read doesn't suspend it reaches addEmbeds and addPhoto mid-constructor.
+    /** What webmention.io has for a post on the site. */
+    sealed interface Mentions {
+        data object Loading : Mentions
+        data class Loaded(val received: List<WebmentionIo.Received>) : Mentions
+        data object Failed : Mentions
+    }
+
+    private val _mentions = MutableStateFlow<Mentions?>(null)
+
+    /** Null when not asked: the blog doesn't show them, or the post isn't on the site. */
+    val mentions: StateFlow<Mentions?> = _mentions
+
+    /** Asked once, as the post opens: a post on the site, published from here or opened to edit. */
+    private suspend fun loadMentions(draft: Draft) {
+        val key = draft.blog ?: return
+        if (draft.hidden || !container.privacy.get(key).showWebmentions) return
+        val address = when {
+            draft.state == PostState.Published -> draft.postUrl
+            draft.editingPath != null -> container.blogs.addressOf(draft.editingPath, draft.categories)
+            else -> null
+        } ?: return
+        _mentions.value = Mentions.Loading
+        _mentions.value = catching { container.receivedMentions(key).mentions(address) }.fold({ Mentions.Loaded(it) }, { Mentions.Failed })
+    }
+
     init {
         loading = viewModelScope.launch {
             val loaded = container.drafts.get(id)
             // Applied at once, so the screen sees it even if no frame is pending to pick it up.
             Snapshot.withMutableSnapshot { text = loaded }
+            loaded?.let { viewModelScope.launch { loadMentions(it) } }
             loaded?.body?.let { bodySelection = TextRange(it.length) }
             container.pendingShares.remove(id)?.let { share ->
                 share.photos.forEach(::addPhoto)

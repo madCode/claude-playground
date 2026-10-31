@@ -57,6 +57,31 @@ Two consequences worth stating, because they look like missing features:
    into a tail of at most two lines: by feel, and no weight. Present, not
    prominent.
 
+**A row says what it asks for** (madCode chose option B in #213). Beside
+the name, in the dim colour at the name's size, one line:
+`goblet squat · 1 leg · bosu · 20 total`. A weight only makes sense next
+to the reps it is for and the version of the move it is for, and a
+lighter number than usual otherwise reads as a mistake.
+
+- **The prescription, on every row**: the board's wording without the Log
+  row's lead-in ("20 total", "45 sec"), and "12 reps" for a bare count, so
+  it can't be read as a second weight.
+- **Variant words, only where the move differs from its plain version**:
+  `stance` other than both ("1 leg", "split stance", "seated"), `arms`
+  other than both ("1 arm"), `stability`, `position`, `tempo` and
+  `difficulty` off their defaults. Read from the coach's `variant`
+  fields, never from the line.
+- **Not twice**: a word the name already says is left out, so
+  "single-arm row" gets no "1 arm" and a lunge no "split stance".
+- **Beside the name, or under it.** When everything fits on one line the
+  qualifiers sit beside the name; when not (a long name, large text), all
+  of them move to a line under it (madCode on #216). The weight stays put.
+- **Never cut through a number.** If even that line is too short,
+  qualifiers are dropped whole from its end, the prescription first, then
+  the variant words, which are what explain a lighter weight. An ellipsis
+  would turn "20 total" into "2…".
+- **TalkBack** reads the name, then each qualifier as its own phrase.
+
 **After** — what you did (madCode approved the minimum page in #127,
 mockup v4). One row per exercise, two lines tall: the name with *hurt* at
 the end of it, then a weight box, a reps box (or on a timed row a *done*

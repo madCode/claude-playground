@@ -54,6 +54,26 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 - **A device test** (`AddMoveTest`) fills the sheet's rows through the
   keyboard on CI's emulator, adds, and saves. On main it failed: Add left
   the new row off screen and the cursor out of sight.
+## 2026-10-26 — the Before sheet says what each row asks for (#213)
+
+- **Why.** A harder version of a move showed only its name beside a
+  weight lighter than the plain move takes, so a right number looked
+  wrong.
+- **What.** Each Before row now ends with dim qualifiers on the name's
+  line: the prescription on every row, and the variant words that differ
+  from the plain move (`goblet squat · 1 leg · bosu · 20 total`). madCode
+  chose this, option B, over showing qualifiers only on harder rows.
+- **Where the words come from.** The coach's `variant` fields and
+  `prescribed_text`, never the line. A word the name already says is not
+  repeated, and the Log row's "20 total x" wording is unchanged.
+- **Fresh-eyes review.** An ellipsis could leave "2…" of "20 total", so
+  qualifiers that don't fit now go whole. Variant values that aren't a
+  word or two of letters are refused, a word the name says in another
+  form ("lunges", "paused") counts as said, and "0" is no prescription.
+- **Under the name when they don't fit** (madCode on #216). Rather than
+  dropping qualifiers beside a long name or at large text, the row moves
+  them all to a second line under the name. Only a second line that is
+  still too short drops any, whole, from its end.
 
 ## 2026-10-22 — every screen has a picture, and a blank one no longer fails CI
 

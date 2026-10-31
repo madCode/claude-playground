@@ -1,7 +1,7 @@
 # Device checks
 
 Every check of the app on a device: what CI's emulator runs on every PR, what it runs nightly,
-and on PRs that change the app's code, against real GitHub, and the five a person runs now and then. The JVM tests (`:core:test`,
+and on PRs that change the app's code, against real GitHub, and the six a person runs now and then. The JVM tests (`:core:test`,
 `:app:testDebugUnitTest`) cover the rest, without a device.
 
 ## On CI's emulator, every PR
@@ -71,13 +71,15 @@ puts it on an emulator). Post only to the tester's blogs, and delete what you po
 | **A TalkBack listen** | A new screen, or a change to one's layout | Turn TalkBack on; go through New post and Publish | Every button says what it does; the blog switcher names the open blog |
 | **A scheduled post on a sleeping phone** | A change to scheduling or `SendTimeAlarm` | Schedule… a short post ten minutes ahead, lock the phone and leave it | It goes out within a few minutes of its time; Home said "Scheduled for…" until then |
 | **A notification for the other blog** | A change to notifications or switching blogs | With two blogs, publish to the one that isn't open | Its notification names that blog; a tap opens the app on it, saying "Switched to …" |
+| **A webmention** | A change to `webmention/` or `Webmentions` | Turn on Send webmentions for `jekyll-test-blog-a`; publish a post linking to https://webmention.rocks/test/1 and wait until it's live | The editor says "told webmention.rocks"; the test page lists the post among its responses |
 | **Updating itself** | A change to `update/` | On a phone with an older CI debug build, open the app once a newer build is out; tap "Build N is out" | Android asks to allow installs, then to update; the app restarts on the newer build (Settings shows it), drafts intact |
 
 The first needs a browser signed in as the tester, whose password and 2FA stay out of CI. The
 second needs someone listening: CI's accessibility checks find missing labels, not labels that
 make no sense. The third needs a phone with an older CI build: CI can't watch Android's
 installer ask and update. The fourth needs a phone left idle, which an emulator in CI isn't;
-the fifth, Android's own notification shade with two blogs signed in.
+the fifth, Android's own notification shade with two blogs signed in. The webmention one needs a
+real receiver to fetch the live post and find the link; the tests stop at the request it is sent.
 
 ## Last checked by a person
 
@@ -88,3 +90,4 @@ the fifth, Android's own notification shade with two blogs signed in.
 | Updating itself | Not yet |
 | A scheduled post on a sleeping phone | Not yet |
 | A notification for the other blog | Not yet |
+| A webmention | Not yet |

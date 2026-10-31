@@ -10,6 +10,9 @@ and moves it to Done.
 - [ ] Sign in with GitHub, a TalkBack listen, updating itself, a scheduled post on a sleeping phone,
   and a notification for the other blog, on a phone, by a person, now and then
   ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)).
+- [ ] Webmentions for a link an Update takes out, and for a deleted post's pages: the spec asks
+  for both, and the app keeps neither the old links nor a page that answers 410.
+- [ ] Send a webmention to a real endpoint by hand once ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)).
 
 ## Not doing
 
@@ -28,6 +31,7 @@ madCode decided these on the morning page, 21 Oct. Each comes back if a writer a
 
 Cycles 40 on, newest first. Earlier cycles, and what madCode set up, are in [DEVLOG.md](DEVLOG.md).
 
+- [x] Webmentions: sent once a post is live; webmention.io's shown in the editor (madCode asked, 25 Oct)
 - [x] Cycle 64: close-out: a test for Forget the vault folder, the records, the coverage page and the morning page
 - [x] Cycles 62–63: the smaller journeys on every PR's emulator: Delete draft, Discard and Remove; Use the publish day; the notification prompt and its tap; removing a sign-in; search, pills and Read again; two photos at once, a note as text, Open with
 - [x] Cycle 58: #189 merged (a notification names its blog), #137 closed

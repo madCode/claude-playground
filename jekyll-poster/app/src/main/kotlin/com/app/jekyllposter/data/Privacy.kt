@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.Insert
@@ -45,6 +46,13 @@ data class BlogPrivacy(
     val datesByDayOnly: Boolean = false,
     /** Links shared into the app lose their tracking codes, in the editor where the writer sees it. */
     val removeTrackingCodes: Boolean = false,
+    /**
+     * Once a post is live, the pages it links to are told by webmention: each linked site sees a
+     * request from the phone (or its VPN) and learns of the post.
+     */
+    @ColumnInfo(defaultValue = "0") val sendWebmentions: Boolean = false,
+    /** A post's editor shows the webmentions webmention.io has for it, asking it each time. */
+    @ColumnInfo(defaultValue = "0") val showWebmentions: Boolean = false,
     /** Added beside other blogs, and nothing published to it yet: Blog & privacy says to set these. */
     val isNew: Boolean = false,
 ) {

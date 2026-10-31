@@ -65,9 +65,10 @@ fun carriesEverything(routes: List<VpnRouteRule>): Boolean =
  * first: a socket bound to the VPN can't fall back to Wi-Fi if the VPN drops mid-request, and
  * names are looked up through it, so the lookups don't go around it either.
  *
- * [required] is read on OkHttp's threads, never the main one.
+ * [required] is read on OkHttp's threads, never the main one. Without a VPN, names are looked
+ * up with [dns].
  */
-class VpnGate(private val vpn: Vpn, private val required: () -> Boolean) {
+class VpnGate(private val vpn: Vpn, private val dns: Dns = Dns.SYSTEM, private val required: () -> Boolean) {
     private fun route(): Route? = if (required()) vpn.current() ?: throw NoVpnException() else null
 
     val socketFactory: SocketFactory = object : SocketFactory() {
@@ -85,7 +86,7 @@ class VpnGate(private val vpn: Vpn, private val required: () -> Boolean) {
      * A new lookup each time. OkHttp only reuses a connection for a client with the same one,
      * so connections made under one setting never serve requests made under another.
      */
-    fun dns(): Dns = Dns { host -> route()?.lookup(host) ?: Dns.SYSTEM.lookup(host) }
+    fun dns(): Dns = Dns { host -> route()?.lookup(host) ?: dns.lookup(host) }
 
     /**
      * The phone's proxies, but no SOCKS one while the VPN is required: OkHttp opens a SOCKS
@@ -117,6 +118,9 @@ class GatedCalls(private val base: OkHttpClient, private val gate: VpnGate) : Ca
     private fun make() = base.newBuilder().socketFactory(gate.socketFactory).dns(gate.dns()).proxySelector(gate.proxySelector).build()
 
     override fun newCall(request: Request): Call = client.newCall(request)
+
+    /** These calls, on the same connections, but with redirects left to the caller to follow. */
+    fun withoutRedirects(): Call.Factory = Call.Factory { client.newBuilder().followRedirects(false).followSslRedirects(false).build().newCall(it) }
 
     fun renew() {
         val old = client

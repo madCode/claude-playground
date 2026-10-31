@@ -159,6 +159,24 @@ fun BlogPrivacyScreen(viewModel: BlogPrivacyViewModel, onBack: () -> Unit) {
                 viewModel::setRemoveTrackingCodes,
             )
 
+            Heading("Links in your posts")
+            Toggle(
+                "Send webmentions",
+                if (state.sendWebmentions) "Once a post is live, each site it links to that takes webmentions is told, and may show it as a reply or mention. " +
+                    "Each site sees the request${if (state.onlyThroughVpn) " from your VPN" else ", from your phone's address"}."
+                else "Off: sites you link to aren't told. They may still see readers arrive from your post.",
+                state.sendWebmentions,
+                viewModel::setSendWebmentions,
+            )
+            Toggle(
+                "Show mentions from webmention.io",
+                if (state.showWebmentions) "A post's editor lists the replies, likes and links webmention.io has for it, for a site that uses it to receive them. " +
+                    "Opening a post tells webmention.io which one${if (state.onlyThroughVpn) ", through your VPN" else ""}."
+                else "Off: the app never asks webmention.io.",
+                state.showWebmentions,
+                viewModel::setShowWebmentions,
+            )
+
             Heading("On GitHub")
             Row(
                 when (state.visibility) {

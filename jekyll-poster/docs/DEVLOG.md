@@ -9,7 +9,7 @@ Times are when each cycle landed, Pacific.
 
 - **Built:** sign-in two ways; several blogs and accounts; writing with photos stripped of their
   location; notes from Obsidian; safe edits, deletes and Hide from the site; scheduled posts;
-  publishing exactly once. Privacy is per blog, Only connect through a VPN included. Debug builds
+  publishing exactly once; webmentions sent, and webmention.io's shown. Privacy is per blog, Only connect through a VPN included. Debug builds
   say when a newer build is out, and install it.
 - **Checked:** nearly every journey a writer takes is walked through the screens: on CI's
   emulator with a pretend GitHub on every PR, or each night (and on PRs that change the app) on
@@ -17,8 +17,24 @@ Times are when each cycle landed, Pacific.
   [coverage page](https://claude.ai/artifact/F3gWC6RBgdtCwN5tgbPDdS) shows which.
 - **Used for real:** madCode publishes to their own blog from the phone.
 - **Waiting on you:** checks by a person ([DEVICE-CHECKS.md](DEVICE-CHECKS.md)): Sign in with
-  GitHub, a TalkBack listen, updating itself, a scheduled post on a sleeping phone, and a
-  notification for the other blog. None has been run yet.
+  GitHub, a TalkBack listen, updating itself, a scheduled post on a sleeping phone, a
+  notification for the other blog, and a webmention. None has been run yet.
+
+## Sun 25 Oct
+
+### Webmentions
+- **Asked:** madCode asked for sending webmentions, and optionally viewing them through a
+  server like webmention.io.
+- **Built:** two switches per blog, off by default, in Blog & privacy:
+  - **Send webmentions:** once Pages says a post is live, each page its body links to is told,
+    endpoint found as the W3C spec says. Each page's result is kept with the post, so a retry
+    sends only to the sites that were down; the editor says how it went.
+  - **Show mentions from webmention.io:** the editor of a post on the site has a Mentions line
+    that opens to who replied, liked, reposted or linked, from webmention.io's public per-page
+    list.
+  - Both go through the blog's connections, so its VPN switch covers them. Nothing is sent to
+    `localhost` or a local-network address.
+- **Not yet:** a link an Update takes out, and a deleted post's pages, aren't told (backlog).
 
 ## Thu 22 Oct
 

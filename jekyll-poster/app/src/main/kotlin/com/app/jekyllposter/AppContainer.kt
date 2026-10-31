@@ -10,6 +10,8 @@ import com.app.jekyllposter.core.net.GatedCalls
 import com.app.jekyllposter.core.net.Vpn
 import com.app.jekyllposter.core.net.VpnGate
 import com.app.jekyllposter.core.obsidian.ObsidianNote
+import com.app.jekyllposter.core.webmention.Webmention
+import com.app.jekyllposter.core.webmention.WebmentionIo
 import com.app.jekyllposter.data.Account
 import com.app.jekyllposter.data.AccountStore
 import com.app.jekyllposter.data.BlogEntry
@@ -33,6 +35,8 @@ import com.app.jekyllposter.publish.BuildWatcher
 import com.app.jekyllposter.publish.Notifier
 import com.app.jekyllposter.publish.PublishQueue
 import com.app.jekyllposter.publish.Publisher
+import com.app.jekyllposter.publish.WebmentionWorker
+import com.app.jekyllposter.publish.Webmentions
 import com.app.jekyllposter.publish.WorkManagerQueue
 import com.app.jekyllposter.ui.catching
 import com.app.jekyllposter.ui.editor.PreviewFetcher
@@ -60,6 +64,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Cache
+import okhttp3.Dns
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -92,6 +97,12 @@ class AppContainer(
     installedBuild: Int? = DebugUpdates.buildOf(BuildConfig.VERSION_NAME),
     /** The debug release's JSON on GitHub; tests point it at a local server. */
     releaseApi: HttpUrl = DebugUpdates.RELEASE_API,
+    /** How a blog's requests look up names when no VPN is asked for; tests name their pages. */
+    private val blogDns: Dns = Dns.SYSTEM,
+    /** webmention.io's API, which a post's received webmentions are read from; tests serve their own. */
+    private val webmentionIo: HttpUrl = "https://webmention.io/".toHttpUrl(),
+    /** Where a live post's webmentions go to be sent; WorkManager in the app. */
+    sendWebmentions: (Long) -> Unit = { WebmentionWorker.enqueue(context, it) },
 ) {
     /** What a share brought, waiting for the editor of the post it started. */
     val pendingShares = ConcurrentHashMap<Long, PendingShare>()
@@ -112,7 +123,7 @@ class AppContainer(
      */
     private val blogCalls = ConcurrentHashMap<String, GatedCalls>()
 
-    private fun callsFor(key: String) = blogCalls.getOrPut(key) { GatedCalls(base.recordedAs(context, key), VpnGate(vpn) { runBlocking { privacy.get(key).onlyThroughVpn } }) }
+    private fun callsFor(key: String) = blogCalls.getOrPut(key) { GatedCalls(base.recordedAs(context, key), VpnGate(vpn, blogDns) { runBlocking { privacy.get(key).onlyThroughVpn } }) }
 
     /**
      * Signing in, listing a sign-in's repositories and renewing its token aren't for one blog: they
@@ -227,10 +238,15 @@ class AppContainer(
     val drafts = database.drafts()
     val blogs = BlogRepository(accounts, database.posts()) { account: Account -> client(account) }
     val publisher = Publisher(drafts, accounts, blogs, privacy)
+    /** A live post's webmentions, through its blog's connections: the VPN switch covers them too. */
+    val webmentions = Webmentions(drafts, privacy, { Webmention(callsFor(it).withoutRedirects()) }, sendWebmentions)
+    /** For blog [key]'s posts' received webmentions; through its connections, like sending. */
+    fun receivedMentions(key: String) = WebmentionIo(callsFor(key), webmentionIo)
     val images = ImageImporter(context.contentResolver, File(context.filesDir, "images"))
     // The post's state is already saved: neither a cancelled worker nor an unreadable store may
     // cost its notification, which then just doesn't name the blog.
     val buildWatcher = BuildWatcher(drafts, accounts, { client(it) }) {
+        withContext(NonCancellable) { catching { webmentions.built(it) } }
         onBuildFinished(it, withContext(NonCancellable) { runCatching { otherBlog(it) }.getOrNull() })
     }
 

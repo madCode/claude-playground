@@ -3,6 +3,7 @@ package com.app.jekyllposter.data
 import com.app.jekyllposter.core.blog.Blog
 import com.app.jekyllposter.core.blog.SiteIndex
 import com.app.jekyllposter.core.github.GitHubClient
+import com.app.jekyllposter.core.jekyll.Permalink
 import com.app.jekyllposter.core.jekyll.PostPath
 import com.app.jekyllposter.core.jekyll.PostSummary
 import com.app.jekyllposter.core.jekyll.SiteConfig
@@ -124,6 +125,18 @@ class BlogRepository(
         val today = LocalDate.now(config.value.timezone ?: ZoneOffset.UTC)
         return posts.filter { post -> post.published && PostPath(post.path).let { !it.isDraft && (it.date?.let { d -> d <= today } ?: false) } }
             .sortedByDescending { PostPath(it.path).date }
+    }
+
+    /**
+     * Where the open blog's post at [path] is on the site, as Jekyll builds it from the file's day:
+     * null for a draft, or before the blog is read. A post whose own `date:` or `permalink:` says
+     * otherwise is somewhere else.
+     */
+    fun addressOf(path: String, categories: List<String>): String? {
+        val post = PostPath(path)
+        val site = siteUrl.value ?: return null
+        val day = post.date?.takeIf { !post.isDraft } ?: return null
+        return site + Permalink.path(config.value, day.atStartOfDay(config.value.timezone ?: ZoneOffset.UTC), post.slug, categories + post.folderCategories)
     }
 
     private fun PostSummary.toCached(blog: String) = CachedPost(blog, path.path, sha, title, categories, tags, published, path.date?.toString())
