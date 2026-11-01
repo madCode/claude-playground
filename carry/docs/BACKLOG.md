@@ -409,12 +409,15 @@ be built to them rather than against them:
 Not sketched further. It wants its own cycle and its own fresh-eyes
 review, not a late-evening addition to an unrelated branch.
 
-### The brain moves to the phone, eventually
+### The brain moves to the phone
+
+**Planned 2026-11-01**, after a day's sheet was written on the laptop and
+never reached the phone: [designs/brain-move.md](designs/brain-move.md).
+Waiting on the owner's answers to its four questions; nothing is built yet.
+What follows is the earlier reasoning it builds on.
 
 The owner's direction, 2026-10-16: *"once we feel confident that the brain
-is working we do eventually want to move it to the phone."* Not planned,
-and nothing here should be built toward it yet — but it changes what
-counts as a good decision in the meantime, so it is written down.
+is working we do eventually want to move it to the phone."*
 
 Tonight's work is a step toward it rather than away: the session file is
 now the delivery channel and the app notices it, so Signal is leaving the
