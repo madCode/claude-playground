@@ -35,6 +35,28 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+
+## 2026-11-01 — the sheet shows the coach's misses and floors
+
+The owner asked why the 1 Nov sheet had only one number. The coach had
+found something for seven of the other rows, and the sheet showed three of
+them at most:
+
+- **Carry dropped three of the coach's four extra lines.** gym-coach has
+  written `claims` (floors and caps), `miss_note` and `pattern_note` on
+  every row since 2026-10-15/16. Carry read only `related` when it took
+  over the sheet (#145), and the rest went nowhere: the curl's "missed 4 of
+  8 at 20 lb" warning and its "at least 10 lb" floor among them.
+- **Now:** a number shows its miss (in the warning colour) and pattern
+  note under it. A no-number row leaves the "By feel" list whenever the
+  coach said anything about it, as gym-coach's own text sheet does, with at
+  most three such rows, misses first. The claims are read defensively: a
+  value of the wrong shape costs those lines, not the row.
+- **One of today's floors was wrong**, and is fixed in gym-coach
+  ([gym-coach#75](https://github.com/madCode/gym-coach/pull/75)): a set
+  marked hurt could set an "at least". Merge that first, or the reverse
+  lunge would show "at least 22 lb" from a set that hurt.
+
 ## 2026-10-24 — Add on a borrowed day keeps every row's typing (#210)
 
 - **What the owner saw.** Tapping *+ Add what you did* after filling in
