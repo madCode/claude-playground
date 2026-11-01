@@ -1,7 +1,7 @@
 # Moving the coach onto the phone
 
-**Status:** plan, waiting on the owner's answers to the four questions at
-the end. Nothing is built yet.
+**Status:** plan, agreed 2026-11-01 (decisions at the end). Nothing is
+built yet; phase 1 is next.
 
 ## Why now
 
@@ -122,22 +122,20 @@ plan:
 - `PLAN.md` and `TRAINING.md`: the reasoning behind each rule.
 - The research harness that samples old Reddit threads (`real_harness.py`).
 
-## The four questions
+## Decisions (owner, 2026-11-01)
 
-1. **Port to Kotlin, or run the Python on the phone** (Chaquopy embeds it
-   in an Android app)? Running the same code would keep one derivation
-   with no port. But Python on Android runs only on a device or emulator,
-   not under Carry's JVM tests, so every coach test would become an
-   emulator test, and the APK grows by tens of MB. **Recommended: port,
-   with the fixtures as the guard.**
-2. **May board lines be published?** The line fixtures are short
-   prescriptions from r/orangetheory comments ("8 x wide bicep curl"),
-   with no usernames or prose. The full comments in `wod_cache/` stay
-   private either way. If not, the fixtures and their tests live in the
-   private gym-coach repo, and Carry's CI can't run them. **Recommended:
-   publish the lines only.**
-3. **Where is the history's backup?** Recommended: Carry's export in the
-   synced folder, which the laptop job copies into the gym-data repository.
-   That repository then stops being a one-off snapshot.
-4. **When does the laptop stop writing sheets?** Recommended: at the end of
-   a side-by-side period with zero differences, not on a fixed date.
+1. **Rewrite in Kotlin**, with the fixtures as the guard. Not Chaquopy:
+   Python on Android runs only on a device or emulator, so every coach
+   test would become an emulator test, and the APK would grow by tens of
+   MB.
+2. **Board lines may be published** in this repository, since they come
+   from public r/orangetheory workout posts. Lines only: no usernames, and
+   the full comments in `wod_cache/` stay in gym-coach.
+3. **History backup:** Carry writes its export to the synced folder, and
+   Syncthing carries it from the phone to the laptop. Claude reads that
+   folder for analysis: a local session reads it there, and a cloud
+   session reads the copy the laptop job puts in the gym-data repository.
+4. **The switch:** after the side-by-side period shows no differences. The
+   owner expects the fixtures and the back-test over every old board to
+   carry most of the weight, so the side-by-side period is a short
+   confirmation on live classes, not the main test.

@@ -413,7 +413,8 @@ review, not a late-evening addition to an unrelated branch.
 
 **Planned 2026-11-01**, after a day's sheet was written on the laptop and
 never reached the phone: [designs/brain-move.md](designs/brain-move.md).
-Waiting on the owner's answers to its four questions; nothing is built yet.
+Agreed the same day (rewrite in Kotlin, board lines public, history
+exported through the synced folder); phase 1, the fixtures, is next.
 What follows is the earlier reasoning it builds on.
 
 The owner's direction, 2026-10-16: *"once we feel confident that the brain
