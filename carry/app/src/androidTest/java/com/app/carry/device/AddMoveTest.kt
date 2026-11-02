@@ -230,7 +230,10 @@ class AddMoveTest {
     private fun saved(): Boolean {
         val end = System.currentTimeMillis() + 20_000
         while (System.currentTimeMillis() < end) {
-            if (runCatching { find(By.text("Saved")) }.isSuccess) return true
+            // The button is the list's last item, and the line a save adds above it pushes it to
+            // the bottom edge, where a half-shown button isn't findable: scrolled to the end first.
+            while (list()?.scroll(Direction.DOWN, 1f) == true) device.waitForIdle()
+            if (device.wait(Until.hasObject(By.text("Saved")), 2_000)) return true
         }
         return false
     }
