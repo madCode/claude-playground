@@ -123,6 +123,17 @@ data class ExerciseSet(
      * Carry must not strip it down to the figure.
      */
     val related: String? = null,
+    /**
+     * Floors and caps the coach drew from other setups of this movement,
+     * at most two: "at least 10 lb (10 lb, single leg, 10/25)". Verbatim,
+     * for the same reason as [related]. Kept raw and read by [claimLines]:
+     * a value of the wrong shape costs these lines, not the whole row.
+     */
+    val claims: JsonElement? = null,
+    /** How the movement's pattern has gone lately ("rows lately: …"), verbatim. */
+    @SerialName("pattern_note") val patternNote: String? = null,
+    /** A big miss on this movement last time: "missed 4 of 8 at 20 lb on 10/23 (wide stance)". */
+    @SerialName("miss_note") val missNote: String? = null,
     /** legs | push | pull | core | combo -- from the knowledge base's muscle groups. */
     val family: String? = null,
     /** Clean sets held at this weight, and how many a bump needs. */
@@ -187,6 +198,18 @@ data class ExerciseSet(
             val before = previousWeight ?: return null
             return (now - before).takeIf { it != 0.0 }
         }
+
+    /** [claims], or nothing when it isn't a list of strings. */
+    val claimLines: List<String>
+        get() = (claims as? JsonArray).orEmpty().asSequence()
+            .mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content?.takeIf(String::isNotBlank) }
+            .take(MAX_CLAIMS).toList()
+
+    /** Whether the coach said anything about this row beyond its number: gym-coach's own
+     *  test for a row that may fold into a list of names (`_is_quiet`). */
+    val coachSaid: Boolean
+        get() = !related.isNullOrBlank() || claimLines.isNotEmpty() ||
+            !missNote.isNullOrBlank() || !patternNote.isNullOrBlank()
 
     val displayName: String
         get() = (canonical ?: components?.joinToString(" + ") ?: line).readable()
@@ -309,6 +332,9 @@ private const val MAX_DURATION_SEC = 60 * 60
 /** The importer's own ceiling on a rep count, and a ladder longer than any board writes. */
 private const val MAX_REPS = 1000
 private const val MAX_ROUNDS = 20
+
+/** gym-coach writes at most two, or one "your logs disagree" line. */
+private const val MAX_CLAIMS = 2
 
 /** "45 sec", "1 min" — the way the sheet writes it. */
 internal fun durationText(seconds: Int): String =

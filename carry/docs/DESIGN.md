@@ -52,10 +52,19 @@ Two consequences worth stating, because they look like missing features:
 1. Weights that **changed** since last time, with what they were. A bump is
    the only number you'd get wrong from memory, because by feel you repeat
    last session's weight.
-2. The other history-backed numbers, one line each.
-3. Everything with no number — first-timers, bodyweight, untracked — folded
-   into a tail of at most two lines: by feel, and no weight. Present, not
-   prominent.
+2. The other history-backed numbers, one line each. Under a number, what
+   the coach said beside it: a miss last time ("missed 4 of 8 at 20 lb on
+   10/23"), in the warning colour, and how the movement's pattern has gone.
+3. Movements with no number of their own but something the coach found:
+   a floor or cap from another setup ("at least 10 lb (10 lb, single leg,
+   10/25)"), a miss, the nearest related lift, a pattern note. A row each,
+   at most three, misses first, then floors and caps. Each number stays
+   inside the sentence that says where it came from, at the size of a note,
+   so it can't be mistaken for a number this movement earned.
+4. Everything else with no number — first-timers, bodyweight, untracked —
+   folded into a tail of at most two lines: by feel, and no weight. Present,
+   not prominent. A row is in the tail only when the coach said nothing
+   about it, which is gym-coach's own test (`_is_quiet`).
 
 **A row says what it asks for** (madCode chose option B in #213). Beside
 the name, in the dim colour at the name's size, one line:
