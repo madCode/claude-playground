@@ -1,7 +1,9 @@
 # Moving the coach onto the phone
 
-**Status:** plan, agreed 2026-11-01 (decisions at the end). Nothing is
-built yet; phase 1 is next.
+**Status:** agreed 2026-11-01 (decisions at the end). Phase 1 done: the
+fixtures are in `brain-fixtures/`. Phase 2's matcher is ported (`brain/`):
+every one of the corpus's 2,834 read lines and 277 boards matches the
+Python's rows exactly. Next: phase 3, the suggestions.
 
 ## Why now
 

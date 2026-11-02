@@ -35,6 +35,24 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+
+## 2026-11-02 — the coach's matcher runs in Kotlin
+
+Phases 1 and 2 of [the brain move](designs/brain-move.md):
+
+- **`brain-fixtures/`**: gym-coach's Python, written down. Every board in
+  the corpus with the rows it makes, and an invented lifter's run with each
+  day's sheet and the history it leaves.
+- **`brain/`**: the matcher, ported: the knowledge base, reading a line's
+  setup (`variants.py`), combos, and a board's rows with its prose filter
+  and de-duplication. All 2,834 lines and 277 boards come out exactly as
+  the Python's; dropping one phrase ("bosu") from the port turns 128 lines
+  and 19 boards red.
+- **Python's text rules, not Kotlin's.** `splitlines`, `strip`, `split` and
+  the regex classes `\d \s \w \b` are spelled out to mean what Python means,
+  the same on the JVM and on Android, whose regex engine differs from the
+  JVM's.
+
 ## 2026-10-24 — Add on a borrowed day keeps every row's typing (#210)
 
 - **What the owner saw.** Tapping *+ Add what you did* after filling in
