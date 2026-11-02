@@ -14,6 +14,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.json.jsonArray
@@ -577,6 +578,44 @@ class CarryViewModelTest {
         model.save(); settled(model)
         assertEquals(1, disk.writes)
         assertTrue(disk.text!!.contains("95"))
+    }
+
+    @Test
+    fun `a read that catches the save's own bytes before the save lands is not a file that moved`() = runTest(dispatcher) {
+        val model = viewModel()
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+
+        // The write lands on disk, then the save goes on reading it back
+        // while the resume's read returns with the new bytes.
+        model.stallAfterMs = null
+        val written = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val readBack = java.util.concurrent.CountDownLatch(1)
+        model.write = { _, text ->
+            disk.writes++; disk.text = text; written.complete(Unit)
+            readBack.await(20, java.util.concurrent.TimeUnit.SECONDS)
+            Saved.YES
+        }
+        var first = true
+        model.read = {
+            if (first) { first = false; written.await() }
+            ready(disk.text!!)
+        }
+        model.refresh()
+        advanceUntilIdle()
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        model.save()
+        withContext(Dispatchers.Default) { withTimeout(20_000) { while (disk.writes == 0) delay(5) } }
+        // The read's landing is queued on Main; run it before the save ends.
+        runCurrent()
+        readBack.countDown()
+        settled(model)
+
+        assertFalse("the owner's own save is not someone else's", model.fileMovedUnderEdits.value)
+        assertEquals(SaveState.Saved, model.saving.value)
+        assertFalse("nothing is left unsaved", model.unsaved)
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
     }
 
     @Test

@@ -125,18 +125,25 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     private val _saving = mutableStateOf<SaveState>(SaveState.Idle)
 
     /**
-     * Saves that have landed, and the text the last one left in the file.
+     * Bumped when a save starts and again when it ends, whatever the
+     * outcome; with [saveJob], how a read tells that a save overlapped it.
      *
-     * A folder read started before a save can land after it, holding the
-     * file as it was: on a resume the read starts at once, and the owner (or
-     * a test) can tap Save before it returns. Applied, it re-seeded the form
-     * from the old numbers and said "Save" again -- and a second tap would
-     * have written those old numbers back. A read a save overtook is dropped
-     * and done again. And a read of the very file we just wrote is not "a
-     * new file": the button stays "Saved", so returning from the share sheet
-     * no longer takes the post button away.
+     * A folder read that overlaps a save can hold the file as it was, as it
+     * was mid-write, or as the save left it before the save's own result
+     * landed: on a resume the read starts at once, and the owner can tap
+     * Save before it returns. Applied, it re-seeded the form from the old
+     * numbers and said "Save" again, and a second tap would have written
+     * those old numbers back; or it set "file changed under you" over the
+     * owner's own save. Counting only saves that LANDED missed every case
+     * but the first. A read that overlapped a save is dropped, and done
+     * again once the save is over.
      */
-    private var savesLanded = 0
+    private var saveEpoch = 0
+    private var saveJob: Job? = null
+
+    /** What the last good save left in the file. A read of exactly that is
+     *  not "a new file": the button stays "Saved", so returning from the
+     *  share sheet keeps the post button. */
     private var lastWritten: String? = null
     val saving: State<SaveState> = _saving
 
@@ -261,16 +268,17 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      * fresh one would put an older sheet on screen -- but it is not
      * "one read at a time", and an earlier comment here claimed it was.
      */
-    fun refresh() {
+    // The resume right after the picker re-reads a folder that was never
+    // taken, and would replace the refusal before the owner had read it.
+    // Taken here, not in the read, so a read already in flight can't use it.
+    fun refresh() = refresh(holdRefusal = refusedPick.also { refusedPick = false }, history = true)
+
+    private fun refresh(holdRefusal: Boolean, history: Boolean) {
         reading?.cancel()
-        // The resume right after the picker re-reads a folder that was never
-        // taken, and would replace the refusal before the owner had read it.
-        // Taken here, not in the read, so a read already in flight can't use it.
-        val holdRefusal = refusedPick.also { refusedPick = false }
-        val savesBefore = savesLanded
+        val epoch = saveEpoch
         reading = viewModelScope.launch {
             val next = stallAfterMs.let { if (it == null) read() else withTimeoutOrNull(it) { read() } }
-            if (savesLanded != savesBefore) return@launch refresh()
+            if (overlapped(epoch)) return@launch readAgain(holdRefusal)
             _state.value = when {
                 holdRefusal -> _state.value
                 // A provider can block forever -- openInputStream has no
@@ -288,13 +296,20 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
             // two sittings opens showing the first sitting's numbers rather
             // than blank boxes the owner would fill in from memory. Only on
             // a NEW file: re-seeding would throw away edits in progress.
-            (_state.value as? CarryState.Ready)?.let { reconcile(it) }
+            (_state.value as? CarryState.Ready)?.let { if (!reconcile(it, epoch)) readAgain(holdRefusal) }
         }
         // The folder is the history, so this is every file in it. Off the
         // main thread and beside the sheet rather than behind it: the lobby
         // screen must not wait on a year of sessions to show today's three
-        // numbers.
-        rereadHistory()
+        // numbers. Not on a read done again: the save already re-reads it.
+        if (history) rereadHistory()
+    }
+
+    private fun overlapped(epoch: Int) = saveEpoch != epoch || saveJob?.isActive == true
+
+    private suspend fun readAgain(holdRefusal: Boolean) {
+        saveJob?.join()
+        refresh(holdRefusal, history = false)
     }
 
     /**
@@ -305,8 +320,11 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
      * the file already held numbers, so a session finished in two sittings
      * was indistinguishable from one being filled in, and every later file
      * triggered the keep-and-warn path with nothing actually typed.
+     *
+     * False, with nothing applied, when a save overlapped the parse below:
+     * the read it is seeding from is stale, and the caller reads again.
      */
-    private suspend fun reconcile(ready: CarryState.Ready) {
+    private suspend fun reconcile(ready: CarryState.Ready, epoch: Int): Boolean {
         val draft = savedDraft()
         when {
             // Not ours. A draft for another session must never be shown
@@ -318,6 +336,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                 val (entries, added) = withContext(kotlinx.coroutines.Dispatchers.Default) {
                     SessionPatch.entriesIn(ready.raw) to SessionPatch.addedIn(ready.raw)
                 }
+                if (overlapped(epoch)) return false
                 _edits.value = ready.session.onScreen(entries)
                 // Rows from a file written before ids arrive with a
                 // positional stand-in, which is the old index identity
@@ -352,6 +371,7 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                 _fileMovedUnderEdits.value = true
             }
         }
+        return true
     }
 
     /** Throw away what was typed and take the file as it now stands. The
@@ -509,7 +529,8 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         // the file could be left damaged even with no draft. Cleared when the save ends.
         unsavedMark.set(true)
         _saving.value = SaveState.Saving
-        viewModelScope.launch {
+        saveEpoch++
+        saveJob = viewModelScope.launch {
             // Every row goes down, nameless ones included. This used to
             // filter them out here, which meant a row the owner typed a
             // weight into but never named was dropped on save -- silently,
@@ -530,7 +551,6 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                         clearDraft()
                         _fileMovedUnderEdits.value = false
                         lastWritten = ready.raw
-                        savesLanded++
                         _saving.value = SaveState.Saved
                         // Reached when the file already holds these
                         // numbers, which means something else wrote it --
@@ -585,7 +605,6 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                     _saving.value = refusal?.let(::keepDamage) ?: when (result!!) {
                         Saved.YES -> {
                             lastWritten = text
-                            savesLanded++
                             // ALL of this is "only if nothing newer arrived
                             // while we wrote". It used to guard the one
                             // line, and the rest ran regardless -- so when
@@ -638,7 +657,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                     if (_saving.value == SaveState.Saved) rereadHistory()
                 }
             }
-        }.invokeOnCompletion {
+        }
+        saveJob?.invokeOnCompletion {
+            saveEpoch++
             // Unless another save has started meanwhile: its own end clears the mark.
             if (_saving.value != SaveState.Saving) unsavedMark.set(handle.contains(DRAFT))
         }
