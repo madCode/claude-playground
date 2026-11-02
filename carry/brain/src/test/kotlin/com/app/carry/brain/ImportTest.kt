@@ -69,8 +69,36 @@ class ImportTest {
         assertEquals(listOf("$name: logged 2 sets"), first.report)
         val renamed = planImport(listOf(name to file(set, row.format("reverse lunge"))), first.appended, kb, write = true)
         assertEquals(listOf("$name: updated 1"), renamed.report)
-        val row = renamed.rewritten!!.single { "#added#" in (it["row_id"] as JsonPrimitive).content }
-        assertEquals(JsonPrimitive("reverse lunge"), row["exercise"])
-        assertEquals(JsonPrimitive(15), row["weight"])
+        val logged = renamed.rewritten!!.single { "#added#" in (it["row_id"] as JsonPrimitive).content }
+        assertEquals(JsonPrimitive("reverse lunge"), logged["exercise"])
+        assertEquals(JsonPrimitive(15), logged["weight"])
+    }
+
+    @Test
+    fun `a knowledge-base change moves no added row nobody touched`() {
+        // The match is redone from today's knowledge base on every run: a row
+        // logged under one match and read under another is not a rename.
+        val set = """"weight": 20"""
+        val row = """{"id": "a1", "name": "goblet squat", "weight": 15, "reps": 10}"""
+        val first = planImport(listOf(name to file(set, row)), emptyList(), kb, write = true)
+        val stored = first.appended.map {
+            if ("#added#" in (it["row_id"] as JsonPrimitive).content) it.with("exercise" to JsonNull) else it
+        }
+        val again = planImport(listOf(name to file(set, row)), stored, kb, write = true)
+        assertEquals(listOf(null), again.report)
+        assertNull(again.rewritten)
+    }
+
+    @Test
+    fun `a rename in a backfilled file is not reported on every run`() {
+        val row = """{"id": "a1", "name": "%s", "weight": 15, "reps": 10}"""
+        fun back(n: String) = ImportSource.Text(
+            """{"schema": "gym-session/1", "sheet_id": "2026-01-10:2G", "date": "2026-01-10", "class": "2G",
+               "backfilled": true, "sets": [], "added": [${row.format(n)}]}""",
+        )
+        val first = planImport(listOf(name to back("goblet squat")), emptyList(), kb, write = true)
+        val renamed = planImport(listOf(name to back("reverse lunge")), first.appended, kb, write = true)
+        assertEquals(listOf(null), renamed.report)
+        assertTrue(renamed.appended.isEmpty())
     }
 }
