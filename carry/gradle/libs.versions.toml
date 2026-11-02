@@ -56,5 +56,6 @@ work-testing = { module = "androidx.work:work-testing", version.ref = "work" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

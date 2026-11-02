@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "carry"
 include(":app")
+include(":brain")
