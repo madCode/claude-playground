@@ -98,32 +98,32 @@ class SheetFixturesTest {
             failures.isEmpty(),
         )
     }
+}
 
-    /** Every place [want] and [got] differ, as path: python vs kotlin. */
-    private fun diff(path: String, want: JsonElement, got: JsonElement, out: MutableList<String>) {
-        when {
-            want is JsonObject && got is JsonObject -> for (k in (want.keys + got.keys).sorted()) {
-                val w = want[k]
-                val g = got[k]
-                if (w == null || g == null) out += "$path.$k: python ${w ?: "(absent)"} vs kotlin ${g ?: "(absent)"}"
-                else diff("$path.$k", w, g, out)
-            }
-            want is JsonArray && got is JsonArray -> {
-                if (want.size != got.size) out += "$path: python has ${want.size} items, kotlin ${got.size}"
-                for (i in 0 until minOf(want.size, got.size)) diff("$path[$i]", want[i], got[i], out)
-            }
-            !sameValue(want, got) -> out += "$path: python $want vs kotlin $got"
+/** Every place [want] and [got] differ, as path: python vs kotlin. */
+internal fun diff(path: String, want: JsonElement, got: JsonElement, out: MutableList<String>) {
+    when {
+        want is JsonObject && got is JsonObject -> for (k in (want.keys + got.keys).sorted()) {
+            val w = want[k]
+            val g = got[k]
+            if (w == null || g == null) out += "$path.$k: python ${w ?: "(absent)"} vs kotlin ${g ?: "(absent)"}"
+            else diff("$path.$k", w, g, out)
         }
+        want is JsonArray && got is JsonArray -> {
+            if (want.size != got.size) out += "$path: python has ${want.size} items, kotlin ${got.size}"
+            for (i in 0 until minOf(want.size, got.size)) diff("$path[$i]", want[i], got[i], out)
+        }
+        !sameValue(want, got) -> out += "$path: python $want vs kotlin $got"
     }
+}
 
-    /** Python's `==` on loaded JSON for scalars: 30 equals 30.0, a string never equals a number. */
-    private fun sameValue(a: JsonElement, b: JsonElement): Boolean {
-        if (a is JsonNull || b is JsonNull) return a is JsonNull && b is JsonNull
-        if (a !is JsonPrimitive || b !is JsonPrimitive) return a == b
-        if (a.isString || b.isString) return a.isString && b.isString && a.content == b.content
-        val ab = a.booleanOrNull
-        val bb = b.booleanOrNull
-        if (ab != null || bb != null) return ab == bb
-        return a.doubleOrNull == b.doubleOrNull
-    }
+/** Python's `==` on loaded JSON for scalars: 30 equals 30.0, a string never equals a number. */
+internal fun sameValue(a: JsonElement, b: JsonElement): Boolean {
+    if (a is JsonNull || b is JsonNull) return a is JsonNull && b is JsonNull
+    if (a !is JsonPrimitive || b !is JsonPrimitive) return a == b
+    if (a.isString || b.isString) return a.isString && b.isString && a.content == b.content
+    val ab = a.booleanOrNull
+    val bb = b.booleanOrNull
+    if (ab != null || bb != null) return ab == bb
+    return a.doubleOrNull == b.doubleOrNull
 }
