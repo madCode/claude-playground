@@ -78,15 +78,3 @@ internal fun row(ml: MatchedLine): JsonObject = JsonObject(mapOf(
     "variant" to variantJson(ml.variant),
     "prescribed_reps" to (ml.prescribedReps?.let(::JsonPrimitive) ?: JsonNull),
 ))
-
-/** `dataclasses.asdict(variant)`. */
-internal fun variantJson(v: Variant): JsonObject {
-    fun s(x: String?): JsonElement = x?.let(::JsonPrimitive) ?: JsonNull
-    fun i(x: Int?): JsonElement = x?.let(::JsonPrimitive) ?: JsonNull
-    return JsonObject(mapOf(
-        "stability" to s(v.stability), "stance" to s(v.stance), "arms" to s(v.arms), "implement" to s(v.implement),
-        "mode" to s(v.mode), "tempo" to s(v.tempo), "position" to s(v.position), "difficulty" to s(v.difficulty),
-        "intensity" to s(v.intensity), "reps" to i(v.reps), "reps_text" to s(v.repsText),
-        "duration_sec" to i(v.durationSec), "grip" to s(v.grip), "unknown" to JsonArray(v.unknown.map(::JsonPrimitive)),
-    ))
-}

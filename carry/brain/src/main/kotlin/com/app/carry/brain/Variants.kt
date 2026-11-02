@@ -306,8 +306,8 @@ private val NOT_A_MOVEMENT = Regex(
 private val LABEL_PREFIX = pyRegex("""^\W*(?:finisher|buy-?in|buy-?out|bonus)\W*:\s*""", ignoreCase = true)
 private val TIME_CAP = pyRegex("""^\W*\d+\s*(?:sec|secs|seconds?|min|mins|minutes?)\s+to\s+(?:do|complete)\s+""", ignoreCase = true)
 
-private fun withoutLabel(line: String) = LABEL_PREFIX.replaceFirst(line, "")
-private fun withoutTimeCap(line: String) = TIME_CAP.replaceFirst(withoutLabel(line), "")
+internal fun withoutLabel(line: String) = LABEL_PREFIX.replaceFirst(line, "")
+internal fun withoutTimeCap(line: String) = TIME_CAP.replaceFirst(withoutLabel(line), "")
 
 /** `variants.prescribed_duration`: seconds for a line that prescribes time for a movement. */
 fun prescribedDuration(line: String): Int? {
