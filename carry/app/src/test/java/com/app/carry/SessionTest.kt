@@ -78,6 +78,40 @@ class SessionTest {
     }
 
     @Test
+    fun `the coach's floors, caps and notes are read, and a bad shape costs only those lines`() {
+        // gym-coach has written claims, pattern_note and miss_note on every
+        // row since 2026-10-15/16; Carry dropped all three until 2026-11-01,
+        // when a sheet hid a miss ("missed 4 of 8 at 20 lb") and a floor.
+        // Invented figures; the keys are the runner's own.
+        fun row(ref: Int, claims: String) =
+            """{"ref": $ref, "line": "8 x hammer curl", "claims": $claims,
+                "miss_note": "missed 2 of 8 at 12 lb on 9/9", "pattern_note": "curls lately: held"}"""
+        val shapes = listOf(
+            "[\"at least 8 lb (8 lb, 9/9)\", \"at most 12 lb (12 lb, 9/2)\"]", "null", "[]",
+            "\"at least 8 lb\"", "[8]", "[\"a\", \"b\", \"c\"]", "[\"\", \"  \"]", "{\"a\": 1}",
+        )
+        val text = """{"schema": "gym-session/1", "sheet_id": "2026-09-10:2G", "date": "2026-09-10",
+            "sets": [${shapes.mapIndexed(::row).joinToString()}]}"""
+        val sets = SessionFiles.parse(text)!!.sets
+        assertEquals("no row is lost to its claims", shapes.size, sets.size)
+        assertEquals(
+            listOf(
+                listOf("at least 8 lb (8 lb, 9/9)", "at most 12 lb (12 lb, 9/2)"), emptyList(), emptyList(),
+                emptyList(), emptyList(), listOf("a", "b"), emptyList(), emptyList(),
+            ),
+            sets.map { it.claimLines },
+        )
+        assertEquals("missed 2 of 8 at 12 lb on 9/9", sets[1].missNote)
+        assertEquals("curls lately: held", sets[1].patternNote)
+        val quiet = SessionFiles.parse(
+            """{"schema": "gym-session/1", "sheet_id": "x", "date": "2026-09-10",
+               "sets": [{"ref": 0, "line": "8 x curl", "claims": ["at least 8 lb"]},
+                        {"ref": 1, "line": "8 x curl", "claims": [], "related": " "}]}"""
+        )!!.sets
+        assertEquals("a floor alone is something the coach said; blanks are not", listOf(true, false), quiet.map { it.coachSaid })
+    }
+
+    @Test
     fun `an unknown field from a newer runner does not break the read`() {
         val session = Session.json.decodeFromString<Session>(fromRunner)
         assertEquals("bench press", session.sets.single().canonical)
