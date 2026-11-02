@@ -2,6 +2,7 @@ package com.app.carry.device
 
 import android.Manifest
 import android.content.Intent
+import android.os.Build
 import android.os.ParcelFileDescriptor
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -135,6 +136,7 @@ class AddMoveTest {
                 // Waited for, not looked for once: with the keyboard up, the window's view of the
                 // list is still settling when the scroll returns, and a box already on screen
                 // isn't in it yet. Looked for once, every pass missed it (trace, 2026-11-02).
+                fresh()
                 device.wait(Until.findObject(what), 1_500)?.let { return it }
             }
         }
@@ -226,6 +228,16 @@ class AddMoveTest {
         alive()
     }
 
+    /**
+     * Drops UiAutomator's copy of the screen, which only changes when the app sends an event.
+     * After `am kill` the activity comes back inside this same process (the test lives in it), and
+     * from then on no events reached the test: the copy said "Save" over a screen showing "Saved",
+     * and every scroll timed out unseen (aRestoredFormSaves, 3 of 5 runs, 2026-11-02).
+     */
+    private fun fresh() {
+        if (Build.VERSION.SDK_INT >= 34) instrumentation.uiAutomation.clearCache()
+    }
+
     /** Whether the button says Saved within a while, looked for below the keyboard too. */
     private fun saved(): Boolean {
         val end = System.currentTimeMillis() + 20_000
@@ -233,6 +245,7 @@ class AddMoveTest {
             // The button is the list's last item, and the line a save adds above it pushes it to
             // the bottom edge, where a half-shown button isn't findable: scrolled to the end first.
             while (list()?.scroll(Direction.DOWN, 1f) == true) device.waitForIdle()
+            fresh()
             if (device.wait(Until.hasObject(By.text("Saved")), 2_000)) return true
         }
         return false

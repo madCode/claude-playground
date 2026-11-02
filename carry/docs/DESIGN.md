@@ -52,10 +52,19 @@ Two consequences worth stating, because they look like missing features:
 1. Weights that **changed** since last time, with what they were. A bump is
    the only number you'd get wrong from memory, because by feel you repeat
    last session's weight.
-2. The other history-backed numbers, one line each.
-3. Everything with no number — first-timers, bodyweight, untracked — folded
-   into a tail of at most two lines: by feel, and no weight. Present, not
-   prominent.
+2. The other history-backed numbers, one line each. Under a number, what
+   the coach said beside it: a miss last time ("missed 4 of 8 at 20 lb on
+   10/23"), in the warning colour, and how the movement's pattern has gone.
+3. Movements with no number of their own but something the coach found:
+   a floor or cap from another setup ("at least 10 lb (10 lb, single leg,
+   10/25)"), a miss, the nearest related lift, a pattern note. A row each,
+   at most three, misses first, then floors and caps. Each number stays
+   inside the sentence that says where it came from, at the size of a note,
+   so it can't be mistaken for a number this movement earned.
+4. Everything else with no number — first-timers, bodyweight, untracked —
+   folded into a tail of at most two lines: by feel, and no weight. Present,
+   not prominent. A row is in the tail only when the coach said nothing
+   about it, which is gym-coach's own test (`_is_quiet`).
 
 **A row says what it asks for** (madCode chose option B in #213). Beside
 the name, in the dim colour at the name's size, one line:
@@ -301,6 +310,14 @@ numbers someone just entered cannot, so they get the protection:
     damaged, it is whatever that write left, so *Try again* repairs it
     unless something else has changed the file since. The "may be
     damaged" warning stays until a good save.
+  - A folder read that overlaps a save can hold the file as it was, or as
+    the save left it before the save's own result landed, so it is dropped
+    and the folder read again once the save is over. Applied, it put the
+    old numbers back in the form (and a second tap would have written them
+    over the new ones), or warned that the file had changed under the
+    owner's own save. A re-read that finds the very file
+    just written keeps "Saved", so coming back from the share sheet keeps
+    the post button.
   - **Not handled:** the refresh on every resume can still put a different
     session on screen while typing is pending, as before. The session
     file is temporary, so that is left for when the brain moves to the
@@ -813,7 +830,7 @@ Three rules, and a review of the first version found it breaking all three.
   save with an added row is one the owner learns to dismiss unread. It
   sits in the button's own list item, where the owner just tapped, and it
   shows with "Saved" and goes with it (the next edit, or a re-read on
-  returning to the app). It is announced politely, so TalkBack reads it
+  returning to the app that finds a different file). It is announced politely, so TalkBack reads it
   without moving focus. Each name is shown on one line, as a directional
   isolate, and cut with an ellipsis only past 200 characters. Carry matches nothing and the
   file is unchanged. The caption over the post says what is true: "The

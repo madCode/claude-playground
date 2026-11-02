@@ -49,6 +49,44 @@ From madCode's 1 Nov log:
   empty. This narrows madCode's 2026-10-16 call ("show the typed name
   back"), which asked about every typed name.
 
+## 2026-11-02 — a read a save overtook no longer puts the old numbers back (#219)
+
+- **Found by** chasing a flake in `AddMoveTest.savingTwiceInARow`: the
+  second save sometimes found the form holding the first save's
+  numbers, or the post button gone.
+- **Why.** A refresh runs on every resume. One that started before a save
+  and finished after it carried the file as it was, and re-seeded the form
+  from it: the old numbers came back and the button said "Save" again, so
+  a second tap would have written the old numbers over the new ones. A
+  read that caught the save's own bytes before the save finished warned
+  "file changed" over the owner's own save instead. Now any read that
+  overlaps a save is dropped and done again once the save is over.
+- **And "Saved" now survives a resume** when the file read back is the one
+  just written. Before, every re-read counted as a new file, so returning
+  from the share sheet took the post button away.
+- Three `CarryViewModelTest` tests drive these; each fails with its part
+  of the fix removed.
+
+## 2026-11-01 — the sheet shows the coach's misses and floors
+
+The owner asked why the 1 Nov sheet had only one number. The coach had
+found something for seven of the other rows, and the sheet showed three of
+them at most:
+
+- **Carry dropped three of the coach's four extra lines.** gym-coach has
+  written `claims` (floors and caps), `miss_note` and `pattern_note` on
+  every row since 2026-10-15/16. Carry read only `related` when it took
+  over the sheet (#145), and the rest went nowhere: the curl's "missed 4 of
+  8 at 20 lb" warning and its "at least 10 lb" floor among them.
+- **Now:** a number shows its miss (in the warning colour) and pattern
+  note under it. A no-number row leaves the "By feel" list whenever the
+  coach said anything about it, as gym-coach's own text sheet does, with at
+  most three such rows, misses first. The claims are read defensively: a
+  value of the wrong shape costs those lines, not the row.
+- **One of today's floors was wrong**, and is fixed in gym-coach
+  ([gym-coach#75](https://github.com/madCode/gym-coach/pull/75)): a set
+  marked hurt could set an "at least". Merge that first, or the reverse
+  lunge would show "at least 22 lb" from a set that hurt.
 ## 2026-10-24 — Add on a borrowed day keeps every row's typing (#210)
 
 - **What the owner saw.** Tapping *+ Add what you did* after filling in

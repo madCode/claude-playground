@@ -5,9 +5,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
@@ -101,6 +103,74 @@ class TodayScreenTest {
         // The overflow is not dropped, only demoted: its name is still on
         // the sheet, in the tail line, so nothing vanishes off the board.
         compose.onNodeWithText("fifth", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a miss, a floor and a pattern note reach the sheet, and only a quiet row stays in the tail`() {
+        // On 2026-11-01 the coach's file held "missed 4 of 8 at 20 lb" and an
+        // "at least" floor for a curl, and the sheet showed the curl's name in
+        // "By feel". The text the coach writes, read the way the folder reads
+        // it; invented movements and figures.
+        val text = """{"schema": "gym-session/1", "sheet_id": "2026-09-10:2G", "date": "2026-09-10",
+          "class": "2G", "sets": [
+            {"ref": 0, "line": "8 x row", "canonical": "row", "family": "pull",
+             "suggested": "~25 lb", "suggested_weight": 25.0, "prescribed_text": "8",
+             "miss_note": "missed 3 of 8 at 30 lb on 9/2", "pattern_note": "rows lately: held 25 lb"},
+            {"ref": 1, "line": "8 x hammer curl", "canonical": "hammer curl", "family": "pull",
+             "suggested": "no history yet", "prescribed_text": "8",
+             "claims": ["at least 8 lb (8 lb, single leg, 9/5)"],
+             "miss_note": "missed 2 of 8 at 12 lb on 9/2 (wide stance)"},
+            {"ref": 2, "line": "8 x press", "canonical": "press", "family": "push",
+             "suggested": "no history yet", "prescribed_text": "8"}
+          ]}"""
+        val session = SessionFiles.parse(text)!!
+        compose.setContent { TodayScreen(session, java.time.LocalDate.of(2026, 9, 10)) }
+
+        // Under the number: the miss and the pattern note.
+        compose.onNodeWithText("missed 3 of 8 at 30 lb on 9/2").assertIsDisplayed()
+        compose.onNodeWithText("rows lately: held 25 lb").assertIsDisplayed()
+        // A row of its own for the curl, with both lines, and out of the tail.
+        compose.onNodeWithText("at least 8 lb (8 lb, single leg, 9/5)").assertIsDisplayed()
+        compose.onNodeWithText("missed 2 of 8 at 12 lb on 9/2 (wide stance)").assertIsDisplayed()
+        compose.onNodeWithText("By feel: press").assertIsDisplayed()
+        shoot("45-coach-notes")
+    }
+
+    @Test
+    fun `a pattern note is said once, on the first row of its pattern`() {
+        // The file repeats it on every row of the pattern; the coach's own
+        // sheet says it once. A control character is dropped from it, as
+        // from a name, so a note can't render its number reversed.
+        val text = """{"schema": "gym-session/1", "sheet_id": "2026-09-10:2G", "date": "2026-09-10",
+          "sets": [
+            {"ref": 0, "line": "8 x front squat", "canonical": "front squat", "suggested_weight": 25.0,
+             "pattern_note": "squats lately: held 25 lb", "miss_note": "missed 2 of 8 at \u202e30 lb"},
+            {"ref": 1, "line": "8 x back squat", "canonical": "back squat", "suggested_weight": 30.0,
+             "pattern_note": "squats lately: held 25 lb"},
+            {"ref": 2, "line": "8 x box squat", "canonical": "box squat", "pattern_note": "squats lately: held 25 lb"}
+          ]}"""
+        compose.setContent { TodayScreen(SessionFiles.parse(text)!!, java.time.LocalDate.of(2026, 9, 10)) }
+        compose.onAllNodesWithText("squats lately: held 25 lb").assertCountEquals(1)
+        compose.onNodeWithText("missed 2 of 8 at 30 lb").assertIsDisplayed()
+        // With its only note a repeat, the third squat is quiet again.
+        compose.onNodeWithText("By feel: box squat").assertIsDisplayed()
+    }
+
+    @Test
+    fun `within the cap a miss beats a related line`() {
+        // Four rows have something to say and three fit. The miss, last in
+        // sheet order, is the one that must not be the casualty.
+        val base = SampleSession.today.sets[6]
+        val many = SampleSession.today.copy(sets = listOf(
+            base.copy(ref = 20, canonical = "first", related = "a 5 lb, 1/1"),
+            base.copy(ref = 21, canonical = "second", related = "b 5 lb, 1/1"),
+            base.copy(ref = 22, canonical = "third", related = "c 5 lb, 1/1"),
+            base.copy(ref = 23, canonical = "fourth", related = null, missNote = "missed 1 of 8 at 9 lb on 1/1"),
+        ))
+        compose.setContent { TodayScreen(many, java.time.LocalDate.of(2026, 10, 17)) }
+        compose.onNodeWithText("missed 1 of 8 at 9 lb on 1/1").assertIsDisplayed()
+        compose.onNodeWithText("c 5 lb, 1/1").assertDoesNotExist()
+        compose.onNodeWithText("third", substring = true).assertIsDisplayed()
     }
 
     @Test
