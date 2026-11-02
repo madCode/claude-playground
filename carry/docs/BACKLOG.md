@@ -461,6 +461,14 @@ stated properties than the one notification permission; and the history
 on the phone, which currently lives beside the coach and is deliberately
 read-only to Claude.
 
+### A UX simplification pass, once the move works *(you asked, 2026-11-02)*
+After the brain is on the phone and has been confirmed to work: a pass over
+every screen to cut it down to what a one-glance lobby read and a quick log
+afterwards actually need. It takes in the earlier ask for a UX audit and user
+personas of the After page *(morning page, 2026-10-16)*. Not before the move
+is confirmed, so the pass simplifies what the app finally does rather than
+what it does today.
+
 ### Quick-add from the lobby
 Nothing exists for "the sheet is wrong and I know it now". Adding a row currently
 means the After tab, which is a form built for afterwards. Unsketched.
