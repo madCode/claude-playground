@@ -111,8 +111,8 @@ class AddMoveTest {
         assertTrue("no second row", device.wait(Until.hasObject(box(NAME).text("")), 10_000) || boxes(NAME).size == 2)
         assertNotNull("the second Add didn't move the cursor", device.wait(Until.findObject(focused(NAME)), 10_000))
         assertEquals("the second row's name has it", "", device.findObject(focused(NAME)).text ?: "")
-        assertTrue("the first row lost its name", device.hasObject(box(NAME).text("popsquat")))
-        assertTrue("the first row lost its weight", device.hasObject(box(LB).text("12")))
+        assertNotNull("the first row lost its name", runCatching { find(box(NAME).text("popsquat")) }.getOrNull())
+        assertNotNull("the first row lost its weight", runCatching { find(box(LB).text("12")) }.getOrNull())
 
         typeInto(NAME, "plankjack")
         alive()
@@ -132,11 +132,31 @@ class AddMoveTest {
         for (direction in listOf(Direction.DOWN, Direction.UP)) {
             repeat(15) {
                 list()?.scroll(direction, 0.5f)
-                device.waitForIdle()
-                device.findObject(what)?.let { return it }
+                // Waited for, not looked for once: with the keyboard up, the window's view of the
+                // list is still settling when the scroll returns, and a box already on screen
+                // isn't in it yet. Looked for once, every pass missed it (trace, 2026-11-02).
+                device.wait(Until.findObject(what), 1_500)?.let { return it }
             }
         }
-        error("nothing on screen matches $what")
+        error("nothing on screen matches $what; ${scrollTrace()}")
+    }
+
+    /** What one scroll does, for a failed [find]: whether the list moved, what was on it, and
+     *  whether it settled. Kept because a device failure is otherwise one line and a screenshot. */
+    private fun scrollTrace(): String {
+        // Each field read on its own: the screen can change under the read.
+        fun seen() = device.findObjects(By.clazz("android.widget.EditText"))
+            .joinToString("|") { runCatching { "${it.text}@${it.visibleBounds.top}" }.getOrElse { "stale" } }
+        val lists = device.findObjects(By.scrollable(true))
+            .joinToString { runCatching { "${it.className}${it.visibleBounds}" }.getOrElse { "stale" } }
+        val focused = runCatching { device.findObject(By.focused(true))?.let { "${it.className} ${it.text}" } }.getOrNull()
+        val before = seen()
+        list()?.scroll(Direction.DOWN, 0.5f)
+        device.waitForIdle()
+        // Sampled after the scroll: a layout that keeps moving once idle is pulling the list back.
+        val after = (0 until 4).joinToString(" / ") { Thread.sleep(400); seen() }
+        return "scrollables: $lists; keyboard: ${shell("dumpsys input_method").contains("mInputShown=true")}; " +
+            "focused: $focused; before: $before; after one scroll down, every 0.4 s: $after"
     }
 
     /** The After tab's list: the tallest thing that scrolls, since a one-line text box scrolls too. */
@@ -198,7 +218,7 @@ class AddMoveTest {
         assertTrue("Carry didn't come back", device.wait(Until.hasObject(By.pkg(pkg).depth(0)), 20_000))
         device.wait(Until.findObject(By.text("After")), 20_000)?.click()
         assertTrue("the typing didn't come back", device.wait(Until.hasObject(box(NAME).text("popsquat")), 20_000))
-        assertTrue(device.hasObject(box(LB).text("12")))
+        assertNotNull("the weight didn't come back", runCatching { find(box(LB).text("12")) }.getOrNull())
 
         tapSave("Save")
         alive()
@@ -210,7 +230,10 @@ class AddMoveTest {
     private fun saved(): Boolean {
         val end = System.currentTimeMillis() + 20_000
         while (System.currentTimeMillis() < end) {
-            if (runCatching { find(By.text("Saved")) }.isSuccess) return true
+            // The button is the list's last item, and the line a save adds above it pushes it to
+            // the bottom edge, where a half-shown button isn't findable: scrolled to the end first.
+            while (list()?.scroll(Direction.DOWN, 1f) == true) device.waitForIdle()
+            if (device.wait(Until.hasObject(By.text("Saved")), 2_000)) return true
         }
         return false
     }
@@ -248,7 +271,9 @@ class AddMoveTest {
         tapSave("Saved")
         alive()
         assertEquals("30", reach("move 0, lb").text)
-        assertTrue(device.hasObject(box(NAME).text("popsquat")))
+        // Found by scrolling, not looked for where the list happens to stand: on a borrowed day
+        // the added row sits above the sheet's rows, so reaching move 0 can scroll it away.
+        find(box(NAME).text("popsquat"))
     }
 
     private companion object {
