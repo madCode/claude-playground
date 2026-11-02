@@ -132,15 +132,17 @@ class AddMoveTest {
         for (direction in listOf(Direction.DOWN, Direction.UP)) {
             repeat(15) {
                 list()?.scroll(direction, 0.5f)
-                device.waitForIdle()
-                device.findObject(what)?.let { return it }
+                // Waited for, not looked for once: with the keyboard up, the window's view of the
+                // list is still settling when the scroll returns, and a box already on screen
+                // isn't in it yet. Looked for once, every pass missed it (trace, 2026-11-02).
+                device.wait(Until.findObject(what), 1_500)?.let { return it }
             }
         }
         error("nothing on screen matches $what; ${scrollTrace()}")
     }
 
-    /** What one scroll each way did, for a failed [find]: whether the list moved, and what was
-     *  on it. A find that fails with the target just off screen means the scroll didn't land. */
+    /** What one scroll does, for a failed [find]: whether the list moved, what was on it, and
+     *  whether it settled. Kept because a device failure is otherwise one line and a screenshot. */
     private fun scrollTrace(): String {
         // Each field read on its own: the screen can change under the read.
         fun seen() = device.findObjects(By.clazz("android.widget.EditText"))
