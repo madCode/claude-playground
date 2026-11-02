@@ -36,6 +36,19 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [designs/](designs/). Newest first below.
 
 
+## 2026-11-02 — the After tab tells two rows apart, and asks less
+
+From madCode's 1 Nov log:
+
+- **"Low row is here twice."** The board had "alt low row" and "bear
+  plank alt low row", and the After tab named both "8 total x low row".
+  Its rows now carry the Before sheet's variant words ("low row · bear
+  plank"), and so do the boxes' TalkBack labels, with commas for the dots.
+- **"Is the weight in the weight box?" about a row with its weight in.**
+  The typed-back line now names only added rows whose weight box is
+  empty. This narrows madCode's 2026-10-16 call ("show the typed name
+  back"), which asked about every typed name.
+
 ## 2026-11-02 — a read a save overtook no longer puts the old numbers back (#219)
 
 - **Found by** chasing a flake in `AddMoveTest.savingTwiceInARow`: the
