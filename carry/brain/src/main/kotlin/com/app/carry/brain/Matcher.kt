@@ -225,6 +225,6 @@ fun stableKey(canonical: String?, components: List<String>?, variant: Variant): 
     }
     val text = Json.encodeToString(kotlinx.serialization.json.JsonElement.serializer(), enc(variantKey(canonical, components, variant)))
     return buildString {
-        for (c in text) if (c.code > 0x7f) append("\\u%04x".format(c.code)) else append(c)
+        for (c in text) if (c.code > 0x7f) append(String.format(java.util.Locale.ROOT, "\\u%04x", c.code)) else append(c)
     }
 }

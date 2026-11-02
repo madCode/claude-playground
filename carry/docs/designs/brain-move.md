@@ -13,6 +13,17 @@ laptop's"). That tests the brain on real classes with no new permission and
 no Reddit key on the phone. History and the board fetch then move to a brain
 that is already proven.
 
+**Phase 4 has started.** The laptop's session import is ported
+(`brain/Import.kt`) and matches gym-coach's import fixtures step for step:
+431 steps of the invented lifter's days, with edits, renames, two sittings
+and every refusal. Nothing on the phone calls it yet; wiring it in, with the
+phone keeping its own history and comparing it to the laptop's, is next.
+The wiring has two things to get right, from the port's review: write
+history rows with `JsonElement.toString()`, not the default encoder, which
+throws on NaN and rounds integers past 2^64; and read a session file the way
+the laptop does, refusing invalid UTF-8 and anything over 1 MiB rather than
+decoding it leniently.
+
 ## Why now
 
 Today the coach lives on the laptop. It runs every half hour, reads the day's board

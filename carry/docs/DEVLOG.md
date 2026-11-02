@@ -37,6 +37,25 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 
 
 
+## 2026-11-02 — the session import runs in Kotlin
+
+- **Phase 4 begins** ([the plan](designs/brain-move.md)): `brain/Import.kt`
+  ports gym-coach's `plan_import`, the step that turns a filled session file
+  into history rows. Two sittings, edits after logging, a tap on hurt alone,
+  renames, and each kind of file it refuses all behave as on the laptop.
+- **Held to `brain-fixtures/imports.jsonl`**, which gym-coach writes (its
+  #78 and #79): 431 steps replayed in order, each step's report, rewrite and
+  appended rows compared exactly.
+- **A rename alone now reaches history** (madCode, 2026-11-02), on both
+  sides: what the owner typed is compared, never what it matched, so a
+  change to the knowledge base re-points nothing nobody touched.
+- **Python's own edges, copied:** its `repr` in the refusal messages, its
+  `json.loads` (NaN accepted, control characters and a byte-order mark
+  refused), and its `str()` of a non-text row id. About 3,000 randomly
+  altered imports were run through both, before the rename change; every
+  result matched.
+- Nothing on the phone calls it yet.
+
 ## 2026-11-02 — the coach's suggestions run in Kotlin, and the phone checks itself
 
 - **Phase 3 of [the brain move](designs/brain-move.md):** suggestions,
