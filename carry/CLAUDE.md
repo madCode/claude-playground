@@ -34,6 +34,11 @@ can tell the difference.
   Anything else that reaches off the device means something has gone
   wrong with the design rather than grown.
 - No account, and no database that outlives a session file.
+- `brain/`: the coach, being ported from gym-coach's Python (plain Kotlin, no
+  Android; `./gradlew :brain:test`). Plan: `docs/designs/brain-move.md`.
+  It must pass `brain-fixtures/`, which gym-coach's `fixtures.py` generates
+  and nobody edits by hand; a rule change there regenerates them, and the
+  port follows in the same change.
 
 ## Commands
 
