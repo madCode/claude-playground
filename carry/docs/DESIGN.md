@@ -687,11 +687,12 @@ The history gets the same treatment (phase 4 of the plan):
   file) never reads as a shorter history: it starts again from the
   laptop's, and the report says so. A copy that can't be read right now is
   left alone until the next run.
-- Rows from before ids existed are mirrored from the laptop's on every run,
-  so its `adopt-history` reaches the phone.
-- Only session files from the last 45 days are imported each hour; older
-  days are already in both. The knowledge base is the newest sheet input's,
-  and the report names which.
+- Only session files from the last 45 days are imported each hour. What
+  the phone can't import itself comes from the laptop's on every run: rows
+  dated before that window, and rows from before ids existed. So an
+  `adopt-history` or an edit to an old session reaches the phone, and only
+  the window is really compared; the report says where it starts.
+- The knowledge base is the newest sheet input's, and the report names it.
 - The laptop's history is still the record. Nothing on the phone reads the
   phone's copy yet.
 
