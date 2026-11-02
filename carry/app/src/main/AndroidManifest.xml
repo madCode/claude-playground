@@ -18,6 +18,13 @@
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!--
+      Which class is on a day, read from the owner's own calendar (phase 5 of
+      docs/designs/brain-move.md). Asked for once, at setup (madCode,
+      2026-11-02). Only event titles and starts on today and tomorrow are
+      read; only the class tag and start leave CalendarReader.
+    -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <!--
       WorkManager's fourth, for expedited and foreground work. Carry has
       none, and CI's emulator job checks the hourly session check still
       comes back after a reboot without it. `check` fails if it returns.

@@ -592,16 +592,17 @@ A device test checks it on an emulator on every PR (`NotificationTapTest`):
 a weight typed and not saved is still in its box after a tap on the real
 notification.
 
-**A debug build holds six Android permissions, and this feature brought
-four of them; a release build holds four.** `aapt2 dump permissions` on the built APK is the only honest
+**A debug build holds seven Android permissions, and this feature brought
+four of them; a release build holds five.** `aapt2 dump permissions` on the built APK is the only honest
 source for this, because a library brings its own. It also lists
 `<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which
 androidx.core defines for the app's own receivers; it grants nothing
 outside the app.
 
-Three are ours: `POST_NOTIFICATIONS`, required on API 33+ to post
-anything, and, in a debug build only, `INTERNET` and
-`REQUEST_INSTALL_PACKAGES`, for the update below. `check` fails if a
+Four are ours: `POST_NOTIFICATIONS`, required on API 33+ to post
+anything; `READ_CALENDAR`, for the class on a day (below, "The phone's
+brain, checked against the laptop's"); and, in a debug build only,
+`INTERNET` and `REQUEST_INSTALL_PACKAGES`, for the update below. `check` fails if a
 release build's merged manifest asks for either. Three more arrive with
 `androidx.work`, and the app can't opt out of them while using it:
 
@@ -695,6 +696,22 @@ The history gets the same treatment (phase 4 of the plan):
 - The knowledge base is the newest sheet input's, and the report names it.
 - The laptop's history is still the record. Nothing on the phone reads the
   phone's copy yet.
+
+And the class itself (phase 5), from the owner's own calendar:
+
+- Carry asks for `READ_CALENDAR` once, at setup, right after notifications,
+  and only once a folder is chosen *(madCode, 2026-11-02)*. Like
+  notifications, it is marked asked on an answer, never before the launch.
+- Each hourly check reads today's and tomorrow's events, title and start
+  only, and decides the class as gym-coach does: the first event titled
+  like "Orange 60 Min 2G". An all-day entry is kept by its UTC date, a
+  timed one by its local date; the laptop's first calendar query found only
+  all-day entries and was wrong for weeks without a sound.
+- It writes `brain/calendar-compare.json`: for each day, the phone's class
+  and start against the laptop's sheet, as `same`, `differ`, `phone_only`
+  (normal for tomorrow, whose sheet waits for the board), `laptop_only`,
+  `no_class` or `no_calendar_access`. Only the class tag and start reach
+  the file; no title, place or other event ever does.
 
 ## Asking whether a newer build is out
 

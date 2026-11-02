@@ -48,6 +48,17 @@ class MainActivity : ComponentActivity() {
             // makes: no dialog, no notifications, and nothing anywhere that
             // says so.
             SessionWatchWorker.markAsked(this)
+            // The calendar right after, so setup asks its two questions together.
+            maybeAskForCalendar()
+        }
+
+    /**
+     * Asked for once, at setup (madCode, 2026-11-02), with the same rule as notifications:
+     * only once there is a folder, and marked on an answer, never before the launch.
+     */
+    private val askCalendar =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            CalendarReader.markAsked(this)
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -228,9 +239,15 @@ class MainActivity : ComponentActivity() {
      * asked before.
      */
     private fun maybeAskToNotify() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        if (!model.folder.chosen || SessionWatchWorker.canNotify(this)) return
-        if (SessionWatchWorker.asked(this)) return
+        val notifyAnswered = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            SessionWatchWorker.canNotify(this) || SessionWatchWorker.asked(this)
+        if (!model.folder.chosen) return
+        if (notifyAnswered) return maybeAskForCalendar()
         runCatching { askNotify.launch(android.Manifest.permission.POST_NOTIFICATIONS) }
+    }
+
+    private fun maybeAskForCalendar() {
+        if (!model.folder.chosen || CalendarReader.granted(this) || CalendarReader.asked(this)) return
+        runCatching { askCalendar.launch(android.Manifest.permission.READ_CALENDAR) }
     }
 }

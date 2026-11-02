@@ -24,6 +24,10 @@ rounds integers past 2^64; and a session file is read the way the laptop
 reads it, refusing invalid UTF-8 and anything over 1 MiB rather than
 decoding it leniently.
 
+**Phase 5 has started with the calendar:** the phone reads the class from the
+owner's own calendar, asking once at setup, and compares it with the
+laptop's sheet each hour. The board fetch waits on a Reddit installed-app ID.
+
 ## Why now
 
 Today the coach lives on the laptop. It runs every half hour, reads the day's board
