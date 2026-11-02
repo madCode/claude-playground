@@ -16,6 +16,8 @@ interface BrainFolder {
     fun read(documentId: String): String?
     /** Makes a new file and writes [text] into it; false when either step failed. */
     fun create(name: String, text: String): Boolean
+    /** Replaces the text of a file already there; false when it failed. */
+    fun write(documentId: String, text: String): Boolean
 }
 
 /**
@@ -39,25 +41,48 @@ object ShadowCheck {
     /** The differences a report lists; past this it only counts them. */
     private const val MAX_DIFFERENCES = 50
 
-    /** Reports for the inputs that have their sheet and no report yet; how many were written. */
-    fun runOnce(sessions: Folder, brain: BrainFolder, build: String): Int {
+    /** Past this a run starts no new comparison: the hourly check has a time budget to keep. */
+    private const val BUDGET_MS = 60_000L
+
+    /**
+     * Reports for the inputs that have their sheet and no sound report yet; how many were written.
+     *
+     * A report that doesn't read back as one (a write cut short leaves an empty or partial file)
+     * is written again. An input or sheet that can't be read right now is left for the next run
+     * rather than reported, since a provider can be busy for a moment. Every comparison tried
+     * counts against the per-run limit, written or not, so a folder Carry can't write to costs a
+     * few comparisons an hour, not all of them.
+     */
+    fun runOnce(sessions: Folder, brain: BrainFolder, build: String, clock: () -> Long = System::currentTimeMillis): Int {
+        val start = clock()
         val files = brain.list()
-        val names = files.map { it.second }.toSet()
+        val byName = files.associate { (id, name) -> name to id }
         val sheets = sessions.list().associate { (id, name) -> name to id }
+        var tried = 0
         var written = 0
         for ((id, name) in files.sortedBy { it.second }) {
+            if (tried >= MAX_REPORTS || clock() - start > BUDGET_MS) break
             val m = INPUT.matchEntire(name) ?: continue
             val (date, tag) = m.destructured
             val reportName = "shadow-$date-$tag.json"
-            if (reportName in names) continue
+            val existing = byName[reportName]
+            if (existing != null && sound(brain.read(existing))) continue
             // The sheet syncs separately; until it is here there is nothing to compare with.
             val sheetId = sheets["session-$date-$tag.json"] ?: continue
-            val report = report(brain.read(id), sessions.read(sheetId), build)
-            if (brain.create(reportName, Json.encodeToString(JsonElement.serializer(), report))) written++
-            if (written >= MAX_REPORTS) break
+            tried++
+            val inputText = brain.read(id) ?: continue
+            val sheetText = sessions.read(sheetId) ?: continue
+            val text = Json.encodeToString(JsonElement.serializer(), report(inputText, sheetText, build))
+            val ok = if (existing != null) brain.write(existing, text) else brain.create(reportName, text)
+            if (ok) written++
         }
         return written
     }
+
+    /** Whether a report file holds a whole report, not what a cut-short write left. */
+    private fun sound(text: String?): Boolean = text != null && runCatching {
+        (Json.parseToJsonElement(text) as JsonObject)["schema"] == JsonPrimitive(REPORT_SCHEMA)
+    }.getOrDefault(false)
 
     /** What one comparison found. An input or sheet that can't be read is reported, not skipped. */
     internal fun report(inputText: String?, sheetText: String?, build: String): JsonObject {

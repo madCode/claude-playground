@@ -51,10 +51,19 @@ class ShadowCheckTest {
         override fun write(documentId: String, text: String) = false
     }
 
-    private class Brain(val files: MutableMap<String, String?>) : BrainFolder {
+    private class Brain(val files: MutableMap<String, String?>, val canWrite: Boolean = true) : BrainFolder {
+        var creates = 0
         override fun list() = files.keys.map { it to it }
         override fun read(documentId: String) = files[documentId]
-        override fun create(name: String, text: String): Boolean { files[name] = text; return true }
+        override fun create(name: String, text: String): Boolean {
+            creates++
+            if (canWrite) files[name] = text
+            return canWrite
+        }
+        override fun write(documentId: String, text: String): Boolean {
+            if (canWrite) files[documentId] = text
+            return canWrite
+        }
     }
 
     private fun report(brain: Brain, name: String = "shadow-$date-$tag.json") =
@@ -97,14 +106,51 @@ class ShadowCheckTest {
     }
 
     @Test
-    fun `an input that can't be read is reported, not skipped, and a run does a few at most`() {
+    fun `an input that can't be read right now is left for the next run`() {
+        val brain = Brain(mutableMapOf("input-$date-$tag.json" to null))
+        val sessions = Sessions(mapOf("session-$date-$tag.json" to sheet.toString()))
+        assertEquals(0, ShadowCheck.runOnce(sessions, brain, "test"))
+        assertFalse("not reported", brain.files.keys.any { it.startsWith("shadow-") })
+        brain.files["input-$date-$tag.json"] = input
+        assertEquals("tried again", 1, ShadowCheck.runOnce(sessions, brain, "test"))
+    }
+
+    @Test
+    fun `a report cut short is written again`() {
+        val brain = Brain(mutableMapOf("input-$date-$tag.json" to input, "shadow-$date-$tag.json" to "{\"sch"))
+        val sessions = Sessions(mapOf("session-$date-$tag.json" to sheet.toString()))
+        assertEquals(1, ShadowCheck.runOnce(sessions, brain, "test"))
+        assertTrue(ShadowCheck.same(report(brain)))
+    }
+
+    @Test
+    fun `a folder Carry can't write to costs a few comparisons a run, not all of them`() {
         val brain = Brain(mutableMapOf<String, String?>().apply {
-            for (d in 1..5) put("input-2026-01-0$d-2G.json", null)
+            for (d in 1..9) put("input-2026-01-0$d-2G.json", input)
+        }, canWrite = false)
+        val sessions = Sessions((1..9).associate { "session-2026-01-0$it-2G.json" to sheet.toString() })
+        assertEquals(0, ShadowCheck.runOnce(sessions, brain, "test"))
+        assertEquals(3, brain.creates)
+    }
+
+    @Test
+    fun `a run stops starting comparisons past its time budget`() {
+        val brain = Brain(mutableMapOf<String, String?>().apply {
+            for (d in 1..3) put("input-2026-01-0$d-2G.json", input)
         })
-        val sessions = Sessions((1..5).associate { "session-2026-01-0$it-2G.json" to sheet.toString() })
-        assertEquals(3, ShadowCheck.runOnce(sessions, brain, "test"))
-        val r = report(brain, "shadow-2026-01-01-2G.json")
+        val sessions = Sessions((1..3).associate { "session-2026-01-0$it-2G.json" to sheet.toString() })
+        // The start, and the check before the first comparison, read 0; every read after that
+        // is past the minute, as if the first comparison had taken it.
+        var reads = 0
+        assertEquals(1, ShadowCheck.runOnce(sessions, brain, "test") { if (reads++ < 2) 0L else 61_000L })
+    }
+
+    @Test
+    fun `an input that isn't one is reported once, as an error`() {
+        val brain = Brain(mutableMapOf("input-$date-$tag.json" to "not json"))
+        ShadowCheck.runOnce(Sessions(mapOf("session-$date-$tag.json" to sheet.toString())), brain, "test")
+        val r = report(brain)
         assertFalse(ShadowCheck.same(r))
-        assertEquals("the input could not be read", r["error"]!!.jsonPrimitive.content)
+        assertEquals("the input is not a JSON object", r["error"]!!.jsonPrimitive.content)
     }
 }

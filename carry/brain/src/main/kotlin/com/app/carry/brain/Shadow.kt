@@ -23,16 +23,23 @@ import java.time.LocalDate
 object Shadow {
     const val INPUT_SCHEMA = "brain-input/1"
 
+    /** The longest board text worked through; the corpus's longest is a small fraction of it. */
+    const val MAX_BOARD_CHARS = 100_000
+
     /** The sheet this port writes from a brain input file. */
     fun sheetFromInput(input: JsonObject): JsonObject {
         require((input["schema"] as? JsonPrimitive)?.contentOrNull == INPUT_SCHEMA) { "not a $INPUT_SCHEMA file" }
+        val board = input["board"]!!.jsonPrimitive.content
+        // A board is a few KB. Matching is linear but not cheap per line, and this runs in the
+        // background, so a file far past any real board is refused rather than worked through.
+        require(board.length <= MAX_BOARD_CHARS) { "a board of ${board.length} characters" }
         val kb = Kb.fromJson(input["exercises"]!!.jsonObject)
         val date = input["date"]!!.jsonPrimitive.content
         val today = LocalDate.parse(date)
         val history = readToday(input["history"]!!.jsonArray.map { it.jsonObject }, kb)
         val baselines = (input["baselines"] as? JsonObject)
             ?.mapNotNull { (k, v) -> (v as? JsonPrimitive)?.doubleOrNull?.let { k to it } }?.toMap() ?: emptyMap()
-        val pairs = kb.matchWod(input["board"]!!.jsonPrimitive.content).matched
+        val pairs = kb.matchWod(board).matched
             .map { it to suggest(it, kb, history, today, baselines) }
         return buildSheet(
             date, input["class"]!!.jsonPrimitive.content, pairs,

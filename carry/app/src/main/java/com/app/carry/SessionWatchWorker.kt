@@ -53,9 +53,12 @@ class SessionWatchWorker(
      * cancel at a suspension point, so it would have sat there for the
      * full ten minutes while a comment two lines up claimed otherwise.
      *
-     * Nothing can interrupt a stuck binder call, so the IO thread is still
-     * lost when a provider wedges. What this buys is the worker finishing
-     * instead of waiting on it.
+     * Nothing can interrupt a stuck binder call or a running computation,
+     * and `coroutineScope` waits for its children, so a wedged provider
+     * still holds this worker until WorkManager stops it. What the timeout
+     * buys is not waiting on the RESULT: the sheet check and its
+     * notification come first, and the side-by-side check after them keeps
+     * its own budget (ShadowCheck).
      */
     override suspend fun doWork(): Result = coroutineScope {
         // Never Result.retry(): there is nothing here worth retrying. The

@@ -202,7 +202,7 @@ class SessionFolder(private val context: Context) : Folder {
         val doc = DocumentsContract.buildDocumentUriUsingTree(tree, documentId)
         context.contentResolver.openInputStream(doc)?.use { stream ->
             // Bounded by hand: readNBytes is API 33 and minSdk is 26. Grown as it fills,
-            // so a cap of 16 MB doesn't mean 16 MB held for a small file.
+            // so a large cap doesn't mean that much held for a small file.
             var buffer = ByteArray(minOf(max + 1, 64 * 1024))
             var filled = 0
             while (filled <= max) {
@@ -240,6 +240,8 @@ class SessionFolder(private val context: Context) : Folder {
         // An input carries the owner's whole history, so it is allowed far more than a sheet.
         override fun read(documentId: String): String? = readCapped(tree, documentId, MAX_BRAIN_INPUT_BYTES)
 
+        override fun write(documentId: String, text: String): Boolean = this@SessionFolder.write(documentId, text)
+
         override fun create(name: String, text: String): Boolean = runCatching {
             val parent = DocumentsContract.buildDocumentUriUsingTree(tree, folderId)
             val doc = DocumentsContract.createDocument(context.contentResolver, parent, "application/json", name)
@@ -255,8 +257,9 @@ class SessionFolder(private val context: Context) : Folder {
         const val KEY = "session_folder"
         const val BRAIN = "brain"
 
-        /** Inputs are kept three weeks on the laptop and hold the history; 16 MB is far past any real one. */
-        const val MAX_BRAIN_INPUT_BYTES = 16_000_000
+        /** An input holds the history, at about 200 bytes a set: 4 MB is twenty thousand sets,
+         *  far past any real one, and keeps a background read's memory modest. */
+        const val MAX_BRAIN_INPUT_BYTES = 4_000_000
         const val FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
 
         /** A real session is a few KB; a megabyte is already absurd. */
