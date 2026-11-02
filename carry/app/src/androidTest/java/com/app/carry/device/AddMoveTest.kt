@@ -136,7 +136,22 @@ class AddMoveTest {
                 device.findObject(what)?.let { return it }
             }
         }
-        error("nothing on screen matches $what")
+        error("nothing on screen matches $what; ${scrollTrace()}")
+    }
+
+    /** What one scroll each way did, for a failed [find]: whether the list moved, and what was
+     *  on it. A find that fails with the target just off screen means the scroll didn't land. */
+    private fun scrollTrace(): String {
+        fun seen() = device.findObjects(By.clazz("android.widget.EditText"))
+            .joinToString("|") { "${it.text}@${it.visibleBounds.top}" }
+        val lists = device.findObjects(By.scrollable(true)).joinToString { "${it.className}${it.visibleBounds}" }
+        val before = seen()
+        list()?.scroll(Direction.DOWN, 0.5f)
+        device.waitForIdle()
+        val after = seen()
+        return "scrollables: $lists; keyboard: ${shell("dumpsys input_method").contains("mInputShown=true")}; " +
+            "focused: ${device.findObject(By.focused(true))?.let { "${it.className} ${it.text}" }}; " +
+            "before: $before; after one scroll down: $after"
     }
 
     /** The After tab's list: the tallest thing that scrolls, since a one-line text box scrolls too. */
