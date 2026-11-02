@@ -43,13 +43,15 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 - **Why.** A refresh runs on every resume. One that started before a save
   and finished after it carried the file as it was, and re-seeded the form
   from it: the old numbers came back and the button said "Save" again, so
-  a second tap would have written the old numbers over the new ones. Now
-  a read that a save overtook is dropped and done again.
+  a second tap would have written the old numbers over the new ones. A
+  read that caught the save's own bytes before the save finished warned
+  "file changed" over the owner's own save instead. Now any read that
+  overlaps a save is dropped and done again once the save is over.
 - **And "Saved" now survives a resume** when the file read back is the one
   just written. Before, every re-read counted as a new file, so returning
   from the share sheet took the post button away.
-- Two `CarryViewModelTest` tests drive each part; with either part removed,
-  they fail.
+- Three `CarryViewModelTest` tests drive these; each fails with its part
+  of the fix removed.
 
 ## 2026-10-24 — Add on a borrowed day keeps every row's typing (#210)
 

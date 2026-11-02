@@ -300,10 +300,12 @@ numbers someone just entered cannot, so they get the protection:
     damaged, it is whatever that write left, so *Try again* repairs it
     unless something else has changed the file since. The "may be
     damaged" warning stays until a good save.
-  - A folder read that started before a save and lands after it holds
-    the file as it was, so it is dropped and the folder read again: applied,
-    it put the old numbers back in the form, and a second tap would have
-    written them over the new ones. A re-read that finds the very file
+  - A folder read that overlaps a save can hold the file as it was, or as
+    the save left it before the save's own result landed, so it is dropped
+    and the folder read again once the save is over. Applied, it put the
+    old numbers back in the form (and a second tap would have written them
+    over the new ones), or warned that the file had changed under the
+    owner's own save. A re-read that finds the very file
     just written keeps "Saved", so coming back from the share sheet keeps
     the post button.
   - **Not handled:** the refresh on every resume can still put a different
