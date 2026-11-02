@@ -42,19 +42,20 @@ object ClassCalendar {
 
     /**
      * One day's comparison: what the phone's calendar says against the sheet the laptop wrote
-     * for that day, if it has. [phone] null is "no class"; [phoneReadable] false is "couldn't
-     * read the calendar" (no permission yet), which is not the same and is said so. A laptop
+     * for that day, if it has. [phone] null is "no class"; [phoneProblem], when set, is why the
+     * calendar couldn't be read (`no_calendar_access`, `calendar_unreadable`), which is not
+     * the same as no class and is said so. A laptop
      * sheet only exists once the day's board is out, so a class only the phone has seen is
      * normal for tomorrow, and reported as that rather than as a difference.
      */
-    fun day(date: LocalDate, phone: Found?, phoneReadable: Boolean, laptopSheet: JsonObject?): JsonObject {
+    fun day(date: LocalDate, phone: Found?, phoneProblem: String?, laptopSheet: JsonObject?): JsonObject {
         fun side(tag: String?, startsAt: String?): JsonElement =
             if (tag == null) JsonNull else JsonObject(mapOf("class" to JsonPrimitive(tag), "starts_at" to (startsAt?.let(::JsonPrimitive) ?: JsonNull)))
         val laptopTag = (laptopSheet?.get("class") as? JsonPrimitive)?.takeIf { it.isString }?.content
         val laptopStart = (laptopSheet?.get("starts_at") as? JsonPrimitive)?.takeIf { it.isString }?.content
         val phoneStart = startsAt(phone?.start)
         val status = when {
-            !phoneReadable -> "no_calendar_access"
+            phoneProblem != null -> phoneProblem
             phone == null && laptopTag == null -> "no_class"
             phone == null -> "laptop_only"
             laptopTag == null -> "phone_only"

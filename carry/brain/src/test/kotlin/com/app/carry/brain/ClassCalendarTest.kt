@@ -40,8 +40,8 @@ class ClassCalendarTest {
     fun `a day's comparison says what kind of difference it is`() {
         val day = LocalDate.of(2026, 1, 10)
         fun sheet(tag: String, at: String?) = JsonObject(mapOf("class" to JsonPrimitive(tag), "starts_at" to (at?.let(::JsonPrimitive) ?: JsonNull)))
-        fun status(phone: ClassCalendar.Found?, laptop: JsonObject?, readable: Boolean = true) =
-            (ClassCalendar.day(day, phone, readable, laptop)["status"] as JsonPrimitive).content
+        fun status(phone: ClassCalendar.Found?, laptop: JsonObject?, problem: String? = null) =
+            (ClassCalendar.day(day, phone, problem, laptop)["status"] as JsonPrimitive).content
         val found = ClassCalendar.Found("2G", nine)
         assertEquals("same", status(found, sheet("2G", "2026-01-10T09:50")))
         assertEquals("differ", status(found, sheet("3G", "2026-01-10T09:50")))
@@ -49,7 +49,8 @@ class ClassCalendarTest {
         assertEquals("phone_only", status(found, null))
         assertEquals("laptop_only", status(null, sheet("2G", null)))
         assertEquals("no_class", status(null, null))
-        assertEquals("no_calendar_access", status(null, sheet("2G", null), readable = false))
+        assertEquals("no_calendar_access", status(null, sheet("2G", null), problem = "no_calendar_access"))
+        assertEquals("calendar_unreadable", status(null, sheet("2G", null), problem = "calendar_unreadable"))
         // An all-day class has no start on either side.
         assertEquals("same", status(ClassCalendar.Found("2G", null), sheet("2G", null)))
     }

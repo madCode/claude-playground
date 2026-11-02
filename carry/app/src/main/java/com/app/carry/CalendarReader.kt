@@ -23,11 +23,16 @@ import java.time.ZoneOffset
  * all-day entries and was wrong for weeks without a sound, so both kinds are tested.
  */
 interface CalendarSource {
-    /** The day's events in start order, or null when the calendar can't be read (no permission). */
+    /** Whether the owner has let Carry read the calendar at all. */
+    fun allowed(): Boolean
+
+    /** The day's events in start order; null when the calendar is allowed but couldn't be read. */
     fun eventsOn(date: LocalDate): List<ClassCalendar.Event>?
 }
 
 class CalendarReader(private val context: Context, private val zone: ZoneId = ZoneId.systemDefault()) : CalendarSource {
+    override fun allowed() = granted(context)
+
     override fun eventsOn(date: LocalDate): List<ClassCalendar.Event>? {
         if (!granted(context)) return null
         val from = date.atStartOfDay(zone).toInstant().toEpochMilli() - HALF_DAY_MS
@@ -37,15 +42,19 @@ class CalendarReader(private val context: Context, private val zone: ZoneId = Zo
             ContentUris.appendId(it, to)
         }.build()
         val columns = arrayOf(CalendarContract.Instances.TITLE, CalendarContract.Instances.BEGIN, CalendarContract.Instances.ALL_DAY)
+        // Visible calendars only: the owner's own, not the hidden or shared ones a laptop feed
+        // list would never have held.
         return runCatching {
-            context.contentResolver.query(uri, columns, null, null, "${CalendarContract.Instances.BEGIN} ASC")?.use { c ->
+            context.contentResolver.query(uri, columns, "${CalendarContract.Instances.VISIBLE} = 1", null, "${CalendarContract.Instances.BEGIN} ASC")?.use { c ->
                 buildList {
                     while (c.moveToNext()) {
                         val title = c.getString(0) ?: continue
                         keep(title, c.getLong(1), c.getInt(2) != 0, date, zone)?.let(::add)
                     }
                 }
-            } ?: emptyList()
+            }
+        // A provider that answers nothing is a failed read, never an empty day: that is the
+        // mistake that hid the laptop's calendar bug for weeks.
         }.getOrNull()
     }
 

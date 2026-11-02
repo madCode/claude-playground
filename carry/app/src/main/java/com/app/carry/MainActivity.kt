@@ -48,8 +48,9 @@ class MainActivity : ComponentActivity() {
             // makes: no dialog, no notifications, and nothing anywhere that
             // says so.
             SessionWatchWorker.markAsked(this)
-            // The calendar right after, so setup asks its two questions together.
-            maybeAskForCalendar()
+            // The calendar follows from onResume, which Android runs after this answer is in.
+            // Launched from here as well, it went out twice, and the second was refused at once
+            // and marked asked before the owner had answered.
         }
 
     /**
@@ -58,11 +59,21 @@ class MainActivity : ComponentActivity() {
      */
     private val askCalendar =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            askingCalendar = false
             CalendarReader.markAsked(this)
         }
 
+    /**
+     * A calendar request is out and not answered. A second launch while one is pending is
+     * refused at once with an empty answer, which would mark the one ask spent before the owner
+     * had answered it; any resume while the dialog is up (a recreation, a second resume) would
+     * launch one. Kept across recreation, as the dialog is.
+     */
+    private var askingCalendar = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        askingCalendar = savedInstanceState?.getBoolean(ASKING_CALENDAR) == true
         enableEdgeToEdge()
         // Only a fresh start at the root of its task has no picker below it left to answer. A start
         // on top of an existing task, as a launcher tap gets after the session notice opened Carry,
@@ -247,7 +258,16 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun maybeAskForCalendar() {
-        if (!model.folder.chosen || CalendarReader.granted(this) || CalendarReader.asked(this)) return
-        runCatching { askCalendar.launch(android.Manifest.permission.READ_CALENDAR) }
+        if (askingCalendar || !model.folder.chosen || CalendarReader.granted(this) || CalendarReader.asked(this)) return
+        askingCalendar = runCatching { askCalendar.launch(android.Manifest.permission.READ_CALENDAR) }.isSuccess
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(ASKING_CALENDAR, askingCalendar)
+    }
+
+    private companion object {
+        const val ASKING_CALENDAR = "asking_calendar"
     }
 }

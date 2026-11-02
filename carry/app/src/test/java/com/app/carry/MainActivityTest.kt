@@ -168,7 +168,21 @@ class MainActivityTest {
         compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
         compose.waitForIdle()
+        // Then the calendar, once (madCode, 2026-11-02: asked once, at setup), and only one
+        // request for it: launched from the answer as well, it went out twice.
+        val calendar = shadowOf(compose.activity).lastRequestedPermission
+        assertEquals(listOf(Manifest.permission.READ_CALENDAR), calendar?.requestedPermissions?.toList())
+        assertFalse(CalendarReader.asked(context))
+        @Suppress("DEPRECATION")
+        compose.activity.onRequestPermissionsResult(
+            calendar!!.requestCode, calendar.requestedPermissions, intArrayOf(PackageManager.PERMISSION_DENIED),
+        )
+        assertTrue(CalendarReader.asked(context))
+
+        compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.waitForIdle()
         // Robolectric keeps the last request, so a new ask is a new object.
-        assertSame("asked again after an answer", request, shadowOf(compose.activity).lastRequestedPermission)
+        assertSame("asked again after both answers", calendar, shadowOf(compose.activity).lastRequestedPermission)
     }
 }

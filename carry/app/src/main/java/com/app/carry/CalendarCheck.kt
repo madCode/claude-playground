@@ -18,19 +18,31 @@ object CalendarCheck {
 
     fun runOnce(sessions: Folder, brain: BrainFolder, calendar: CalendarSource, now: LocalDateTime, build: String): Boolean {
         val sheets = sessions.list()
+        val allowed = calendar.allowed()
         val days = listOf(now.toLocalDate(), now.toLocalDate().plusDays(1)).map { date ->
-            val events = calendar.eventsOn(date)
-            ClassCalendar.day(date, events?.let(ClassCalendar::classOn), events != null, laptopSheet(sessions, sheets, date))
+            val events = if (allowed) calendar.eventsOn(date) else null
+            val found = events?.let(ClassCalendar::classOn)
+            val problem = when {
+                !allowed -> "no_calendar_access"
+                events == null -> "calendar_unreadable"
+                else -> null
+            }
+            ClassCalendar.day(date, found, problem, laptopSheet(sessions, sheets, date, found?.classTag))
         }
         val text = ClassCalendar.report(days, build, now).toString() + "\n"
         val existing = brain.list().firstOrNull { it.second == REPORT }?.first
         return existing?.let { brain.write(it, text) } ?: brain.create(REPORT, text)
     }
 
-    /** The laptop's sheet for [date]: the first by name, as a day has one class. */
-    private fun laptopSheet(sessions: Folder, sheets: List<Pair<String, String>>, date: LocalDate): JsonObject? =
-        sheets.filter { (_, name) -> SHEET.matchEntire(name)?.groupValues?.get(1) == date.toString() }
-            .minByOrNull { it.second }
-            ?.let { (id, _) -> sessions.read(id) }
+    /**
+     * The laptop's sheet for [date]. A day can hold two (two classes, or a rebooking): the one
+     * for the phone's class when there is one, else the first by name, so a second sheet never
+     * makes a false difference or hides a real one.
+     */
+    private fun laptopSheet(sessions: Folder, sheets: List<Pair<String, String>>, date: LocalDate, tag: String?): JsonObject? =
+        sheets.mapNotNull { (id, name) -> SHEET.matchEntire(name)?.takeIf { it.groupValues[1] == date.toString() }?.let { Triple(id, name, it.groupValues[2]) } }
+            .sortedBy { it.second }
+            .let { day -> day.firstOrNull { it.third == tag } ?: day.firstOrNull() }
+            ?.let { (id, _, _) -> sessions.read(id) }
             ?.let { runCatching { Json.parseToJsonElement(it) as JsonObject }.getOrNull() }
 }
