@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
@@ -78,6 +79,11 @@ class SessionWatchWorker(
             runCatching {
                 val folder = SessionFolder(context)
                 folder.brain()?.let { ShadowCheck.runOnce(folder, it, BuildConfig.VERSION_NAME) }
+            }
+            // And the phone's own history beside the laptop's (HistoryCheck), apart again.
+            runCatching {
+                val folder = SessionFolder(context)
+                folder.brain()?.let { HistoryCheck.runOnce(folder, it, LocalDate.now(), BuildConfig.VERSION_NAME) }
             }
         }
         if (withTimeoutOrNull(CarryViewModel.STALL_AFTER_MS) { work.await() } == null) {
