@@ -159,10 +159,7 @@ class MainActivityTest {
         // doesn't burn the only ask the app makes.
         assertFalse(SessionWatchWorker.asked(context))
 
-        @Suppress("DEPRECATION")
-        compose.activity.onRequestPermissionsResult(
-            request!!.requestCode, request.requestedPermissions, intArrayOf(PackageManager.PERMISSION_DENIED),
-        )
+        deny(request!!)
         assertTrue(SessionWatchWorker.asked(context))
 
         compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
@@ -173,10 +170,14 @@ class MainActivityTest {
         val calendar = shadowOf(compose.activity).lastRequestedPermission
         assertEquals(listOf(Manifest.permission.READ_CALENDAR), calendar?.requestedPermissions?.toList())
         assertFalse(CalendarReader.asked(context))
-        @Suppress("DEPRECATION")
-        compose.activity.onRequestPermissionsResult(
-            calendar!!.requestCode, calendar.requestedPermissions, intArrayOf(PackageManager.PERMISSION_DENIED),
-        )
+        // Resumed again while the dialog is up: no second request, which Android would refuse at
+        // once and so spend the one ask before the owner answered it.
+        compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.waitForIdle()
+        assertSame("asked twice while the first was out", calendar, shadowOf(compose.activity).lastRequestedPermission)
+        assertFalse(CalendarReader.asked(context))
+        deny(calendar!!)
         assertTrue(CalendarReader.asked(context))
 
         compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
@@ -184,5 +185,19 @@ class MainActivityTest {
         compose.waitForIdle()
         // Robolectric keeps the last request, so a new ask is a new object.
         assertSame("asked again after both answers", calendar, shadowOf(compose.activity).lastRequestedPermission)
+    }
+
+    /**
+     * The owner says no, as Android delivers it. Calling onRequestPermissionsResult alone leaves
+     * the activity believing a request is still out (Android clears that when it dispatches the
+     * answer), so the next request would be refused at once as a second one at the same time.
+     */
+    private fun deny(request: org.robolectric.shadows.ShadowActivity.PermissionsRequest) {
+        @Suppress("DEPRECATION")
+        compose.activity.onRequestPermissionsResult(
+            request.requestCode, request.requestedPermissions, intArrayOf(PackageManager.PERMISSION_DENIED),
+        )
+        android.app.Activity::class.java.getDeclaredField("mHasCurrentPermissionsRequest")
+            .apply { isAccessible = true }.setBoolean(compose.activity, false)
     }
 }
