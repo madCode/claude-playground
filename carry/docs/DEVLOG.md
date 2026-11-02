@@ -35,6 +35,24 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [DESIGN.md](DESIGN.md); what is specified but unbuilt is in
 [designs/](designs/). Newest first below.
 
+## 2026-11-02 — a read a save overtook no longer puts the old numbers back (#219)
+
+- **Found by** chasing a flake in `AddMoveTest.savingTwiceInARow`: the
+  second save sometimes found the form holding the first save's
+  numbers, or the post button gone.
+- **Why.** A refresh runs on every resume. One that started before a save
+  and finished after it carried the file as it was, and re-seeded the form
+  from it: the old numbers came back and the button said "Save" again, so
+  a second tap would have written the old numbers over the new ones. A
+  read that caught the save's own bytes before the save finished warned
+  "file changed" over the owner's own save instead. Now any read that
+  overlaps a save is dropped and done again once the save is over.
+- **And "Saved" now survives a resume** when the file read back is the one
+  just written. Before, every re-read counted as a new file, so returning
+  from the share sheet took the post button away.
+- Three `CarryViewModelTest` tests drive these; each fails with its part
+  of the fix removed.
+
 ## 2026-10-24 — Add on a borrowed day keeps every row's typing (#210)
 
 - **What the owner saw.** Tapping *+ Add what you did* after filling in
