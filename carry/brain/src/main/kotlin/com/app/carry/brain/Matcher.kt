@@ -36,8 +36,10 @@ class Kb(val exercises: LinkedHashMap<String, Exercise>) {
 
     companion object {
         /** The knowledge base as gym-coach's YAML loader reads it, written out as JSON. */
-        fun fromJson(text: String): Kb {
-            val root = Json.parseToJsonElement(text) as JsonObject
+        fun fromJson(text: String): Kb = fromJson(Json.parseToJsonElement(text) as JsonObject)
+
+        /** The same, already parsed: a brain input file carries the knowledge base inline. */
+        fun fromJson(root: JsonObject): Kb {
             val out = LinkedHashMap<String, Exercise>()
             for ((name, value) in root) {
                 val e = value as? JsonObject ?: JsonObject(emptyMap())

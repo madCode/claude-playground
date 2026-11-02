@@ -635,6 +635,25 @@ tomorrow's sheet the evening before, which is the case this feature exists
 for; storing it on sight meant that when its day arrived it was already
 seen and was silently never announced.
 
+## The phone's brain, checked against the laptop's
+
+The coach is moving onto the phone ([the plan](designs/brain-move.md)).
+Until it does, the laptop's sheet is the one shown, and the phone checks
+its own brain against it on real classes:
+
+- Beside each sheet, gym-coach writes what it was worked out from:
+  `brain/input-<date>-<class>.json` (the board, the history as stored, the
+  baselines, the knowledge base). Carry's sheet list never shows that
+  folder.
+- After the hourly sheet check, Carry works out the same sheet with its own
+  brain from that input and writes `brain/shadow-<date>-<class>.json`:
+  whether the two agree on everything the coach writes, and where not.
+  The owner's own entries are not compared.
+- One report per sheet, never rewritten, at most three per check, and never
+  at the sheet notification's expense.
+- Nothing is shown in the app. The reports sync back to the laptop, where
+  they are read; the switch waits on them agreeing.
+
 ## Asking whether a newer build is out
 
 The app's only network use. The owner chose it on 2026-10-16

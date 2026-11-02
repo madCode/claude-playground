@@ -70,6 +70,12 @@ class SessionWatchWorker(
                     post = { found -> notify(context, found) },
                 )
             }
+            // After the sheet check, and apart from it: the side-by-side check of the
+            // phone's brain (ShadowCheck) must never cost the owner a sheet notification.
+            runCatching {
+                val folder = SessionFolder(context)
+                folder.brain()?.let { ShadowCheck.runOnce(folder, it, BuildConfig.VERSION_NAME) }
+            }
         }
         if (withTimeoutOrNull(CarryViewModel.STALL_AFTER_MS) { work.await() } == null) {
             work.cancel()

@@ -138,6 +138,7 @@ abstract class SelfUpdateManifestCheck : DefaultTask() {
 }
 
 dependencies {
+    implementation(project(":brain"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
