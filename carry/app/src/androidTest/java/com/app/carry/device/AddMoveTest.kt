@@ -142,16 +142,19 @@ class AddMoveTest {
     /** What one scroll each way did, for a failed [find]: whether the list moved, and what was
      *  on it. A find that fails with the target just off screen means the scroll didn't land. */
     private fun scrollTrace(): String {
+        // Each field read on its own: the screen can change under the read.
         fun seen() = device.findObjects(By.clazz("android.widget.EditText"))
-            .joinToString("|") { "${it.text}@${it.visibleBounds.top}" }
-        val lists = device.findObjects(By.scrollable(true)).joinToString { "${it.className}${it.visibleBounds}" }
+            .joinToString("|") { runCatching { "${it.text}@${it.visibleBounds.top}" }.getOrElse { "stale" } }
+        val lists = device.findObjects(By.scrollable(true))
+            .joinToString { runCatching { "${it.className}${it.visibleBounds}" }.getOrElse { "stale" } }
+        val focused = runCatching { device.findObject(By.focused(true))?.let { "${it.className} ${it.text}" } }.getOrNull()
         val before = seen()
         list()?.scroll(Direction.DOWN, 0.5f)
         device.waitForIdle()
-        val after = seen()
+        // Sampled after the scroll: a layout that keeps moving once idle is pulling the list back.
+        val after = (0 until 4).joinToString(" / ") { Thread.sleep(400); seen() }
         return "scrollables: $lists; keyboard: ${shell("dumpsys input_method").contains("mInputShown=true")}; " +
-            "focused: ${device.findObject(By.focused(true))?.let { "${it.className} ${it.text}" }}; " +
-            "before: $before; after one scroll down: $after"
+            "focused: $focused; before: $before; after one scroll down, every 0.4 s: $after"
     }
 
     /** The After tab's list: the tallest thing that scrolls, since a one-line text box scrolls too. */
