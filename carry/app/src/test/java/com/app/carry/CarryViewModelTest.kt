@@ -619,6 +619,30 @@ class CarryViewModelTest {
     }
 
     @Test
+    fun `a read behind a save that hangs still reaches Stalled`() = runTest(dispatcher) {
+        val model = viewModel()
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+
+        val hung = java.util.concurrent.CountDownLatch(1)
+        val writing = java.util.concurrent.CountDownLatch(1)
+        model.write = { _, _ -> writing.countDown(); hung.await(20, java.util.concurrent.TimeUnit.SECONDS); Saved.NO_FILE_INTACT }
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        model.save()
+        withContext(Dispatchers.Default) { writing.await(20, java.util.concurrent.TimeUnit.SECONDS) }
+        model.refresh()
+        // The stall timeout runs on virtual time here, so it is due as soon
+        // as nothing else is queued.
+        withContext(Dispatchers.Default) {
+            withTimeout(20_000) { while (model.state.value != CarryState.Stalled) delay(5) }
+        }
+        hung.countDown()
+        settled(model)
+        assertEquals("the typing is kept", SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+    }
+
+    @Test
     fun `a save over a file that changed, emptied or went is refused, with the typing kept and listed`() = runTest(dispatcher) {
         // madCode, 2026-10-17: refuse, keep the typing, offer the new file.
         for (onDisk in listOf(sheet.replace("10 x bench press", "12 x bench press"), "", null)) {
