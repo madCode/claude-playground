@@ -15,7 +15,7 @@ that is already proven.
 
 **Phase 4 has started.** The laptop's session import is ported
 (`brain/Import.kt`) and matches gym-coach's import fixtures step for step:
-417 steps of the invented lifter's days, with edits, renames, two sittings
+431 steps of the invented lifter's days, with edits, renames, two sittings
 and every refusal. Nothing on the phone calls it yet; wiring it in, with the
 phone keeping its own history and comparing it to the laptop's, is next.
 The wiring has two things to get right, from the port's review: write

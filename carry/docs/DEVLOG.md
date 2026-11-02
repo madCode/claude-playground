@@ -44,7 +44,7 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   into history rows. Two sittings, edits after logging, a tap on hurt alone,
   renames, and each kind of file it refuses all behave as on the laptop.
 - **Held to `brain-fixtures/imports.jsonl`**, which gym-coach writes (its
-  #78 and #79): 417 steps replayed in order, each step's report, rewrite and
+  #78 and #79): 431 steps replayed in order, each step's report, rewrite and
   appended rows compared exactly.
 - **A rename alone now reaches history** (madCode, 2026-11-02), on both
   sides: what the owner typed is compared, never what it matched, so a
