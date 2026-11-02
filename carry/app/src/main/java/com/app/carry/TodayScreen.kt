@@ -61,17 +61,31 @@ fun TodayScreen(
     older: Boolean = false,
 ) {
     val day = SessionFiles.dayOf(session.date, today)
-    val weighted = session.sets.filter { it.suggestedWeight != null }
+    // A pattern note once per movement, on its first row in sheet order, as
+    // the coach's own sheet does: the file repeats it on every row of the
+    // pattern, and three squats would otherwise say "squats lately" three times.
+    val seenNotes = mutableSetOf<String>()
+    val sets = session.sets.map { set ->
+        val note = set.patternNote?.takeIf { it.isNotBlank() } ?: return@map set
+        if (seenNotes.add(note)) set else set.copy(patternNote = null)
+    }
+    val weighted = sets.filter { it.suggestedWeight != null }
     val changed = weighted.filter { it.change != null }
     val held = weighted.filter { it.change == null }
-    val noNumber = session.sets.filter { it.suggestedWeight == null }
-    // A movement with no number of its own, but a neighbour the coach could
-    // point at, is worth more than its name in a list: "by feel" told the
+    val noNumber = sets.filter { it.suggestedWeight == null }
+    // A movement with no number of its own, but something the coach found
+    // about it, is worth more than its name in a list: "by feel" told the
     // owner nothing they did not already know while the file held "goblet
     // forward lunge 30 lb, 10/10". Capped, because these are rows rather
     // than one concatenated line, and the sheet is read in a single glance.
-    val borrowed = noNumber.filter { !it.related.isNullOrBlank() }.take(MAX_RELATED)
-    val tail = noNumber - borrowed.toSet()
+    // Within the cap a miss comes first, then a floor or cap, since a
+    // warning is worth more than a suggestion; they show in sheet order.
+    // By position, not by value: two identical rows are still two rows.
+    val chosen = noNumber.indices.filter { noNumber[it].coachSaid }
+        .sortedBy { i -> noNumber[i].let { if (!it.missNote.isNullOrBlank()) 0 else if (it.claimLines.isNotEmpty()) 1 else 2 } }
+        .take(MAX_NOTED).toSet()
+    val noted = noNumber.filterIndexed { i, _ -> i in chosen }
+    val tail = noNumber.filterIndexed { i, _ -> i !in chosen }
 
     Column(modifier.fillMaxSize().background(Look.Slate).padding(horizontal = 14.dp)) {
         // On a past sheet the headline is the ANSWER to "why am I looking at
@@ -126,7 +140,7 @@ fun TodayScreen(
             // renders first -- so the app would crash on every launch with
             // no way to fix it from the phone.
             items(changed + held) { SheetRow(it) }
-            items(borrowed) { RelatedRow(it) }
+            items(noted) { NotedRow(it) }
             if (tail.isNotEmpty()) item { TailLine(tail) }
         }
     }
@@ -165,7 +179,26 @@ private fun SheetRow(set: ExerciseSet) {
             fontFamily = Look.Figure, fontWeight = FontWeight.SemiBold, fontSize = Look.FigureSize,
         )
     }
+    // What the coach said beside the number: a miss last time, and how the
+    // movement's pattern has gone. The text sheet always printed both.
+    CoachLines(listOfNotNull(set.missNote?.let { it to true }, set.patternNote?.let { it to false }),
+        Modifier.padding(start = 11.dp, bottom = 6.dp))
     Box(Modifier.fillMaxWidth().height(1.dp).background(Look.Rule))
+}
+
+/** Lines from the coach under a row's name, dim; a warning (a miss) in brick. */
+@Composable
+private fun CoachLines(lines: List<Pair<String, Boolean>>, modifier: Modifier = Modifier) {
+    if (lines.isEmpty()) return
+    Column(modifier) {
+        lines.filter { it.first.isNotBlank() }.forEach { (text, warning) ->
+            Text(
+                text.readable(), color = if (warning) Look.BrickInk else Look.ChalkDim, fontFamily = Look.Name,
+                fontSize = Look.SmallSize, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 1.dp),
+            )
+        }
+    }
 }
 
 /**
@@ -268,18 +301,21 @@ private fun StreakPips(set: ExerciseSet) {
 }
 
 /**
- * A movement with no weight of its own, under the nearest one the coach
- * found: `cross-back lunge` over `goblet forward lunge 30 lb, 10/10`.
+ * A movement with no weight of its own, under what the coach found about it:
+ * `cross-back lunge` over `goblet forward lunge 30 lb, 10/10`, or `hammer
+ * curl` over `at least 10 lb (10 lb, single leg, 10/25)` and a miss.
  *
  * Deliberately NOT shaped like [SheetRow]. That row's big right-hand
- * figure is a number earned by this movement's own history; this one is a
- * guess sideways from a different movement, and the two must not be
- * mistaken for each other in a lobby. So the number stays inside the
+ * figure is a number earned by this movement's own history; these are
+ * guesses sideways from other setups and other movements, and the two must
+ * not be mistaken for each other in a lobby. So each number stays inside the
  * sentence that says where it came from, at the size of a note.
+ *
+ * In the text sheet's order: floors and caps, the miss, the related line,
+ * the pattern note.
  */
 @Composable
-private fun RelatedRow(set: ExerciseSet) {
-    val related = set.related ?: return
+private fun NotedRow(set: ExerciseSet) {
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -294,12 +330,13 @@ private fun RelatedRow(set: ExerciseSet) {
             )
         }
         // Indented to the name, and never squeezed to one line: the weight
-        // sits at the END of this string, so an ellipsis would eat the only
-        // part worth carrying in.
-        Text(
-            related, color = Look.ChalkDim, fontFamily = Look.Name,
-            fontSize = Look.SmallSize, maxLines = 2, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 11.dp, top = 1.dp),
+        // sits at the END of a related line, so an ellipsis would eat the
+        // only part worth carrying in.
+        CoachLines(
+            set.claimLines.map { it to false } +
+                listOfNotNull(set.missNote?.let { it to true }, set.related?.let { it to false },
+                    set.patternNote?.let { it to false }),
+            Modifier.padding(start = 11.dp),
         )
     }
 }
@@ -356,9 +393,9 @@ private const val MAX_PIPS = 10
 /** Names folded into the tail line; past this nobody is reading them. */
 private const val MAX_TAIL_NAMES = 40
 
-/** Three borrowed numbers is the most a glance can hold beside the real
- *  ones; the rest of the no-number movements stay in the tail line. */
-private const val MAX_RELATED = 3
+/** Three rows of what the coach found is the most a glance can hold beside
+ *  the real numbers; the rest of the no-number movements stay in the tail line. */
+private const val MAX_NOTED = 3
 
 /** 45.0 reads as "45"; 12.5 keeps its half. Dumbbells come in halves. */
 internal fun Double?.asWeight(): String {

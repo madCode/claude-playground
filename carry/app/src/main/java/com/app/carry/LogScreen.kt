@@ -212,7 +212,9 @@ fun LogScreen(
             items(session.sets.size, key = { setKeys[it] }) { i ->
                 val set = session.sets[i]
                 LogRow(
-                    name = set.displayName,
+                    // With the Before sheet's variant words, so two rows of one
+                    // movement ("low row", "low row · bear plank") can be told apart.
+                    name = (listOf(set.displayName) + set.variantWords).joinToString(" · "),
                     prescription = set.prescription,
                     // Only where a weight is logged: on a bodyweight ladder every
                     // round has the same load, so "heaviest" picks nothing, and
@@ -366,6 +368,9 @@ private fun LogRow(
     // any more, an untouched row already means "not done", and a skipped
     // row with a weight on it would be two answers at once.
     val change = { e: SessionPatch.Entry -> onChange(e.copy(skipped = false)) }
+    // The boxes' labels, with commas where the name has dots: TalkBack reads
+    // a "·" out as "middle dot".
+    val spoken = name.replace(" · ", ", ")
     // Two lines: the name and *hurt*, then the fields. Everything is read at
     // arm's length or tapped with cold hands, so neither the name nor the
     // targets give up room; the row gets taller instead.
@@ -402,15 +407,15 @@ private fun LogRow(
             // Chips sit level with the boxes, not with the labels above them.
             itemVerticalAlignment = Alignment.Bottom,
         ) {
-            NumberField(entry.weight.asWeightField(), "$key-w", "$name, lb", "lb", weightProblem) { text ->
+            NumberField(entry.weight.asWeightField(), "$key-w", "$spoken, lb", "lb", weightProblem) { text ->
                 change(entry.copy(weight = text.toDoubleOrNull()))
             }
             if (timed) {
-                DoneTag(entry.done, "$name, time") { change(entry.copy(done = !entry.done)) }
+                DoneTag(entry.done, "$spoken, time") { change(entry.copy(done = !entry.done)) }
             } else {
                 val count = prescribedReps?.takeIf { it > 0 }?.toString()
                 NumberField(
-                    repsField(entry.reps, entry.fractionalReps), "$key-r", "$name, reps", "reps", repsProblem,
+                    repsField(entry.reps, entry.fractionalReps), "$key-r", "$spoken, reps", "reps", repsProblem,
                     hint = count, fill = count.takeIf { tapFills },
                 ) { text ->
                     val (reps, fractional) = parseReps(text)
@@ -778,8 +783,10 @@ private fun ShareIntel(classTag: String?, post: IntelPost.Post, onSend: (String)
 }
 
 /**
- * Each name the owner typed, shown back once the save has landed, with the
- * one question a typed name raises: is the weight in the weight box?
+ * Each name the owner typed with the weight box left empty, shown back once
+ * the save has landed, with the one question that raises: is the weight in
+ * the weight box? A row whose box has a weight has answered it (madCode,
+ * 2026-11-01: asked about "alt halo" with its weight filled in).
  *
  * Carry can't tell a load from a movement in free text (a digit test
  * missed "deadlift twenty six" and "½ rack" and flagged "bicep curl 21s"),
@@ -796,7 +803,7 @@ private fun TypedBack(added: List<AddedSet>) {
     // inline flag compiles on the JVM and throws on Android, whose regex is
     // ICU's, so every unit test passed and the app died on the phone -- on
     // the recomposition after a save that had already written the file.
-    val names = added.mapNotNull { row ->
+    val names = added.filter { it.weight == null }.mapNotNull { row ->
         row.name.readable().replace(SPACES, " ").trim().takeIf { it.isNotEmpty() }?.let(::clip)
     }.distinct()
     if (names.isEmpty()) return
