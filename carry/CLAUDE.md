@@ -23,10 +23,13 @@ can tell the difference.
 
 - `app/`: Android, Jetpack Compose. The two screens, the folder picker (SAF),
   and reading/writing the session file.
-- Session files are the only I/O for the owner's data, with one
-  deliberate exception: after a save, Carry can hand a composed text post
-  to the share sheet. It keeps no account — the owner's own app does the
-  posting, and the text is shown in full before it goes.
+- Session files are the only I/O for the owner's data, with two
+  deliberate exceptions. After a save, Carry can hand a composed text post
+  to the share sheet; it keeps no account — the owner's own app does the
+  posting, and the text is shown in full before it goes. And, with the
+  owner's permission, it reads which class is on today and tomorrow from
+  their calendar: event titles and starts only, and only the class tag and
+  start are kept or written (`CalendarReader`).
 - The network is for what the owner has approved, one use at a time:
   today, a CI debug build asking GitHub whether a newer build is out
   (`DebugUpdates`, #107), sending nothing of theirs. Fetching the board

@@ -4,7 +4,8 @@
     <!--
       POST_NOTIFICATIONS is this app's own, added 2026-10-16 so a session
       file landing in the synced folder can say so. The notification text
-      carries the class only (see NewSession.text).
+      carries the class only (see NewSession.text). READ_CALENDAR is its own
+      too, added 2026-11-02 for the class on a day (below).
 
       A debug build adds INTERNET and REQUEST_INSTALL_PACKAGES in
       src/debug/AndroidManifest.xml, to install newer CI builds of itself.
@@ -17,6 +18,13 @@
       the reasons.
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!--
+      Which class is on a day, read from the owner's own calendar (phase 5 of
+      docs/designs/brain-move.md). Asked for once, at setup (madCode,
+      2026-11-02). Only event titles and starts on today and tomorrow are
+      read; only the class tag and start leave CalendarReader.
+    -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
     <!--
       WorkManager's fourth, for expedited and foreground work. Carry has
       none, and CI's emulator job checks the hourly session check still

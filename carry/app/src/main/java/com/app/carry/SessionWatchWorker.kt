@@ -85,6 +85,11 @@ class SessionWatchWorker(
                 val folder = SessionFolder(context)
                 folder.brain()?.let { HistoryCheck.runOnce(folder, it, LocalDate.now(), BuildConfig.VERSION_NAME) }
             }
+            // And which class the phone's calendar says, beside the laptop's sheet (CalendarCheck).
+            runCatching {
+                val folder = SessionFolder(context)
+                folder.brain()?.let { CalendarCheck.runOnce(folder, it, CalendarReader(context), LocalDateTime.now(), BuildConfig.VERSION_NAME) }
+            }
         }
         if (withTimeoutOrNull(CarryViewModel.STALL_AFTER_MS) { work.await() } == null) {
             work.cancel()

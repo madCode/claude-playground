@@ -42,6 +42,8 @@ class NotificationTapTest {
     @Before fun aSheetForTodayInTheFolder() {
         shell("cmd statusbar collapse")
         shell("pm grant $pkg ${Manifest.permission.POST_NOTIFICATIONS}")
+        // And the calendar, asked for once at setup: the dialog would otherwise cover Carry.
+        shell("pm grant $pkg ${Manifest.permission.READ_CALENDAR}")
         NotificationManagerCompat.from(carry).cancelAll()
         TestFolder.grantTo(carry, pkg)
         assertTrue("Carry couldn't take the folder's grant", SessionFolder(carry).remember(TestFolder.tree()))

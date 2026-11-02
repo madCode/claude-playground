@@ -37,6 +37,18 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 
 
 
+## 2026-11-02 — the phone reads the class from its own calendar, beside the laptop
+
+- **Phase 5, the calendar half** ([the plan](designs/brain-move.md)).
+  Carry asks for calendar access once, at setup (madCode's choice), and
+  each hour sets the class its calendar shows for today and tomorrow
+  against the laptop's sheet (DESIGN.md).
+- **Read narrowly.** Titles and starts only, matched with gym-coach's own
+  pattern; only the tag and start reach the report.
+- **Tested for the bug that hid for weeks on the laptop:** a timed event
+  and an all-day one, in a timezone far from UTC, each kept on its own day.
+- The board fetch, the other half of phase 5, waits on a Reddit key.
+
 ## 2026-11-02 — the phone keeps its own history, beside the laptop's
 
 - **Phase 4, wired in** ([the plan](designs/brain-move.md)). gym-coach
