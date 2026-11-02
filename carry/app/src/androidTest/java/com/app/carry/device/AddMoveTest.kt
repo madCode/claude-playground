@@ -111,8 +111,8 @@ class AddMoveTest {
         assertTrue("no second row", device.wait(Until.hasObject(box(NAME).text("")), 10_000) || boxes(NAME).size == 2)
         assertNotNull("the second Add didn't move the cursor", device.wait(Until.findObject(focused(NAME)), 10_000))
         assertEquals("the second row's name has it", "", device.findObject(focused(NAME)).text ?: "")
-        assertTrue("the first row lost its name", device.hasObject(box(NAME).text("popsquat")))
-        assertTrue("the first row lost its weight", device.hasObject(box(LB).text("12")))
+        assertNotNull("the first row lost its name", runCatching { find(box(NAME).text("popsquat")) }.getOrNull())
+        assertNotNull("the first row lost its weight", runCatching { find(box(LB).text("12")) }.getOrNull())
 
         typeInto(NAME, "plankjack")
         alive()
@@ -218,7 +218,7 @@ class AddMoveTest {
         assertTrue("Carry didn't come back", device.wait(Until.hasObject(By.pkg(pkg).depth(0)), 20_000))
         device.wait(Until.findObject(By.text("After")), 20_000)?.click()
         assertTrue("the typing didn't come back", device.wait(Until.hasObject(box(NAME).text("popsquat")), 20_000))
-        assertTrue(device.hasObject(box(LB).text("12")))
+        assertNotNull("the weight didn't come back", runCatching { find(box(LB).text("12")) }.getOrNull())
 
         tapSave("Save")
         alive()
