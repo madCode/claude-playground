@@ -81,4 +81,15 @@ class HistoryTest {
         assertTrue((History.compare(laptop, laptop)["same"] as JsonPrimitive).content.toBoolean())
         assertFalse((History.compare(phone.drop(3), phone)["same"] as JsonPrimitive).content.toBoolean())
     }
+
+    @Test
+    fun `the phone's history reads back only whole`() {
+        val rows = History.parse("{\"row_id\": \"a\", \"weight\": 25}\n{\"row_id\": \"b\", \"weight\": NaN}\n")
+        val text = History.writePhone(rows)
+        assertEquals(rows.toString(), History.parsePhone(text).toString())
+        // Empty, cut anywhere, or not this document: each refused, never a shorter history.
+        for (bad in listOf("", text.substring(0, text.length / 2), text.substring(0, text.lastIndexOf(']')), "{\"rows\": []}")) {
+            assertTrue(bad, runCatching { History.parsePhone(bad) }.isFailure)
+        }
+    }
 }

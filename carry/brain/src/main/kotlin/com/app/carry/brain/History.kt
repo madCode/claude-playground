@@ -41,10 +41,36 @@ object History {
      */
     fun write(rows: List<JsonObject>): String = rows.joinToString("") { "$it\n" }
 
-    /** `import_finished`'s choice of files: session files for days before [today], in name order. */
-    fun finished(names: List<String>, today: LocalDate): List<String> = names
-        .filter { name -> SESSION_NAME.matchEntire(name)?.let { it.groupValues[1] < today.toString() } == true }
-        .sorted()
+    const val PHONE_SCHEMA = "brain-history-phone/1"
+
+    /**
+     * The phone's own history, as one JSON document rather than a line a row: an empty file
+     * or one a cut-short write left (SAF's "wt" truncates first) does not parse, where lines
+     * cut at a boundary would read as a shorter history and lose rows without a word.
+     */
+    fun writePhone(rows: List<JsonObject>): String =
+        JsonObject(mapOf("schema" to JsonPrimitive(PHONE_SCHEMA), "rows" to JsonArray(rows))).toString() + "\n"
+
+    /** [writePhone]'s document back, or a throw for anything that isn't one whole. */
+    fun parsePhone(text: String): List<JsonObject> {
+        val doc = pyJsonLoads(text) as? JsonObject ?: throw IllegalArgumentException("not an object")
+        require(doc["schema"] == JsonPrimitive(PHONE_SCHEMA)) { "not $PHONE_SCHEMA" }
+        val rows = doc["rows"] as? JsonArray ?: throw IllegalArgumentException("no rows")
+        return rows.map { it as? JsonObject ?: throw IllegalArgumentException("a row that is not an object") }
+    }
+
+    /**
+     * `import_finished`'s choice of files: session files for days before [today], in name
+     * order. From the last [days] days only, where the laptop takes every file: what is older
+     * is already in both histories, and reading every file of every year each hour is a cost
+     * that only grows.
+     */
+    fun finished(names: List<String>, today: LocalDate, days: Long = Long.MAX_VALUE): List<String> {
+        val from = if (days == Long.MAX_VALUE) "" else today.minusDays(days).toString()
+        return names
+            .filter { name -> SESSION_NAME.matchEntire(name)?.let { it.groupValues[1] < today.toString() && it.groupValues[1] >= from } == true }
+            .sorted()
+    }
 
     /**
      * A session file's bytes as the import takes them, `read_text`'s way: too large or not UTF-8
@@ -74,6 +100,9 @@ object History {
      * before ids existed have none, and are only counted. Equal means equal as Python reads
      * them: 25 is 25.0, and a key missing on one side is null there.
      */
+    /** Whether a row has an id to be compared on: rows from before ids existed have none. */
+    fun keyed(row: JsonObject): Boolean = (row["row_id"] as? JsonPrimitive)?.isString == true
+
     fun compare(phone: List<JsonObject>, laptop: List<JsonObject>): JsonObject {
         fun keyed(rows: List<JsonObject>) = rows.mapNotNull { r -> (r["row_id"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.let { it to r } }.toMap()
         val p = keyed(phone)

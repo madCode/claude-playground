@@ -58,8 +58,9 @@ class HistoryCheckTest {
     }
 
     private class Brain(val files: MutableMap<String, String>, val canWrite: Boolean = true) : BrainFolder {
+        val unreadable = mutableSetOf<String>()
         override fun list() = files.keys.map { it to it }
-        override fun read(documentId: String) = files[documentId]
+        override fun read(documentId: String) = if (documentId in unreadable) null else files[documentId]
         override fun create(name: String, text: String): Boolean {
             if (canWrite) files[name] = text
             return canWrite
@@ -85,7 +86,7 @@ class HistoryCheckTest {
     fun `the first run starts the phone's history from the laptop's, and they agree`() {
         val b = brain(logged(0..21))
         assertEquals(HistoryCheck.Outcome.CHECKED, HistoryCheck.runOnce(sessions(19, 20, 21), b, today, "test"))
-        assertEquals(History.parse(b.files.getValue("history.jsonl")), History.parse(b.files.getValue("history-phone.jsonl")))
+        assertEquals(History.parse(b.files.getValue("history.jsonl")), History.parsePhone(b.files.getValue("history-phone.json")))
         val r = report(b)
         assertTrue(flag(r, "seeded"))
         assertTrue("the files already logged change nothing: $r", flag(r, "same"))
@@ -118,7 +119,7 @@ class HistoryCheckTest {
 
     @Test
     fun `a phone history a cut-short write damaged is started again from the laptop's, and says so`() {
-        val b = brain(logged(0..21), "history-phone.jsonl" to "{\"row_id\": \"x\", \"wei")
+        val b = brain(logged(0..21), "history-phone.json" to "{\"schema\": \"brain-history-phone/1\", \"rows\": [{\"row_id\": \"x\", \"wei")
         HistoryCheck.runOnce(sessions(21), b, today, "test")
         assertTrue(flag(report(b), "seeded"))
         assertTrue(flag(report(b), "same"))
@@ -145,5 +146,48 @@ class HistoryCheckTest {
     fun `a folder that can't be written is reported as such`() {
         val b = Brain(mutableMapOf("history.jsonl" to History.write(logged(0..20)), "input-2000-01-01-2G.json" to kbInput), canWrite = false)
         assertEquals(HistoryCheck.Outcome.NOT_WRITTEN, HistoryCheck.runOnce(sessions(21), b, today, "test"))
+    }
+
+    @Test
+    fun `an emptied phone history is started again, never read as one with no rows`() {
+        // SAF's "wt" truncates before it writes: a write cut short can leave nothing at all.
+        val b = brain(logged(0..21), "history-phone.json" to "")
+        HistoryCheck.runOnce(sessions(21), b, today, "test")
+        assertTrue(flag(report(b), "seeded"))
+        assertTrue(flag(report(b), "same"))
+    }
+
+    @Test
+    fun `a phone history that can't be read right now is left alone, not replaced`() {
+        val mine = History.writePhone(logged(0..20))
+        val b = brain(logged(0..21), "history-phone.json" to mine)
+        b.unreadable += "history-phone.json"
+        assertEquals(HistoryCheck.Outcome.UNREADABLE, HistoryCheck.runOnce(sessions(21), b, today, "test"))
+        assertEquals(mine, b.files["history-phone.json"])
+        assertFalse(b.files.containsKey("history-compare.json"))
+    }
+
+    @Test
+    fun `rows the laptop adopts later reach the phone, instead of standing as a difference`() {
+        // A day logged before ids, as the laptop held it when the phone started its copy.
+        val old = JsonObject(mapOf("date" to JsonPrimitive("2000-01-01"), "exercise" to JsonPrimitive("deadlift"),
+            "weight" to JsonPrimitive(30), "reps" to JsonPrimitive(8)))
+        val b = brain(listOf(old) + logged(0..21))
+        HistoryCheck.runOnce(sessions(21), b, today, "test")
+        assertTrue(flag(report(b), "same"))
+        // `adopt-history` gives it an id on the laptop.
+        val adopted = JsonObject(old + mapOf("row_id" to JsonPrimitive("2000-01-01:2G#0")))
+        b.files["history.jsonl"] = History.write(listOf(adopted) + logged(0..21))
+        HistoryCheck.runOnce(sessions(21), b, today, "test")
+        val r = report(b)
+        assertEquals(JsonPrimitive(0), r["unkeyed_phone"])
+        assertEquals(listOf("2000-01-01:2G#0"), r["only_laptop"]!!.jsonArray.map { it.jsonPrimitive.content })
+    }
+
+    @Test
+    fun `only the last weeks' files are imported each hour`() {
+        val b = brain(logged(0..21))
+        HistoryCheck.runOnce(sessions(0, 21), b, LocalDate.parse(date(21)).plusDays(HistoryCheck.WINDOW_DAYS), "test")
+        assertEquals(JsonPrimitive(1), report(b)["files_imported"])
     }
 }

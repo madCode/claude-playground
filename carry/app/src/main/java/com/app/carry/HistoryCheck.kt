@@ -12,7 +12,7 @@ import java.time.LocalDate
  * own history, beside the laptop's, and says where the two differ.
  *
  * gym-coach copies its history to `brain/history.jsonl` after each import. The
- * first time, the phone's history (`brain/history-phone.jsonl`) starts as a
+ * first time, the phone's history (`brain/history-phone.json`) starts as a
  * copy of it. After that the phone imports the finished session files itself,
  * with the ported import, and writes `brain/history-compare.json`: the rows
  * only one side has and the fields that differ. The laptop's history is still
@@ -20,8 +20,12 @@ import java.time.LocalDate
  */
 object HistoryCheck {
     const val LAPTOP = "history.jsonl"
-    const val PHONE = "history-phone.jsonl"
+    /** `.json`, one document: a provider names a file by its type, and has none for `.jsonl`. */
+    const val PHONE = "history-phone.json"
     const val REPORT = "history-compare.json"
+
+    /** Session files imported each run: older ones are already in both histories. */
+    const val WINDOW_DAYS = 45L
 
     private val INPUT = Regex("""^input-\d{4}-\d{2}-\d{2}-[A-Za-z0-9]+\.json$""")
 
@@ -34,29 +38,34 @@ object HistoryCheck {
         val laptopText = brain.read(laptopId) ?: return Outcome.UNREADABLE
         val laptop = runCatching { History.parse(laptopText) }.getOrElse { return Outcome.UNREADABLE }
 
-        // The laptop's knowledge base, as the newest sheet input carries it, so an added row
-        // is matched here as the laptop's import matches it.
-        val kb = files.keys.filter { INPUT.matches(it) }.sortedDescending().asSequence()
-            .mapNotNull { name -> brain.read(files.getValue(name))?.let { runCatching { History.kbFromInput(it) }.getOrNull() } }
-            .firstOrNull() ?: return Outcome.NO_KNOWLEDGE_BASE
+        // The laptop's knowledge base, as the newest sheet input carries it, so an added row is
+        // matched as the laptop's import matches it. Only the newest: an older one would match
+        // with a knowledge base the laptop no longer has, and the report says which was used.
+        val kbFrom = files.keys.filter { INPUT.matches(it) }.maxOrNull() ?: return Outcome.NO_KNOWLEDGE_BASE
+        val kb = brain.read(files.getValue(kbFrom))?.let { runCatching { History.kbFromInput(it) }.getOrNull() }
+            ?: return Outcome.NO_KNOWLEDGE_BASE
 
-        // Seeded from the laptop's once. Seeded again only when the phone's own copy no longer
-        // reads as a history, which a write cut short can leave; the report says so.
+        // Seeded from the laptop's once, and again only when the phone's copy is there but no
+        // longer one whole document (a write cut short). A copy that can't be READ right now
+        // is a busy provider, not damage: nothing is replaced, and the next run tries again.
         val phoneId = files[PHONE]
-        val stored = phoneId?.let { brain.read(it) }?.let { runCatching { History.parse(it) }.getOrNull() }
+        val phoneText = phoneId?.let { brain.read(it) ?: return Outcome.UNREADABLE }
+        val stored = phoneText?.let { runCatching { History.parsePhone(it) }.getOrNull() }
         val seeded = stored == null
-        val phone = stored ?: laptop
+        // Rows from before ids existed are the laptop's alone: only it ever writes them, and its
+        // `adopt-history` gives them ids later. Mirrored each run, so an adoption reaches the
+        // phone instead of standing as a difference for good.
+        val phone = laptop.filterNot(History::keyed) + (stored ?: laptop).filter(History::keyed)
 
         val names = sessions.list().associate { (id, name) -> name to id }
-        val finished = History.finished(names.keys.toList(), today)
+        val finished = History.finished(names.keys.toList(), today, WINDOW_DAYS)
         val sources = finished.map { it to History.source(sessions.readBytes(names.getValue(it), History.MAX_SESSION_FILE_BYTES)) }
         val plan = planImport(sources, phone, kb, write = true)
         val after = plan.rewritten ?: (phone + plan.appended)
 
-        val historyText = History.write(after)
         val phoneWritten = when {
-            phoneId == null -> brain.create(PHONE, historyText)
-            seeded || after != phone -> brain.write(phoneId, historyText)
+            phoneId == null -> brain.create(PHONE, History.writePhone(after))
+            seeded || after != stored -> brain.write(phoneId, History.writePhone(after))
             else -> true
         }
         val report = JsonObject(History.compare(after, laptop) + mapOf(
@@ -64,6 +73,8 @@ object HistoryCheck {
             "checked" to JsonPrimitive(today.toString()),
             "seeded" to JsonPrimitive(seeded),
             "phone_written" to JsonPrimitive(phoneWritten),
+            "knowledge_base_from" to JsonPrimitive(kbFrom),
+            "files_imported" to JsonPrimitive(finished.size),
             "import" to JsonArray(plan.report.filterNotNull().map(::JsonPrimitive)),
         ))
         val reportText = report.toString() + "\n"

@@ -676,15 +676,22 @@ The history gets the same treatment (phase 4 of the plan):
 
 - After each import, gym-coach copies its history to `brain/history.jsonl`.
 - The first time Carry finds it, Carry starts its own history,
-  `brain/history-phone.jsonl`, as a copy. From then on Carry imports each
+  `brain/history-phone.json`, as a copy. From then on Carry imports each
   finished session file itself, with the ported import, the day after the
   class as the laptop does.
 - After each hourly check it writes `brain/history-compare.json`: the rows
   only one side has, and for rows on both, which fields differ.
 - Session files are read as the laptop reads them for this: as bytes,
   refused past 1 MiB or when not UTF-8, never decoded leniently.
-- If the phone's copy no longer reads as a history (a write cut short),
-  it starts again from the laptop's, and the report says so.
+- The phone's copy is one JSON document, so a write cut short (or an empty
+  file) never reads as a shorter history: it starts again from the
+  laptop's, and the report says so. A copy that can't be read right now is
+  left alone until the next run.
+- Rows from before ids existed are mirrored from the laptop's on every run,
+  so its `adopt-history` reaches the phone.
+- Only session files from the last 45 days are imported each hour; older
+  days are already in both. The knowledge base is the newest sheet input's,
+  and the report names which.
 - The laptop's history is still the record. Nothing on the phone reads the
   phone's copy yet.
 
