@@ -52,10 +52,16 @@ object HistoryCheck {
         val phoneText = phoneId?.let { brain.read(it) ?: return Outcome.UNREADABLE }
         val stored = phoneText?.let { runCatching { History.parsePhone(it) }.getOrNull() }
         val seeded = stored == null
-        // Rows from before ids existed are the laptop's alone: only it ever writes them, and its
-        // `adopt-history` gives them ids later. Mirrored each run, so an adoption reaches the
-        // phone instead of standing as a difference for good.
-        val phone = laptop.filterNot(History::keyed) + (stored ?: laptop).filter(History::keyed)
+        // What the phone can't import itself is taken from the laptop's on every run: rows from
+        // before ids existed (only the laptop writes them, and its `adopt-history` gives them ids
+        // later), and every row dated before the window, whose files the phone no longer reads.
+        // Otherwise an adoption, or an edit to an old session, stands as a difference for good
+        // that reads like the port's. So only the window is compared, and the report says where
+        // it starts.
+        val windowFrom = today.minusDays(WINDOW_DAYS).toString()
+        fun old(row: JsonObject) = ((row["date"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: windowFrom) < windowFrom
+        val phone = laptop.filter { !History.keyed(it) || old(it) } +
+            (stored ?: laptop).filter { History.keyed(it) && !old(it) }
 
         val names = sessions.list().associate { (id, name) -> name to id }
         val finished = History.finished(names.keys.toList(), today, WINDOW_DAYS)
@@ -75,6 +81,7 @@ object HistoryCheck {
             "phone_written" to JsonPrimitive(phoneWritten),
             "knowledge_base_from" to JsonPrimitive(kbFrom),
             "files_imported" to JsonPrimitive(finished.size),
+            "window_from" to JsonPrimitive(windowFrom),
             "import" to JsonArray(plan.report.filterNotNull().map(::JsonPrimitive)),
         ))
         val reportText = report.toString() + "\n"

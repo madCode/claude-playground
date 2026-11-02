@@ -181,7 +181,20 @@ class HistoryCheckTest {
         HistoryCheck.runOnce(sessions(21), b, today, "test")
         val r = report(b)
         assertEquals(JsonPrimitive(0), r["unkeyed_phone"])
-        assertEquals(listOf("2000-01-01:2G#0"), r["only_laptop"]!!.jsonArray.map { it.jsonPrimitive.content })
+        assertTrue("the adopted row is the phone's too: $r", flag(r, "same"))
+    }
+
+    @Test
+    fun `an old session edited on the laptop reaches the phone, which no longer reads its file`() {
+        val b = brain(logged(0..21))
+        HistoryCheck.runOnce(sessions(21), b, today, "test")
+        // Day 0 is far outside the window; the laptop logs an edit to it.
+        val edited = logged(0..21).mapIndexed { i, row ->
+            if (i == 0) JsonObject(row + mapOf("weight" to JsonPrimitive(99))) else row
+        }
+        b.files["history.jsonl"] = History.write(edited)
+        HistoryCheck.runOnce(sessions(21), b, today.plusDays(HistoryCheck.WINDOW_DAYS), "test")
+        assertTrue("an edit outside the window is not a difference: ${report(b)}", flag(report(b), "same"))
     }
 
     @Test
