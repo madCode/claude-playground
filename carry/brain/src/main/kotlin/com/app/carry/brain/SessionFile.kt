@@ -104,11 +104,7 @@ internal fun answered(s: JsonObject): Boolean =
         FEEL_MARKERS.any { s.flag(it) } || pyStr(s.el("note")).pyStrip().isNotEmpty()
 
 /** `str(x or "")`. */
-private fun pyStr(e: JsonElement?): String = when {
-    !truthy(e) -> ""
-    e is JsonPrimitive -> e.content
-    else -> e.toString()
-}
+private fun pyStr(e: JsonElement?): String = if (truthy(e)) pyStrOf(e) else ""
 
 /** `session_file._variant_for`: the row's setup, minus a no-weight implement its own weight contradicts. */
 internal fun variantFor(s: JsonObject): JsonElement {
@@ -150,7 +146,7 @@ fun toHistory(obj: JsonObject, kb: Kb): Pair<List<JsonObject>, List<String>> {
         val reps = s.num("reps")
         val prescribed = s.num("prescribed_reps")
         entries += JsonObject(common + mapOf(
-            "row_id" to JsonPrimitive("$sid#${(s.el("ref") as? JsonPrimitive)?.content ?: "None"}"),
+            "row_id" to JsonPrimitive("$sid#${pyStrOf(s["ref"])}"),
             "exercise" to s.raw("canonical"),
             "components" to s.raw("components"),
             "line" to s.raw("line"),
@@ -172,11 +168,12 @@ fun toHistory(obj: JsonObject, kb: Kb): Pair<List<JsonObject>, List<String>> {
     }
 
     for (a in (obj.el("added") as? JsonArray)?.map { it as JsonObject } ?: emptyList()) {
-        val name = (a["name"] as JsonPrimitive).content.pyStrip()
-        val reps = a.el("reps")?.takeIf(::truthy)?.let { (it as JsonPrimitive).content } ?: "8"
+        // As Python's f-strings write them: `str()` of whatever the file holds, so a row id is the one Python made.
+        val name = pyStrOf(a["name"]).pyStrip()
+        val reps = a["reps"]?.takeIf(::truthy)?.let(::pyStrOf) ?: "8"
         val ml = kb.matchWod("$reps x $name").matched.firstOrNull()
-        if (ml == null) notes += "added row '$name' matched nothing in the exercise KB"
-        val id = a.el("id")?.takeIf(::truthy)?.let { (it as JsonPrimitive).content } ?: name
+        if (ml == null) notes += "added row ${pyStrRepr(name)} matched nothing in the exercise KB"
+        val id = a["id"]?.takeIf(::truthy)?.let(::pyStrOf) ?: name
         entries += JsonObject(common + mapOf(
             "row_id" to JsonPrimitive("$sid#added#$id"),
             "exercise" to json(ml?.canonical),
