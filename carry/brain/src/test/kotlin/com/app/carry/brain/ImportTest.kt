@@ -101,4 +101,44 @@ class ImportTest {
         assertEquals(listOf(null), renamed.report)
         assertTrue(renamed.appended.isEmpty())
     }
+
+    @Test
+    fun `a rep count in another script's digits is still a rep count`() {
+        // Python's \d is every script's digits: "٣ x lunge" saved again as
+        // "lunge" is the same name typed, and nothing is rewritten.
+        val set = """"weight": 20"""
+        val row = """{"id": "a1", "name": "%s", "weight": 15, "reps": 10}"""
+        val first = planImport(listOf(name to file(set, row.format("\u0663 x lunge"))), emptyList(), kb, write = true)
+        val again = planImport(listOf(name to file(set, row.format("lunge"))), first.appended, kb, write = true)
+        assertEquals(listOf(null), again.report)
+    }
+
+    @Test
+    fun `numbers are written the same whatever the phone's language`() {
+        val saved = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("ar-EG"))
+            assertEquals("1e+20", pyRepr(JsonPrimitive(1e20)))
+        } finally {
+            java.util.Locale.setDefault(saved)
+        }
+    }
+
+    @Test
+    fun `a file nested deep enough to exhaust the stack is refused alone`() {
+        val deep = "[".repeat(900) + "]".repeat(900)
+        val files = listOf(
+            name to file(""""weight": 20, "variant": {"unknown": $deep}"""),
+            name to file(""""weight": 20"""),
+        )
+        var plan: ImportPlan? = null
+        var thrown: Throwable? = null
+        // A small stack, as on a phone's worker thread, so the overflow is
+        // certain here rather than dependent on the desktop JVM's warm-up.
+        val t = Thread(null, { try { plan = planImport(files, emptyList(), kb, write = true) } catch (e: Throwable) { thrown = e } }, "small", 64 * 1024)
+        t.start(); t.join()
+        assertNull(thrown)
+        assertEquals("$name: logged 1 set", plan!!.report[1])
+        assertTrue(plan!!.report[0]!!.startsWith("$name: not "))
+    }
 }

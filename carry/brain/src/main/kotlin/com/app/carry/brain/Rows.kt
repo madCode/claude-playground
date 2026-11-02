@@ -81,7 +81,7 @@ internal fun g(x: Double): String {
     val digits = rounded.unscaledValue().abs().toString().trimEnd('0').ifEmpty { "0" }
     val mantissa = if (digits.length > 1) "${digits[0]}.${digits.substring(1)}" else digits
     val sign = if (rounded.signum() < 0) "-" else ""
-    return "$sign${mantissa}e${if (exp < 0) "-" else "+"}${"%02d".format(Math.abs(exp))}"
+    return "$sign${mantissa}e${if (exp < 0) "-" else "+"}${String.format(java.util.Locale.ROOT, "%02d", Math.abs(exp))}"
 }
 
 internal fun date(iso: String): LocalDate = LocalDate.parse(iso)
@@ -196,11 +196,11 @@ internal fun pyStrRepr(s: String): String {
             cp == '\t'.code -> out.append("\\t")
             cp == '\n'.code -> out.append("\\n")
             cp == '\r'.code -> out.append("\\r")
-            cp < 0x20 || cp == 0x7f -> out.append("\\x%02x".format(cp))
+            cp < 0x20 || cp == 0x7f -> out.append(String.format(java.util.Locale.ROOT, "\\x%02x", cp))
             cp < 0x7f || pyPrintable(cp) -> out.appendCodePoint(cp)
-            cp <= 0xff -> out.append("\\x%02x".format(cp))
-            cp <= 0xffff -> out.append("\\u%04x".format(cp))
-            else -> out.append("\\U%08x".format(cp))
+            cp <= 0xff -> out.append(String.format(java.util.Locale.ROOT, "\\x%02x", cp))
+            cp <= 0xffff -> out.append(String.format(java.util.Locale.ROOT, "\\u%04x", cp))
+            else -> out.append(String.format(java.util.Locale.ROOT, "\\U%08x", cp))
         }
     }
     return out.append(quote).toString()
@@ -238,7 +238,7 @@ internal fun pyFloatRepr(x: Double): String {
     val ds = digits.unscaledValue().abs().toString()
     val mantissa = if (ds.length > 1) "${ds[0]}.${ds.substring(1)}" else ds
     val sign = if (x < 0) "-" else ""
-    return "$sign${mantissa}e${if (exp < 0) "-" else "+"}${"%02d".format(Math.abs(exp))}"
+    return "$sign${mantissa}e${if (exp < 0) "-" else "+"}${String.format(java.util.Locale.ROOT, "%02d", Math.abs(exp))}"
 }
 
 /**

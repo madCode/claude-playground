@@ -74,6 +74,10 @@ fun planImport(files: List<Pair<String, ImportSource>>, history: List<JsonObject
             importOne(name, source, kb, byRow, loggedAnotherWay, write)
         } catch (e: Exception) {
             "$name: not imported (${(e as? PyException)?.pyName ?: e::class.simpleName})" to null
+        } catch (e: StackOverflowError) {
+            // A file nested deep enough to exhaust a worker thread's stack (on a
+            // phone, about 1 MB): that file is refused, and the rest still import.
+            "$name: not imported (RecursionError)" to null
         }
         report += line
         if (plan == null || !write) continue
@@ -114,7 +118,8 @@ private fun fieldsToUpdate(h: JsonObject, e: JsonObject): List<String> =
 private fun typed(row: JsonObject): String =
     (row["line"]?.takeIf(::truthy)?.let { pyStrOf(it) } ?: "").replaceFirst(TYPED_PREFIX, "")
 
-private val TYPED_PREFIX = Regex("^[0-9]+ x ")
+// Python's `\d`, which takes every script's digits, not only ASCII's.
+private val TYPED_PREFIX = pyRegex("^\\d+ x ")
 
 /** `session_file._identity`: what makes a logged row the same exercise. */
 private fun sameIdentity(a: JsonObject, b: JsonObject): Boolean {
