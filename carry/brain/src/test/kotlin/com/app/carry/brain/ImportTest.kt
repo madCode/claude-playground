@@ -13,7 +13,8 @@ import java.io.File
  * fixture run reaches the second only together with a change of numbers:
  * a row whose numbers were cleared with a marker kept is still answered, so
  * the import takes the file's word and erases the logged numbers; and a
- * rename alone of an added row changes nothing compared, so it is not logged.
+ * rename alone of an added row is logged (madCode, 2026-11-02), compared by
+ * the name typed, never by what it matched.
  * Invented rows.
  */
 class ImportTest {
@@ -61,14 +62,15 @@ class ImportTest {
     }
 
     @Test
-    fun `a rename alone of an added row is not logged`() {
+    fun `a rename alone of an added row is logged`() {
         val set = """"weight": 20"""
         val row = """{"id": "a1", "name": "%s", "weight": 15, "reps": 10}"""
         val first = planImport(listOf(name to file(set, row.format("goblet squat"))), emptyList(), kb, write = true)
         assertEquals(listOf("$name: logged 2 sets"), first.report)
         val renamed = planImport(listOf(name to file(set, row.format("reverse lunge"))), first.appended, kb, write = true)
-        assertEquals(listOf(null), renamed.report)
-        assertNull(renamed.rewritten)
-        assertTrue(renamed.appended.isEmpty())
+        assertEquals(listOf("$name: updated 1"), renamed.report)
+        val row = renamed.rewritten!!.single { "#added#" in (it["row_id"] as JsonPrimitive).content }
+        assertEquals(JsonPrimitive("reverse lunge"), row["exercise"])
+        assertEquals(JsonPrimitive(15), row["weight"])
     }
 }

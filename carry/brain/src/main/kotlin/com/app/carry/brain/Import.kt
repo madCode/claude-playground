@@ -110,6 +110,12 @@ internal fun same(a: JsonElement?, b: JsonElement?): Boolean {
 private fun fieldsToUpdate(h: JsonObject, e: JsonObject): List<String> =
     if (COMPARED.filter { !same(e[it], h[it]) } == listOf("hurt")) listOf("hurt") else UPDATED
 
+/** `session_file._typed`: an added row's name as typed, its line without the rep count in front. */
+private fun typed(row: JsonObject): String =
+    (row["line"]?.takeIf(::truthy)?.let { pyStrOf(it) } ?: "").replaceFirst(TYPED_PREFIX, "")
+
+private val TYPED_PREFIX = Regex("^[0-9]+ x ")
+
 /** `session_file._identity`: what makes a logged row the same exercise. */
 private fun sameIdentity(a: JsonObject, b: JsonObject): Boolean {
     fun line(r: JsonObject) = r["line"]?.takeIf(::truthy) ?: JsonPrimitive("")
@@ -172,7 +178,13 @@ private fun importOne(
     var differ = 0
     for ((e, id) in entries.zip(ids)) {
         val h = byRow[id] ?: continue
-        if (COMPARED.all { same(e[it], h.row[it]) }) continue
+        // An added row's name is the owner's too: a rename with every number
+        // unchanged still reaches history. What they typed is compared, never
+        // what it matched (the match is redone from today's knowledge base),
+        // and only where an update can land.
+        val formRow = syncable && pyEquals(h.row["source"], JsonPrimitive("form"))
+        val renamed = "#added#" in id && formRow && typed(h.row) != typed(e)
+        if (!renamed && COMPARED.all { same(e[it], h.row[it]) }) continue
         if ("#added#" !in id && !sameIdentity(h.row, e)) {
             return "$name: not imported, a logged row is now a different exercise in the file; it may have been regenerated" to null
         }

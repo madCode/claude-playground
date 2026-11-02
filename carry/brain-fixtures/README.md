@@ -2,8 +2,8 @@
 
 What gym-coach's Python coach does today, written down so this repository's
 Kotlin port (`../brain`) can be held to it. The plan is
-[docs/designs/brain-move.md](../docs/designs/brain-move.md); these are its
-phase 1.
+[docs/designs/brain-move.md](../docs/designs/brain-move.md); these began as its
+phase 1 and grow with each phase.
 
 **Generated, never edited by hand.** gym-coach's `fixtures.py` writes them:
 
@@ -17,6 +17,8 @@ follows in the same change, until the Python is retired.
 |---|---|
 | `boards.jsonl` | Every board in the corpus, cut to the lines the coach reads, with the rows the Python matches (`expected`) and what each line matches on its own (`per_line`). |
 | `sheets.jsonl` | An invented lifter walking the corpus, one class a day: the sheet the coach writes from their history so far, their answers, and the history rows those become. Replay it in order. |
+| `scenarios.jsonl` | gym-coach's own `suggest` test cases, dates moved back two years. |
+| `imports.jsonl` | The session import: the lifter's days imported in order from an empty history, with edits, renames, two sittings and every refusal mixed in. Each step's report, the rows it rewrote and the rows it appended. Replay it in order. |
 | `exercises.json` | The knowledge base, exactly as the Python's YAML loader read it, in its order. |
 | `manifest.json` | Counts, the corpus's hash, the knowledge base's hash, and the lifter's stated baselines. |
 
