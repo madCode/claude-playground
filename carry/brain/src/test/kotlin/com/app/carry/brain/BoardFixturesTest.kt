@@ -48,7 +48,17 @@ class BoardFixturesTest {
                 if (structured != pl.jsonObject["structured"]) misses += "${b.id()}: structured differs for $raw"
             }
         }
+        // Lines the coach reads past: a port that matches one has a row the Python never makes.
+        var unread = 0
+        for (b in boards) for (raw in b["unread"]!!.jsonArray.map { it.jsonPrimitive.content }) {
+            val stripped = raw.pyStrip().trimStart('-', '*', '\u2022').pyStrip()
+            unread++
+            if (kb.matchLine(stripped) != null || untrackedLines(listOf(stripped)).isNotEmpty()) {
+                misses += "${b.id()}: read a line the coach reads past: $raw"
+            }
+        }
         assertTrue("$lines lines read", lines > 2000)
+        assertTrue("$unread lines read past", unread > 5000)
         assertTrue("${misses.size} of $lines lines differ:\n" + misses.take(15).joinToString("\n"), misses.isEmpty())
     }
 

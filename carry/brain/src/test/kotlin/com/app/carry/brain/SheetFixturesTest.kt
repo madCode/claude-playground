@@ -10,6 +10,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -60,7 +61,14 @@ class SheetFixturesTest {
             val today = LocalDate.parse(date)
             val read = readToday(history, kb)
             val pairs = kb.matchWod(text).matched.map { it to suggest(it, kb, read, today, baselines) }
-            val sheet = buildSheet(date, classTag, pairs)
+            // Which class's board stands in, and when the class starts, are inputs
+            // to the sheet (the calendar's and the fetch's), so they come from the fixture.
+            val wanted = d["sheet"]!!.jsonObject
+            val sheet = buildSheet(
+                date, classTag, pairs,
+                borrowedFrom = (wanted["borrowed_from"] as? JsonPrimitive)?.contentOrNull,
+                startsAt = (wanted["starts_at"] as? JsonPrimitive)?.contentOrNull,
+            )
             sets += pairs.size
 
             val diffs = mutableListOf<String>()
@@ -80,6 +88,8 @@ class SheetFixturesTest {
             if (diffs.isNotEmpty()) failures += "$date $classTag (${diffs.size} fields):\n    " + diffs.take(6).joinToString("\n    ")
 
             history += d["logged"]!!.jsonArray.map { it.jsonObject }
+            // Rows as an older build stored them, without a variant: read_today re-reads them.
+            history += d["legacy"]!!.jsonArray.map { it.jsonObject }
         }
         assertTrue("$sets sets suggested", sets > 1000)
         assertTrue("$rows rows logged", rows > 800)

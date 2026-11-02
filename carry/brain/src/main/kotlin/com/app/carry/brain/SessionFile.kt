@@ -46,7 +46,12 @@ internal fun sheetId(date: String, classTag: String) = "$date:$classTag"
  * the owner's fields blank. [date] is ISO; no start time is written, as
  * the Python leaves one out when the calendar gives none.
  */
-fun buildSheet(date: String, classTag: String, suggestions: List<Pair<MatchedLine, Suggestion>>, borrowedFrom: String? = null): JsonObject {
+fun buildSheet(
+    date: String, classTag: String, suggestions: List<Pair<MatchedLine, Suggestion>>,
+    borrowedFrom: String? = null,
+    /** The class's start, local time to the minute ("2026-01-10T09:50"); left out when the calendar gave none. */
+    startsAt: String? = null,
+): JsonObject {
     val sets = suggestions.mapIndexed { ref, (ml, sg) ->
         JsonObject(mapOf(
             "ref" to JsonPrimitive(ref),
@@ -87,7 +92,7 @@ fun buildSheet(date: String, classTag: String, suggestions: List<Pair<MatchedLin
         "borrowed_from" to json(borrowedFrom),
         "sets" to JsonArray(sets),
         "added" to JsonArray(emptyList()),
-    ))
+    ) + (startsAt?.let { mapOf("starts_at" to JsonPrimitive(it)) } ?: emptyMap()))
 }
 
 private val FEEL_MARKERS = listOf("easy", "hard", "easier")
