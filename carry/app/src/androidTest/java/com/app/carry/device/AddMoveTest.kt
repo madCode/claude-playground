@@ -43,6 +43,8 @@ class AddMoveTest {
     @Before fun aBorrowedSheetInTheFolder() {
         // Granted, so the one question Carry asks doesn't cover the screen.
         shell("pm grant $pkg ${Manifest.permission.POST_NOTIFICATIONS}")
+        // And the calendar, asked for once at setup: the dialog would otherwise cover Carry.
+        shell("pm grant $pkg ${Manifest.permission.READ_CALENDAR}")
         TestFolder.grantTo(carry, pkg)
         assertTrue("Carry couldn't take the folder's grant", SessionFolder(carry).remember(TestFolder.tree()))
         val today = LocalDate.now()
