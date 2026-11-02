@@ -689,7 +689,8 @@ class LogScreenTest {
             .getOrNull(SemanticsProperties.EditableText)?.text
     }
 
-    private val weighted = SampleSession.today.sets.filter { !it.timed }.map { it.displayName }
+    private val weighted = SampleSession.today.sets.filter { !it.timed }
+        .map { (listOf(it.displayName.replace(" · ", ", ")) + it.variantWords).joinToString(", ") }
 
     /** A made-up weight in every sheet row, and two rows added from the button above them. */
     private fun fillThenAddTwice() {
@@ -964,10 +965,10 @@ class LogScreenTest {
     fun `after a save, each typed name is shown back with the question`() {
         // madCode's call, 2026-10-16: "show the typed name back, no digit
         // check". A digit test missed these two and flagged real names, so
-        // the screen asks instead, about every name the owner typed.
+        // the screen asks instead, about every name typed with no weight.
         added.value = listOf(
             AddedSet(id = "a", name = "deadlift twenty six", reps = 8),
-            AddedSet(id = "b", name = "\u00bd rack row", weight = 20.0),
+            AddedSet(id = "b", name = "\u00bd rack row"),
         )
         show(SaveState.Saved)
         reach("You typed")
@@ -990,14 +991,55 @@ class LogScreenTest {
     }
 
     @Test
+    fun `two rows of one movement say what tells them apart`() {
+        // madCode, 2026-11-01: "low row is here twice". The board had an alt
+        // low row and a bear plank alt low row; the After tab named both
+        // "8 total x low row". The coach's variant tells them apart.
+        val text = """{"schema": "gym-session/1", "sheet_id": "2026-09-10:2G", "date": "2026-09-10",
+          "sets": [
+            {"ref": 0, "line": "8 total x alt low row", "canonical": "low row", "prescribed_text": "8 total",
+             "prescribed_reps": 4, "variant": {"position": "none", "stance": "both"}},
+            {"ref": 1, "line": "8 total x bear plank alt low row", "canonical": "low row",
+             "prescribed_text": "8 total", "prescribed_reps": 4,
+             "variant": {"position": "bear_plank", "stance": "both"}}
+          ]}"""
+        show(session = SessionFiles.parse(text)!!)
+        reach("8 total x low row · bear plank")
+        compose.onNodeWithText("8 total x low row · bear plank").assertIsDisplayed()
+        compose.onNodeWithText("8 total x low row").assertIsDisplayed()
+        shoot("47-two-low-rows")
+    }
+
+    @Test
+    fun `a typed name with its weight filled in is not asked about`() {
+        // madCode, 2026-11-01: asked "is the weight in the weight box?" about
+        // "alt halo" with its weight in the box. Only the empty box asks.
+        added.value = listOf(
+            AddedSet(id = "a", name = "alt halo", weight = 18.0, reps = 10),
+            AddedSet(id = "b", name = "plank jack", reps = 20),
+        )
+        show(SaveState.Saved)
+        reach("You typed")
+        compose.onNodeWithText(
+            "You typed: \"\u2068plank jack\u2069\". Is the weight in the weight box?"
+        ).assertIsDisplayed()
+        // And with every weight in, nothing is asked at all, beside the
+        // Saved button the line would sit on.
+        added.value = listOf(AddedSet(id = "a", name = "alt halo", weight = 18.0, reps = 10))
+        reach("Saved")
+        compose.onNodeWithText("Saved").assertIsDisplayed()
+        compose.onNodeWithText("You typed", substring = true).assertDoesNotExist()
+    }
+
+    @Test
     fun `a typed name is shown back on one line, whole, and cut visibly only past 200`() {
         // A line separator in a name read from the file would break the
         // sentence; a weight at the end of a long name must still show.
         val long = "a".repeat(180) + " deadlift 26 lb"
         added.value = listOf(
-            AddedSet(id = "a", name = "row\u2028machine", weight = 30.0),
-            AddedSet(id = "b", name = long, weight = 26.0),
-            AddedSet(id = "c", name = "x".repeat(300), weight = 10.0),
+            AddedSet(id = "a", name = "row\u2028machine"),
+            AddedSet(id = "b", name = long),
+            AddedSet(id = "c", name = "x".repeat(300)),
         )
         show(SaveState.Saved)
         // The long names make their own boxes scrollable; the list is the
@@ -1012,7 +1054,7 @@ class LogScreenTest {
 
     @Test
     fun `nothing is shown back before the save`() {
-        added.value = listOf(AddedSet(id = "a", name = "deadlift twenty six", weight = 26.0))
+        added.value = listOf(AddedSet(id = "a", name = "deadlift twenty six"))
         show(SaveState.Idle)
         reach("Save")
         compose.onNodeWithText("You typed", substring = true).assertDoesNotExist()

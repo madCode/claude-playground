@@ -83,8 +83,9 @@ lighter number than usual otherwise reads as a mistake.
 - **TalkBack** reads the name, then each qualifier as its own phrase.
 
 **After** — what you did (madCode approved the minimum page in #127,
-mockup v4). One row per exercise, two lines tall: the name with *hurt* at
-the end of it, then a weight box, a reps box (or on a timed row a *done*
+mockup v4). One row per exercise, two lines tall: the name, with the Before
+sheet's variant words after it ("low row · bear plank", so two rows of one
+movement can be told apart), and *hurt* at the end of it, then a weight box, a reps box (or on a timed row a *done*
 tag), *easy*, and *mod* on a row the coach gave no weight. Plus **add a
 row**, for anything the sheet didn't list. Visible labels sit above the boxes
 ("lb", "reps", "time"), stay put once something is typed, and are the
@@ -806,7 +807,9 @@ Three rules, and a review of the first version found it breaking all three.
   hip stretch". madCode's call, 2026-10-16: "show the typed name back, no
   digit check". So after a save, a line just above the Saved button reads
   *You typed: "deadlift twenty six". Is the weight in the weight box?*,
-  naming every typed name. It is a line, not a dialog: a dialog on every
+  naming every typed name whose weight box is empty. A row with a weight
+  in its box has answered the question (madCode, 2026-11-01, asked about
+  "alt halo" with its weight filled in). It is a line, not a dialog: a dialog on every
   save with an added row is one the owner learns to dismiss unread. It
   sits in the button's own list item, where the owner just tapped, and it
   shows with "Saved" and goes with it (the next edit, or a re-read on
