@@ -1,7 +1,17 @@
 # Moving the coach onto the phone
 
-**Status:** plan, agreed 2026-11-01 (decisions at the end). Nothing is
-built yet; phase 1 is next.
+**Status, 2026-11-02:** phases 1 to 3 done. The Kotlin brain in `brain/`
+matches the Python on every fixture:
+- every corpus board: 2,834 read lines, 9,152 lines read past, 277 boards;
+- 163 days of the invented lifter's sheets and history rows;
+- 202 cases from gym-coach's own tests.
+
+**The side-by-side check runs next, ahead of phases 4 and 5.** gym-coach
+writes each sheet's inputs beside it, and the phone compares its own sheet
+built from them (DESIGN.md, "The phone's brain, checked against the
+laptop's"). That tests the brain on real classes with no new permission and
+no Reddit key on the phone. History and the board fetch then move to a brain
+that is already proven.
 
 ## Why now
 

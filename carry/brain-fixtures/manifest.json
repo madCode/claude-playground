@@ -1,0 +1,13 @@
+{
+  "baselines": {
+    "bicep curl": 15.0,
+    "deadlift": 35.0,
+    "goblet squat": 25.0,
+    "low row": 30.0
+  },
+  "boards": 277,
+  "corpus": "277 rows, sha256 b5281eacdae9",
+  "days": 163,
+  "exercises_sha256": "ac1b7534cb00",
+  "schema": "brain-fixtures/2"
+}

@@ -36,6 +36,36 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 [designs/](designs/). Newest first below.
 
 
+
+## 2026-11-02 — the coach's suggestions run in Kotlin, and the phone checks itself
+
+- **Phase 3 of [the brain move](designs/brain-move.md):** suggestions,
+  building the sheet, and turning answers into history, ported. They match
+  the Python on 163 days of an invented lifter and on 202 cases from
+  gym-coach's own tests. Removing one rule (a hurt set never sets a floor)
+  turns 3 of those cases red.
+- **The side-by-side check:** after the hourly sheet check, Carry works out
+  each sheet again from the inputs gym-coach writes beside it
+  ([gym-coach#77](https://github.com/madCode/gym-coach/pull/77)) and writes
+  a report back to the synced folder. Nothing shows in the app.
+
+## 2026-11-02 — the coach's matcher runs in Kotlin
+
+Phases 1 and 2 of [the brain move](designs/brain-move.md):
+
+- **`brain-fixtures/`**: gym-coach's Python, written down. Every board in
+  the corpus with the rows it makes, and an invented lifter's run with each
+  day's sheet and the history it leaves.
+- **`brain/`**: the matcher, ported: the knowledge base, reading a line's
+  setup (`variants.py`), combos, and a board's rows with its prose filter
+  and de-duplication. All 2,834 lines and 277 boards come out exactly as
+  the Python's; dropping one phrase ("bosu") from the port turns 128 lines
+  and 19 boards red.
+- **Python's text rules, not Kotlin's.** `splitlines`, `strip`, `split` and
+  the regex classes `\d \s \w \b` are spelled out to mean what Python means,
+  the same on the JVM and on Android, whose regex engine differs from the
+  JVM's.
+
 ## 2026-11-02 — the After tab tells two rows apart, and asks less
 
 From madCode's 1 Nov log:

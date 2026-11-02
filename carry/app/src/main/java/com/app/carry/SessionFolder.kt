@@ -196,24 +196,70 @@ class SessionFolder(private val context: Context) : Folder {
      * TransactionTooLargeException that takes the owner's typed numbers
      * with it.
      */
-    override fun read(documentId: String): String? = runCatching {
-        val tree = uri ?: return null
+    override fun read(documentId: String): String? = uri?.let { readCapped(it, documentId, MAX_SESSION_BYTES) }
+
+    private fun readCapped(tree: Uri, documentId: String, max: Int): String? = runCatching {
         val doc = DocumentsContract.buildDocumentUriUsingTree(tree, documentId)
         context.contentResolver.openInputStream(doc)?.use { stream ->
-            // Bounded by hand: readNBytes is API 33 and minSdk is 26.
-            val buffer = ByteArray(MAX_SESSION_BYTES + 1)
+            // Bounded by hand: readNBytes is API 33 and minSdk is 26. Grown as it fills,
+            // so a large cap doesn't mean that much held for a small file.
+            var buffer = ByteArray(minOf(max + 1, 64 * 1024))
             var filled = 0
-            while (filled < buffer.size) {
+            while (filled <= max) {
+                if (filled == buffer.size) buffer = buffer.copyOf(minOf(max + 1, buffer.size * 2))
                 val n = stream.read(buffer, filled, buffer.size - filled)
                 if (n < 0) break
                 filled += n
             }
-            if (filled > MAX_SESSION_BYTES) null else buffer.decodeToString(0, filled)
+            if (filled > max) null else buffer.decodeToString(0, filled)
         }
     }.getOrNull()
 
+    /** The `brain/` subfolder gym-coach writes each sheet's inputs into, or null when there is none yet. */
+    fun brain(): BrainFolder? = runCatching {
+        val tree = uri ?: return null
+        val id = list().firstOrNull { it.second == BRAIN }?.first ?: return null
+        SafBrainFolder(tree, id)
+    }.getOrNull()
+
+    private inner class SafBrainFolder(private val tree: Uri, private val folderId: String) : BrainFolder {
+        override fun list(): List<Pair<String, String>> = runCatching {
+            val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, folderId)
+            val columns = arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+            context.contentResolver.query(children, columns, null, null, null)?.use { c ->
+                buildList {
+                    while (c.moveToNext()) {
+                        val id = c.getString(0)
+                        val name = c.getString(1)
+                        if (id != null && name != null) add(id to name)
+                    }
+                }
+            } ?: emptyList()
+        }.getOrDefault(emptyList())
+
+        // An input carries the owner's whole history, so it is allowed far more than a sheet.
+        override fun read(documentId: String): String? = readCapped(tree, documentId, MAX_BRAIN_INPUT_BYTES)
+
+        override fun write(documentId: String, text: String): Boolean = this@SessionFolder.write(documentId, text)
+
+        override fun create(name: String, text: String): Boolean = runCatching {
+            val parent = DocumentsContract.buildDocumentUriUsingTree(tree, folderId)
+            val doc = DocumentsContract.createDocument(context.contentResolver, parent, "application/json", name)
+                ?: return false
+            context.contentResolver.openOutputStream(doc, "wt")?.use {
+                it.write(text.encodeToByteArray())
+                true
+            } ?: false
+        }.getOrDefault(false)
+    }
+
     private companion object {
         const val KEY = "session_folder"
+        const val BRAIN = "brain"
+
+        /** An input holds the history, at about 200 bytes a set: 4 MB is twenty thousand sets,
+         *  far past any real one, and keeps a background read's memory modest. */
+        const val MAX_BRAIN_INPUT_BYTES = 4_000_000
         const val FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
 
         /** A real session is a few KB; a megabyte is already absurd. */

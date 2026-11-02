@@ -1,0 +1,1242 @@
+{
+ "goblet squat": {
+  "muscle_groups": [
+   "legs",
+   "glutes"
+  ],
+  "aliases": [
+   "goblet squats",
+   "squat goblet",
+   "two handed single dumbbell squat"
+  ],
+  "implement": "single_dumbbell",
+  "pattern": "squat"
+ },
+ "single dumbbell deadlift": {
+  "muscle_groups": [
+   "posterior chain",
+   "glutes",
+   "hamstrings"
+  ],
+  "aliases": [
+   "two handed single dumbbell deadlift"
+  ],
+  "implement": "single_dumbbell",
+  "pattern": "hinge"
+ },
+ "back extension": {
+  "muscle_groups": [
+   "back",
+   "lower back",
+   "shoulders",
+   "glutes"
+  ],
+  "aliases": [
+   "back extensions",
+   "hyperextension",
+   "hyperextensions"
+  ],
+  "pattern": "core",
+  "implement": "bodyweight"
+ },
+ "bosu bridge hold with dumbbell pullover": {
+  "muscle_groups": [
+   "glutes",
+   "chest",
+   "back"
+  ],
+  "aliases": [
+   "bridge hold with dumbbell pullover"
+  ],
+  "implement": "single_dumbbell",
+  "pattern": "pullover"
+ },
+ "front squat": {
+  "muscle_groups": [
+   "legs",
+   "glutes"
+  ],
+  "aliases": [
+   "front squats"
+  ],
+  "pattern": "squat"
+ },
+ "back squat": {
+  "muscle_groups": [
+   "legs",
+   "glutes"
+  ],
+  "aliases": [
+   "back squats",
+   "barbell squat",
+   "barbell back squat"
+  ],
+  "pattern": "squat"
+ },
+ "squat jump": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "cardio"
+  ],
+  "aliases": [
+   "jump squat",
+   "jump squats",
+   "squat jumps"
+  ],
+  "implement": "bodyweight"
+ },
+ "sumo squat": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "inner thigh"
+  ],
+  "aliases": [
+   "sumo squats"
+  ],
+  "pattern": "squat"
+ },
+ "deadlift": {
+  "muscle_groups": [
+   "posterior chain",
+   "back",
+   "glutes",
+   "hamstrings"
+  ],
+  "aliases": [
+   "deadlifts",
+   "conventional deadlift"
+  ],
+  "pattern": "hinge"
+ },
+ "romanian deadlift": {
+  "muscle_groups": [
+   "hamstrings",
+   "glutes",
+   "posterior chain"
+  ],
+  "aliases": [
+   "rdl",
+   "rdls",
+   "romanian deadlifts"
+  ],
+  "pattern": "hinge"
+ },
+ "single-leg deadlift": {
+  "muscle_groups": [
+   "hamstrings",
+   "glutes",
+   "balance"
+  ],
+  "aliases": [
+   "single leg deadlift",
+   "one-leg deadlift",
+   "single leg rdl"
+  ],
+  "pattern": "hinge"
+ },
+ "sumo deadlift": {
+  "muscle_groups": [
+   "posterior chain",
+   "glutes",
+   "inner thigh"
+  ],
+  "aliases": [
+   "sumo deadlifts"
+  ],
+  "pattern": "hinge"
+ },
+ "walking lunge": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "balance"
+  ],
+  "aliases": [
+   "walking lunges"
+  ],
+  "pattern": "lunge"
+ },
+ "reverse lunge": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "balance"
+  ],
+  "aliases": [
+   "reverse lunges",
+   "revese lunge"
+  ],
+  "pattern": "lunge"
+ },
+ "lateral lunge": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "inner thigh"
+  ],
+  "aliases": [
+   "lateral lunges",
+   "side lunge",
+   "side lunges",
+   "front loaded lateral lunge",
+   "loaded lateral lunge"
+  ],
+  "pattern": "lunge"
+ },
+ "curtsy lunge": {
+  "muscle_groups": [
+   "legs",
+   "glutes"
+  ],
+  "aliases": [
+   "curtsy lunges"
+  ],
+  "pattern": "lunge"
+ },
+ "step-up": {
+  "muscle_groups": [
+   "legs",
+   "glutes"
+  ],
+  "aliases": [
+   "step up",
+   "step ups",
+   "box step-up",
+   "box step-ups"
+  ],
+  "pattern": "lunge"
+ },
+ "hip thrust": {
+  "muscle_groups": [
+   "glutes",
+   "posterior chain"
+  ],
+  "aliases": [
+   "hip thrusts",
+   "glute bridge",
+   "glute bridges"
+  ],
+  "pattern": "hinge"
+ },
+ "push press": {
+  "muscle_groups": [
+   "shoulders",
+   "triceps",
+   "core"
+  ],
+  "aliases": [
+   "push presses"
+  ],
+  "pattern": "vertical_push",
+  "implement": "double_dumbbell"
+ },
+ "shoulder press": {
+  "muscle_groups": [
+   "shoulders",
+   "triceps"
+  ],
+  "aliases": [
+   "overhead press",
+   "ohp",
+   "strict press",
+   "military press"
+  ],
+  "pattern": "vertical_push",
+  "implement": "double_dumbbell"
+ },
+ "bench press": {
+  "muscle_groups": [
+   "chest",
+   "triceps",
+   "shoulders"
+  ],
+  "aliases": [
+   "chest press",
+   "bench presses",
+   "flat bench"
+  ],
+  "pattern": "horizontal_push"
+ },
+ "chest fly": {
+  "muscle_groups": [
+   "chest"
+  ],
+  "aliases": [
+   "chest flys",
+   "chest flies",
+   "dumbbell fly",
+   "dumbbell flys"
+  ],
+  "pattern": "fly"
+ },
+ "bent-over row": {
+  "muscle_groups": [
+   "back",
+   "biceps"
+  ],
+  "aliases": [
+   "bent over row",
+   "bentover row",
+   "bent-over rows",
+   "bb row",
+   "barbell row"
+  ],
+  "pattern": "horizontal_pull"
+ },
+ "single-arm row": {
+  "muscle_groups": [
+   "back",
+   "biceps"
+  ],
+  "aliases": [
+   "single arm row",
+   "one-arm row",
+   "dumbbell row",
+   "db row",
+   "single arm low row",
+   "single arm high row"
+  ],
+  "pattern": "horizontal_pull"
+ },
+ "renegade row": {
+  "muscle_groups": [
+   "back",
+   "core",
+   "biceps"
+  ],
+  "aliases": [
+   "renegade rows"
+  ],
+  "pattern": "horizontal_pull"
+ },
+ "trx row": {
+  "pattern": "horizontal_pull",
+  "muscle_groups": [
+   "back",
+   "biceps"
+  ],
+  "aliases": [
+   "inverted row",
+   "suspension row"
+  ],
+  "implement": "bodyweight"
+ },
+ "lat pulldown": {
+  "muscle_groups": [
+   "back",
+   "biceps"
+  ],
+  "aliases": [
+   "lat pulldowns"
+  ],
+  "pattern": "vertical_pull"
+ },
+ "pull-up": {
+  "pattern": "vertical_pull",
+  "muscle_groups": [
+   "back",
+   "biceps"
+  ],
+  "aliases": [
+   "pull up",
+   "pull ups",
+   "pullup",
+   "pullups",
+   "chin-up",
+   "chin up",
+   "chin ups"
+  ],
+  "implement": "bodyweight"
+ },
+ "bicep curl": {
+  "muscle_groups": [
+   "biceps"
+  ],
+  "aliases": [
+   "bicep curls",
+   "dumbbell curl",
+   "hammer curl",
+   "hammer curls"
+  ],
+  "implement": "double_dumbbell",
+  "pattern": "curl"
+ },
+ "tricep extension": {
+  "muscle_groups": [
+   "triceps"
+  ],
+  "aliases": [
+   "tricep extensions",
+   "overhead tricep extension",
+   "skull crusher",
+   "skull crushers"
+  ],
+  "pattern": "triceps"
+ },
+ "tricep kickback": {
+  "muscle_groups": [
+   "triceps"
+  ],
+  "aliases": [
+   "tricep kickbacks"
+  ],
+  "pattern": "triceps"
+ },
+ "lateral raise": {
+  "muscle_groups": [
+   "shoulders"
+  ],
+  "aliases": [
+   "lateral raises",
+   "side raise",
+   "side raises"
+  ],
+  "pattern": "raise"
+ },
+ "kettlebell swing": {
+  "muscle_groups": [
+   "posterior chain",
+   "glutes",
+   "cardio"
+  ],
+  "aliases": [
+   "kb swing",
+   "kettlebell swings",
+   "kb swings"
+  ],
+  "pattern": "hinge"
+ },
+ "hip hinge swing": {
+  "muscle_groups": [
+   "posterior chain",
+   "glutes"
+  ],
+  "aliases": [
+   "hip hinge swings"
+  ],
+  "implement": "single_dumbbell",
+  "pattern": "hinge"
+ },
+ "low row": {
+  "muscle_groups": [
+   "back",
+   "biceps"
+  ],
+  "aliases": [
+   "low rows"
+  ],
+  "implement": "double_dumbbell",
+  "pattern": "horizontal_pull"
+ },
+ "reverse grip low row": {
+  "muscle_groups": [
+   "back",
+   "biceps"
+  ],
+  "aliases": [
+   "reverse grip row"
+  ],
+  "implement": "double_dumbbell",
+  "pattern": "horizontal_pull"
+ },
+ "box jump": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "cardio"
+  ],
+  "aliases": [
+   "box jumps",
+   "low bench box jump",
+   "low bench box jumps"
+  ],
+  "implement": "bodyweight"
+ },
+ "plank": {
+  "muscle_groups": [
+   "core"
+  ],
+  "aliases": [
+   "planks",
+   "plank hold"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core"
+ },
+ "side plank": {
+  "muscle_groups": [
+   "core",
+   "obliques"
+  ],
+  "aliases": [
+   "side planks"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core"
+ },
+ "russian twist": {
+  "muscle_groups": [
+   "core",
+   "obliques"
+  ],
+  "aliases": [
+   "russian twists"
+  ],
+  "pattern": "core"
+ },
+ "mountain climber": {
+  "muscle_groups": [
+   "core",
+   "cardio"
+  ],
+  "aliases": [
+   "mountain climbers"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core"
+ },
+ "woodchopper": {
+  "muscle_groups": [
+   "core",
+   "obliques"
+  ],
+  "aliases": [
+   "wood chopper",
+   "woodchoppers",
+   "wood choppers",
+   "cable woodchopper"
+  ],
+  "pattern": "core"
+ },
+ "burpee": {
+  "muscle_groups": [
+   "full body",
+   "cardio"
+  ],
+  "aliases": [
+   "burpees"
+  ],
+  "implement": "bodyweight"
+ },
+ "farmer's carry": {
+  "muscle_groups": [
+   "grip",
+   "core",
+   "full body"
+  ],
+  "aliases": [
+   "farmers carry",
+   "farmer carry",
+   "suitcase carry"
+  ],
+  "pattern": "carry"
+ },
+ "thruster": {
+  "muscle_groups": [
+   "legs",
+   "shoulders",
+   "full body"
+  ],
+  "aliases": [
+   "thrusters"
+  ],
+  "implement": "single_dumbbell",
+  "pattern": "vertical_push"
+ },
+ "clean and press": {
+  "muscle_groups": [
+   "full body",
+   "shoulders",
+   "posterior chain"
+  ],
+  "aliases": [
+   "clean & press",
+   "power clean"
+  ],
+  "pattern": "vertical_push"
+ },
+ "high row": {
+  "muscle_groups": [
+   "back",
+   "shoulders"
+  ],
+  "aliases": [
+   "high rows"
+  ],
+  "pattern": "horizontal_pull"
+ },
+ "cossack squat": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "inner thigh"
+  ],
+  "aliases": [
+   "dynamic cossack squat",
+   "cossack squats"
+  ],
+  "pattern": "lunge",
+  "implement": "bodyweight"
+ },
+ "lateral shift": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "inner thigh"
+  ],
+  "aliases": [
+   "two handed single dumbbell alt lateral shift",
+   "dynamic lateral shift"
+  ],
+  "implement": "single_dumbbell",
+  "pattern": "squat"
+ },
+ "speed skater": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "cardio"
+  ],
+  "aliases": [
+   "speed skaters",
+   "speed skater with power"
+  ],
+  "implement": "bodyweight"
+ },
+ "dumbbell pullover": {
+  "muscle_groups": [
+   "chest",
+   "back",
+   "core"
+  ],
+  "aliases": [
+   "pullover with alt leg extension",
+   "pullover"
+  ],
+  "pattern": "pullover"
+ },
+ "tall kneeling to single arm stand": {
+  "muscle_groups": [
+   "core",
+   "shoulders"
+  ],
+  "aliases": [],
+  "pattern": "core"
+ },
+ "sit-up": {
+  "muscle_groups": [
+   "core"
+  ],
+  "aliases": [
+   "sit-ups",
+   "sit up",
+   "sit ups",
+   "sit-up with knee tuck"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core",
+  "held": true
+ },
+ "squat": {
+  "muscle_groups": [
+   "legs",
+   "glutes"
+  ],
+  "aliases": [
+   "squats"
+  ],
+  "implement": "bodyweight",
+  "pattern": "squat"
+ },
+ "cross-back lunge": {
+  "muscle_groups": [
+   "legs",
+   "glutes"
+  ],
+  "aliases": [
+   "dumbbell front loaded single arm cross-back lunge",
+   "cross back lunge"
+  ],
+  "implement": "single_dumbbell",
+  "pattern": "lunge"
+ },
+ "dumbbell double crunch": {
+  "muscle_groups": [
+   "core"
+  ],
+  "aliases": [
+   "double crunch"
+  ],
+  "pattern": "core"
+ },
+ "bird dog": {
+  "muscle_groups": [
+   "core",
+   "back"
+  ],
+  "aliases": [
+   "bird dog with lateral toe tap",
+   "bird dogs"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core"
+ },
+ "goblet forward lunge": {
+  "muscle_groups": [
+   "legs",
+   "glutes"
+  ],
+  "aliases": [
+   "goblet forward lunges"
+  ],
+  "implement": "single_dumbbell",
+  "pattern": "lunge"
+ },
+ "standing high to low chop": {
+  "muscle_groups": [
+   "core",
+   "obliques",
+   "shoulders"
+  ],
+  "aliases": [
+   "high to low chop",
+   "standing high to low chops",
+   "high to low chops"
+  ],
+  "pattern": "core"
+ },
+ "low to high chop": {
+  "muscle_groups": [
+   "core",
+   "obliques",
+   "shoulders"
+  ],
+  "aliases": [
+   "low to high chops",
+   "half kneeling low to high chop"
+  ],
+  "pattern": "core"
+ },
+ "forward lunge with high to low chop": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "core",
+   "obliques"
+  ],
+  "aliases": [
+   "forward lunge with chop",
+   "lunge with high to low chop"
+  ],
+  "pattern": "lunge"
+ },
+ "v-up": {
+  "muscle_groups": [
+   "core"
+  ],
+  "aliases": [
+   "v ups",
+   "v-ups",
+   "full v-up",
+   "bodyweight full v-up"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core",
+  "held": true
+ },
+ "straight leg roll up": {
+  "muscle_groups": [
+   "core"
+  ],
+  "aliases": [
+   "roll up",
+   "roll ups",
+   "straight leg roll ups"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core"
+ },
+ "toe reach": {
+  "muscle_groups": [
+   "core"
+  ],
+  "aliases": [
+   "toe reaches",
+   "dumbbell toe reach",
+   "toe touch"
+  ],
+  "pattern": "core"
+ },
+ "scaption": {
+  "muscle_groups": [
+   "shoulders"
+  ],
+  "aliases": [
+   "scaptions",
+   "kneeling scaption",
+   "bosu kneeling scaption"
+  ],
+  "pattern": "raise"
+ },
+ "superhero": {
+  "muscle_groups": [
+   "back",
+   "lower back",
+   "shoulders"
+  ],
+  "aliases": [
+   "superheroes",
+   "trx superhero",
+   "superman hold"
+  ],
+  "pattern": "core"
+ },
+ "calf raise": {
+  "muscle_groups": [
+   "calves"
+  ],
+  "aliases": [
+   "calf raises",
+   "2 x calf raise",
+   "2x calf raise"
+  ],
+  "pattern": "calf"
+ },
+ "halo": {
+  "muscle_groups": [
+   "core",
+   "shoulders"
+  ],
+  "aliases": [
+   "alt halo",
+   "halos"
+  ],
+  "pattern": "core"
+ },
+ "sled push": {
+  "muscle_groups": [
+   "legs",
+   "cardio"
+  ],
+  "aliases": [
+   "sled pushes"
+  ]
+ },
+ "reverse fly": {
+  "muscle_groups": [
+   "back",
+   "shoulders"
+  ],
+  "aliases": [
+   "rear delt fly",
+   "reverse flys",
+   "reverse flies"
+  ],
+  "implement": "double_dumbbell",
+  "pattern": "fly"
+ },
+ "single arm snatch": {
+  "muscle_groups": [
+   "full body",
+   "shoulders",
+   "legs"
+  ],
+  "aliases": [
+   "snatch",
+   "dumbbell snatch"
+  ],
+  "implement": "single_dumbbell"
+ },
+ "clean": {
+  "muscle_groups": [
+   "full body",
+   "legs",
+   "back"
+  ],
+  "aliases": [
+   "dumbbell clean",
+   "cleans"
+  ],
+  "implement": "single_dumbbell"
+ },
+ "skier swing": {
+  "muscle_groups": [
+   "hamstrings",
+   "glutes",
+   "posterior chain",
+   "core"
+  ],
+  "aliases": [
+   "skier swings",
+   "ski swing"
+  ],
+  "pattern": "hinge"
+ },
+ "bridge": {
+  "muscle_groups": [
+   "glutes",
+   "hamstrings"
+  ],
+  "aliases": [
+   "glute bridge",
+   "bridges"
+  ],
+  "implement": "bodyweight",
+  "pattern": "hinge"
+ },
+ "torso rotation": {
+  "muscle_groups": [
+   "core",
+   "obliques"
+  ],
+  "aliases": [
+   "torso rotations",
+   "trunk rotation",
+   "rotation"
+  ],
+  "pattern": "core"
+ },
+ "bench power push-up": {
+  "muscle_groups": [
+   "chest",
+   "triceps"
+  ],
+  "aliases": [
+   "bench power push up",
+   "power push-up"
+  ],
+  "implement": "bodyweight",
+  "pattern": "horizontal_push"
+ },
+ "upright row": {
+  "muscle_groups": [
+   "shoulders",
+   "back"
+  ],
+  "aliases": [
+   "upright rows"
+  ],
+  "pattern": "vertical_pull"
+ },
+ "good morning": {
+  "muscle_groups": [
+   "hamstrings",
+   "posterior chain"
+  ],
+  "aliases": [
+   "good mornings"
+  ],
+  "pattern": "hinge"
+ },
+ "lateral hop over": {
+  "muscle_groups": [
+   "legs",
+   "cardio"
+  ],
+  "aliases": [
+   "lateral hop overs",
+   "hop over",
+   "hop overs"
+  ],
+  "implement": "bodyweight"
+ },
+ "deadbug": {
+  "muscle_groups": [
+   "core"
+  ],
+  "aliases": [
+   "dead bug",
+   "deadbugs",
+   "dead bugs"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core"
+ },
+ "trx clutch curl to torso rotation": {
+  "muscle_groups": [
+   "biceps",
+   "core"
+  ],
+  "aliases": [
+   "clutch curl to torso rotation",
+   "clutch curl"
+  ],
+  "implement": "trx"
+ },
+ "neutral grip front raise": {
+  "muscle_groups": [
+   "shoulders"
+  ],
+  "aliases": [
+   "front raise",
+   "front raises"
+  ],
+  "implement": "double_dumbbell",
+  "pattern": "raise"
+ },
+ "trx forward lunge with y-raise": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "shoulders"
+  ],
+  "aliases": [
+   "trx forward lunge with y raise"
+  ],
+  "implement": "trx",
+  "pattern": "lunge"
+ },
+ "front loaded forward lunge": {
+  "muscle_groups": [
+   "legs",
+   "glutes"
+  ],
+  "aliases": [
+   "front loaded lunge"
+  ],
+  "pattern": "lunge"
+ },
+ "reciprocating row": {
+  "muscle_groups": [
+   "back",
+   "biceps"
+  ],
+  "aliases": [
+   "reciprocating rows",
+   "alternating row",
+   "alternating rows"
+  ],
+  "pattern": "horizontal_pull"
+ },
+ "goblet forward lunge with torso rotation": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "core"
+  ],
+  "aliases": [],
+  "implement": "single_dumbbell",
+  "pattern": "lunge"
+ },
+ "goblet reverse lunge with torso rotation": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "core"
+  ],
+  "aliases": [
+   "goblet alt reverse lunge with torso rotation",
+   "goblet alt revese lunge with torso rotation",
+   "goblet revese lunge with torso rotation"
+  ],
+  "implement": "single_dumbbell",
+  "pattern": "lunge"
+ },
+ "arnold press": {
+  "muscle_groups": [
+   "shoulders"
+  ],
+  "aliases": [
+   "arnold presses"
+  ],
+  "implement": "double_dumbbell",
+  "pattern": "vertical_push"
+ },
+ "single arm march in place": {
+  "muscle_groups": [
+   "core",
+   "legs"
+  ],
+  "aliases": [
+   "march in place",
+   "single arm march"
+  ],
+  "pattern": "core"
+ },
+ "trx lateral leg lift": {
+  "muscle_groups": [
+   "legs",
+   "inner thigh"
+  ],
+  "aliases": [
+   "lateral leg lift",
+   "lateral leg lifts"
+  ],
+  "implement": "trx"
+ },
+ "bicycle crunch": {
+  "muscle_groups": [
+   "core",
+   "obliques"
+  ],
+  "aliases": [
+   "bicycle crunches",
+   "bicycles"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core"
+ },
+ "bosu push-up": {
+  "muscle_groups": [
+   "chest",
+   "triceps",
+   "core"
+  ],
+  "aliases": [
+   "bosu push up",
+   "bosu pushup"
+  ],
+  "implement": "bodyweight",
+  "pattern": "horizontal_push"
+ },
+ "single leg airplane": {
+  "muscle_groups": [
+   "hamstrings",
+   "glutes",
+   "balance"
+  ],
+  "aliases": [
+   "airplane",
+   "single-leg airplane"
+  ],
+  "implement": "bodyweight",
+  "pattern": "hinge"
+ },
+ "trx rollout": {
+  "muscle_groups": [
+   "core"
+  ],
+  "aliases": [
+   "rollout",
+   "roll out",
+   "trx roll out"
+  ],
+  "implement": "trx",
+  "pattern": "core"
+ },
+ "bench seated knee tuck": {
+  "muscle_groups": [
+   "core"
+  ],
+  "aliases": [
+   "seated knee tuck",
+   "knee tuck",
+   "knee tucks"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core"
+ },
+ "quick lateral hops": {
+  "muscle_groups": [
+   "legs",
+   "cardio"
+  ],
+  "aliases": [
+   "quick lateral hop",
+   "lateral hops"
+  ],
+  "implement": "bodyweight"
+ },
+ "high pull": {
+  "muscle_groups": [
+   "back",
+   "shoulders"
+  ],
+  "aliases": [
+   "high pulls",
+   "high pull with power"
+  ],
+  "pattern": "vertical_pull"
+ },
+ "goblet step down toe tap": {
+  "muscle_groups": [
+   "legs",
+   "glutes"
+  ],
+  "aliases": [
+   "step down toe tap",
+   "step down toe taps"
+  ],
+  "implement": "single_dumbbell"
+ },
+ "pop squat": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "cardio"
+  ],
+  "aliases": [
+   "pop squats",
+   "90 degree pop squat",
+   "alt 90 degree pop squat"
+  ],
+  "implement": "bodyweight"
+ },
+ "push-up": {
+  "muscle_groups": [
+   "chest",
+   "triceps",
+   "core"
+  ],
+  "aliases": [
+   "push up",
+   "pushup",
+   "push-ups",
+   "pushups"
+  ],
+  "implement": "bodyweight",
+  "pattern": "horizontal_push"
+ },
+ "knee raise": {
+  "muscle_groups": [
+   "core"
+  ],
+  "aliases": [
+   "knee raises",
+   "alt knee raise",
+   "knee tuck raise",
+   "knee lift",
+   "knee lifts"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core"
+ },
+ "knee drive": {
+  "muscle_groups": [
+   "core",
+   "cardio"
+  ],
+  "aliases": [
+   "knee drives",
+   "alt knee drive"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core"
+ },
+ "neutral grip step-down": {
+  "muscle_groups": [
+   "legs",
+   "glutes",
+   "balance"
+  ],
+  "aliases": [
+   "neutral grip step down",
+   "single arm neutral grip step-down",
+   "single arm neutral grip step down"
+  ],
+  "implement": "single_dumbbell",
+  "pattern": "lunge"
+ },
+ "crunch": {
+  "muscle_groups": [
+   "core"
+  ],
+  "aliases": [
+   "crunches"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core"
+ }
+}
