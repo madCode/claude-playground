@@ -804,6 +804,11 @@ class CarryViewModelTest {
         // in front of them.
         val newer = sheet.replace("2026-10-17", "2026-10-18")
         val model = viewModel()
+        // The refresh below lands while the save is out, and waits for it, under the stall
+        // timeout. On the test dispatcher that timeout is virtual time, which jumps to it as soon
+        // as nothing is queued, so on a loaded machine the save's thread was slower than the jump
+        // and the screen went Stalled (failed in a full build, 2026-11-02).
+        model.stallAfterMs = null
         model.read = { ready() }
         model.refresh(); settled(model)
         model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))

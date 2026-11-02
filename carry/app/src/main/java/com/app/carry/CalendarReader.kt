@@ -68,7 +68,7 @@ class CalendarReader(private val context: Context, private val zone: ZoneId = Zo
         internal fun keep(title: String, beginMs: Long, allDay: Boolean, date: LocalDate, zone: ZoneId): ClassCalendar.Event? {
             val instant = Instant.ofEpochMilli(beginMs)
             return if (allDay) {
-                if (LocalDate.ofInstant(instant, ZoneOffset.UTC) == date) ClassCalendar.Event(title, null) else null
+                if (instant.atZone(ZoneOffset.UTC).toLocalDate() == date) ClassCalendar.Event(title, null) else null
             } else {
                 val start = LocalDateTime.ofInstant(instant, zone)
                 if (start.toLocalDate() == date) ClassCalendar.Event(title, start) else null
