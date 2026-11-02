@@ -21,6 +21,20 @@ work=$(mktemp -d)
 
 fail() { echo "reboot check: $*" >&2; exit 1; }
 
+# Root, checked. `adb root` restarts adbd as root, and the connection it answers on can close
+# under it ("unable to connect for root: closed"), most often straight after a reboot: a
+# failure there says nothing about Carry, and under `set -e` it ended the run. So it is tried
+# again until the shell really is root.
+as_root() {
+  for _ in 1 2 3 4 5 6; do
+    adb root > /dev/null 2>&1 || true
+    adb wait-for-device
+    [ "$(adb shell id -u 2>/dev/null | tr -d '\r')" = 0 ] && return 0
+    sleep 2
+  done
+  fail "adb couldn't become root"
+}
+
 # JobScheduler's jobs for Carry's WorkManager, one per line, as the key dumpsys prints after
 # "JOB": the namespace when there is one, the uid and the id. Android 16 prints
 # "JOB androidx.work.systemjobscheduler:u0a220/1: e006984 @androidx.work...@<pkg>/androidx.work...";
@@ -81,8 +95,7 @@ run() {
 }
 
 # Root, to read JobScheduler's saved jobs and, later, to move the clock. Google APIs images allow it.
-adb root > /dev/null
-adb wait-for-device
+as_root
 adb install -r -g "$apk" > /dev/null
 adb shell am start -W -n "$pkg/com.app.carry.MainActivity" > /dev/null
 before=$(await_jobs 60) || { show_jobs; fail "opening Carry scheduled no session check"; }
@@ -128,8 +141,7 @@ echo "Scheduled after the reboot: $after"
 
 # Two hours on, so the next period is due, then the job as JobScheduler would start it. Root
 # again: adbd restarts unprivileged after a reboot.
-adb root > /dev/null
-adb wait-for-device
+as_root
 adb shell settings put global auto_time 0
 adb shell date "@$(( $(adb shell date +%s | tr -d '\r') + 7200 ))" > /dev/null
 sleep 5
