@@ -268,7 +268,9 @@ class AddMoveTest {
         tapSave("Saved")
         alive()
         assertEquals("30", reach("move 0, lb").text)
-        assertTrue(device.hasObject(box(NAME).text("popsquat")))
+        // Found by scrolling, not looked for where the list happens to stand: on a borrowed day
+        // the added row sits above the sheet's rows, so reaching move 0 can scroll it away.
+        find(box(NAME).text("popsquat"))
     }
 
     private companion object {
