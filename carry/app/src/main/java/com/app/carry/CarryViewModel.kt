@@ -123,6 +123,21 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     val since: State<Growth.Since?> = _since
 
     private val _saving = mutableStateOf<SaveState>(SaveState.Idle)
+
+    /**
+     * Saves that have landed, and the text the last one left in the file.
+     *
+     * A folder read started before a save can land after it, holding the
+     * file as it was: on a resume the read starts at once, and the owner (or
+     * a test) can tap Save before it returns. Applied, it re-seeded the form
+     * from the old numbers and said "Save" again -- and a second tap would
+     * have written those old numbers back. A read a save overtook is dropped
+     * and done again. And a read of the very file we just wrote is not "a
+     * new file": the button stays "Saved", so returning from the share sheet
+     * no longer takes the post button away.
+     */
+    private var savesLanded = 0
+    private var lastWritten: String? = null
     val saving: State<SaveState> = _saving
 
     /** Whether a newer debug build is out. Null on a release or local build, which never asks. */
@@ -223,6 +238,13 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
     /** The file as it is on disk now, read just before a write. */
     internal var readNow: (String) -> String? = { folder.read(it) }
 
+    /**
+     * Null only in a test that holds a read open: the test dispatcher runs
+     * this timeout on virtual time, which jumps to it -- however large --
+     * as soon as nothing else is queued.
+     */
+    internal var stallAfterMs: Long? = STALL_AFTER_MS
+
     /** The same seam for the folder's history, which is read on its own
      *  schedule: on resume with the sheet, and again whenever a save has
      *  changed what the folder holds. */
@@ -245,8 +267,10 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
         // taken, and would replace the refusal before the owner had read it.
         // Taken here, not in the read, so a read already in flight can't use it.
         val holdRefusal = refusedPick.also { refusedPick = false }
+        val savesBefore = savesLanded
         reading = viewModelScope.launch {
-            val next = withTimeoutOrNull(STALL_AFTER_MS) { read() }
+            val next = stallAfterMs.let { if (it == null) read() else withTimeoutOrNull(it) { read() } }
+            if (savesLanded != savesBefore) return@launch refresh()
             _state.value = when {
                 holdRefusal -> _state.value
                 // A provider can block forever -- openInputStream has no
@@ -309,8 +333,9 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                 // "Saved" describes the file that WAS on screen. Left
                 // standing, it offers to post a session nobody filled in:
                 // the sync drops the day's second class in, this reseeds
-                // from it, and the button is still there.
-                _saving.value = SaveState.Idle
+                // from it, and the button is still there. Unless this IS
+                // the file we just wrote.
+                if (!(_saving.value == SaveState.Saved && ready.raw == lastWritten)) _saving.value = SaveState.Idle
             }
             // Same session, same bytes: the draft is the truth, and a fresh
             // ViewModel after process death starts empty.
@@ -504,6 +529,8 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                         // pinned to old bytes and poisons the next file.
                         clearDraft()
                         _fileMovedUnderEdits.value = false
+                        lastWritten = ready.raw
+                        savesLanded++
                         _saving.value = SaveState.Saved
                         // Reached when the file already holds these
                         // numbers, which means something else wrote it --
@@ -557,6 +584,8 @@ class CarryViewModel(app: Application, private val handle: SavedStateHandle) : A
                     if (result == Saved.YES) { damagePending = false; leftOnDisk = null }
                     _saving.value = refusal?.let(::keepDamage) ?: when (result!!) {
                         Saved.YES -> {
+                            lastWritten = text
+                            savesLanded++
                             // ALL of this is "only if nothing newer arrived
                             // while we wrote". It used to guard the one
                             // line, and the rest ran regardless -- so when

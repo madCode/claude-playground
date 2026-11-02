@@ -526,6 +526,60 @@ class CarryViewModelTest {
     }
 
     @Test
+    fun `coming back to the file just saved keeps Saved and the numbers`() = runTest(dispatcher) {
+        // Returning from the share sheet is a resume, and a resume reads the
+        // folder: the file it finds is the one just written, not a new one.
+        val model = viewModel()
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        model.save(); settled(model)
+        assertEquals(SaveState.Saved, model.saving.value)
+
+        model.refresh(); settled(model)
+
+        assertEquals("the post button stays", SaveState.Saved, model.saving.value)
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+    }
+
+    @Test
+    fun `a read that began before a save and lands after it never puts the old numbers back`() = runTest(dispatcher) {
+        val model = viewModel()
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+
+        // The resume's read takes the file as it was, then waits on the
+        // provider while the owner types and saves.
+        model.stallAfterMs = null
+        val held = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val before = disk.text!!
+        var first = true
+        model.read = {
+            if (first) { first = false; ready(before).also { held.await() } } else ready(disk.text!!)
+        }
+        model.refresh()
+        advanceUntilIdle()
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        // Not `settled`: the held read is still running, on purpose.
+        model.save()
+        withContext(Dispatchers.Default) {
+            kotlinx.coroutines.withTimeoutOrNull(20_000) { while (model.saving.value != SaveState.Saved) delay(5) }
+                ?: error("save never landed: ${model.saving.value} ${model.state.value::class.simpleName}")
+        }
+        held.complete(Unit)
+        settled(model)
+
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+        assertEquals(SaveState.Saved, model.saving.value)
+        // And a second tap writes nothing older than what is in the file.
+        model.save(); settled(model)
+        assertEquals(1, disk.writes)
+        assertTrue(disk.text!!.contains("95"))
+    }
+
+    @Test
     fun `a save over a file that changed, emptied or went is refused, with the typing kept and listed`() = runTest(dispatcher) {
         // madCode, 2026-10-17: refuse, keep the typing, offer the new file.
         for (onDisk in listOf(sheet.replace("10 x bench press", "12 x bench press"), "", null)) {
