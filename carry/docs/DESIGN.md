@@ -672,6 +672,30 @@ its own brain against it on real classes:
 - Nothing is shown in the app. The reports sync back to the laptop, where
   they are read; the switch waits on them agreeing.
 
+The history gets the same treatment (phase 4 of the plan):
+
+- After each import, gym-coach copies its history to `brain/history.jsonl`.
+- The first time Carry finds it, Carry starts its own history,
+  `brain/history-phone.json`, as a copy. From then on Carry imports each
+  finished session file itself, with the ported import, the day after the
+  class as the laptop does.
+- After each hourly check it writes `brain/history-compare.json`: the rows
+  only one side has, and for rows on both, which fields differ.
+- Session files are read as the laptop reads them for this: as bytes,
+  refused past 1 MiB or when not UTF-8, never decoded leniently.
+- The phone's copy is one JSON document, so a write cut short (or an empty
+  file) never reads as a shorter history: it starts again from the
+  laptop's, and the report says so. A copy that can't be read right now is
+  left alone until the next run.
+- Only session files from the last 45 days are imported each hour. What
+  the phone can't import itself comes from the laptop's on every run: rows
+  dated before that window, and rows from before ids existed. So an
+  `adopt-history` or an edit to an old session reaches the phone, and only
+  the window is really compared; the report says where it starts.
+- The knowledge base is the newest sheet input's, and the report names it.
+- The laptop's history is still the record. Nothing on the phone reads the
+  phone's copy yet.
+
 ## Asking whether a newer build is out
 
 The app's only network use. The owner chose it on 2026-10-16

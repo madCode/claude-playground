@@ -37,6 +37,21 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 
 
 
+## 2026-11-02 — the phone keeps its own history, beside the laptop's
+
+- **Phase 4, wired in** ([the plan](designs/brain-move.md)). gym-coach
+  copies its history into the synced folder after each import (its #80);
+  Carry starts its own from it once, then imports each finished class
+  itself and writes where the two differ (DESIGN.md, "The phone's brain,
+  checked against the laptop's").
+- **Read as the laptop reads.** Session files are taken as bytes and decoded
+  strictly; history rows are written with `JsonElement.toString()`, which
+  keeps a NaN or a huge integer exactly as the laptop wrote it.
+- **Tests** run the check on fixture days: the first run starts from the
+  laptop's and agrees; a class only the phone has logged shows as the
+  phone's alone, then agrees once the laptop logs it; today's class waits;
+  a damaged copy starts again; a file that isn't UTF-8 is refused.
+
 ## 2026-11-02 — the session import runs in Kotlin
 
 - **Phase 4 begins** ([the plan](designs/brain-move.md)): `brain/Import.kt`

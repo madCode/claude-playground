@@ -22,6 +22,13 @@ interface Folder {
     fun list(): List<Pair<String, String>>
     fun read(documentId: String): String?
 
+    /**
+     * The file's bytes, up to [max] + 1 so a caller can tell "too large" from "this size", or
+     * null when it can't be read. For the history import, which decodes as strictly as the
+     * laptop does; [read] decodes leniently, for the screen.
+     */
+    fun readBytes(documentId: String, max: Int): ByteArray? = read(documentId)?.encodeToByteArray()
+
     /** Raw write. Prefer [save], which checks the result. */
     fun write(documentId: String, text: String): Boolean
 
@@ -198,9 +205,17 @@ class SessionFolder(private val context: Context) : Folder {
      */
     override fun read(documentId: String): String? = uri?.let { readCapped(it, documentId, MAX_SESSION_BYTES) }
 
+    override fun readBytes(documentId: String, max: Int): ByteArray? =
+        uri?.let { tree -> runCatching { readUpTo(tree, documentId, max) }.getOrNull() }
+
     private fun readCapped(tree: Uri, documentId: String, max: Int): String? = runCatching {
+        readUpTo(tree, documentId, max)?.let { if (it.size > max) null else it.decodeToString() }
+    }.getOrNull()
+
+    /** At most [max] + 1 bytes, so one more than allowed shows the file is too large. */
+    private fun readUpTo(tree: Uri, documentId: String, max: Int): ByteArray? {
         val doc = DocumentsContract.buildDocumentUriUsingTree(tree, documentId)
-        context.contentResolver.openInputStream(doc)?.use { stream ->
+        return context.contentResolver.openInputStream(doc)?.use { stream ->
             // Bounded by hand: readNBytes is API 33 and minSdk is 26. Grown as it fills,
             // so a large cap doesn't mean that much held for a small file.
             var buffer = ByteArray(minOf(max + 1, 64 * 1024))
@@ -211,9 +226,9 @@ class SessionFolder(private val context: Context) : Folder {
                 if (n < 0) break
                 filled += n
             }
-            if (filled > max) null else buffer.decodeToString(0, filled)
+            buffer.copyOf(filled)
         }
-    }.getOrNull()
+    }
 
     /** The `brain/` subfolder gym-coach writes each sheet's inputs into, or null when there is none yet. */
     fun brain(): BrainFolder? = runCatching {

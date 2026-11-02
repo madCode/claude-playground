@@ -16,12 +16,12 @@ that is already proven.
 **Phase 4 has started.** The laptop's session import is ported
 (`brain/Import.kt`) and matches gym-coach's import fixtures step for step:
 431 steps of the invented lifter's days, with edits, renames, two sittings
-and every refusal. Nothing on the phone calls it yet; wiring it in, with the
-phone keeping its own history and comparing it to the laptop's, is next.
-The wiring has two things to get right, from the port's review: write
-history rows with `JsonElement.toString()`, not the default encoder, which
-throws on NaN and rounds integers past 2^64; and read a session file the way
-the laptop does, refusing invalid UTF-8 and anything over 1 MiB rather than
+and every refusal. It is wired in: the phone keeps its own history beside
+the laptop's and reports where they differ (DESIGN.md).
+Two things from the port's review are kept to: history rows are written with
+`JsonElement.toString()`, not the default encoder, which throws on NaN and
+rounds integers past 2^64; and a session file is read the way the laptop
+reads it, refusing invalid UTF-8 and anything over 1 MiB rather than
 decoding it leniently.
 
 ## Why now
