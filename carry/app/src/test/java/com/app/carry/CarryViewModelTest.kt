@@ -14,6 +14,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.json.jsonArray
@@ -523,6 +524,122 @@ class CarryViewModelTest {
         read = { ready(disk.text!!) }
         readNow = { disk.text }
         write = { _, text -> disk.writes++; disk.text = text; Saved.YES }
+    }
+
+    @Test
+    fun `coming back to the file just saved keeps Saved and the numbers`() = runTest(dispatcher) {
+        // Returning from the share sheet is a resume, and a resume reads the
+        // folder: the file it finds is the one just written, not a new one.
+        val model = viewModel()
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        model.save(); settled(model)
+        assertEquals(SaveState.Saved, model.saving.value)
+
+        model.refresh(); settled(model)
+
+        assertEquals("the post button stays", SaveState.Saved, model.saving.value)
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+    }
+
+    @Test
+    fun `a read that began before a save and lands after it never puts the old numbers back`() = runTest(dispatcher) {
+        val model = viewModel()
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+
+        // The resume's read takes the file as it was, then waits on the
+        // provider while the owner types and saves.
+        model.stallAfterMs = null
+        val held = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val before = disk.text!!
+        var first = true
+        model.read = {
+            if (first) { first = false; ready(before).also { held.await() } } else ready(disk.text!!)
+        }
+        model.refresh()
+        advanceUntilIdle()
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        // Not `settled`: the held read is still running, on purpose.
+        model.save()
+        withContext(Dispatchers.Default) {
+            kotlinx.coroutines.withTimeoutOrNull(20_000) { while (model.saving.value != SaveState.Saved) delay(5) }
+                ?: error("save never landed: ${model.saving.value} ${model.state.value::class.simpleName}")
+        }
+        held.complete(Unit)
+        settled(model)
+
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+        assertEquals(SaveState.Saved, model.saving.value)
+        // And a second tap writes nothing older than what is in the file.
+        model.save(); settled(model)
+        assertEquals(1, disk.writes)
+        assertTrue(disk.text!!.contains("95"))
+    }
+
+    @Test
+    fun `a read that catches the save's own bytes before the save lands is not a file that moved`() = runTest(dispatcher) {
+        val model = viewModel()
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+
+        // The write lands on disk, then the save goes on reading it back
+        // while the resume's read returns with the new bytes.
+        model.stallAfterMs = null
+        val written = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val readBack = java.util.concurrent.CountDownLatch(1)
+        model.write = { _, text ->
+            disk.writes++; disk.text = text; written.complete(Unit)
+            readBack.await(20, java.util.concurrent.TimeUnit.SECONDS)
+            Saved.YES
+        }
+        var first = true
+        model.read = {
+            if (first) { first = false; written.await() }
+            ready(disk.text!!)
+        }
+        model.refresh()
+        advanceUntilIdle()
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        model.save()
+        withContext(Dispatchers.Default) { withTimeout(20_000) { while (disk.writes == 0) delay(5) } }
+        // The read's landing is queued on Main; run it before the save ends.
+        runCurrent()
+        readBack.countDown()
+        settled(model)
+
+        assertFalse("the owner's own save is not someone else's", model.fileMovedUnderEdits.value)
+        assertEquals(SaveState.Saved, model.saving.value)
+        assertFalse("nothing is left unsaved", model.unsaved)
+        assertEquals(SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
+    }
+
+    @Test
+    fun `a read behind a save that hangs still reaches Stalled`() = runTest(dispatcher) {
+        val model = viewModel()
+        val disk = Disk(sheet)
+        model.on(disk)
+        model.refresh(); settled(model)
+
+        val hung = java.util.concurrent.CountDownLatch(1)
+        val writing = java.util.concurrent.CountDownLatch(1)
+        model.write = { _, _ -> writing.countDown(); hung.await(20, java.util.concurrent.TimeUnit.SECONDS); Saved.NO_FILE_INTACT }
+        model.edit(0, SessionPatch.Entry(weight = 95.0, reps = 8))
+        model.save()
+        withContext(Dispatchers.Default) { writing.await(20, java.util.concurrent.TimeUnit.SECONDS) }
+        model.refresh()
+        // The stall timeout runs on virtual time here, so it is due as soon
+        // as nothing else is queued.
+        withContext(Dispatchers.Default) {
+            withTimeout(20_000) { while (model.state.value != CarryState.Stalled) delay(5) }
+        }
+        hung.countDown()
+        settled(model)
+        assertEquals("the typing is kept", SessionPatch.Entry(weight = 95.0, reps = 8), model.edits.value[0])
     }
 
     @Test
