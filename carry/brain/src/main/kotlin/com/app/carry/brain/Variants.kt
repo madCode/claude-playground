@@ -264,6 +264,16 @@ fun extract(line: String, canonical: String, kb: Kb): Variant {
         .copy(reps = prescribedReps(line), repsText = repsText(line), durationSec = prescribedDuration(line))
 }
 
+/**
+ * `variants.stated_implement`: the implement the line's own words name, or
+ * null when it names none and [extract] falls back to the knowledge base's.
+ */
+fun statedImplement(line: String, canonical: String, kb: Kb): String? {
+    val wordLists = aliasWordLists(canonical, kb)
+    val (found, _) = matchPhrases(stripWords(scopeToClauses(line, wordLists), wordLists))
+    return found["implement"]
+}
+
 /** `variants._combo_found`: the attribute words a combo line states, every part's own words stripped first. */
 internal fun comboFound(line: String, canonicals: List<String>, kb: Kb): Pair<Map<String, String>, List<String>> {
     val all = canonicals.flatMap { aliasWordLists(it, kb) }
