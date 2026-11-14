@@ -465,6 +465,20 @@
   "implement": "bodyweight",
   "pattern": "core"
  },
+ "plank pull through": {
+  "muscle_groups": [
+   "core"
+  ],
+  "aliases": [
+   "plank pull throughs",
+   "plank pull-through",
+   "plank pull-throughs",
+   "pull through",
+   "pull throughs"
+  ],
+  "implement": "bodyweight",
+  "pattern": "core"
+ },
  "side plank": {
   "muscle_groups": [
    "core",
@@ -791,6 +805,7 @@
    "trx superhero",
    "superman hold"
   ],
+  "implement": "bodyweight",
   "pattern": "core"
  },
  "calf raise": {
