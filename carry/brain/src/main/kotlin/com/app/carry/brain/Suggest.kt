@@ -238,6 +238,41 @@ private fun noWeightHead(ml: MatchedLine, kb: Kb, history: List<Row>): String {
     return "no weight needed"
 }
 
+/** `gym_lib._last_loaded`: the latest finished, unhurt, loaded set of this movement at any setup. */
+private fun lastLoaded(ml: MatchedLine, history: List<Row>, today: LocalDate): Row? =
+    history.filter {
+        it.str("exercise") == ml.canonical && !it.hasComponents() && it.flag("weight") && isComplete(it) &&
+            !hurt(it) && date(it.date()) < today
+    }.maxByOrNull { it.date() }
+
+/** `gym_lib._ceiling_set`: the lightest failed or hurt set that a start from [source] must stay under. */
+private fun ceilingSet(canonical: String?, source: Row, history: List<Row>, today: LocalDate): Row? =
+    history.filter { h ->
+        if (h.hasComponents() || !h.flag("weight") || (isComplete(h) && !hurt(h))) return@filter false
+        val time = date(h.date())
+        if (time >= today) return@filter false
+        if (h.str("exercise") == canonical && daysBetween(time, today) <= RELATED_LINE_WINDOW_DAYS) return@filter true
+        h.str("exercise").let { it == canonical || it == source.str("exercise") } && h.date() > source.date()
+    }.minByOrNull { it.weight() }
+
+private val CITED = pyRegex("\\(last: .*? (\\d+(?:\\.\\d+)?) lb")
+
+/** `gym_lib._pattern_note_limit`: the most a struggle or hold note lets a start or a bare line say. */
+private fun patternNoteLimit(note: Triple<String, String, String?>?): Double? {
+    if (note == null || note.first !in setOf("back_off", "hold")) return null
+    val limit = CITED.find(note.second)?.groupValues?.get(1)?.toDouble() ?: return null
+    return if (note.first == "back_off") stepDown(limit) else limit
+}
+
+/** `gym_lib._step_down`: one dumbbell under [w], never rounded up. */
+private fun stepDown(w: Double): Double = DUMBBELL_LB.lastOrNull { it < w }?.toDouble() ?: w
+
+/** `gym_lib._why_capped`. */
+private fun whyCapped(h: Row, today: LocalDate): String {
+    val time = dateLabel(h.date(), today)
+    return if (hurt(h)) "$time's ${g(h.weight())} lb that hurt" else "$time's unfinished ${g(h.weight())} lb"
+}
+
 // ------------------------------------------------- same-variant-key (rule 2)
 
 /** `gym_lib.DUMBBELL_LB`. */
@@ -605,6 +640,86 @@ private fun rule3(ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalDate)
     return claims
 }
 
+// ------------------------------------------------------ a start (rule 3a)
+
+/** `gym_lib.SAFE_START_STEPS_DOWN`. */
+private const val SAFE_START_STEPS_DOWN = 1
+
+/** `gym_lib._SAYS_UNLOADED`: words a board uses for an unweighted row that the variant tables don't read. */
+private val SAYS_UNLOADED = pyRegex(
+    "\\b(?:bw|b/w|body\\s*weight|un-?weighted|band(?:ed|s)?|air|prisoner|(?:no|without)\\s+weights?" +
+        "|holds?|iso(?:metric)?|pulses?|jump(?:ing|s)?|plyo(?:metric)?|trx)\\b",
+    ignoreCase = true,
+)
+
+private val ONE_IMPLEMENT = setOf("single_dumbbell", "ybell", "kettlebell", "medball")
+private val TWO_IMPLEMENT = setOf("double_dumbbell")
+private val ISOLATION_PATTERNS = setOf("fly", "raise", "triceps", "curl", "calf")
+
+private fun onRack(w: Double): Double = DUMBBELL_LB.lastOrNull { it <= w }?.toDouble() ?: w
+
+/** `gym_lib._safe_start`: (head, weight, the failed set it was capped under) for a loaded row nothing else answered. */
+private fun safeStart(ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalDate): Triple<String, Double, Row?>? {
+    if (ml.components != null) {
+        val parts = ml.components.map { c ->
+            safeStart(ml.copy(canonical = c, components = null), kb, history, today) ?: return null
+        }
+        return parts.minByOrNull { it.second }
+    }
+    if (ml.canonical == null || loadIsAGuess(ml.canonical, ml.variant.implement, kb)) return null
+    val entry = kb[ml.canonical]
+    if (entry != null && "cardio" in entry.muscleGroups) return null
+    val loaded = history.filter { h ->
+        isComplete(h) && !hurt(h) && !h.hasComponents() && date(h.date()) < today &&
+            h.str("exercise")?.let { kb[it] } != null && carriedLoad(h, kb) &&
+            !(h.flag("credited_from_combo") && h.obj("variant")?.str("implement") != ml.variant.implement)
+    }
+    val groups = entry?.muscleGroups?.take(1).orEmpty()
+    val pattern = entry?.pattern?.takeIf { it.isNotEmpty() }
+    fun of(h: Row) = kb[h.str("exercise")!!]!!
+    var tiers = listOf(
+        loaded.filter { it.str("exercise") == ml.canonical },
+        loaded.filter { pattern != null && of(it).pattern == pattern },
+        loaded.filter {
+            groups.isNotEmpty() && of(it).muscleGroups.take(1) == groups &&
+                (pattern == null || of(it).pattern == null || of(it).pattern in ISOLATION_PATTERNS)
+        },
+    )
+    if (entry != null && entry.pattern == "core" && !entry.held) tiers = tiers.take(1)
+    for (tier in tiers) {
+        if (tier.isEmpty()) continue
+        val recent = tier.filter { daysBetween(date(it.date()), today) <= RELATED_LINE_WINDOW_DAYS }
+        val source = recent.ifEmpty { tier }.maxBy { it.date() }
+        var weight = source.weight()
+        val sourceImpl = (source.obj("variant")?.str("implement")?.takeIf { it.isNotEmpty() } ?: of(source).implement)
+            ?.takeIf { it !in NO_WEIGHT_IMPLEMENTS }
+        val targetImpl = ml.variant.implement
+        if ((sourceImpl in ONE_IMPLEMENT && !(targetImpl in ONE_IMPLEMENT && ml.variant.arms != "single")) ||
+            (sourceImpl == null && targetImpl in TWO_IMPLEMENT)
+        ) {
+            weight = onRack(weight / 2)
+        }
+        // As Python reads them: a reps of 8.5 stays 8.5, and the ratio is
+        // taken before it multiplies, which can land a hair under a rack
+        // weight and so a step lower; the other order would not.
+        val done = source.num("reps")?.takeIf { it != 0.0 } ?: source.num("prescribed_reps")?.takeIf { it != 0.0 }
+        val wanted = ml.prescribedReps
+        val scaled = done != null && wanted != null && wanted != 0 && wanted > done
+        if (scaled) weight = onRack(weight * ((30 + done!!) / (30 + wanted!!)))
+        val ceiling = ceilingSet(ml.canonical, source, history, today)
+        var cap = ceiling
+        if (cap != null && weight >= cap.weight()) weight = cap.weight() else cap = null
+        repeat(if (scaled && cap == null) 0 else SAFE_START_STEPS_DOWN) { weight = stepDown(weight) }
+        weight = maxOf(weight, minOf(DUMBBELL_LB[0].toDouble(), source.weight()))
+        if (ceiling != null && weight >= ceiling.weight()) return null
+        val how = sourceImpl?.takeIf { it != ml.variant.implement }?.let { IMPLEMENT_LABELS[it] }?.let { ", $it" } ?: ""
+        val head = "start ~${g(weight)} lb (${source.str("exercise")} ${g(source.weight())} lb$how, " +
+            "${dateLabel(source.date(), today)})"
+        return Triple(head, weight, cap)
+    }
+    return null
+}
+
 // ---------------------------------------------------------- related (rule 4)
 
 /** `gym_lib._carried_load`: a set that is evidence about a weight, for the lines that cross movements. */
@@ -787,6 +902,27 @@ private fun suggestOne(ml: MatchedLine, kb: Kb, history: List<Row>, today: Local
     if (implement in NO_WEIGHT_IMPLEMENTS) {
         var head = noWeightHead(ml, kb, history)
         val loaded = loadedBefore(ml, history, today)
+        val last = if (loaded != null) lastLoaded(ml, history, today) else null
+        if (last != null && ml.components == null && ml.variant.mode != "hold" &&
+            statedImplement(ml.line, ml.canonical!!, kb) == null && SAYS_UNLOADED.find(ml.line) == null
+        ) {
+            var weight = last.weight()
+            var bare = "~${g(weight)} lb, as on ${dateLabel(last.date(), today)} (the board didn't say weighted)"
+            val cap = ceilingSet(ml.canonical, last, history, today)
+            if (cap != null && weight >= cap.weight()) {
+                weight = stepDown(cap.weight())
+                bare = "~${g(weight)} lb, a step under ${whyCapped(cap, today)}"
+            }
+            val limitNote = patternNote(ml, kb, history, "no history yet", null, today)
+            val limit = patternNoteLimit(limitNote)
+            if (limit != null && weight > limit) {
+                weight = limit
+                bare = if (limitNote!!.first == "back_off") "~${g(limit)} lb, a step under the ${ml.canonical} misses lately"
+                else "~${g(limit)} lb, no heavier than lately"
+            }
+            return Suggestion(ml.canonical, ml.components, ml.variant, muscleGroups,
+                last.obj("variant")?.str("implement"), bare, weight = weight)
+        }
         if (loaded != null) head = "$head — note: you used ${g(loaded.weight())} lb on ${dateLabel(loaded.date(), today)}"
         return Suggestion(ml.canonical, ml.components, ml.variant, muscleGroups, implement, head)
     }
@@ -819,14 +955,20 @@ private fun suggestOne(ml: MatchedLine, kb: Kb, history: List<Row>, today: Local
             headWeight = based.second
         }
     }
+    var start: Triple<String, Double, Row?>? = null
     if (head == null) {
         head = "no history yet"
         claims = rule3(ml, kb, history, today)
+        if (claims.isEmpty()) start = safeStart(ml, kb, history, today)
     }
     var shown: String = head!!
 
     var related = relatedLine(ml, kb, history, headWeight, today)
     var note = patternNote(ml, kb, history, shown, headWeight, today)
+    if (start != null) {
+        shown = start.first
+        headWeight = start.second
+    }
     if (note != null && note.first == "push" && "it hurt" in shown) note = null
     val failed = "didn't finish" in shown
     var found = if (failed || (note != null && note.first == "back_off")) null else bigMiss(ml, kb, history, today)
@@ -838,6 +980,18 @@ private fun suggestOne(ml: MatchedLine, kb: Kb, history: List<Row>, today: Local
     val miss = found?.first
     if (miss != null) related = null
     if ((miss != null || failed) && note != null && note.first == "push") note = null
+    val startCap = start?.third
+    if (startCap != null) {
+        shown = if (found != null && found.second == startCap) "start ~${g(headWeight!!)} lb, a step under the miss"
+        else "start ~${g(headWeight!!)} lb, a step under ${whyCapped(startCap, today)}"
+        related = null
+    }
+    val limit = if (start != null) patternNoteLimit(note) else null
+    if (limit != null && headWeight!! > limit) {
+        headWeight = limit
+        shown = if (note!!.first == "back_off") "start ~${g(limit)} lb, a step under the misses"
+        else "start ~${g(limit)} lb, no heavier than lately"
+    }
     val patternNoteText = note?.second
     if (note?.third != null) {
         shown = note.third!!

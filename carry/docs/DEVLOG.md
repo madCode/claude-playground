@@ -45,6 +45,18 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
   the name with its source: "from goblet squat 30 lb, 1 DB, Sat", or "a
   step under Tue's 40 lb that hurt". Rep estimates and earned numbers are
   unchanged.
+## 2026-11-14 — every weighted row gets a number, in the port too
+
+- **The coach's rule changed** (gym-coach#81, madCode: "every weighted row
+  gets a number"). A loaded row nothing else answered gets a start one
+  dumbbell under the closest set the owner finished, named, with guards
+  for misses, hurt sets, per-hand weights, high reps and pattern notes. A
+  bare "5 x squat" they have loaded gets the weight they used.
+- **Fixtures regenerated** from gym-coach's `fixtures.py` on the same
+  277-board corpus; the Kotlin brain ports the rule and passes them.
+  Breaking the cap or the board's own no-weight words turns them red.
+- **Still to do:** the Before screen shows a start as a plain number; it
+  should say where it came from, as a borrowed number does.
 
 ## 2026-11-02 — the phone reads the class from its own calendar, beside the laptop
 
