@@ -37,9 +37,12 @@ acts on them. The weight stays whatever the estimate said.
 
 Two consequences worth stating, because they look like missing features:
 
-- **Silence is an answer.** A line that says "first time, go by feel" is the
-  honest output when nothing comparable has been lifted, and filling it with
-  a confident number would be the failure, not the fix.
+- **A number says where it came from.** Every weighted row gets a number
+  (madCode, 2026-11-14): when this movement has none of its own, the coach
+  starts a step under the closest lift. That number is shown with its source
+  ("from goblet squat 30 lb, 1 DB, Sat"), so it is never mistaken for one
+  this movement earned. "By feel" is left only for a kind of lift never
+  loaded.
 - **A warning is worth more than a suggestion.** Telling someone they did
   not finish a weight last time needs no evidence about what they *should*
   lift, and it is the one thing they cannot reconstruct from memory in a
@@ -52,9 +55,11 @@ Two consequences worth stating, because they look like missing features:
 1. Weights that **changed** since last time, with what they were. A bump is
    the only number you'd get wrong from memory, because by feel you repeat
    last session's weight.
-2. The other history-backed numbers, one line each. Under a number, what
-   the coach said beside it: a miss last time ("missed 4 of 8 at 20 lb on
-   10/23"), in the warning colour, and how the movement's pattern has gone.
+2. The other numbers, one line each. Under a number, what the coach said
+   beside it: for a start, where it came from ("from goblet squat 30 lb, 1
+   DB, Sat", "a step under Tue's 40 lb that hurt"); a miss last time
+   ("missed 4 of 8 at 20 lb on 10/23"), in the warning colour; and how the
+   movement's pattern has gone.
 3. Movements with no number of their own but something the coach found:
    a floor or cap from another setup ("at least 10 lb (10 lb, single leg,
    10/25)"), a miss, the nearest related lift, a pattern note. A row each,
