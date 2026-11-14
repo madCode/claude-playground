@@ -37,6 +37,15 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 
 
 
+## 2026-11-14 — a start says where its number came from
+
+- **The coach now gives every weighted row a number** (gym-coach#81). A
+  start borrowed from another lift showed on the Before tab as a plain
+  number, like one this movement earned. It now carries a dim line under
+  the name with its source: "from goblet squat 30 lb, 1 DB, Sat", or "a
+  step under Tue's 40 lb that hurt". Rep estimates and earned numbers are
+  unchanged.
+
 ## 2026-11-02 — the phone reads the class from its own calendar, beside the laptop
 
 - **Phase 5, the calendar half** ([the plan](designs/brain-move.md)).

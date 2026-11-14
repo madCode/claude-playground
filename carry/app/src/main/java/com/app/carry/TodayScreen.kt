@@ -181,7 +181,11 @@ private fun SheetRow(set: ExerciseSet) {
     }
     // What the coach said beside the number: a miss last time, and how the
     // movement's pattern has gone. The text sheet always printed both.
-    CoachLines(listOfNotNull(set.missNote?.let { it to true }, set.patternNote?.let { it to false }),
+    // A borrowed number says where it came from first, as a borrowed
+    // number in the noted rows does, so it is never mistaken for one this
+    // movement earned.
+    CoachLines(listOfNotNull(set.numberSource?.let { it to false }, set.missNote?.let { it to true },
+        set.patternNote?.let { it to false }),
         Modifier.padding(start = 11.dp, bottom = 6.dp))
     Box(Modifier.fillMaxWidth().height(1.dp).background(Look.Rule))
 }

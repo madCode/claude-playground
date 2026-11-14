@@ -82,6 +82,32 @@ class TodayScreenTest {
     }
 
     @Test
+    fun `a start says where its number came from, and an earned number does not`() {
+        // gym-coach gives a loaded row with no history of its own a start
+        // from the closest lift (madCode, 2026-11-14: "every weighted row
+        // gets a number"). Shown bare, it would read as this movement's own.
+        val base = SampleSession.today.sets[0]
+        val started = SampleSession.today.copy(
+            sets = listOf(
+                base.copy(ref = 30, canonical = "front squat", family = "legs", suggestedWeight = 25.0,
+                    previousWeight = null, suggested = "start ~25 lb (goblet squat 30 lb, 1 DB, Sat)"),
+                base.copy(ref = 31, canonical = "squat", family = "legs", suggestedWeight = 35.0,
+                    previousWeight = null, suggested = "~35 lb, a step under Tue's 40 lb that hurt"),
+                base.copy(ref = 32, canonical = "chest press", family = "push", suggestedWeight = 8.0,
+                    previousWeight = null, suggested = "~8 lb for 12 reps (est. from 10 lb x 8, Sun)"),
+            ),
+        )
+        compose.setContent { TodayScreen(started, java.time.LocalDate.of(2026, 10, 17)) }
+
+        compose.onNodeWithText("from goblet squat 30 lb, 1 DB, Sat").assertIsDisplayed()
+        compose.onNodeWithText("a step under Tue's 40 lb that hurt").assertIsDisplayed()
+        compose.onNodeWithText("25 lb").assertIsDisplayed()
+        // A rep estimate is this movement's own history: no source line.
+        compose.onNodeWithText("est. from", substring = true).assertDoesNotExist()
+        shoot("48-start-source")
+    }
+
+    @Test
     fun `only three borrowed numbers are given rows, and the rest stay in the tail`() {
         // These are rows, not one concatenated line, so an unbounded count
         // would push the weights the owner actually came for off a glance.

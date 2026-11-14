@@ -205,6 +205,23 @@ data class ExerciseSet(
             .mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content?.takeIf(String::isNotBlank) }
             .take(MAX_CLAIMS).toList()
 
+    /**
+     * Where a borrowed number came from, when the coach gave this row a
+     * start rather than one its own history earned: "from goblet squat 30
+     * lb, 1 DB, Sat", "a step under Tue's 40 lb that hurt", "as on 11/1 (the
+     * board didn't say weighted)". Null for every other head, so a number
+     * the movement earned is shown as before.
+     */
+    val numberSource: String?
+        get() {
+            val rest = STARTED.matchEntire(suggested ?: return null)?.groupValues?.get(1)?.trim() ?: return null
+            return when {
+                rest.startsWith("(") && rest.endsWith(")") -> "from ${rest.substring(1, rest.length - 1)}"
+                rest.startsWith(",") -> rest.removePrefix(",").trim()
+                else -> rest
+            }.takeIf { it.isNotBlank() }
+        }
+
     /** Whether the coach said anything about this row beyond its number: gym-coach's own
      *  test for a row that may fold into a list of names (`_is_quiet`). */
     val coachSaid: Boolean
@@ -335,6 +352,11 @@ private const val MAX_ROUNDS = 20
 
 /** gym-coach writes at most two, or one "your logs disagree" line. */
 private const val MAX_CLAIMS = 2
+
+/** gym-coach's start heads (rule 3a) and bare-line heads; not its rep estimates ("~25 lb for 12 reps"). */
+private val STARTED = Regex(
+    """(?:first round: )?(?:start ~\d+(?:\.\d+)? lb|~\d+(?:\.\d+)? lb(?=, (?:as on|a step under|no heavier)))(.*)""",
+)
 
 /** "45 sec", "1 min" — the way the sheet writes it. */
 internal fun durationText(seconds: Int): String =
