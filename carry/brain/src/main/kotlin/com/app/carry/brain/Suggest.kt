@@ -691,7 +691,7 @@ private fun safeStart(ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalD
         val recent = tier.filter { daysBetween(date(it.date()), today) <= RELATED_LINE_WINDOW_DAYS }
         val source = recent.ifEmpty { tier }.maxBy { it.date() }
         var weight = source.weight()
-        val sourceImpl = (source.obj("variant")?.str("implement") ?: of(source).implement)
+        val sourceImpl = (source.obj("variant")?.str("implement")?.takeIf { it.isNotEmpty() } ?: of(source).implement)
             ?.takeIf { it !in NO_WEIGHT_IMPLEMENTS }
         val targetImpl = ml.variant.implement
         if ((sourceImpl in ONE_IMPLEMENT && !(targetImpl in ONE_IMPLEMENT && ml.variant.arms != "single")) ||
@@ -699,10 +699,13 @@ private fun safeStart(ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalD
         ) {
             weight = onRack(weight / 2)
         }
-        val done = source.int("reps")?.takeIf { it != 0 } ?: source.int("prescribed_reps")?.takeIf { it != 0 }
+        // As Python reads them: a reps of 8.5 stays 8.5, and the ratio is
+        // taken before it multiplies, which can land a hair under a rack
+        // weight and so a step lower; the other order would not.
+        val done = source.num("reps")?.takeIf { it != 0.0 } ?: source.num("prescribed_reps")?.takeIf { it != 0.0 }
         val wanted = ml.prescribedReps
         val scaled = done != null && wanted != null && wanted != 0 && wanted > done
-        if (scaled) weight = onRack(weight * (30 + done!!) / (30 + wanted!!))
+        if (scaled) weight = onRack(weight * ((30 + done!!) / (30 + wanted!!)))
         val ceiling = ceilingSet(ml.canonical, source, history, today)
         var cap = ceiling
         if (cap != null && weight >= cap.weight()) weight = cap.weight() else cap = null
