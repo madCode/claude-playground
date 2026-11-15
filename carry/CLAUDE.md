@@ -32,8 +32,9 @@ can tell the difference.
   start are kept or written (`CalendarReader`).
 - The network is for what the owner has approved, one use at a time:
   today, a CI debug build asking GitHub whether a newer build is out
-  (`DebugUpdates`, #107), sending nothing of theirs. Fetching the board
-  from Reddit is expected to follow, when the brain moves to the phone.
+  (`DebugUpdates`, #107), sending nothing of theirs. Next, reading the
+  day's board from this repository's `carry-boards` branch, which a
+  scheduled job fills from Reddit (`tools/boards/`), sending nothing either.
   Anything else that reaches off the device means something has gone
   wrong with the design rather than grown.
 - No account, and no database that outlives a session file.

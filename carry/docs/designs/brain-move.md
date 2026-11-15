@@ -26,7 +26,12 @@ decoding it leniently.
 
 **Phase 5 has started with the calendar:** the phone reads the class from the
 owner's own calendar, asking once at setup, and compares it with the
-laptop's sheet each hour. The board fetch waits on a Reddit installed-app ID.
+laptop's sheet each hour. **The board** comes from a scheduled GitHub job
+(madCode's idea, 2026-11-14), since Reddit now gates new apps: every half
+hour it reads the recent daily threads with the laptop's existing key, held
+as the repository's Actions secrets, and commits each class's intel comment,
+cut to its workout lines, to the `carry-boards` branch
+(`tools/boards/fetch_boards.py`). Carry reading it is next.
 
 ## Why now
 
@@ -52,7 +57,7 @@ syncing issues."* This replaces the "eventually" in the backlog with a plan.
 | Exercise knowledge base: `exercises.yaml` (movements, aliases) and `variants.py` (implements, grips, stances) | The same data, as an app asset |
 | Matcher: board text to rows (`gym_lib.match_wod`, combos) | Kotlin, in a `:brain` module |
 | Suggestions: streaks, estimates, floors and ceilings, related lines | Kotlin, in `:brain` |
-| Board fetch from Reddit (`reddit_fetch.py`) | Carry, on Wi-Fi or data, on a schedule |
+| Board fetch from Reddit (`reddit_fetch.py`) | A scheduled GitHub job publishes it; Carry downloads it, on Wi-Fi or data |
 | Which class is when: a private calendar URL (`gym_calendar.py`) | The phone's own calendar (`READ_CALENDAR`), as already designed in [read-class-from-calendar](read-class-from-calendar.md) |
 | History (`history.jsonl`) and the next-day import | Carry, which already writes the log |
 | Weekly audit and coverage probe | Stay on the laptop, reading an export of the history (below) |
@@ -106,8 +111,8 @@ fresh-eyes review.
    tests. Carry writes an export to the synced folder after every change,
    for the audit and as a backup.
 5. **Board and class on the phone.** The phone's calendar for when, and
-   Reddit for what: an installed-app token, which needs no secret stored
-   in the app, plus the borrow-the-other-class rule and its timing window.
+   the published board for what: no Reddit key on the phone at all, plus
+   the borrow-the-other-class rule and its timing window.
    Background work in WorkManager, like the hourly sheet check.
 6. **Side-by-side period**, as above.
 7. **Switch.** Carry's sheet becomes the sheet. The laptop job stops
