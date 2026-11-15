@@ -1,0 +1,74 @@
+name: Carry boards
+
+# The day's board from r/orangetheory, for Carry to read without a Reddit key
+# (madCode, 2026-11-14). Every half hour it finds the recent daily threads,
+# keeps each class's intel comment cut to its workout lines, and commits one
+# file per day to the `carry-boards` branch, which is never merged. Only a
+# change is committed. The Reddit key is the repository's Actions secrets;
+# GitHub gives them to neither a fork's pull request nor any pull request
+# here, and on a pull request this only runs the tests.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7,37 * * * *'
+  pull_request:
+    branches: [main]
+    paths: ['carry/tools/boards/**', '.github/workflows/carry-boards.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: carry-boards
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Tests
+        run: python3 -m unittest discover -v carry/tools/boards
+
+  fetch:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Fetch and commit the boards
+        env:
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/boards"
+          git init -q "$out"
+          cd "$out"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          if git fetch -q --depth 1 origin carry-boards; then
+            git checkout -q -b carry-boards FETCH_HEAD
+          else
+            git checkout -q --orphan carry-boards
+          fi
+          python3 "$GITHUB_WORKSPACE/carry/tools/boards/fetch_boards.py" .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No board changed."
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -qm "Boards, $(date -u +%FT%H:%MZ)"
+          git push -q origin carry-boards
