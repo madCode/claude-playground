@@ -786,7 +786,9 @@ the debug source set only; a release build has neither.
    later can find it.
 5. **Hands it to Android's `PackageInstaller`.** The first in-app update
    always asks "Update this app?". On Android 12 and later, once Carry has
-   installed itself, later ones may skip that, which is why it asks to. A
+   installed itself, later ones skip that: it asks to, and declares
+   `UPDATE_PACKAGES_WITHOUT_USER_ACTION`, without which Android asks every
+   time and the background update never happens. A
    session that fails before it's committed is abandoned, so nothing is
    left staged.
 6. **Failures are said, and counted.** A download or hand-off that fails
