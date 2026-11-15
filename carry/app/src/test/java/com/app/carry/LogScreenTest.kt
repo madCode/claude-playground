@@ -8,6 +8,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.hasContentDescription
@@ -629,6 +631,20 @@ class LogScreenTest {
         modOn("added exercise, lb").assertIsDisplayed()
         compose.onNodeWithContentDescription("added exercise, lb").performTextReplacement("30")
         modOn("added exercise, lb").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a chip turned on is told from one turned off at a glance`() {
+        // The owner, 2026-11-15: mod selected "is not high contrast enough
+        // compared to unselected". The shot puts both states side by side,
+        // mod and easy each on in one row and off in the next.
+        edits.value = mapOf(6 to SessionPatch.Entry(weight = 12.5, easier = true, easy = true))
+        show()
+        compose.onNode(hasScrollAction()).performScrollToNode(hasContentDescription("lateral raise, lb"))
+        modOn("lateral raise, lb").assertIsDisplayed().assertIsOn()
+        compose.onNode(hasScrollAction()).performScrollToNode(hasContentDescription("squat, lb"))
+        modOn("squat, lb").assertIsDisplayed().assertIsOff()
+        shoot("49-chips-on-and-off")
     }
 
     @Test

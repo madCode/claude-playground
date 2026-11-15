@@ -37,6 +37,14 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 
 
 
+## 2026-11-15 — a chip that is on looks on
+
+- **The owner:** *mod* selected "is not high contrast enough compared to
+  unselected". On it was `ChalkDim`, off `ChalkFaint`: two greys a few
+  shades apart. Now every chip that is on is filled with its colour (*mod*
+  in chalk, *easy* amber, *hurt* brick) and one that is off stays an
+  outline. A new screenshot, `49-chips-on-and-off`, shows both side by side.
+
 ## 2026-11-15 — why Carry never updated itself
 
 - **A missing permission.** Since Android 12, an app may install its own

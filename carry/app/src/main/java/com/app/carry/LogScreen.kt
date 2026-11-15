@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -430,7 +431,7 @@ private fun LogRow(
             // bodyweight movement has; kept while it is on, so it can't be
             // left set where nobody can see it.
             if (offersMod || entry.easier) {
-                Chip("mod", entry.easier, Look.ChalkDim) { change(entry.copy(easier = !entry.easier)) }
+                Chip("mod", entry.easier, Look.Chalk) { change(entry.copy(easier = !entry.easier)) }
             }
         }
         RowProblem(listOfNotNull(weightProblem, repsProblem))
@@ -551,7 +552,7 @@ private fun AddedRow(
             // The coach suggests nothing for an added row, so the weight
             // box is the only sign of whether it carried one.
             if (row.weight == null || row.easier) {
-                Chip("mod", row.easier, Look.ChalkDim) { onChange(row.copy(easier = !row.easier)) }
+                Chip("mod", row.easier, Look.Chalk) { onChange(row.copy(easier = !row.easier)) }
             }
             // No skip: a row you added is one you did. Clearing it is
             // emptying the name.
@@ -708,13 +709,19 @@ private fun Chip(text: String, on: Boolean, accent: androidx.compose.ui.graphics
             .toggleable(value = on, role = Role.Checkbox, onValueChange = { onToggle() }),
         contentAlignment = Alignment.Center,
     ) {
+        // On is filled, off is an outline: told apart by shape as well as
+        // colour. Two shades of grey for on and off read as one state
+        // (owner, 2026-11-15).
         Text(
             text,
             maxLines = 1,
-            color = if (on) accent else Look.ChalkFaint,
+            // Dark text on amber or chalk, light on brick: whichever reads better on the fill.
+            color = if (!on) Look.ChalkFaint else if (accent.luminance() > 0.3f) Look.Slate else Look.Chalk,
             fontFamily = Look.Figure, fontSize = Look.After.Chip,
+            fontWeight = if (on) FontWeight.SemiBold else null,
             modifier = Modifier
                 .clip(RoundedCornerShape(3.dp))
+                .background(if (on) accent else androidx.compose.ui.graphics.Color.Transparent)
                 .border(1.dp, if (on) accent else Look.RuleStrong, RoundedCornerShape(3.dp))
                 .padding(horizontal = 6.dp, vertical = 5.dp),
         )
