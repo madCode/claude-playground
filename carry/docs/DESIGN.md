@@ -103,7 +103,10 @@ movement can be told apart), and *hurt* at the end of it, then a weight box, a r
 tag), *easy*, and *mod* on a row the coach gave no weight. Plus **add a
 row**, for anything the sheet didn't list. Visible labels sit above the boxes
 ("lb", "reps", "time"), stay put once something is typed, and are the
-words TalkBack reads on each box; the chips sit level with the boxes.
+words TalkBack reads on each box; the chips sit level with the boxes. A
+chip that is on is filled with its colour and one that is off is an
+outline, so the two differ in shape, not only in shade (owner, 2026-11-15:
+*mod* on and off had been two near greys).
 
 **Each row says "I did it" with its own fields.** There is no separate
 "did it" control, and there is no way to say "didn't do it":
