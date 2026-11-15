@@ -1,12 +1,14 @@
 name: Carry boards
 
 # The day's board from r/orangetheory, for Carry to read without a Reddit key
-# (madCode, 2026-11-14). Every half hour it finds the recent daily threads,
-# keeps each class's intel comment cut to its workout lines, and commits one
-# file per day to the `carry-boards` branch, which is never merged. Only a
-# change is committed. The Reddit key is the repository's Actions secrets;
-# GitHub gives them to neither a fork's pull request nor any pull request
-# here, and on a pull request this only runs the tests.
+# (madCode, 2026-11-14). Every half hour it reads the recent daily threads,
+# keeps each class's intel comment cut to its workout lines, and replaces the
+# `carry-boards` branch, which is never merged, with one commit holding the
+# current days only: a comment deleted on Reddit leaves no copy here. Nothing
+# is pushed unless a board changed. The Reddit key is the repository's
+# Actions secrets. GitHub does give secrets to a pull request from a branch
+# of this repository, so the `if` on the fetch job is what keeps a pull
+# request to the tests; keep it.
 on:
   workflow_dispatch:
   schedule:
@@ -17,10 +19,6 @@ on:
 
 permissions:
   contents: read
-
-concurrency:
-  group: carry-boards
-  cancel-in-progress: false
 
 jobs:
   test:
@@ -40,6 +38,10 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
+    # Two fetches never push at once; a pull request's tests never wait on one.
+    concurrency:
+      group: carry-boards-fetch
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -53,22 +55,30 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          out="$RUNNER_TEMP/boards"
-          git init -q "$out"
-          cd "$out"
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
-          if git fetch -q --depth 1 origin carry-boards; then
-            git checkout -q -b carry-boards FETCH_HEAD
-          else
-            git checkout -q --orphan carry-boards
+          prev="$RUNNER_TEMP/prev"
+          out="$RUNNER_TEMP/out"
+          git init -q "$prev"
+          git -C "$prev" remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          if git -C "$prev" fetch -q --depth 1 origin carry-boards; then
+            git -C "$prev" checkout -q FETCH_HEAD
           fi
-          python3 "$GITHUB_WORKSPACE/carry/tools/boards/fetch_boards.py" .
-          git add -A
-          if git diff --cached --quiet; then
+          mkdir -p "$out"
+          status=0
+          python3 "$GITHUB_WORKSPACE/carry/tools/boards/fetch_boards.py" "$prev" "$out" || status=$?
+          if [ "$status" = 75 ]; then
+            echo "Reddit unreachable; the branch stays as it is."
+            exit 0
+          elif [ "$status" != 0 ]; then
+            exit "$status"
+          fi
+          if diff -r -q --exclude=.git "$prev" "$out" > /dev/null; then
             echo "No board changed."
             exit 0
           fi
+          cd "$out"
+          git init -q -b carry-boards
+          git add -A
           git -c user.name='github-actions[bot]' \
               -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-              commit -qm "Boards, $(date -u +%FT%H:%MZ)"
-          git push -q origin carry-boards
+              commit -q --allow-empty -m "Boards, $(date -u +%FT%H:%MZ)"
+          git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" carry-boards
