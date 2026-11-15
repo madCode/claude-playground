@@ -20,7 +20,7 @@ espresso = "3.7.0"
 androidxTestRunner = "1.7.0"
 orchestrator = "1.6.1"
 testServices = "1.6.0"
-uiautomator = "2.3.0"
+uiautomator = "2.4.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
