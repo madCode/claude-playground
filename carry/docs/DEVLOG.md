@@ -37,6 +37,18 @@ The plan is [BACKLOG.md](BACKLOG.md); how it works now is
 
 
 
+## 2026-11-15 — why Carry never updated itself
+
+- **A missing permission.** Since Android 12, an app may install its own
+  update without a tap only if it declares
+  `UPDATE_PACKAGES_WITHOUT_USER_ACTION`. Carry didn't, so Android asked
+  every time, and the background update, which never shows a dialog, waited
+  for a tap that no screen asked for. The owner's phone stayed on whichever
+  build they last installed by hand.
+- The build's manifest check now requires it in debug and refuses it in
+  release. The first update after this one still asks once, because the
+  build doing the installing doesn't have the permission yet.
+
 ## 2026-11-14 — a start says where its number came from
 
 - **The coach now gives every weighted row a number** (gym-coach#81). A

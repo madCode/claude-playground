@@ -125,7 +125,10 @@ abstract class SelfUpdateManifestCheck : DefaultTask() {
     @TaskAction
     fun check() {
         val text = manifest.get().asFile.readText()
-        for (name in listOf("android.permission.REQUEST_INSTALL_PACKAGES", "android.permission.INTERNET", "UpdateInstaller\$Result")) {
+        for (name in listOf(
+            "android.permission.REQUEST_INSTALL_PACKAGES", "android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION",
+            "android.permission.INTERNET", "UpdateInstaller\$Result",
+        )) {
             if ((name in text) != selfUpdates.get()) {
                 throw GradleException("${manifest.get().asFile}: $name should " + if (selfUpdates.get()) "be there" else "not be there")
             }

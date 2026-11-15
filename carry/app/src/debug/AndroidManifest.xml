@@ -7,11 +7,15 @@
     and downloading it. The request carries nothing of the owner's; session files still never
     leave except through the share sheet.
   - REQUEST_INSTALL_PACKAGES, to hand that build to Android's installer. Android still asks the
-    owner to allow it once, and to confirm each install unless it lets the app update itself.
+    owner to allow it once.
+  - UPDATE_PACKAGES_WITHOUT_USER_ACTION, so Android 12 and later install an update of Carry by
+    Carry without asking. Without it every install wants a tap, and a background one, which
+    never shows a dialog, waits for the owner: their phone never updated itself until this.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
     <application>
         <receiver
             android:name=".UpdateInstaller$Result"
