@@ -609,7 +609,12 @@ private fun comparableEntries(ml: MatchedLine, history: List<Row>): List<Pair<Ro
 }
 
 /** `gym_lib._rule_3`: "at least" and "at most" from comparable setups, or one "your logs disagree". */
-private fun rule3(ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalDate): List<String> {
+private fun rule3(ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalDate): List<String> =
+    rule3Bounds(ml, kb, history, today).first
+
+/** `gym_lib._rule_3_bounds`: the claims, and the floor and ceiling behind them; both null when the logs disagree. */
+private fun rule3Bounds(ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalDate):
+    Triple<List<String>, Pair<Double, Row>?, Pair<Double, Row>?> {
     val floors = mutableListOf<Pair<Double, Row>>()
     val ceilings = mutableListOf<Pair<Double, Row>>()
     val pattern = patternOf(ml, kb)
@@ -624,8 +629,8 @@ private fun rule3(ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalDate)
         val (fw, fh) = floors.maxBy { it.first }
         val (cw, ch) = ceilings.minBy { it.first }
         if (fw > cw) {
-            return listOf("your logs disagree: ${g(fw)} lb (${citation(fh, ml.variant, kb, today)}) " +
-                "vs ${g(cw)} lb (${citation(ch, ml.variant, kb, today)})")
+            return Triple(listOf("your logs disagree: ${g(fw)} lb (${citation(fh, ml.variant, kb, today)}) " +
+                "vs ${g(cw)} lb (${citation(ch, ml.variant, kb, today)})"), null, null)
         }
     }
     val claims = mutableListOf<String>()
@@ -637,7 +642,23 @@ private fun rule3(ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalDate)
         val (w, h) = ceilings.minBy { it.first }
         claims += "at most ${g(w)} lb (${citation(h, ml.variant, kb, today)})"
     }
-    return claims
+    return Triple(claims, floors.maxByOrNull { it.first }, ceilings.minByOrNull { it.first })
+}
+
+/** `gym_lib._bounded_start`: a number for a row rule 3 bounded. */
+private fun boundedStart(
+    ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalDate,
+    floor: Pair<Double, Row>?, ceiling: Pair<Double, Row>?,
+): Triple<String, Double, Row?>? {
+    if (floor != null) return Triple("~${g(floor.first)} lb, the floor below", floor.first, null)
+    if (ceiling == null) return null
+    val (weight, h) = ceiling
+    val failed = !isComplete(h) || hurt(h)
+    val limit = if (failed) stepDown(weight) else weight
+    val start = safeStart(ml, kb, history, today)
+    if (start != null && start.second <= limit) return start
+    if (failed && limit >= weight) return null
+    return Triple(if (failed) "~${g(limit)} lb, a step under the cap below" else "~${g(limit)} lb, the cap below", limit, null)
 }
 
 // ------------------------------------------------------ a start (rule 3a)
@@ -654,6 +675,8 @@ private val SAYS_UNLOADED = pyRegex(
 
 private val ONE_IMPLEMENT = setOf("single_dumbbell", "ybell", "kettlebell", "medball")
 private val TWO_IMPLEMENT = setOf("double_dumbbell")
+private val ONE_LEG = setOf("single", "split")
+private const val ONE_LEG_FACTOR = 0.6
 private val ISOLATION_PATTERNS = setOf("fly", "raise", "triceps", "curl", "calf")
 
 private fun onRack(w: Double): Double = DUMBBELL_LB.lastOrNull { it <= w }?.toDouble() ?: w
@@ -699,6 +722,10 @@ private fun safeStart(ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalD
         ) {
             weight = onRack(weight / 2)
         }
+        // `gym_lib.ONE_LEG_FACTOR`: one leg, or a split stance, from a set on two.
+        val sourceStance = source.obj("variant")?.str("stance")
+        val legsScaled = ml.variant.stance in ONE_LEG && sourceStance !in ONE_LEG
+        if (legsScaled) weight = onRack(weight * ONE_LEG_FACTOR)
         // As Python reads them: a reps of 8.5 stays 8.5, and the ratio is
         // taken before it multiplies, which can land a hair under a rack
         // weight and so a step lower; the other order would not.
@@ -709,7 +736,7 @@ private fun safeStart(ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalD
         val ceiling = ceilingSet(ml.canonical, source, history, today)
         var cap = ceiling
         if (cap != null && weight >= cap.weight()) weight = cap.weight() else cap = null
-        repeat(if (scaled && cap == null) 0 else SAFE_START_STEPS_DOWN) { weight = stepDown(weight) }
+        repeat(if ((scaled || legsScaled) && cap == null) 0 else SAFE_START_STEPS_DOWN) { weight = stepDown(weight) }
         weight = maxOf(weight, minOf(DUMBBELL_LB[0].toDouble(), source.weight()))
         if (ceiling != null && weight >= ceiling.weight()) return null
         val how = sourceImpl?.takeIf { it != ml.variant.implement }?.let { IMPLEMENT_LABELS[it] }?.let { ", $it" } ?: ""
@@ -958,8 +985,10 @@ private fun suggestOne(ml: MatchedLine, kb: Kb, history: List<Row>, today: Local
     var start: Triple<String, Double, Row?>? = null
     if (head == null) {
         head = "no history yet"
-        claims = rule3(ml, kb, history, today)
-        if (claims.isEmpty()) start = safeStart(ml, kb, history, today)
+        val (bounded, floor, ceiling) = rule3Bounds(ml, kb, history, today)
+        claims = bounded
+        start = if (claims.isEmpty()) safeStart(ml, kb, history, today)
+        else boundedStart(ml, kb, history, today, floor, ceiling)
     }
     var shown: String = head!!
 
