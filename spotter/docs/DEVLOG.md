@@ -18,6 +18,9 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 - **Shipped:** an imported load with an unknown count now keeps its per-dumbbell weight, so it
   can step on the rack; it still has no total and converts to nothing. DESIGN.md has the
   export's shape.
+- **Review caught:** stepping from an unknown count could double a weight if an old goblet "40"
+  fed a two-dumbbell row; DESIGN.md now says such a load only feeds rows whose count it can't
+  contradict, for the progression work to test.
 
 ### Spotter starts
 - **Why:** madCode asked for a fresh app beside Carry, from the handoff now in

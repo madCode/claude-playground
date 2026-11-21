@@ -42,7 +42,7 @@ class LoadTest {
     fun labelsSayCountAndWeight() {
         assertEquals("2×25", Load(25, 2).label)
         assertEquals("1×50", Load(50, 1).label)
-        assertEquals("40 lb (count?)", Load(40, null).label)
+        assertEquals("40 lb each (count?)", Load(40, null).label)
     }
 
     @Test(expected = IllegalArgumentException::class)

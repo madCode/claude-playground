@@ -34,6 +34,6 @@ data class Load(val lb: Int, val count: Int?) {
         return Load(each, 2)
     }
 
-    /** How the sheet writes it: "2×25", or "40 lb (count?)" when the count is unknown. */
-    val label: String get() = if (count == null) "$lb lb (count?)" else "$count×$lb"
+    /** How the sheet writes it: "2×25", or "40 lb each (count?)" when the count is unknown. */
+    val label: String get() = if (count == null) "$lb lb each (count?)" else "$count×$lb"
 }

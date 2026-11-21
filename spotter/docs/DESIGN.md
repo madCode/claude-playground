@@ -90,8 +90,10 @@ next one in that list. A Y-bell is another implement and never steps onto that l
   never merged into one: a single-arm lift relates to a two-dumbbell one through a variation
   factor, not arithmetic.
 - Imported history gives the weight of each dumbbell but often not how many. Such a load can
-  step on the rack, but has no total and converts to no other count. Imported decimals round
-  down, never up.
+  step on the rack, but has no total and converts to no other count. It only feeds a row whose
+  count it can't contradict: a row with no count of its own, or one whose name fixes the count
+  (a goblet squat is one dumbbell). Otherwise an imported "squat 40" that was a goblet could
+  become 2×45 on a two-dumbbell row. Imported decimals round down, never up.
 
 ## Where the inputs come from
 
