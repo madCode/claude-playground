@@ -67,9 +67,11 @@ next one in that list.
   order: name, the number, ▲ ▼ = against last time. Warnings at the top and on their rows
   (a miss, pain, a run of unfinished sets). A tap on a row opens why.
 - **Log.** The same rows. Each is "✓ as listed" or "changed" (heaviest weight from the rack,
-  reps), with "felt easy / hard", "twinge" and "had to stop" one tap away, and per-round detail
-  optional. Untouched rows stay unlogged, never "skipped". "Add an exercise" records one the
-  board missed by picking it from the list.
+  reps), with "felt easy / hard", "twinge", "had to stop" and "did an easier version" one tap
+  away. "+ Each round" is optional: each new round starts as a copy of the previous one, so
+  only what changed needs a tap. The row's heaviest weight and reps stay its one number.
+  Untouched rows stay unlogged, never "skipped". "Add an exercise" records one the board
+  missed by picking it from the list.
 
 Later: progress, review of new exercise names, sharing a board for others, the watch.
 
