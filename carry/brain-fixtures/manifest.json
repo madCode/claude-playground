@@ -6,7 +6,7 @@
     "low row": 30.0
   },
   "boards": 277,
-  "corpus": "277 rows, sha256 b5281eacdae9",
+  "corpus": "277 rows, sha256 8790fb471179",
   "days": 163,
   "exercises_sha256": "7531d641ab6d",
   "schema": "brain-fixtures/3"
