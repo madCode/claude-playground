@@ -1166,6 +1166,47 @@
     "legs",
     "cardio"
    ]
+  },
+  {
+   "name": "plank pop",
+   "aliases": [
+    "plank pops"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "plank jack",
+   "aliases": [
+    "plank jacks"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "jumping jack",
+   "aliases": [
+    "jumping jacks"
+   ],
+   "pattern": null,
+   "muscles": [
+    "full body",
+    "cardio"
+   ]
+  },
+  {
+   "name": "toe tap",
+   "aliases": [
+    "toe taps"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
   }
  ]
 }

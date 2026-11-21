@@ -18,12 +18,13 @@ can grade against Carry.
 
 Step 1, the coach core:
 
-- [ ] Starting lists: movements (from `carry/brain-fixtures/exercises.json`), variations and
-  filler, as JSON resources in `coach/`. *(design)*
 - [ ] Board line reading: reps and rep schemes ("6 each", "12 total", ladders, timed), with
   traps 5, 7 and 8 as tests. *(handoff)*
 - [ ] Identity: movement plus variations, every word accounted for, "not sure" otherwise; trap
   6, 10 and the close-grip and floor cases as tests. *(design, madCode)*
+- [ ] Words the lists leave over on the corpus, for madCode's first review list: "tap"
+  ("alt dumbbell tap"), "step out", "balance", "stand" ("sit-up to stand"), bare "press" and
+  "rotation", "jack", "walkout", "ultimate". About 21% of rows still have one. *(cycle 1)*
 - [ ] The corpus grade: every line of `boards.jsonl` read fully, unsure or wrong, against
   hand-checked answers for a sample. *(design)*
 - [ ] Progression: up, hold, down from a history of sets; traps 3 and 4 as tests; Epley only in
@@ -70,3 +71,6 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
   to a folder madCode controls.
 
 ## Done
+
+- [x] Starting lists: movements, variations, connectors, rep-scheme words and filler, as JSON in
+  the coach, loaded by `Vocabulary`. Cycle 1, 2026-11-21.

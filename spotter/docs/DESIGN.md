@@ -75,9 +75,19 @@ what is on the board, and nothing says so.
   which variation, harder or easier, or filler. The answer is an event in the phone's log, so it
   never relabels history already logged and is backed up with it. A useful answer can be
   proposed back to the starting list in a PR.
-- **Where the lists live.** The starting exercise and vocabulary lists are public knowledge, so
-  they are JSON files in this repository, shipped inside the app and changed by PR, with the
-  corpus tests run on them in CI. madCode's own answers live only on the phone.
+- **Where the lists live.** The starting lists are public knowledge, so they are JSON files in
+  `coach/src/main/resources/spotter/`, shipped inside the app and changed by PR:
+  `movements.json` (each movement, its true synonyms, pattern, muscles, and whether it is
+  one-legged) and `words.json` (variations by axis, connectors, rep-scheme words, filler).
+  madCode's own answers live only on the phone.
+- **A movement is what is lifted; everything around it is a variation.** Carry's list baked
+  variations into names ("goblet squat", "reverse grip low row") and filed different exercises
+  as aliases ("hammer curl" under bicep curl, a bare "rotation" under torso rotation). Here an
+  alias is only another spelling, a named variation is a word on its axis, and a combo ("lunge
+  with torso rotation") is two movements and a connector, never a list entry.
+- **Every phrase means one thing.** Loading the lists fails if a phrase is in two places, so
+  which one a line meant never depends on file order. The longest phrase wins when reading:
+  "high plank" is a position before "high pull" could be a movement.
 
 ## Loads
 

@@ -146,11 +146,17 @@
    ],
    "overhead": [
     "overhead"
+   ],
+   "low bench": [
+    "low bench"
    ]
   },
   "stability": {
    "bosu": [
-    "bosu"
+    "bosu",
+    "on bosu",
+    "feet on bosu",
+    "on the bosu"
    ]
   },
   "grip": {
@@ -201,6 +207,13 @@
    ],
    "eccentric": [
     "eccentric"
+   ],
+   "full range": [
+    "full",
+    "full range"
+   ],
+   "stick": [
+    "stick it"
    ]
   },
   "direction": {
@@ -239,6 +252,17 @@
    "light": [
     "light",
     "lighter"
+   ]
+  },
+  "band": {
+   "low": [
+    "low band"
+   ],
+   "mid": [
+    "mid band"
+   ],
+   "high": [
+    "high band"
    ]
   }
  },

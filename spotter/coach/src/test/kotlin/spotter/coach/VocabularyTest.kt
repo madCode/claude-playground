@@ -66,6 +66,13 @@ class VocabularyTest {
     }
 
     @Test
+    fun whereTheBandOrBosuGoesIsAVariation() {
+        assertEquals(Variation("band", "mid"), words.lookup("mid band"))
+        assertEquals(Variation("stability", "bosu"), words.lookup("feet on bosu"))
+        assertEquals("plank pop", movement("plank pops"))
+    }
+
+    @Test
     fun aWordInNoListIsUnknown() {
         assertNull(words.lookup("windmill"))
     }
