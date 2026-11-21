@@ -171,6 +171,8 @@ line: `date`, `exercise` or `components`, `line`, `variant`, `weight`, `reps`,
 `prescribed_reps`, `easy`, `hard`, `hurt`, `skipped`, `incomplete`,
 `breakdown`). Older rows don't say whether a weight was per hand or total, so
 import them with the count marked unknown and treat them as weaker evidence.
+(Since settled: the number is per dumbbell; only the count is missing. See DESIGN.md's
+scorecard section.)
 The import reads a file madCode provides at runtime; their data never enters
 this repository.
 
