@@ -196,6 +196,33 @@ class LogScreenTest {
     }
 
     @Test
+    fun `typing a name offers the coach's names, and a tap takes one`() {
+        // madCode, 2026-11-19: a picked name is the one the laptop's import
+        // knows; a typed one may not be. The list is the bundled asset, the
+        // same one the app ships.
+        show()
+        tapAdd()
+        waitForFocusedName()
+        focusedName().performTextReplacement("gobl sq")
+        reach("goblet squat")
+        shoot("50-name-suggestions")
+        compose.onNodeWithContentDescription("suggested name: goblet squat").performClick()
+        assertEquals("goblet squat", added.value.single().name)
+        // Taken: the list goes, since the name is now one of them.
+        compose.onAllNodes(hasContentDescription("suggested name:", substring = true)).assertCountEquals(0)
+    }
+
+    @Test
+    fun `a name the coach doesn't know is kept as typed, with nothing in the way`() {
+        show()
+        tapAdd()
+        waitForFocusedName()
+        focusedName().performTextReplacement("zorbing")
+        assertEquals("zorbing", added.value.single().name)
+        compose.onAllNodes(hasContentDescription("suggested name:", substring = true)).assertCountEquals(0)
+    }
+
+    @Test
     fun `adding a row gives somewhere to name it`() {
         // On a day with no intel for the owner's class this is the session,
         // not an afterthought.

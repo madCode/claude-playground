@@ -62,6 +62,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.runtime.withFrameNanos
@@ -486,6 +488,9 @@ private fun AddedRow(
     onChange: (AddedSet) -> Unit,
 ) {
     val nameFocus = remember { FocusRequester() }
+    var nameFocused by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val known = remember { ExerciseNames.load(context) }
     if (focus) {
         LaunchedEffect(Unit) {
             // From the row, not the list: a request made before the row
@@ -531,9 +536,27 @@ private fun AddedRow(
                 },
                 modifier = Modifier.weight(1f)
                     .focusRequester(nameFocus)
+                    .onFocusChanged { nameFocused = it.isFocused }
                     .semantics { contentDescription = "added exercise name" },
             )
             Chip("hurt", row.hurt, Look.Brick) { onChange(row.copy(hurt = !row.hurt)) }
+        }
+        // The coach's names for what is being typed: tapping one gives the
+        // row the name the laptop's import knows. Only while the box has the
+        // focus, so a finished row doesn't carry a list under it.
+        if (nameFocused) {
+            ExerciseNames.suggest(row.name, known).forEach { name ->
+                Text(
+                    name,
+                    color = Look.ChalkDim, fontFamily = Look.Name, fontSize = Look.After.Name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 44.dp)
+                        .clickable(role = Role.Button, onClickLabel = "use this name") { onChange(row.copy(name = name)) }
+                        .padding(start = 9.dp, top = 10.dp, bottom = 6.dp)
+                        .semantics { contentDescription = "suggested name: $name" },
+                )
+            }
         }
         FlowRow(
             Modifier.fillMaxWidth().padding(start = 9.dp, top = 4.dp),

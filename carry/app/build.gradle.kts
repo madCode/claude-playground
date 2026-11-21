@@ -100,11 +100,33 @@ androidComponents {
     }
     onVariants { variant ->
         val name = variant.name.replaceFirstChar { it.uppercase() }
+        // The coach's exercise names, for the After tab's suggestions (ExerciseNames).
+        val bundleKb = tasks.register<BundleExerciseNames>("bundle${name}ExerciseNames") {
+            source.set(rootProject.layout.projectDirectory.file("brain-fixtures/exercises.json"))
+        }
+        variant.sources.assets?.addGeneratedSourceDirectory(bundleKb, BundleExerciseNames::outDir)
         val manifestCheck = tasks.register<SelfUpdateManifestCheck>("check${name}SelfUpdateManifest") {
             manifest.set(variant.artifacts.get(com.android.build.api.artifact.SingleArtifact.MERGED_MANIFEST))
             selfUpdates.set(variant.buildType == "debug")
         }
         tasks.named("check") { dependsOn(manifestCheck) }
+    }
+}
+
+/** Copies the brain fixtures' knowledge base into the app's assets as `exercises.json`. */
+abstract class BundleExerciseNames : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val source: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val dir = outDir.get().asFile
+        dir.mkdirs()
+        source.get().asFile.copyTo(dir.resolve("exercises.json"), overwrite = true)
     }
 }
 
