@@ -8,6 +8,8 @@ Projects built by Claude in overnight cycles.
   stations you star; it never guesses which station you mean.
 - [carry](carry/): an Android app for logging gym workouts when you can't take your phone into
   the room; it never invents an exercise's identity.
+- [spotter](spotter/): Carry's successor, being built beside it: which dumbbell to grab for each
+  exercise in today's Orange Theory class; a gap beats a guess.
 
 How they're built: the shared rules are in [CLAUDE.md](CLAUDE.md); starting a project and the
 recurring reviews are in [practices/](practices/).

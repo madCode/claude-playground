@@ -4,8 +4,9 @@ madCode asked, on 2026-11-21, for this app to be built from scratch in a new
 session, beside the current Carry (`../carry/`), which keeps working until this
 one is better. "Better" is measured, not felt: see **The scorecard decides**.
 This file is the brief. It hands over what a month of Carry learned, not its
-code. Read it whole before planning; the name `carry-next` is a placeholder
-for madCode to change.
+code. Read it whole before planning. (Written as `carry-next/HANDOFF.md`; madCode
+named the app Spotter, and paths to `../carry/` are from the old folder, a
+sibling of `carry/`, as `spotter/` is.)
 
 ## Who it's for
 
