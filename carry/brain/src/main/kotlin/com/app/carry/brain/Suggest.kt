@@ -645,20 +645,39 @@ private fun rule3Bounds(ml: MatchedLine, kb: Kb, history: List<Row>, today: Loca
     return Triple(claims, floors.maxByOrNull { it.first }, ceilings.minByOrNull { it.first })
 }
 
+/** `gym_lib.FLOOR_FRESH_DAYS`. */
+private const val FLOOR_FRESH_DAYS = 35L
+
 /** `gym_lib._bounded_start`: a number for a row rule 3 bounded. */
 private fun boundedStart(
     ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalDate,
     floor: Pair<Double, Row>?, ceiling: Pair<Double, Row>?,
 ): Triple<String, Double, Row?>? {
-    if (floor != null) return Triple("~${g(floor.first)} lb, the floor below", floor.first, null)
+    if (floor != null) {
+        val (weight, h) = floor
+        if (ceiling != null && ceiling.first <= weight && (!isComplete(ceiling.second) || hurt(ceiling.second))) {
+            val under = stepDown(ceiling.first)
+            return if (under < ceiling.first) Triple("~${g(under)} lb, a step under the cap below", under, null) else null
+        }
+        if (daysBetween(date(h.date()), today) > FLOOR_FRESH_DAYS) {
+            val under = stepDown(weight)
+            return Triple("~${g(under)} lb, a step under an old floor", under, null)
+        }
+        return Triple("~${g(weight)} lb, the floor below", weight, null)
+    }
     if (ceiling == null) return null
-    val (weight, h) = ceiling
-    val failed = !isComplete(h) || hurt(h)
-    val limit = if (failed) stepDown(weight) else weight
+    val limit = stepDown(ceiling.first)
+    if (limit >= ceiling.first) return null
     val start = safeStart(ml, kb, history, today)
-    if (start != null && start.second <= limit) return start
-    if (failed && limit >= weight) return null
-    return Triple(if (failed) "~${g(limit)} lb, a step under the cap below" else "~${g(limit)} lb, the cap below", limit, null)
+    if (start == null) {
+        val h = ceiling.second
+        val sameMove = h.str("exercise") == ml.canonical &&
+            oneLegged(ml.canonical, ml.variant.stance) == oneLegged(h.str("exercise"), h.obj("variant")?.str("stance"))
+        if (sameMove && (!isComplete(h) || hurt(h))) return Triple("~${g(limit)} lb, a step under the cap below", limit, null)
+        return null
+    }
+    if (start.second <= limit) return start
+    return Triple("~${g(limit)} lb, a step under the cap below", limit, null)
 }
 
 // ------------------------------------------------------ a start (rule 3a)
@@ -675,8 +694,15 @@ private val SAYS_UNLOADED = pyRegex(
 
 private val ONE_IMPLEMENT = setOf("single_dumbbell", "ybell", "kettlebell", "medball")
 private val TWO_IMPLEMENT = setOf("double_dumbbell")
-private val ONE_LEG = setOf("single", "split")
 private const val ONE_LEG_FACTOR = 0.6
+private val ONE_LEG_STANCES = setOf("single", "split", "staggered")
+private val ONE_LEG_NAMES = listOf(
+    "single-leg", "single leg", "lunge", "step-up", "step up", "split squat", "bulgarian", "cossack", "pistol", "skater squat",
+)
+
+/** `gym_lib._one_legged`: one leg by stance, or by a name whose stance boards leave unsaid. */
+private fun oneLegged(canonical: String?, stance: String?): Boolean =
+    stance in ONE_LEG_STANCES || ONE_LEG_NAMES.any { it in (canonical ?: "") }
 private val ISOLATION_PATTERNS = setOf("fly", "raise", "triceps", "curl", "calf")
 
 private fun onRack(w: Double): Double = DUMBBELL_LB.lastOrNull { it <= w }?.toDouble() ?: w
@@ -723,8 +749,8 @@ private fun safeStart(ml: MatchedLine, kb: Kb, history: List<Row>, today: LocalD
             weight = onRack(weight / 2)
         }
         // `gym_lib.ONE_LEG_FACTOR`: one leg, or a split stance, from a set on two.
-        val sourceStance = source.obj("variant")?.str("stance")
-        val legsScaled = ml.variant.stance in ONE_LEG && sourceStance !in ONE_LEG
+        val legsScaled = oneLegged(ml.canonical, ml.variant.stance) &&
+            !oneLegged(source.str("exercise"), source.obj("variant")?.str("stance"))
         if (legsScaled) weight = onRack(weight * ONE_LEG_FACTOR)
         // As Python reads them: a reps of 8.5 stays 8.5, and the ratio is
         // taken before it multiplies, which can land a hair under a rack
