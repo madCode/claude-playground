@@ -6,10 +6,18 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 - **Built so far:** the design, and the coach's first piece: loads per hand with a count, and
   the rack's uneven steps.
-- **Waiting on you:** whether the scorecard's `suggested_weight` and `weight` are per hand or
-  total.
+- **Waiting on you:** nothing.
 
 ## Saturday 21 November 2026
+
+### The scorecard's shape
+- **Why:** the export has to be what gym-coach's `scorecard.py` grades.
+- **Learned:** from the session that wrote it, at madCode's ask: weights are per dumbbell, never
+  a sum, compared by their place on the rack. Older history also holds per-dumbbell weights; only
+  the count is missing.
+- **Shipped:** an imported load with an unknown count now keeps its per-dumbbell weight, so it
+  can step on the rack; it still has no total and converts to nothing. DESIGN.md has the
+  export's shape.
 
 ### Spotter starts
 - **Why:** madCode asked for a fresh app beside Carry, from the handoff now in

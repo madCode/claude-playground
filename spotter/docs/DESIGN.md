@@ -89,8 +89,9 @@ next one in that list. A Y-bell is another implement and never steps onto that l
   whose total is no more than it, rounded down to the rack (1×40 → 2×20). Two dumbbells are
   never merged into one: a single-arm lift relates to a two-dumbbell one through a variation
   factor, not arithmetic.
-- An imported load with an unknown count has no per-hand weight, so nothing steps or converts
-  from it. Imported decimals round down, never up.
+- Imported history gives the weight of each dumbbell but often not how many. Such a load can
+  step on the rack, but has no total and converts to no other count. Imported decimals round
+  down, never up.
 
 ## Where the inputs come from
 
@@ -129,6 +130,12 @@ names and numbers; the phone sends it the day's sheet through Garmin's Connect I
 SDK. The coach stays on the phone; the watch only shows what it is sent.
 
 ## The scorecard decides
+
+The export writes what gym-coach's `scorecard.py` grades: one file per class with a top-level
+`date` (YYYY-MM-DD) and a row per exercise. Each row's `suggested_weight` and `weight` are the
+weight of one dumbbell, never a sum (2×25 is 25, a goblet 1×40 is 40), with the count in a field
+of its own. `suggested_weight` is null when the sheet showed no number. Rows with no weight, or
+`skipped`, aren't graded.
 
 Over every logged weighted set: did the sheet give a number (*numbered*), was it within one
 dumbbell of what was lifted (*close*), and how many were more than a step *high* or *low*.

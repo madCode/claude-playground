@@ -25,12 +25,12 @@ class LoadTest {
     }
 
     @Test
-    fun anUnknownCountNeitherStepsNorConverts() {
-        // Imported "40" could have been 2×20 or 2×40: stepping up from it could double the weight.
+    fun anUnknownCountKeepsItsDumbbellButHasNoTotal() {
+        // Imported history's 40 is one dumbbell's weight; whether one or two were held is lost.
         val imported = Load(40, null)
-        assertNull(imported.splitSharedDumbbell())
-        assertNull(imported.perHand)
+        assertEquals(40, imported.perHand)
         assertNull(imported.total)
+        assertNull(imported.splitSharedDumbbell())
     }
 
     @Test

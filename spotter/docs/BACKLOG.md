@@ -30,8 +30,8 @@ Step 1, the coach core:
   3 to 12 reps. *(handoff)*
 - [ ] The sheet: rows in block order, warnings first, ▲ ▼ =, a reason for every number, test
   numbers; traps 2, 9, 11. *(design)*
-- [ ] The scorecard shape: what `scorecard.py` reads per row. Ask madCode whether
-  `suggested_weight` and `weight` are per hand or total before writing it. *(handoff)*
+- [ ] The scorecard shape, as DESIGN.md's scorecard section says: one session file per class.
+  *(handoff; the shape from the session that wrote `scorecard.py`)*
 
 Step 2, the phone shows today's sheet:
 
