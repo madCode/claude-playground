@@ -1,0 +1,306 @@
+{
+ "schema": "spotter-words/1",
+ "variations": {
+  "implement": {
+   "one dumbbell, both hands": [
+    "goblet",
+    "single dumbbell",
+    "one dumbbell",
+    "two handed single dumbbell",
+    "two-handed single dumbbell"
+   ],
+   "two dumbbells": [
+    "dumbbells",
+    "double dumbbell",
+    "double dumbbells",
+    "two dumbbells",
+    "2 dumbbells"
+   ],
+   "dumbbell": [
+    "dumbbell",
+    "db",
+    "dbs"
+   ],
+   "y-bell": [
+    "y-bell",
+    "ybell",
+    "yb",
+    "y bell"
+   ],
+   "kettlebell": [
+    "kettlebell",
+    "kb"
+   ],
+   "trx": [
+    "trx"
+   ],
+   "band": [
+    "band",
+    "banded",
+    "mini band",
+    "mini-band",
+    "bands"
+   ],
+   "bodyweight": [
+    "bodyweight",
+    "bw",
+    "air"
+   ]
+  },
+  "arms": {
+   "single": [
+    "single arm",
+    "single-arm",
+    "one arm",
+    "one-arm",
+    "sa"
+   ],
+   "alternating": [
+    "alt",
+    "alternating"
+   ],
+   "reciprocating": [
+    "reciprocating"
+   ]
+  },
+  "legs": {
+   "single": [
+    "single leg",
+    "single-leg",
+    "one leg",
+    "one-leg",
+    "sl"
+   ],
+   "split": [
+    "split stance",
+    "split"
+   ],
+   "staggered": [
+    "staggered",
+    "staggered stance"
+   ],
+   "wide": [
+    "wide",
+    "wide stance"
+   ],
+   "sumo": [
+    "sumo",
+    "sumo stance"
+   ],
+   "kneeling": [
+    "kneeling",
+    "tall kneeling"
+   ],
+   "half kneeling": [
+    "half kneeling",
+    "half-kneeling"
+   ],
+   "seated": [
+    "seated"
+   ],
+   "standing": [
+    "standing"
+   ],
+   "rear foot elevated": [
+    "rfe",
+    "rear foot elevated",
+    "rear-foot elevated"
+   ]
+  },
+  "position": {
+   "floor": [
+    "floor"
+   ],
+   "incline": [
+    "incline"
+   ],
+   "decline": [
+    "decline"
+   ],
+   "bench": [
+    "bench",
+    "on bench",
+    "on the bench"
+   ],
+   "bridge hold": [
+    "bridge hold",
+    "glute bridge hold"
+   ],
+   "high plank": [
+    "high plank"
+   ],
+   "low plank": [
+    "low plank"
+   ],
+   "bear plank": [
+    "bear plank"
+   ],
+   "lying": [
+    "lying",
+    "prone",
+    "supine"
+   ],
+   "front loaded": [
+    "front loaded",
+    "front-loaded"
+   ],
+   "overhead": [
+    "overhead"
+   ]
+  },
+  "stability": {
+   "bosu": [
+    "bosu"
+   ]
+  },
+  "grip": {
+   "close": [
+    "close grip",
+    "close-grip",
+    "close",
+    "narrow grip",
+    "narrow"
+   ],
+   "neutral": [
+    "neutral grip",
+    "neutral"
+   ],
+   "reverse": [
+    "reverse grip",
+    "reverse-grip",
+    "supinated",
+    "palms up"
+   ],
+   "hammer": [
+    "hammer",
+    "hammer grip"
+   ],
+   "wide": [
+    "wide grip"
+   ]
+  },
+  "tempo": {
+   "pulse": [
+    "pulse",
+    "pulses",
+    "pulsing"
+   ],
+   "half": [
+    "half"
+   ],
+   "slow": [
+    "slow"
+   ],
+   "pause": [
+    "pause",
+    "paused"
+   ],
+   "explosive": [
+    "explosive",
+    "power"
+   ],
+   "eccentric": [
+    "eccentric"
+   ]
+  },
+  "direction": {
+   "lateral": [
+    "lateral"
+   ],
+   "transverse": [
+    "transverse"
+   ],
+   "cross body": [
+    "cross body",
+    "cross-body",
+    "crossbody"
+   ],
+   "rotational": [
+    "rotational"
+   ],
+   "backward": [
+    "backward",
+    "backwards"
+   ]
+  },
+  "mode": {
+   "hold": [
+    "hold",
+    "holds",
+    "iso",
+    "isometric"
+   ]
+  },
+  "intensity": {
+   "heavy": [
+    "heavy",
+    "heavier"
+   ],
+   "light": [
+    "light",
+    "lighter"
+   ]
+  }
+ },
+ "connectors": {
+  "combo": [
+   "to",
+   "into",
+   "with",
+   "then",
+   "+",
+   "&",
+   "and"
+  ],
+  "choice": [
+   "or"
+  ]
+ },
+ "filler": [
+  "rest",
+  "rest as needed",
+  "as needed",
+  "finisher",
+  "bonus",
+  "buy-in",
+  "buy in",
+  "count & remember reps",
+  "count and remember reps",
+  "amrepsap",
+  "amrap",
+  "until",
+  "time",
+  "round",
+  "rounds",
+  "block",
+  "repeat",
+  "recover",
+  "of",
+  "the",
+  "a",
+  "on",
+  "for"
+ ],
+ "scheme": [
+  "x",
+  "each",
+  "each side",
+  "per side",
+  "ea",
+  "total",
+  "sec",
+  "secs",
+  "second",
+  "seconds",
+  "min",
+  "mins",
+  "minute",
+  "minutes",
+  "rep",
+  "reps",
+  "r",
+  "l",
+  "right",
+  "left"
+ ]
+}
