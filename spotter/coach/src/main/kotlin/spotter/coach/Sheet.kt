@@ -128,10 +128,10 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
          * board row's is: the board's rows are all there at once, while added ones come and go
          * one at a time, and an id is what the log files an entry under.
          */
-        fun addedId(n: Int): String = "$ADDED_ID$n"
+        fun addedId(n: Long): String = "$ADDED_ID$n"
 
         /** Which added line an id is, or null for a board row. */
-        fun addedNumber(id: String): Int? = id.takeIf(::isAdded)?.removePrefix(ADDED_ID)?.toIntOrNull()
+        fun addedNumber(id: String): Long? = id.takeIf(::isAdded)?.removePrefix(ADDED_ID)?.toLongOrNull()
 
         /**
          * A row for a line the person typed, read exactly as a board line is; null when it isn't

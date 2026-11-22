@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
@@ -119,11 +120,12 @@ fun LogView(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit,
 private fun AddExercise(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit) {
     var typed by rememberSaveable { mutableStateOf("") }
     var refused by rememberSaveable { mutableStateOf<String?>(null) }
+    val keyboard = LocalSoftwareKeyboardController.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
         Text("Did one the board missed?", fontSize = 15.sp, color = muted)
         fun add() {
             if (typed.isBlank()) return
-            val next = draft.adding(typed.trim(), today.sheet)
+            val next = draft.adding(typed.trim(), today.sheet, System.currentTimeMillis())
             val row = next.added.entries.last().let { (id, line) -> today.read(id, line) }
             refused = when {
                 // A line with no reps or time is refused too: logged, it would read as a timed
@@ -132,12 +134,14 @@ private fun AddExercise(today: Today.Showing, draft: LogDraft, onChange: (LogDra
                 row.reading is Reading.NotSure -> "Spotter isn't sure what that is (${row.understood.removePrefix("not sure: ")}), so it can't be logged yet."
                 row.suggestion == null -> "That one is done without a weight, so there is nothing to log."
                 // A slip of the thumb ("800 x"): logged, it would leave the next sheet with no number.
-                row.target?.let { it.first < 1 || it.last > MAX_REPS } == true -> "That many reps doesn't look right. Check the number and add it again."
+                (listOfNotNull(row.target?.first, row.target?.last) + (row.line.scheme as? Scheme.Ladder)?.perSide().orEmpty()).any { it !in 1..MAX_REPS } -> "That many reps doesn't look right. Check the number and add it again."
                 else -> null
             }
             if (refused == null) {
                 typed = ""
                 onChange(next)
+                // Out of the way of the new row, which is above the field.
+                keyboard?.hide()
             }
         }
         OutlinedTextField(

@@ -273,6 +273,10 @@ class LoggingTest {
         // The next id is past every one on the sheet and in the draft, so none is given out twice.
         assertEquals(Sheet.addedId(4), LogDraft().adding("8 x squat", Sheet(listOf(later.copy(id = Sheet.addedId(3))))).added.keys.single())
         assertEquals(listOf(true, false), listOf(Sheet.addedId(3), board.rows[0].id).map(Sheet::isAdded))
+        // With the clock, an id is also apart from one the sheet doesn't show yet, and two adds
+        // within one tick still differ.
+        val timed = LogDraft().adding("8 x squat", board, now = 1_000).adding("8 x squat", board, now = 1_000)
+        assertEquals(listOf(Sheet.addedId(1_000), Sheet.addedId(1_001)), timed.added.keys.toList())
     }
 
     // Logged from a board row since gone (a stray), and the same exercise added as one more set:

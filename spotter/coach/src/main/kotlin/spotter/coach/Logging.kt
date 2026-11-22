@@ -68,12 +68,14 @@ data class LogDraft(
     fun with(id: String, log: RowLog?) = copy(rows = if (log == null) rows - id else rows + (id to log))
 
     /**
-     * With [typed] added as a row of its own, under the next id free on [sheet] and in the draft.
-     * An id once used by a logged row isn't given out again while that row is on the sheet.
+     * With [typed] added as a row of its own, under an id past every one on [sheet] and in the
+     * draft. [now], the clock, keeps it apart from ids the sheet doesn't show as well: a row
+     * logged a moment ago that the screen hasn't loaded yet would otherwise share its id, and
+     * the save would take the new line for a correction of the old one.
      */
-    fun adding(typed: String, sheet: Sheet): LogDraft {
+    fun adding(typed: String, sheet: Sheet, now: Long = 0): LogDraft {
         val used = (sheet.rows.map { it.id } + added.keys).mapNotNull(Sheet::addedNumber)
-        return copy(added = added + (Sheet.addedId((used.maxOrNull() ?: 0) + 1) to typed))
+        return copy(added = added + (Sheet.addedId(maxOf(now, (used.maxOrNull() ?: 0) + 1)) to typed))
     }
 
     companion object {
