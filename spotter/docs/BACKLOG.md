@@ -57,11 +57,12 @@ Step 3, logging:
 
 - [ ] The Log screen, second half: "+ Each round", each round a copy of the one before; "Add an
   exercise"; and the person's calls below. *(madCode)* From cycles 11 and 12's reviews:
-  - Logged rows no longer on the sheet (a borrowed board replaced by the class's own, a line
-    the board's poster revised) can't be seen or cleared, and stay in history beside the new
-    board's rows. Show them, with Clear.
-  - A row logged from a stale or borrowed board: madCode said (2026-11-22) it carries over to
-    the real board's row with the same exercise; rows with no match are shown with Clear.
+  - With two logged rows of one exercise and one row for it on the new board, clearing the
+    carried one brings the other onto that row at the next read. *(cycle 18 review)*
+  - The Log screen reopened from a sheet shown before the last save finished loading can save
+    against a stale match. *(cycle 18 review)*
+  - Stepping the reps of a carried entry counts as entering them anew, so the set is read
+    against the new row's target, not the one it was logged under. *(cycle 18 review)*
   - A repeat of a line added above the one done shifts the repeat number, so the log moves to
     the other copy (same words, so the same weight).
   - Two classes of the same format on one day share one log (keyed by date and "2G"), so
@@ -150,6 +151,9 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] A log follows the exercise when the board changes (cycle 18): rows logged from a borrowed
+  or revised board carry over to the row with the same exercise; the rest are listed on the Log
+  screen with Clear. *(madCode, 2026-11-22)*
 - [x] The export goes to a folder madCode picks (cycle 17): after each save, once a day and when
   the folder is picked; only changed files are written, an emptied class's file is removed, and
   the home screen says where the log is or that the copy failed. Android backup keeps the log.

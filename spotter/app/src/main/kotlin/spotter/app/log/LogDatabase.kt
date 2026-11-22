@@ -138,7 +138,7 @@ class EventLog(private val db: LogDatabase) {
      */
     fun save(draft: LogDraft, sheet: Sheet, date: LocalDate, className: String, at: Long): List<JournalEntry> =
         db.runInTransaction<List<JournalEntry>> {
-            val events = Logging.events(draft, sheet, Logging.logged(entries(), date, className), date, className, at)
+            val events = Logging.events(draft, sheet, Logging.logged(sheet, entries(), date, className), date, className, at)
             dao.insertAll(events.map(EventRow::of))
             events
         }

@@ -2,6 +2,11 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 18 — build: a log follows the exercise
+
+- A test board whose first line isn't a block header the reader knows becomes a row, and every
+  index after it is off by one: check `sheet.rows` before indexing a new fixture.
+
 ### Cycle 17 — build: the log goes to a picked folder
 
 - Put the decisions of anything that talks to Android (which files to write, what to remember

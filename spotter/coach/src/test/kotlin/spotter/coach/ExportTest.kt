@@ -27,8 +27,8 @@ class ExportTest {
     private fun sheet(day: LocalDate) = Sheet.make(board, Journal.history(written.filter { it.date < day }, vocabulary), identity)
     private fun save(day: LocalDate, className: String, draft: (Sheet) -> LogDraft) {
         val sheet = sheet(day)
-        val logged = Logging.logged(written, day, className)
-        Logging.events(draft(sheet).copy(seen = logged.keys), sheet, logged, day, className, at = 100L + written.size)
+        val logged = Logging.logged(sheet, written, day, className)
+        Logging.events(draft(sheet).copy(seen = logged.byRow.keys), sheet, logged, day, className, at = 100L + written.size)
             .forEach { written += it.copy(id = written.size + 1L) }
     }
 
@@ -121,7 +121,7 @@ class ExportTest {
         // sheet rebuilt for Thursday would now show another number; then Thursday's row is corrected.
         save(thursday.minusDays(1), "3G") { s -> LogDraft().with(s.rows[0].id, LogDraft.picked(s.rows[0], 30)) }
         save(thursday, "Orange 60 / Tornado!") { s ->
-            LogDraft.from(s, Logging.logged(written, thursday, "Orange 60 / Tornado!")).let { d -> d.with(s.rows[0].id, d.rows.getValue(s.rows[0].id).copy(hurt = true)) }
+            LogDraft.from(s, Logging.logged(s, written, thursday, "Orange 60 / Tornado!").byRow).let { d -> d.with(s.rows[0].id, d.rows.getValue(s.rows[0].id).copy(hurt = true)) }
         }
         val corrected = written.last()
         assertEquals(JournalEntry.Kind.CORRECTED, corrected.kind)
