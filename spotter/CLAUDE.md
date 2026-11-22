@@ -30,6 +30,7 @@ board corpus), not of structure: don't copy its code or layout.
     ./gradlew build koverXmlReport koverHtmlReport koverVerify   # everything CI runs
     ./gradlew :coach:test                # the coach's tests alone
     ./gradlew :app:testDebugUnitTest     # the app's, with screenshots in app/build/screenshots
+    ./gradlew -q :coach:replay -Phistory=… -Pout=…   # grade the coach on a history (docs/REPLAY.md)
 
 JDK 21 and the Android SDK are required.
 `../jekyll-poster/tools/install-android-sdk.sh` installs it for a cloud session, with the Maven

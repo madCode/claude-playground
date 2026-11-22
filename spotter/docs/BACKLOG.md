@@ -127,14 +127,8 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 - History import, on the phone: pick a `history.jsonl`, show what was read and what was left
   out by reason, keep it beside the log (not in it), and feed the sheet. The reading is done
   (`HistoryImport`, cycle 19). An imported day that is also in the log must count once. (Step 4.)
-- A replay tool, with step 4 (asked by the gym-coach session for madCode, 2026-11-22): a JVM
-  entry point or Gradle task in the coach, no Android SDK and no network, that takes a
-  `history.jsonl` and a corpus of boards, replays each class using only the history before
-  that day, and writes one scorecard session file per class; a flag turns strength per movement
-  on or off. Built and tested on invented data. madCode grades their real history with it in
-  private and gives the feedback themselves: nothing comes back from that session. When merged, tell madCode how to run it:
-  this session can't message that one (it needs a trusted device), so put the command on the
-  morning page for them to pass on.
+- The replay tool's switch for strength per movement, when step 5 is built
+  ([REPLAY.md](REPLAY.md)). The gym-coach session asked for it (2026-11-22).
 - Strength per movement, behind a switch, judged on the scorecard. (Step 5.)
 - Progress, the new-word review screen, sharing a board. (Step 6.)
 - The Garmin watch view, a Connect IQ app the phone sends the sheet to. (Step 7.)
@@ -154,6 +148,10 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] The replay tool (cycle 20, asked by the gym-coach session for madCode): `:coach:replay`
+  takes a `history.jsonl` and writes a scorecard session per class, each made from the days
+  before it only. How to run it: [REPLAY.md](REPLAY.md). madCode grades in private; nothing
+  comes back from that session.
 - [x] Reading gym-coach's `history.jsonl` in the coach (cycle 19): each row read in full or left
   out with a reason; on Carry's invented-lifter history, 698 of 880 weighted rows are read.
 - [x] A log follows the exercise when the board changes (cycle 18): rows logged from a borrowed

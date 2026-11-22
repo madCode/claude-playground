@@ -11,6 +11,15 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 20: the replay tool
+- **Why:** the gym-coach session asked for a way to grade Spotter's coach on your real history
+  without a phone, in private.
+- **Shipped:** one command replays a history file: for each class, the sheet the coach would
+  have made from the days before it, beside what you lifted, as a file the scorecard grades.
+  It prints counts only and refuses to write inside a git checkout. `docs/REPLAY.md` has the
+  command. No switch for strength per movement yet: that is step 5.
+- Tested on invented histories only, including Carry's invented lifter (163 classes).
+
 ### Cycle 19: reading your history file
 - **Why:** step 4. The sheet says "new: go light" on every row until it has history, and yours
   is in gym-coach's file.

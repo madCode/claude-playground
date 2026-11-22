@@ -243,6 +243,10 @@ reason, so the import can say what it didn't take:
   version was done, and rows dated after today.
 - A file too long to be a history keeps its newest rows and says how many it didn't take.
 
+The same reading drives the replay tool ([REPLAY.md](REPLAY.md)): each class in a history file is
+given the sheet the coach would have made from the days before it, beside what was lifted, as a
+session file for the scorecard. It runs on a laptop with no phone, for grading in private.
+
 ## Where the inputs come from
 
 - **The board:** `boards/YYYY-MM-DD.json` (schema `carry-board/1`) on this repository's

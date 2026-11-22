@@ -18,3 +18,17 @@ dependencies {
 tasks.test {
     inputs.file("../docs/scorecard-example.json")
 }
+
+// Replays a history file through the coach, for grading it in private (docs/REPLAY.md):
+//   ./gradlew :coach:replay -Phistory=/path/history.jsonl -Pout=/path/outside/any/repo
+tasks.register<JavaExec>("replay") {
+    group = "verification"
+    description = "Replays a history.jsonl through the coach and writes a scorecard session per class."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass = "spotter.coach.ReplayKt"
+    // Paths as typed, from the folder the command was run in. A cached configuration would keep
+    // the folder of the first run and read, or write, somewhere else on the next.
+    notCompatibleWithConfigurationCache("resolves its paths from the folder it is run in")
+    val from = gradle.startParameter.currentDir
+    args(listOf("history", "out").map { name -> (findProperty(name) as String?)?.let { from.resolve(it).path } ?: "" }.filter { it.isNotEmpty() })
+}
