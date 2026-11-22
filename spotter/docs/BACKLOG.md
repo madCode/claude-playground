@@ -122,8 +122,9 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Later
 
-- History import from gym-coach's `history.jsonl`: unknown counts stay unknown, decimals round
-  down. Its format, with invented rows, is in [HISTORY-FORMAT.md](HISTORY-FORMAT.md). (Step 4.)
+- History import, on the phone: pick a `history.jsonl`, show what was read and what was left
+  out by reason, keep it beside the log (not in it), and feed the sheet. The reading is done
+  (`HistoryImport`, cycle 19). An imported day that is also in the log must count once. (Step 4.)
 - A replay tool, with step 4 (asked by the gym-coach session for madCode, 2026-11-22): a JVM
   entry point or Gradle task in the coach, no Android SDK and no network, that takes a
   `history.jsonl` and a corpus of boards, replays each class using only the history before
@@ -151,6 +152,8 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] Reading gym-coach's `history.jsonl` in the coach (cycle 19): each row read in full or left
+  out with a reason; on Carry's invented-lifter history, 702 of 880 weighted rows are read.
 - [x] A log follows the exercise when the board changes (cycle 18): rows logged from a borrowed
   or revised board carry over to the row with the same exercise; the rest are listed on the Log
   screen with Clear. *(madCode, 2026-11-22)*

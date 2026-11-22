@@ -218,6 +218,26 @@ next one in that list. A Y-bell is another implement and never steps onto that l
   (a goblet squat is one dumbbell). Otherwise an imported "squat 40" that was a goblet could
   become 2×45 on a two-dumbbell row. Imported decimals round down, never up.
 
+## History import
+
+`HistoryImport` in the coach reads gym-coach's `history.jsonl`
+([HISTORY-FORMAT.md](HISTORY-FORMAT.md)) into the coach's own history. The phone's screen for
+picking the file comes next; the reading is done and tested on invented rows.
+
+A row becomes history only when all of it can be read. Otherwise it is left out and counted by
+reason, so the import can say what it didn't take:
+
+- **The exercise** is named by Spotter's own lists from the line as written, or from the name
+  the row was filed under when an old row has no line. Not named in full: left out.
+- **The weight** is one dumbbell's, rounded down from a decimal. **The count** is the row's own
+  hint (two dumbbells, one, a Ybell), then a name that fixes it (a goblet squat), else unknown.
+- **The reps** are set against the line's own reps a side. The row's reported and asked reps are
+  in the same terms as each other, so only their difference carries over: 12 done of "12 total"
+  is 6 a side, clean. With nothing to say what was asked, the row is left out: it can't be
+  called clean or short.
+- **A ladder** has one weight, its heaviest round's, so it can hold a number but not raise it.
+- Left out too: rows marked skipped, rows with no weight, and rows where form broke down.
+
 ## Where the inputs come from
 
 - **The board:** `boards/YYYY-MM-DD.json` (schema `carry-board/1`) on this repository's

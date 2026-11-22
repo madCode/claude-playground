@@ -2,6 +2,12 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 19 — build: reading the history file
+
+- Carry's fixtures hold an invented history in the real format: look at a sample of real-shaped
+  rows before writing a reader from the format notes alone. The notes said reps on "12 total"
+  are the person's own number; the rows showed reps and asked reps always share terms.
+
 ### Cycle 18 — build: a log follows the exercise
 
 - A test board whose first line isn't a block header the reader knows becomes a row, and every
