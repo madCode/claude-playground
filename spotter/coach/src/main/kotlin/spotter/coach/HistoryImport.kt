@@ -103,7 +103,7 @@ object HistoryImport {
         }
         val reps = o.int("reps")
         val asked = o.int("prescribed_reps")
-        // Not finished, though the reps don't show it: never a clean set to step up from.
+        // Not finished, though the reps may not show it: read as "felt hard", which delays a step.
         val flags = Flags(o.flag("hurt"), o.flag("hard") || o.flag("incomplete"))
         val load = Load(lb, count)
         val logged = when (val scheme = line?.scheme) {
@@ -114,7 +114,12 @@ object HistoryImport {
             }
             is Scheme.Ladder -> {
                 val rounds = scheme.perSide()
-                val off = if (reps != null && asked != null) reps - asked else 0
+                if (rounds.any { it < 1 }) return Left.REPS_UNCLEAR
+                val short = if (reps != null && asked != null) maxOf(0, asked - reps) else 0
+                // Asked as a round's own total ("10 / 8 / 6 total", asked 10): both sides were
+                // counted, so the shortfall is halved, upwards.
+                val bothSides = scheme.count == Count.TOTAL && asked in scheme.rounds && asked !in rounds
+                val off = -(if (bothSides) (short + 1) / 2 else short)
                 // One weight for the whole ladder, its heaviest. Which round the row's numbers
                 // are for isn't said, so a shortfall is put on the last; a ladder read this way
                 // never raises a number, so the choice only tells a near miss from a miss.
@@ -141,15 +146,22 @@ object HistoryImport {
         val halves = scheme.count == Count.TOTAL
         val sided = scheme.count != Count.PLAIN
         return when {
-            // Both sides counted: 8 of 12 total is 4 a side.
-            halves && asked == scheme.low && asked != target.first -> reps / 2
+            // "1 total" is no reps a side: nothing to hold a set against.
+            target.first < 1 -> null
+            // Both sides counted: 8 of 12 total is 4 a side. The shortfall is halved upwards,
+            // so one short of an odd total ("5 total", 4 done) is still one short.
+            halves && asked == scheme.low && asked != target.first ->
+                if (reps < asked) maxOf(0, target.first - (asked - reps + 1) / 2) else target.first + (reps - asked) / 2
             // Nothing asked on the row: only a number the line itself could have asked for.
             asked == null -> reps.takeIf { !halves && it in target }
             asked != target.first -> null
             // A side. More than a side was asked may be both sides counted: twice what was
             // asked is the set done as asked, and anything else can't be told.
-            reps <= target.last || !sided -> reps
-            reps == 2 * target.first -> target.first
+            !sided || reps <= target.first -> reps
+            // Twice what a side was asked: the set as asked with both sides counted, unless a
+            // wide range ("4 - 8 each") could also have asked for that many a side.
+            reps == 2 * target.first -> target.first.takeIf { reps > target.last }
+            reps <= target.last -> reps
             else -> null
         }
     }

@@ -81,13 +81,22 @@ class HistoryImportTest {
             row("6 each x reverse lunge", "20", 10, 6, "double_dumbbell"),
             row("4 each x reverse lunge", "20", 8, null, "double_dumbbell"),
             row("8 x chest press", "25", 12, null, "double_dumbbell"),
+            // A wide range could have asked for 8 a side, or 8 may be 4 a side counted twice.
+            row("4 - 8 each x reverse lunge", "20", 8, 4, "double_dumbbell"),
+            // "1 total" is no reps a side.
+            row("1 total x reverse lunge", "20", 1, 1, "double_dumbbell"),
+            row("2 / 1 total x reverse lunge", "20", 1, 1, "double_dumbbell"),
             // Twice what a side was asked is the set done as asked, counted on both sides.
             row("6 each x reverse lunge", "20", 12, 6, "double_dumbbell"),
+            // One short of an odd total is one short, not rounded away.
+            row("5 total x reverse lunge", "20", 4, 5, "double_dumbbell"),
+            row("6 - 10 each x reverse lunge", "20", 8, 6, "double_dumbbell"),
             // No sides to confuse: more than asked is more than asked.
             row("8 x chest press", "25", 10, 8, "double_dumbbell"),
         )
-        assertEquals(mapOf(HistoryImport.Left.REPS_UNCLEAR to 6), result.left)
-        assertEquals(listOf(listOf(6), listOf(10)), result.logged.map { it.reps })
+        assertEquals(mapOf(HistoryImport.Left.REPS_UNCLEAR to 9), result.left)
+        assertEquals(listOf(listOf(6), listOf(1), listOf(8), listOf(10)), result.logged.map { it.reps })
+        assertEquals(listOf(2..2, Outcome.NEAR_MISS), result.logged[1].let { listOf(it.target, it.outcome) })
     }
 
     // A ladder has one weight, its heaviest round's, so it can hold a number but not raise it.
@@ -99,6 +108,9 @@ class HistoryImportTest {
         ).logged
         assertEquals(listOf(listOf(10, 8, 6), listOf(10, 8, 6), true), listOf(clean.ladder, clean.reps, clean.heaviestOnly))
         assertEquals(listOf(listOf(5, 4, 3), listOf(5, 4, 2)), listOf(short.ladder, short.reps))
+        // Asked as a round's own total, both sides were counted: 6 of 10 is two a side short.
+        val total = read(row("10 / 8 / 6 total x reverse lunge", "20", 6, 10, "double_dumbbell")).logged.single()
+        assertEquals(listOf(5, 4, 1), total.reps)
     }
 
     // An old row has no line: the name it was filed under, and its own word on what was asked.

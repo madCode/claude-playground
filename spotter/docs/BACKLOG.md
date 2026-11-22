@@ -70,6 +70,8 @@ Step 3, logging:
     one's sheet reads the later one's log. Key a class by its start as well. *(cycles 12, 15)*
   - "… isn't logged yet" counts rows by id, so a class logged from a board since changed reads
     as not logged; it also can't be dismissed for a class left unlogged on purpose. *(cycle 15)*
+- [ ] "Felt hard" (and an imported unfinished set) delays a step only at the same reps: a
+  clean set at other reps from before it can still raise the number. *(cycle 19 review)*
 - [ ] Export notes for whoever reads the files (cycle 16 review): a session's `ref` is the row's
   place among logged rows, not on the board, and `borrowed_from` isn't known from the log; a
   timed row's seconds are read from its stored words at export time.

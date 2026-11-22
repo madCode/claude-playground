@@ -238,7 +238,7 @@ reason, so the import can say what it didn't take:
   a side) and asked 6 is a side. Where it can't be told (10 against "12 total", 8 against
   "4 each" with nothing asked), the row is left out.
 - **A ladder** has one weight, its heaviest round's, so it can hold a number but not raise it.
-- **Not finished** (`incomplete`) counts as "felt hard": never the clean set a step up starts from.
+- **Not finished** (`incomplete`) counts as "felt hard", which delays a step.
 - Left out too: rows marked skipped, with no weight, where form broke down, where an easier
   version was done, and rows dated after today.
 - A file too long to be a history keeps its newest rows and says how many it didn't take.
