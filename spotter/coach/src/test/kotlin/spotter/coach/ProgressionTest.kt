@@ -95,12 +95,14 @@ class ProgressionTest {
         assertEquals(Load(35, 2), weight(listOf(hard, logged(3, 30, listOf(8)))).load)
     }
 
-    // A ladder logged with one weight, its heaviest round's, never raises round one's number.
+    // A ladder logged with one weight, its heaviest round's, never raises a number: the round it
+    // was held for holds, and round one's 8 gets what the 4 converts to, rounded down.
     @Test
     fun aLadderLoggedWithOneWeightHolds() {
         val ladder = Logged(day(1), press, Load(30, 2), null, listOf(8, 6, 4), ladder = listOf(8, 6, 4), heaviestOnly = true)
+        assertEquals(Load(30, 2), weight(listOf(ladder), target = 4..4).load)
         val s = weight(listOf(ladder), target = 8..8)
-        assertEquals(Load(30, 2), s.load)
+        assertEquals(Load(25, 2), s.load)
         assertEquals(Change.SAME, s.change)
         // With each round's weight known, a clean ladder goes up as before.
         assertEquals(Load(35, 2), weight(listOf(ladder.copy(heaviestOnly = false)), target = 8..8).load)
@@ -124,6 +126,45 @@ class ProgressionTest {
         // A miss since puts the latest session back in charge (trap 4): under the 30 missed.
         log += logged(5, 30, listOf(5), target = 10..10)
         assertTrue(weight(log).load.lb < 30)
+    }
+
+    // A number from long ago doesn't come back: 8s clean at 40, then the 10s settled at 25.
+    @Test
+    fun aStaleSessionAtTheseRepsIsNotTheBasis() {
+        val log = listOf(logged(1, 40, listOf(8)), logged(5, 25, listOf(10), target = 10..10), logged(9, 25, listOf(10), target = 10..10))
+        assertEquals(Load(25, 2), weight(log).load)
+    }
+
+    // What twinged at 8 reps is too much for 12: the cap converts down.
+    @Test
+    fun aTwingeAtFewerRepsCapsLower() {
+        val log = listOf(logged(1, 25, listOf(12), target = 12..12), logged(2, 30, listOf(8), hurt = true))
+        val s = weight(log, target = 12..12)
+        assertEquals(Load(25, 2), s.load)
+        assertEquals("it twinged last time at 2×30", s.caution)
+    }
+
+    // A sound session after a twinge clears it, whichever reps it was at.
+    @Test
+    fun aSoundSessionClearsATwinge() {
+        val log = listOf(
+            logged(1, 35, listOf(8)),
+            logged(2, 20, listOf(10), target = 10..10, hurt = true),
+            logged(3, 30, listOf(10), target = 10..10),
+        )
+        val s = weight(log)
+        assertEquals(Load(40, 2), s.load)
+        assertNull(s.caution)
+    }
+
+    // The arrow is against the session the number rests on, so it agrees with the reason.
+    @Test
+    fun theArrowAgreesWithTheReason() {
+        // 8s near-missed at 40, 10s at 35: asking 8 holds 40, and says so.
+        val log = listOf(logged(1, 40, listOf(8, 7, 7)), logged(2, 35, listOf(10), target = 10..10))
+        val s = weight(log)
+        assertEquals(Load(40, 2), s.load)
+        assertEquals(Change.SAME, s.change)
     }
 
     // A ladder's one weight was its heaviest round's: other reps convert from that round's.

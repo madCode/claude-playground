@@ -110,8 +110,9 @@ object Logging {
             at, date, className, row.id, row.shown, row.reading as Reading.Known, Load(log.lb, log.count),
             target = row.target, ladder = ladder, reps = ladder ?: listOfNotNull(log.reps),
             hurt = log.hurt, stopped = log.stopped, easy = log.easy, hard = log.hard, easier = log.easier,
-            // The screen takes one weight for the row; a ladder's is its heaviest round's.
-            heaviestOnly = ladder != null, shown = (row.suggestion as? Suggestion.Weight)?.load,
+            // A ladder ticked as listed was done at the sheet's number from round one; "changed"
+            // gives one weight, which for a ladder is its heaviest round's.
+            heaviestOnly = ladder != null && log != LogDraft.asListed(row), shown = (row.suggestion as? Suggestion.Weight)?.load,
         )
     }
 }

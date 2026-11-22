@@ -118,9 +118,14 @@ class LoggingTest {
         // Each comes back as the coach reads it, and the squat as a ladder done clean.
         val history = Journal.history(written, vocabulary)
         assertEquals(3, history.size)
-        // One weight for a ladder is its heaviest round's: it holds, it doesn't raise round one.
+        // One weight for a ladder is its heaviest round's, held for the 6: round one's 10 gets
+        // what that converts to, rounded down, and never a step up.
+        assertTrue(bySquat.getValue(squat.id).heaviestOnly)
         val next = row(sheet(thursday), "10 / 8 / 6 x squat")
-        assertEquals("2×30 =", sheet(thursday).glance(next))
+        assertEquals("2×25 =", sheet(thursday).glance(next))
+        // Ticked as listed, the ladder was done at the sheet's number from round one.
+        val ticked = save(thursday, LogDraft().with(next.id, LogDraft.asListed(next))).single()
+        assertEquals(false, ticked.heaviestOnly)
         // What the sheet showed is kept with the event, for the scorecard: nothing, on a new row.
         assertNull(bySquat.getValue(squat.id).shownLb)
     }

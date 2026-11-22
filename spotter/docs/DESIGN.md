@@ -52,17 +52,21 @@ both are installed side by side.
     A twinge holds the weight and says so (madCode): the latest set that hurt caps the number at
     what hurt, or a step under it if it was also a miss; the cap comes last, so no other rule
     lifts a number past it, and no test weight is offered at or above it. The row carries a
-    warning and the reason, whether or not the cap changed the number. With nothing but
+    warning and the reason, whether or not the cap changed the number. What twinged at fewer
+    reps caps lower for more reps. A sound session after a twinge clears it. With nothing but
     twinges logged, the latest one is the number. Nothing is borrowed from a lift that twinged.
     A clean set that "felt hard" waits a session before stepping up (TRAINING.md, 3).
     Each rep count keeps its own history: the last time these reps were asked is the basis,
-    unless a set was missed since at any reps (then the latest session is); a near miss since
-    only stops a step up. With no history at these reps, the weight converts by Epley from the
-    reps done, rounded down, starting from the weight held and never from a step up
-    (TRAINING.md, 5).
-    A ladder's sets are each judged against their own round. A ladder logged with one weight,
-    its heaviest round's, holds the number and never raises it; other reps convert from that
-    round's reps. A timed set
+    while the latest session bears it out. A set missed since, at any reps, puts the latest
+    session in charge, and so does a latest weight lighter than the older one predicts for its
+    reps (so a number from long ago doesn't come back). A near miss since, or a latest session
+    that can't be compared, only stops a step up. Otherwise the weight converts by Epley from
+    the reps done, rounded down, starting from the weight held and never from a step up
+    (TRAINING.md, 5). ▲ ▼ = compare with the session the number rests on.
+    A ladder's sets are each judged against their own round. A ladder logged as "changed" has
+    one weight, its heaviest round's: it never raises a number, and stands for that round's
+    reps, so round one gets what it converts to. A ladder ticked as listed was done at the
+    sheet's number from round one. A timed set
     holds its weight, since it says nothing about reps in reserve, and a timed set and a counted
     one don't convert into each other. A rep target with no reps logged says nothing. A step more than 20% heavier (12 to 15, 20 to 25) is a
     big jump: the number holds and the heavier one is offered as a test. A new exercise borrows

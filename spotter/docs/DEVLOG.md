@@ -22,8 +22,10 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   over to the new format.
 - **Review caught:** my first version walked the number down on alternating rep counts and
   never back up; raised a ladder's weight when converting to other reps; lent a twinged lift's
-  weight to its one-leg version; and left ladders already on the phone able to step up. All
-  fixed and tested.
+  weight to its one-leg version; and left ladders already on the phone able to step up. A
+  second look at the fix caught more: a session from long ago could bring back a much heavier
+  number; a twinge at 8 reps allowed the same weight for 12; an old twinge capped for ever; and
+  the arrow could disagree with its reason. All fixed and tested.
 - **Left:** a class logged before this update and reopened after it won't show its rows as
   logged (their ids changed format). Nothing is logged on your phone yet, so it wasn't bridged.
 

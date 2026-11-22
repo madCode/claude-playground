@@ -32,6 +32,12 @@ data class Logged(
     val firstTarget: Int? get() = ladder?.first() ?: target?.last
 
     /**
+     * The reps the logged weight stands for, when telling one rep count's history from another's:
+     * what was asked, or the fewest-rep round of a ladder logged with its heaviest weight.
+     */
+    val anchor: Int? get() = if (ladder != null && heaviestOnly) ladder.min() else firstTarget
+
+    /**
      * The reps the weight is known to have been done for, for converting between rep counts: the
      * fewest of the sets logged, or what a ladder's first round asked. Null when timed.
      */
@@ -78,7 +84,7 @@ data class Logged(
 
 enum class Outcome { CLEAN, IN_RANGE, NEAR_MISS, MISS, HURT }
 
-/** Against last time this exercise was logged. */
+/** Against the logged session the number rests on. */
 enum class Change { UP, SAME, DOWN, NEW }
 
 /** What the sheet shows for a row. */
@@ -133,25 +139,38 @@ object Progression {
         // madCode: a twinge holds the weight and notes it. With nothing but twinges logged, the
         // latest one is the basis, and the cap below holds it there or a step under.
         val sound = own.filter { it.outcome != Outcome.HURT }
+        val to = target?.last
         // Each rep count keeps its own history (TRAINING.md, 5): the last time these reps were
         // asked is a better basis than a conversion from other reps, which is rounded down each
-        // time and would walk the number down on a board that alternates 8s and 10s. Unless a
-        // set was missed since, at any reps: then the latest session decides (trap 4). A near
-        // miss since, at other reps, only stops a step up.
-        val sameReps = sound.lastOrNull { it.firstTarget == target?.last }
+        // time and would walk the number down on a board that alternates 8s and 10s. But only
+        // while the latest session bears it out: a set missed since, at any reps, puts the
+        // latest session in charge (trap 4), and so does a latest weight lighter than this one
+        // predicts for its reps, which is how a number from long ago would come back too heavy.
+        val latest = sound.lastOrNull()
+        val sameReps = sound.lastOrNull { it.anchor == to }
         val since = sound.dropWhile { it !== sameReps }.drop(1)
-        val basis = when {
-            sound.isEmpty() -> last
-            sameReps != null && since.none { it.outcome == Outcome.MISS } -> sameReps
-            else -> sound.last()
+        // Null when the two can't be compared (timed, or reps Epley doesn't cover).
+        val borneOut: Boolean? = if (sameReps == null || latest == null || latest === sameReps) true else {
+            val a = sameReps.anchor
+            val b = latest.anchor
+            if (a == null || b == null || a !in epleyReps || b !in epleyReps) null
+            else latest.load.lb >= (convert(sameReps.load.lb, a, b) ?: 0)
         }
+        val basis = when {
+            latest == null -> last
+            sameReps != null && borneOut != false && since.none { it.outcome == Outcome.MISS } -> sameReps
+            else -> latest
+        }
+        // No step up from an older session on the strength of one that can't be compared with
+        // it, or that came up short.
+        val noStep = basis !== latest && (borneOut == null || since.any { it.outcome == Outcome.NEAR_MISS })
         val reasons = mutableListOf<String>()
         var test: Load? = null
         val held = basis.load.lb
         var lb = when {
             basis.outcome == Outcome.HURT -> held
-            basis.outcome == Outcome.CLEAN && basis === sameReps && since.any { it.outcome == Outcome.NEAR_MISS } ->
-                held.also { reasons += "clean at ${basis.load.label}, with a near miss since: same again" }
+            basis.outcome == Outcome.CLEAN && noStep ->
+                held.also { reasons += "clean at ${basis.load.label} the last time these reps came up: same again" }
             basis.outcome == Outcome.CLEAN && basis.heaviestOnly ->
                 held.also { reasons += "a ladder logged at ${basis.load.label}, its heaviest round: same again" }
             // Weak evidence against a step, so it delays one rather than cancels it (TRAINING.md, 3).
@@ -183,9 +202,8 @@ object Progression {
         // off by as much as a dumbbell step (TRAINING.md, 5), so it never rides on a step up:
         // it starts from the weight held, or the step down after a miss.
         // After a miss the step down is expected to reach what was asked, so it converts from that.
-        val from = if (basis.outcome == Outcome.MISS) basis.firstTarget else basis.repsDone ?: basis.firstTarget
-        val to = target?.last
-        if (basis.firstTarget != to) {
+        val from = if (basis.outcome == Outcome.MISS) basis.anchor else basis.repsDone ?: basis.anchor
+        if (basis.anchor != to) {
             if (lb > held) {
                 lb = held
                 decided = held
@@ -195,22 +213,28 @@ object Progression {
             if (from == null || to == null || from !in epleyReps || to !in epleyReps) {
                 return Suggestion.NoNumber("last time was ${from?.let { "$it reps" } ?: "timed"} and this is ${to?.let { "$it reps" } ?: "timed"}: no sound conversion")
             }
-            val converted = Rack.atMost(lb * (1 + from / 30.0) / (1 + to / 30.0))
+            val converted = convert(lb, from, to)
                 ?: return Suggestion.NoNumber("$to reps is lighter than the lightest dumbbell from last time's weight")
             if (converted != lb) reasons += "$from reps last time, $to now: $converted"
             lb = converted
             test = null
         }
 
-        // The latest set that hurt since then caps the number at what hurt, or under it if it was
-        // also a miss (trap 3). Last, so no step above can lift the number past it. The latest,
-        // not the lowest: a twinge at 20 followed by a twinge at 25 done in full holds 25.
+        // The latest set that hurt, since the last sound one, caps the number at what hurt, or
+        // under it if it was also a miss (trap 3). Last, so no step above can lift the number
+        // past it. The latest, not the lowest: a twinge at 20 followed by a twinge at 25 done in
+        // full holds 25. A sound session after a twinge clears it.
         var caution: String? = null
-        own.lastOrNull { it.outcome == Outcome.HURT && !it.date.isBefore(basis.date) }?.let { hurt ->
-            val cap = if (hurt.hurtAndMissed) {
+        own.lastOrNull { it.outcome == Outcome.HURT && (latest == null || !it.date.isBefore(latest.date)) }?.let { hurt ->
+            var cap = if (hurt.hurtAndMissed) {
                 Rack.down(hurt.load.lb) ?: return Suggestion.NoNumber("it hurt at the lightest dumbbell: no number")
             } else {
                 hurt.load.lb
+            }
+            // What twinged at 8 reps is too much for 12: the cap converts down, never up.
+            val hurtReps = hurt.anchor
+            if (hurtReps != null && to != null && to > hurtReps && hurtReps in epleyReps && to in epleyReps) {
+                cap = convert(cap, hurtReps, to) ?: return Suggestion.NoNumber("it hurt at the lightest dumbbell: no number")
             }
             decided = minOf(decided, cap)
             lb = minOf(lb, cap)
@@ -222,13 +246,16 @@ object Progression {
         }
 
         val load = basis.load.copy(lb = lb)
+        // Against the session the number rests on, so the arrow agrees with the reason.
         val change = when {
-            decided > last.load.lb -> Change.UP
-            decided < last.load.lb -> Change.DOWN
+            decided > held -> Change.UP
+            decided < held -> Change.DOWN
             else -> Change.SAME
         }
         return Suggestion.Weight(load, change, reasons, test, caution)
     }
+
+    private fun convert(lb: Int, from: Int, to: Int): Int? = Rack.atMost(lb * (1 + from / 30.0) / (1 + to / 30.0))
 
     /**
      * A new exercise borrows only through a stated factor: a one-legged version of a two-legged

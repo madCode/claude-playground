@@ -56,6 +56,8 @@ Step 3, logging:
     nothing logged until picked), the count only when the words or the last log fix it, and
     start from the last weight held when there is one.
   - "+ Each round" will need a weight per round, not one per row.
+  - A ladder done clean with each round's weight known ("8 / 6 / 4") counts as clean at 8 for
+    a straight "8 x" row, which is more sets at 8 than were done. *(cycle 13 review)*
 - [ ] The evening before: once today's class is logged, the sheet shows the next class
   (madCode, 2026-11-22).
 - [ ] Logging a class after its window: the sheet moves on three hours after the start, and
