@@ -14,6 +14,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,7 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -33,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import spotter.app.today.Today
+import spotter.coach.BoardLine
 import spotter.coach.Count
 import spotter.coach.JournalEntry
 import spotter.coach.LogDraft
@@ -76,6 +80,7 @@ fun LogView(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit,
             }
             LogRowView(row, today.sheet.glance(row), draft.rows[row.id]) { onChange(draft.with(row.id, it)) }
         }
+        AddExercise(today, draft, onChange)
         if (today.strays.isNotEmpty()) {
             Text(
                 "Logged, but not on this board",
@@ -100,6 +105,49 @@ fun LogView(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit,
             ) { Text("Save") }
             OutlinedButton(onClick = onCancel, modifier = Modifier.heightIn(min = 48.dp)) { Text("Cancel") }
         }
+    }
+}
+
+/**
+ * An exercise the board missed, typed as the board would have written it and read the same way:
+ * a line Spotter can't name in full, or one with no weight, isn't added, and says why.
+ */
+@Composable
+private fun AddExercise(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit) {
+    var typed by rememberSaveable { mutableStateOf("") }
+    var refused by rememberSaveable { mutableStateOf<String?>(null) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+        Text("Did one the board missed?", fontSize = 15.sp, color = muted)
+        OutlinedTextField(
+            value = typed,
+            // A board line is never longer; nothing is read until "Add". A line with no reps or time
+            // is refused too: logged, it would read as a timed set and say nothing to a counted row.
+            onValueChange = { typed = it.take(BoardLine.MAX_LENGTH).replace("\n", " "); refused = null },
+            label = { Text("As the board would say it: 8 x chest press") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        refused?.let {
+            Text(it, fontSize = 15.sp, color = ink, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+        }
+        OutlinedButton(
+            onClick = {
+                val next = draft.adding(typed.trim(), today.sheet)
+                val row = next.added.entries.last().let { (id, line) -> today.read(id, line) }
+                refused = when {
+                    row == null || row.line.scheme == null -> "That doesn't read as an exercise. Start with the reps, as the board does: 8 x chest press."
+                    row.reading is Reading.NotSure -> "Spotter isn't sure what that is (${row.understood.removePrefix("not sure: ")}), so it can't be logged yet."
+                    row.suggestion == null -> "That one is done without a weight, so there is nothing to log."
+                    else -> null
+                }
+                if (refused == null) {
+                    typed = ""
+                    onChange(next)
+                }
+            },
+            enabled = typed.isNotBlank(),
+            modifier = Modifier.heightIn(min = 48.dp),
+        ) { Text("Add an exercise") }
     }
 }
 

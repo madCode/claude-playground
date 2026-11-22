@@ -62,8 +62,19 @@ data class LogDraft(
     val seen: Set<String> = emptySet(),
     /** Logged rows no longer on the board ([ClassLog.strays]) the person has cleared, by entry id. */
     val cleared: Set<Long> = emptySet(),
+    /** Lines typed in on this screen for exercises the board missed, by [Sheet.addedId]. */
+    val added: Map<String, String> = emptyMap(),
 ) {
     fun with(id: String, log: RowLog?) = copy(rows = if (log == null) rows - id else rows + (id to log))
+
+    /**
+     * With [typed] added as a row of its own, under the next id free on [sheet] and in the draft.
+     * An id once used by a logged row isn't given out again while that row is on the sheet.
+     */
+    fun adding(typed: String, sheet: Sheet): LogDraft {
+        val used = (sheet.rows.map { it.id } + added.keys).mapNotNull(Sheet::addedNumber)
+        return copy(added = added + (Sheet.addedId((used.maxOrNull() ?: 0) + 1) to typed))
+    }
 
     companion object {
         /** Whether a row can be logged here: a weighted row Spotter read. */
@@ -218,7 +229,8 @@ object Logging {
             // dumbbells, or how it felt, doesn't make a listed ladder a changed one.
             // Rounds said that don't fit the row leave only their heaviest, never "as listed".
             heaviestOnly = ladder != null && rounds(log, ladder) == null && (log.rounds != null || log.lb != LogDraft.asListed(row)?.lb),
-            shown = (row.suggestion as? Suggestion.Weight)?.load, roundLb = rounds(log, ladder),
+            // An added row was never on the sheet before class: it showed the person no number.
+            shown = (row.suggestion as? Suggestion.Weight)?.load?.takeIf { !Sheet.isAdded(row.id) }, roundLb = rounds(log, ladder),
         )
     }
 

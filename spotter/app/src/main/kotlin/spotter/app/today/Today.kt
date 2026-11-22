@@ -6,6 +6,7 @@ import spotter.coach.JournalEntry
 import spotter.coach.Logged
 import spotter.coach.Logging
 import spotter.coach.Sheet
+import spotter.coach.SheetRow
 import spotter.coach.TodaysBoard
 import spotter.coach.Vocabulary
 import java.time.LocalDate
@@ -38,7 +39,19 @@ sealed interface Today {
         val logged: Map<String, JournalEntry> = emptyMap(),
         /** Logged for this class from rows no longer on the board. */
         val strays: List<JournalEntry> = emptyList(),
-    ) : Today
+        /**
+         * A row for a line typed on the Log screen ([Sheet.added]), from the history the sheet
+         * was made from. Null when the line isn't an exercise line.
+         */
+        val read: (id: String, typed: String) -> SheetRow? = { _, _ -> null },
+    ) : Today {
+        /** With the draft's added lines as rows after the sheet's own, for the Log screen and its save. */
+        fun with(added: Map<String, String>): Showing {
+            val have = sheet.rows.map { it.id }.toSet()
+            val rows = added.filterKeys { it !in have }.mapNotNull { (id, typed) -> read(id, typed) }
+            return if (rows.isEmpty()) this else copy(sheet = sheet.copy(rows = sheet.rows + rows))
+        }
+    }
 
     companion object {
         private val day = DateTimeFormatter.ofPattern("EEE d MMM", Locale.UK)
@@ -93,10 +106,16 @@ sealed interface Today {
                     chosen.staleFrom?.let { "This is the board from ${it.format(day)}: the one for ${booked.date.format(day)} couldn't be fetched." },
                     chosen.borrowedFrom?.let { "No ${booked.tag} board yet, so this is the $it board. Leave rows that aren't in your class." },
                 )
-                val sheet = Sheet.make(chosen.lines, log, identity, chosen.borrowedFrom)
+                val board = Sheet.make(chosen.lines, log, identity, chosen.borrowedFrom)
                 val name = className(chosen)
+                // What the person added and logged is a row again, built from its own entry.
+                val added = Journal.live(entries)
+                    .filter { it.date == booked.date && it.className == name && Sheet.isAdded(it.row) }
+                    .mapNotNull { Sheet.added(it.row, it.line, log, identity) }
+                    .distinctBy { it.id }
+                val sheet = board.copy(rows = board.rows + added)
                 val logged = Logging.logged(sheet, entries, booked.date, name)
-                Showing(title, notes, sheet, booked.date, name, logged.byRow, logged.strays)
+                Showing(title, notes, sheet, booked.date, name, logged.byRow, logged.strays) { id, typed -> Sheet.added(id, typed, log, identity) }
             }
         }
     }

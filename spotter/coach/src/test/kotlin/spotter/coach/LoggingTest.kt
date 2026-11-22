@@ -242,6 +242,39 @@ class LoggingTest {
         assertEquals(RowLog(25, 2, 8), RowLog.of(straight.copy(roundLb = listOf(20, 50))))
     }
 
+    // An exercise the board missed, typed in: read as a board line is, logged like any row, and
+    // the next sheet's number for it. The scorecard is told the sheet showed nothing for it.
+    @Test
+    fun anAddedExerciseIsLoggedAndFeedsTheNextSheet() {
+        val history = Journal.history(written, vocabulary)
+        // Only an exercise line makes a row; what was typed is read by the same reader.
+        assertNull(Sheet.added(Sheet.addedId(1), "Great class today!", history, identity))
+        assertNull(Sheet.added(Sheet.addedId(1), "Floor block 3:", history, identity))
+        assertEquals(false, LogDraft.loggable(Sheet.added(Sheet.addedId(1), "8 x zorbing", history, identity)!!))
+
+        val board = sheet(monday)
+        val draft = LogDraft().adding("8 x chest press", board).adding("10 x hammer curl", board)
+        assertEquals(listOf(Sheet.addedId(1), Sheet.addedId(2)), draft.added.keys.toList())
+        val rows = draft.added.map { (id, typed) -> Sheet.added(id, typed, history, identity)!! }
+        assertEquals(listOf(Sheet.ADDED, "10 x hammer curl", 10..10), rows[1].let { listOf(it.block, it.shown, it.target) })
+        val sheet = board.copy(rows = board.rows + rows)
+        val events = Logging.events(draft.with(rows[1].id, LogDraft.picked(rows[1], 25).copy(count = 2, easy = true)), sheet, ClassLog(), monday, "2G", 1L)
+        // The row left alone isn't logged, and the added one is filed under its own id.
+        assertEquals(listOf(Sheet.addedId(2) to 25), events.map { it.row to it.lb })
+        write(events)
+        val next = Sheet.make(listOf("* 10 x hammer curl"), Journal.history(written, vocabulary), identity)
+        assertEquals("2×30 ▲", next.glance(next.rows.single()))
+
+        // Logged again where the sheet has a number for it: the scorecard still hears "no number",
+        // since an added row was never on the sheet before class.
+        val later = Sheet.added(Sheet.addedId(1), "10 x hammer curl", Journal.history(written, vocabulary), identity)!!
+        val ticked = Logging.events(LogDraft().with(later.id, LogDraft.asListed(later)!!), Sheet(listOf(later)), ClassLog(), thursday, "2G", 2L).single()
+        assertEquals(listOf(30, null), listOf(ticked.lb, ticked.shownLb))
+        // The next id is past every one on the sheet and in the draft, so none is given out twice.
+        assertEquals(Sheet.addedId(4), LogDraft().adding("8 x squat", Sheet(listOf(later.copy(id = Sheet.addedId(3))))).added.keys.single())
+        assertEquals(listOf(true, false), listOf(Sheet.addedId(3), board.rows[0].id).map(Sheet::isAdded))
+    }
+
     // "Last time" is the last logged, also when two fall on one day (one exercise in two blocks).
     @Test
     fun lastHeldIsTheLastLogged() {

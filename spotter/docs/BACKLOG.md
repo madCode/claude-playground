@@ -55,8 +55,7 @@ Step 3, logging:
 - [ ] Log screen, from the cycle 24 review: "Last time" under "Heaviest dumbbell" shows the
   weight the coach read a ladder at, which can be round one's; a carried ladder's rounds are
   labelled with this row's reps when the two have as many rounds.
-- [ ] The Log screen, second half: "Add an exercise"; and the person's calls below.
-  *(madCode)* From reviews:
+- [ ] The Log screen, second half: the person's calls below. *(madCode)* From reviews:
   - With two logged rows of one exercise and one row for it on the new board, clearing the
     carried one brings the other onto that row at the next read. *(cycle 18 review)*
   - The Log screen reopened from a sheet shown before the last save finished loading can save
