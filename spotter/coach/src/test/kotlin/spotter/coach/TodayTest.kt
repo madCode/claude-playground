@@ -101,7 +101,7 @@ class TodayTest {
         assertEquals(day, Booking.earlier(events.take(2), day.plusDays(2).atTime(23, 0), null)?.date)
         assertNull(Booking.earlier(events.take(2), day.plusDays(3).atTime(0, 30), null))
         // One class in the calendar twice, under two titles, isn't offered beside itself.
-        val twice = events + CalendarEvent("OTF: Orange 60 2G", day, nine)
+        val twice = events + CalendarEvent("Orange 60 2G (invite)", day, nine)
         assertNull(Booking.earlier(twice, soon, Booking.next(twice, soon)))
         // A logged all-day class can be corrected the same day.
         val allDay = listOf(CalendarEvent("Orange 60 Min 2G", day, null))
