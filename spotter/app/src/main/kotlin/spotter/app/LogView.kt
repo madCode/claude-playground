@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import spotter.app.today.Today
+import spotter.coach.JournalEntry
 import spotter.coach.LogDraft
 import spotter.coach.Rack
 import spotter.coach.Reading
@@ -72,6 +73,19 @@ fun LogView(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit,
                 }
             }
             LogRowView(row, today.sheet.glance(row), draft.rows[row.id]) { onChange(draft.with(row.id, it)) }
+        }
+        if (today.strays.isNotEmpty()) {
+            Text(
+                "Logged, but not on this board",
+                fontSize = 14.sp,
+                color = muted,
+                modifier = Modifier.padding(top = 8.dp).semantics { heading() },
+            )
+            Text("The board changed after you logged these. They still count unless you clear them.", fontSize = 15.sp, color = muted)
+            today.strays.forEach { stray ->
+                val cleared = stray.id in draft.cleared
+                StrayView(stray, cleared) { onChange(draft.copy(cleared = if (cleared) draft.cleared - stray.id else draft.cleared + stray.id)) }
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 8.dp)) {
             Button(
@@ -131,6 +145,22 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (R
             if (open && log != null) Details(row, log, onChange)
             // Last, so the first pick doesn't move the rack under the thumb.
             log?.let { Text("Logged: " + summary(it), fontSize = 15.sp, color = ink, fontWeight = FontWeight.SemiBold) }
+        }
+    }
+}
+
+@Composable
+private fun StrayView(stray: JournalEntry, cleared: Boolean, onToggle: () -> Unit) {
+    Surface(color = Color.White, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stray.line, fontSize = 17.sp, color = ink)
+            Text(
+                if (cleared) "Removed when you save." else "Logged: " + summary(RowLog.of(stray)),
+                fontSize = 15.sp,
+                color = ink,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Choice("Clear", cleared, "${stray.line}: clear", onToggle)
         }
     }
 }

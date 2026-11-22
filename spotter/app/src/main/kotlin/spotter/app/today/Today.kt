@@ -36,6 +36,8 @@ sealed interface Today {
         val className: String,
         /** What is logged for this class already, by sheet row. */
         val logged: Map<String, JournalEntry> = emptyMap(),
+        /** Logged for this class from rows no longer on the board. */
+        val strays: List<JournalEntry> = emptyList(),
     ) : Today
 
     companion object {
@@ -51,7 +53,7 @@ sealed interface Today {
             val date = lines.booked.date
             val name = className(lines)
             val before = entries.filter { it.date < date || (it.date == date && it.className != name) }
-            return from(chosen, Journal.history(before, vocabulary), identity, Logging.logged(entries, date, name))
+            return from(chosen, Journal.history(before, vocabulary), identity, entries)
         }
 
         private fun className(lines: TodaysBoard.Lines) = lines.booked.logName
@@ -72,8 +74,11 @@ sealed interface Today {
         fun loggedClasses(entries: List<JournalEntry>): Set<Pair<LocalDate, String>> =
             Journal.live(entries).map { it.date to it.className }.toSet()
 
-        /** The screen's state for the board [chosen], with the sheet made from [log]. */
-        fun from(chosen: TodaysBoard, log: List<Logged>, identity: Identity, logged: Map<String, JournalEntry> = emptyMap()): Today = when (chosen) {
+        /**
+         * The screen's state for the board [chosen], with the sheet made from [log]; the class's
+         * own events are picked from [entries] and set against the sheet's rows.
+         */
+        fun from(chosen: TodaysBoard, log: List<Logged>, identity: Identity, entries: List<JournalEntry> = emptyList()): Today = when (chosen) {
             is TodaysBoard.Nothing -> Nothing(chosen.reason.replaceFirstChar { it.uppercase() } + ".")
             is TodaysBoard.Lines -> {
                 val booked = chosen.booked
@@ -82,7 +87,10 @@ sealed interface Today {
                     chosen.staleFrom?.let { "This is the board from ${it.format(day)}: the one for ${booked.date.format(day)} couldn't be fetched." },
                     chosen.borrowedFrom?.let { "No ${booked.tag} board yet, so this is the $it board. Leave rows that aren't in your class." },
                 )
-                Showing(title, notes, Sheet.make(chosen.lines, log, identity, chosen.borrowedFrom), booked.date, className(chosen), logged)
+                val sheet = Sheet.make(chosen.lines, log, identity, chosen.borrowedFrom)
+                val name = className(chosen)
+                val logged = Logging.logged(sheet, entries, booked.date, name)
+                Showing(title, notes, sheet, booked.date, name, logged.byRow, logged.strays)
             }
         }
     }

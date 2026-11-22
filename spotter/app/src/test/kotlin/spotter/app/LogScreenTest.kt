@@ -98,7 +98,7 @@ class LogScreenTest {
 
         val (shown, draft) = saved!!
         save(shown, draft)
-        val stored = Logging.logged(log.entries(), saturday, "2G")
+        val stored = Logging.logged(shown.sheet, log.entries(), saturday, "2G").byRow
         assertEquals(listOf(30, 45), stored.values.map { it.lb })
         assertTrue(stored.values.last().hurt)
         // Saturday's own sheet keeps Saturday's numbers; the next class reads what was done.
@@ -109,6 +109,37 @@ class LogScreenTest {
         assertEquals("2×35 ▲", next.sheet.glance(next.sheet.rows[0]))
         // One short on the one set logged, with a twinge: the weight holds.
         assertEquals("2×45 =", next.sheet.glance(next.sheet.rows[1]))
+    }
+
+    // Logged from the other format's board before the class's own was posted: the press carries
+    // over to the real board's press, and the row that isn't on it is shown, to keep or clear.
+    @Test
+    fun aLogFromABorrowedBoardFollowsTheRealOne() {
+        val borrowed = TodaysBoard.Lines(
+            BookedClass("2G", saturday, saturday.atTime(9, 50), "Orange 60 Min 2G"),
+            listOf("**Floor Block 1 - 10 minutes**", "* 10 x close grip chest press (explosive)", "* 12 x goblet squat"),
+            borrowedFrom = "3G",
+        )
+        val before = Today.of(borrowed, log.entries(), identity, vocabulary) as Today.Showing
+        save(before, LogDraft().with(before.sheet.rows[0].id, spotter.coach.RowLog(25, 2, 10)).with(before.sheet.rows[1].id, spotter.coach.RowLog(35, 1, 12)))
+
+        var saved: Pair<Today.Showing, LogDraft>? = null
+        show(today(saturday)) { t, d -> saved = t to d }
+        compose.onNodeWithText("Change the log (1 logged)").performClick()
+        compose.onNodeWithText("Logged: 2×25 · 10 reps").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Logged, but not on this board").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Logged: 1×35 · 12 reps").performScrollTo().assertIsDisplayed()
+        shoot("log-strays")
+        compose.onNodeWithContentDescription("12 x goblet squat: clear").performScrollTo().performClick()
+        compose.onNodeWithText("Removed when you save.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+
+        val (shown, draft) = saved!!
+        // The press wasn't touched, so only the removal is written.
+        assertEquals(listOf(spotter.coach.JournalEntry.Kind.REMOVED), save(shown, draft).map { it.kind })
+        val again = today(saturday)
+        assertEquals(listOf(25), again.logged.values.map { it.lb })
+        assertTrue(again.strays.isEmpty())
     }
 
     // Reopened, the screen shows what is logged, and the button says so.

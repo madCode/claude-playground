@@ -19,7 +19,12 @@ data class RowLog(
     /** Had to stop: down a step next time. */
     val stopped: Boolean = false,
     val easier: Boolean = false,
-)
+) {
+    companion object {
+        /** A logged entry in the screen's terms. */
+        fun of(e: JournalEntry) = RowLog(e.lb, e.count, e.reps.singleOrNull()?.takeIf { e.ladder == null }, e.easy, e.hard, e.hurt, e.stopped, e.easier)
+    }
+}
 
 /**
  * A class being logged: what each sheet row says, by [SheetRow.id]. A row left out stays unlogged,
@@ -31,6 +36,8 @@ data class LogDraft(
     val rows: Map<String, RowLog> = emptyMap(),
     /** The rows logged when the screen opened: only these can be cleared by leaving them out. */
     val seen: Set<String> = emptySet(),
+    /** Logged rows no longer on the board ([ClassLog.strays]) the person has cleared, by entry id. */
+    val cleared: Set<Long> = emptySet(),
 ) {
     fun with(id: String, log: RowLog?) = copy(rows = if (log == null) rows - id else rows + (id to log))
 
@@ -68,17 +75,59 @@ data class LogDraft(
         fun from(sheet: Sheet, logged: Map<String, JournalEntry>): LogDraft {
             val rows = sheet.rows.mapNotNull { row ->
                 val e = logged[row.id] ?: return@mapNotNull null
-                row.id to RowLog(e.lb, e.count, e.reps.singleOrNull()?.takeIf { e.ladder == null }, e.easy, e.hard, e.hurt, e.stopped, e.easier)
+                row.id to RowLog.of(e)
             }.toMap()
             return LogDraft(rows, rows.keys)
         }
     }
 }
 
+/**
+ * What is logged for one class, set against the board as it is now. The board can change under a
+ * log: the class's own board replaces a borrowed one, or its poster revises a line.
+ */
+data class ClassLog(
+    /** By [SheetRow.id]: the entry logged from that row, or carried over to it from a row now gone. */
+    val byRow: Map<String, JournalEntry> = emptyMap(),
+    /** Logged from rows no longer on the board, with no row to carry over to: shown, to keep or clear. */
+    val strays: List<JournalEntry> = emptyList(),
+)
+
 object Logging {
-    /** The live entries for one class's rows, by row id: what the Log screen starts from. */
-    fun logged(entries: List<JournalEntry>, date: LocalDate, className: String): Map<String, JournalEntry> =
-        Journal.live(entries).filter { it.date == date && it.className == className }.associateBy { it.row }
+    /**
+     * The live entries for one class, matched to [sheet]'s rows: what the Log screen starts from.
+     *
+     * An entry whose row is gone carries over to the first free row of the same exercise and the
+     * same kind of count (madCode, 2026-11-22): what was done was done, whichever board named it.
+     * It keeps its own weight and reps. With no such row it is a stray.
+     */
+    fun logged(sheet: Sheet, entries: List<JournalEntry>, date: LocalDate, className: String): ClassLog {
+        val live = Journal.live(entries).filter { it.date == date && it.className == className }
+        val ids = sheet.rows.map { it.id }.toSet()
+        val byRow = linkedMapOf<String, JournalEntry>()
+        // Two entries can't share a row id unless the log is damaged; the later one wins, as before.
+        live.filter { it.row in ids }.forEach { byRow[it.row] = it }
+        val strays = mutableListOf<JournalEntry>()
+        for (e in live.filter { it.row !in ids }) {
+            val row = sheet.rows.firstOrNull { it.id !in byRow && LogDraft.loggable(it) && (it.reading as Reading.Known).key == e.key && shape(it) == shape(e) }
+            if (row == null) strays += e else byRow[row.id] = e
+        }
+        return ClassLog(byRow, strays)
+    }
+
+    // A ladder, a counted row and a timed one are logged in different terms: an entry carried to
+    // a row of another kind would be rewritten in the wrong ones when corrected.
+    private fun shape(row: SheetRow) = when {
+        row.line.scheme is Scheme.Ladder -> "ladder"
+        row.target != null -> "counted"
+        else -> "other"
+    }
+
+    private fun shape(e: JournalEntry) = when {
+        e.ladder != null -> "ladder"
+        e.reps.size == 1 -> "counted"
+        else -> "other"
+    }
 
     /**
      * The events to write for [draft] against what is [logged] already: a new row is logged, a
@@ -87,8 +136,16 @@ object Logging {
      *
      * Only a row the screen opened with ([LogDraft.seen]) and then cleared is removed: a row logged
      * since the screen opened, which it never showed, isn't the person's to have cleared.
+     *
+     * An entry carried over from a row now gone is left as it is unless changed: a correction
+     * moves it to the row it was carried to. A stray is removed only when cleared.
      */
     fun events(
+        draft: LogDraft, sheet: Sheet, log: ClassLog, date: LocalDate, className: String, at: Long,
+    ): List<JournalEntry> = rowEvents(draft, sheet, log.byRow, date, className, at) +
+        log.strays.filter { it.id in draft.cleared }.map { it.copy(id = 0, at = at, kind = JournalEntry.Kind.REMOVED, target = it.id) }
+
+    private fun rowEvents(
         draft: LogDraft, sheet: Sheet, logged: Map<String, JournalEntry>, date: LocalDate, className: String, at: Long,
     ): List<JournalEntry> = sheet.rows.filter(LogDraft::loggable).mapNotNull { row ->
         val now = draft.rows[row.id]

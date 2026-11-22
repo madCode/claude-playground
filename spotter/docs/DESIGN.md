@@ -253,6 +253,11 @@ next one in that list. A Y-bell is another implement and never steps onto that l
   a new row is logged, a changed one corrected, one cleared removed, an unchanged one left
   alone. Reopened, the screen shows what is logged. A class's own sheet keeps the numbers from
   before it; the next class reads what was done.
+- When the board changes under a log (the class's own board replaces a borrowed one, or its
+  poster revises a line), what was logged follows the exercise: an entry whose row is gone
+  carries over to the first free row with the same exercise and the same kind of count, keeping
+  its own weight and reps. Entries with no such row are listed under "Logged, but not on this
+  board", each with Clear; they still count until cleared.
 - Still to come on the Log screen: "+ Each round" (each new round a copy of the previous one,
   so only what changed needs a tap; the heaviest stays the row's one number), and "Add an
   exercise" for one the board missed.

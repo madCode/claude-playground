@@ -11,6 +11,15 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 18: a log follows the exercise when the board changes
+- **Why:** your answer ("1 yes"): rows logged from a borrowed board should carry over to your
+  own board's rows with the same exercise.
+- **Shipped:** log from the other format's board, and when your class's own board is posted the
+  log moves to the matching rows, with the weight and reps you logged. Anything with no
+  matching row is listed at the bottom of the Log screen under "Logged, but not on this
+  board", with a Clear button; it still counts until you clear it. The same happens when a
+  board's poster revises a line after you've logged it.
+
 ### Cycle 17: the log goes to a folder you pick
 - **Why:** step 3's backup: the log shouldn't live on one phone only.
 - **Shipped:** the bottom of the home screen says where your log is. Choose a backup folder
