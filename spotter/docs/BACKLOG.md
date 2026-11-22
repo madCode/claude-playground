@@ -153,7 +153,7 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 ## Done
 
 - [x] Reading gym-coach's `history.jsonl` in the coach (cycle 19): each row read in full or left
-  out with a reason; on Carry's invented-lifter history, 702 of 880 weighted rows are read.
+  out with a reason; on Carry's invented-lifter history, 698 of 880 weighted rows are read.
 - [x] A log follows the exercise when the board changes (cycle 18): rows logged from a borrowed
   or revised board carry over to the row with the same exercise; the rest are listed on the Log
   screen with Clear. *(madCode, 2026-11-22)*

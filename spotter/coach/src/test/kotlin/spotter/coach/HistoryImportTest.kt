@@ -23,7 +23,8 @@ class HistoryImportTest {
         append(""""variant": {"implement": ${implement?.let { "\"$it\"" }}, "arms": "both"}, "weight": $weight, "reps": $reps, "prescribed_reps": $asked, "class": "2G", "source": "form"$extra}""")
     }
 
-    private fun read(vararg rows: String) = HistoryImport.read(rows.joinToString("\n"), identity)
+    private val today = LocalDate.of(2026, 4, 1)
+    private fun read(vararg rows: String) = HistoryImport.read(rows.joinToString("\n"), identity, today)
 
     // The count comes from the row's one hint, then from a name that fixes it, and is otherwise
     // unknown; a decimal weight rounds down.
@@ -34,8 +35,12 @@ class HistoryImportTest {
             row("8 x goblet squat", "40", 8, 8),
             row("8 x deadlift", "22.5", 8, 8),
             row("8 x deadlift", "30", 8, 8, "ybell"),
+            // The name fixes the count: the hint says "two" by default on single-arm lines.
+            row("8 each x single arm shoulder press", "15", 8, 8, "double_dumbbell"),
+            row("8 x goblet squat", "40", 8, 8, "double_dumbbell"),
         )
-        assertEquals(listOf(Load(25, 2), Load(40, 1), Load(22, null), Load(30, 1)), result.logged.map { it.load })
+        // 22.5 comes down to a dumbbell on the rack, never up.
+        assertEquals(listOf(Load(25, 2), Load(40, 1), Load(20, null), Load(30, 1), Load(15, 1), Load(40, 1)), result.logged.map { it.load })
         assertEquals(exercise("8 x goblet squat").key, result.logged[1].key)
         assertEquals(listOf("2G", "8 x chest press"), listOf(result.rows[0].className, result.rows[0].line))
         assertTrue(result.left.isEmpty())
@@ -46,17 +51,43 @@ class HistoryImportTest {
     @Test
     fun repsAreSetAgainstTheLine() {
         val result = read(
+            // Asked 12 of "12 total": both sides counted, so 12 is 6 a side and 8 is 4.
             row("12 total x reverse lunge", "20", 12, 12, "double_dumbbell"),
+            row("12 total x reverse lunge", "20", 8, 12, "double_dumbbell"),
+            // Asked 6 of "12 total": a side. 12 reported is the set done as asked.
             row("12 total x reverse lunge", "20", 6, 6, "double_dumbbell"),
+            row("12 total x reverse lunge", "20", 5, 6, "double_dumbbell"),
+            row("12 total x reverse lunge", "20", 12, 6, "double_dumbbell"),
             row("8 x chest press", "25", 6, 8, "double_dumbbell"),
             row("6 - 10 x chest press", "25", 9, 6, "double_dumbbell"),
             row("8 x chest press", "25", null, 8, "double_dumbbell"),
+            row("8 x chest press", "25", 8, null, "double_dumbbell"),
         ).logged
-        assertEquals(listOf(6..6, 6..6, 8..8, 6..10, 8..8), result.map { it.target })
-        assertEquals(listOf(listOf(6), listOf(6), listOf(6), listOf(9), emptyList()), result.map { it.reps })
-        assertEquals(listOf(Outcome.CLEAN, Outcome.CLEAN, Outcome.NEAR_MISS, Outcome.IN_RANGE), result.take(4).map { it.outcome })
+        assertEquals(listOf(6..6, 6..6, 6..6, 6..6, 6..6, 8..8, 6..10, 8..8, 8..8), result.map { it.target })
+        assertEquals(listOf(listOf(6), listOf(4), listOf(6), listOf(5), listOf(6), listOf(6), listOf(9), emptyList(), listOf(8)), result.map { it.reps })
+        assertEquals(listOf(Outcome.CLEAN, Outcome.NEAR_MISS, Outcome.IN_RANGE), listOf(result[0], result[1], result[6]).map { it.outcome })
         // Nothing said about the reps: nothing to judge, so it can't raise a number.
-        assertEquals(false, result[4].judged)
+        assertEquals(false, result[7].judged)
+    }
+
+    // Where the reported number may count a side or both, the row is left out: 10 against
+    // "12 total" is one short or four over, and "8" against "4 each" is clean or double.
+    @Test
+    fun repsThatMayBeASideOrBothAreLeftOut() {
+        val result = read(
+            row("12 total x reverse lunge", "20", 10, 6, "double_dumbbell"),
+            row("12 total x reverse lunge", "20", 12, null, "double_dumbbell"),
+            row("12 total x reverse lunge", "20", 12, 9, "double_dumbbell"),
+            row("6 each x reverse lunge", "20", 10, 6, "double_dumbbell"),
+            row("4 each x reverse lunge", "20", 8, null, "double_dumbbell"),
+            row("8 x chest press", "25", 12, null, "double_dumbbell"),
+            // Twice what a side was asked is the set done as asked, counted on both sides.
+            row("6 each x reverse lunge", "20", 12, 6, "double_dumbbell"),
+            // No sides to confuse: more than asked is more than asked.
+            row("8 x chest press", "25", 10, 8, "double_dumbbell"),
+        )
+        assertEquals(mapOf(HistoryImport.Left.REPS_UNCLEAR to 6), result.left)
+        assertEquals(listOf(listOf(6), listOf(10)), result.logged.map { it.reps })
     }
 
     // A ladder has one weight, its heaviest round's, so it can hold a number but not raise it.
@@ -95,6 +126,11 @@ class HistoryImportTest {
             row("8 x push-up", "null", 8, 8, "bodyweight"),
             row("8 x chest press", "\"25\"", 8, 8),
             row("8 x chest press", "0", 8, 8),
+            row("8 x chest press", "100", 8, 8),
+            row("8 x chest press", "2", 8, 8),
+            row("8 x chest press", "25", 8, 8, extra = """, "easier": true"""),
+            row("8 x chest press", "25", 8, 8, date = "2026-04-02"),
+            row("8 x chest press", "25", 8, 8, date = "1999-12-31"),
             row("8 x chest press", "25", 4, 8, extra = """, "breakdown": "fail""""),
             row("8 x zorbing", "25", 8, 8),
             row("12 total x reverse lunge", "20", 12, null),
@@ -103,13 +139,35 @@ class HistoryImportTest {
         )
         assertEquals(
             mapOf(
-                HistoryImport.Left.UNREADABLE to 3, HistoryImport.Left.SKIPPED to 1, HistoryImport.Left.NO_WEIGHT to 3,
+                HistoryImport.Left.UNREADABLE to 5, HistoryImport.Left.SKIPPED to 1, HistoryImport.Left.NO_WEIGHT to 3,
+                HistoryImport.Left.OFF_RACK to 2, HistoryImport.Left.EASIER to 1,
                 HistoryImport.Left.BROKE_DOWN to 1, HistoryImport.Left.NOT_NAMED to 1, HistoryImport.Left.REPS_UNCLEAR to 1,
             ),
             result.left,
         )
         val kept = result.logged.single()
         assertEquals(listOf(LocalDate.of(2026, 3, 1), Load(25, 2), true, true), listOf(kept.date, kept.load, kept.hurt, kept.hard))
+    }
+
+    // Not finished, though the reps don't say so: it can't be the clean set a step up starts from.
+    @Test
+    fun anUnfinishedSetDoesntRaiseTheNumber() {
+        val history = read(row("8 x chest press", "25", 8, 8, "double_dumbbell", extra = """, "incomplete": true""")).logged
+        assertEquals(true, history.single().hard)
+        val sheet = Sheet.make(listOf("* 8 x chest press"), history, identity)
+        assertEquals("2×25 =", sheet.glance(sheet.rows.single()))
+    }
+
+    // A file with a byte-order mark keeps its first row, and one too long to be a history keeps
+    // its newest rows, which are appended last, and says how many it didn't take.
+    @Test
+    fun theFirstRowAndTheNewestRowsAreKept() {
+        assertEquals(1, HistoryImport.read("\uFEFF" + row("8 x chest press", "25", 8, 8), identity, today).rows.size)
+        val old = row("8 x chest press", "20", 8, 8, date = "2026-03-01")
+        val text = (List(HistoryImport.MAX_LINES) { old } + row("8 x deadlift", "40", 8, 8, date = "2026-03-02")).joinToString("\n")
+        val result = HistoryImport.read("$old\n$text", identity, today)
+        assertEquals(mapOf(HistoryImport.Left.TOO_MANY to 2), result.left)
+        assertEquals(40, result.logged.last().load.lb)
     }
 
     // Rows come out in date order whatever order they were appended in, a day's rows as written.
@@ -137,11 +195,11 @@ class HistoryImportTest {
     fun theInventedLiftersHistoryReads() {
         val rows = File("../../carry/brain-fixtures/sheets.jsonl").readLines().filter { it.isNotBlank() }
             .flatMap { Json.parseToJsonElement(it).jsonObject.getValue("logged").jsonArray }
-        val result = HistoryImport.read(rows.joinToString("\n") { it.toString() }, identity)
+        val result = HistoryImport.read(rows.joinToString("\n") { it.toString() }, identity, LocalDate.of(2030, 1, 1))
         assertEquals(rows.size, result.rows.size + result.left.values.sum())
         assertEquals(null, result.left[HistoryImport.Left.UNREADABLE])
-        // 702 when written. A change to the word lists may raise it; a drop means rows that
+        // 698 when written. A change to the word lists may raise it; a drop means rows that
         // were read no longer are.
-        assertTrue("${result.rows.size} read, left ${result.left}", result.rows.size >= 700)
+        assertTrue("${result.rows.size} read, left ${result.left}", result.rows.size >= 698)
     }
 }

@@ -229,14 +229,19 @@ reason, so the import can say what it didn't take:
 
 - **The exercise** is named by Spotter's own lists from the line as written, or from the name
   the row was filed under when an old row has no line. Not named in full: left out.
-- **The weight** is one dumbbell's, rounded down from a decimal. **The count** is the row's own
-  hint (two dumbbells, one, a Ybell), then a name that fixes it (a goblet squat), else unknown.
-- **The reps** are set against the line's own reps a side. The row's reported and asked reps are
-  in the same terms as each other, so only their difference carries over: 12 done of "12 total"
-  is 6 a side, clean. With nothing to say what was asked, the row is left out: it can't be
-  called clean or short.
+- **The weight** is one dumbbell's, brought down to a dumbbell on the rack (22.5 is read as 20).
+  Heavier or lighter than the rack: left out, something else was held.
+- **The count** is fixed by the name where it can be (a goblet squat, a single-arm press: one),
+  then by the row's own hint (two dumbbells, one, a Ybell), else unknown.
+- **The reps** are a side. The row doesn't say whether its numbers count a side or both, so the
+  asked number is matched to the line: against "12 total", asked 12 is both sides (8 done is 4
+  a side) and asked 6 is a side. Where it can't be told (10 against "12 total", 8 against
+  "4 each" with nothing asked), the row is left out.
 - **A ladder** has one weight, its heaviest round's, so it can hold a number but not raise it.
-- Left out too: rows marked skipped, rows with no weight, and rows where form broke down.
+- **Not finished** (`incomplete`) counts as "felt hard": never the clean set a step up starts from.
+- Left out too: rows marked skipped, with no weight, where form broke down, where an easier
+  version was done, and rows dated after today.
+- A file too long to be a history keeps its newest rows and says how many it didn't take.
 
 ## Where the inputs come from
 
