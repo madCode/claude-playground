@@ -42,6 +42,17 @@ class ProgressionTest {
         assertEquals(Change.DOWN, weight(listOf(logged(1, 25, listOf(7, 8, 8)))).change)
     }
 
+    // One set logged (the Log screen's heaviest) has no first set to miss: one or two short holds,
+    // three short steps down.
+    @Test
+    fun oneLoggedSetHoldsUnlessThreeShort() {
+        assertEquals(Load(25, 2), weight(listOf(logged(1, 25, listOf(7)))).load)
+        assertEquals(Load(25, 2), weight(listOf(logged(1, 25, listOf(6)))).load)
+        assertEquals(Load(20, 2), weight(listOf(logged(1, 25, listOf(5)))).load)
+        // After a clean 30, a 35 one short with a twinge caps at 35 rather than a step under it.
+        assertEquals(Load(35, 2), weight(listOf(logged(1, 30, listOf(8)), logged(2, 35, listOf(7), hurt = true))).load)
+    }
+
     // A range goes up only once every set reaches its top.
     @Test
     fun aRangeHoldsUntilTheTop() {

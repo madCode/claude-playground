@@ -7,11 +7,19 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 - **Built so far:** the design; loads per hand on the rack's steps; reading a board line's
   count; naming its exercise, in full on 89% of Carry's board rows; the suggested weight from a
   log; the app, which updates itself; today's sheet on the phone; logging a class.
-- **Waiting on you:** whether one rep short on a single logged set should drop the next number
-  (BACKLOG.md, "Your call"); running `scorecard.py` on the example export; a few board words still
+- **Waiting on you:** a few board words still
   unsorted (BACKLOG.md, "Your call").
 
 ## Sunday 22 November 2026
+
+### Your answer: one set short
+- **Asked:** with one set logged, should one rep short drop the next number? You chose "hold
+  unless three or more short".
+- **Shipped:** a single logged set has no first set to miss. One or two short holds the
+  weight, three or more drops a step. With a twinge as well, the weight is capped at what you
+  held, not a step under it. Several sets logged are judged as before.
+- **Also:** `scorecard.py` grades Spotter's example export (exit 0, numbered and close 67%, as
+  expected), so the export's shape is settled.
 
 ### Cycle 12: the Log screen
 - **Why:** step 3's centre: what was done, logged in the car in under a minute.

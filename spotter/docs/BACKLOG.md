@@ -61,15 +61,6 @@ Step 3, logging:
 
 ## Your call
 
-- **One logged set is read as the first set.** The Log screen records the heaviest weight and
-  its reps, one number per row, as you asked. The rules then read it as set 1, so one rep short
-  ("7 of 8") counts as a miss on the first set and drops the next number a step, even with a
-  twinge. Keep that, or read a single logged set more gently (hold after one or two short)?
-  *(cycle 12)*
-
-- **Check the export against `scorecard.py`** (cycles can't read gym-coach): run it on
-  [scorecard-example.json](scorecard-example.json), an invented class, and say whether it
-  grades. It is in Carry's `gym-session/1` format, so it should. *(cycle 7)*
 
 - **Board words still unsorted**, after madCode's answers of 2026-11-22. Each stays "not sure"
   until answered. *(cycle 4)*
@@ -107,6 +98,13 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 - Strength per movement, behind a switch, judged on the scorecard. (Step 5.)
 - Progress, the new-word review screen, sharing a board. (Step 6.)
 - The Garmin watch view, a Connect IQ app the phone sends the sheet to. (Step 7.)
+- Choose which calendar Spotter reads, for privacy. Android's calendar permission covers every
+  calendar on the phone, so the choice lives in Spotter: list the calendars by name, let the
+  person pick one or more, and query only those (`Calendar`, `CalendarContract.Instances` by
+  calendar id). Until they pick, it reads all visible calendars as now. Say plainly on the
+  screen that Android's permission still covers all of them. *(madCode, 2026-11-22)* Low
+  priority: it limits only what Spotter reads, not what Android allows, and Spotter already reads
+  just today's and tomorrow's titles and times and keeps nothing.
 
 ## Not doing
 
@@ -116,6 +114,9 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] The export grades: `scorecard.py` (gym-coach main) read `scorecard-example.json` with exit
+  0, numbered 67%, close 67%, as expected (run by another session at madCode's ask,
+  2026-11-22).
 - [x] The Log screen, first half (cycle 12): ✓ as listed or changed (weight, one or two, reps),
   how it felt, saved as events in one transaction; the sheet reads the log; the class stays
   three hours after it starts so it can be logged in the car.

@@ -28,8 +28,13 @@ data class Logged(
     /** Whether there is anything to judge: a rep target with no reps logged says nothing. */
     val judged: Boolean get() = reps.isNotEmpty() || (target == null && ladder == null)
 
+    // The first-set rule needs sets to compare. One set logged is the heaviest, often from a
+    // later, tired round (the Log screen's one number), so it holds unless three or more short:
+    // madCode's call, 2026-11-22.
     private val missed: Boolean
-        get() = stopped || formBroke || shortBy().let { it.firstOrNull()?.let { first -> first > 0 } == true || it.any { s -> s >= 3 } }
+        get() = stopped || formBroke || shortBy().let { short ->
+            (short.size > 1 && short.first() > 0) || short.any { it >= 3 }
+        }
 
     // How many reps short each set was of its own target's low end.
     private fun shortBy(): List<Int> = reps.mapIndexed { i, r ->
