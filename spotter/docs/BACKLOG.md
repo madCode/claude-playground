@@ -69,9 +69,11 @@ Step 3, logging:
   - The row id writes the count as a Kotlin data-class dump; give it a fixed format, pinned in
     a test, so a code change can't change every id.
   - "+ Each round" will need a weight per round, not one per row.
+- [ ] The evening before: once today's class is logged, the sheet shows the next class
+  (madCode, 2026-11-22).
 - [ ] Logging a class after its window: the sheet moves on three hours after the start, and
   then the class can't be logged at all. Keep a "Log <day>'s class" way in while it has
-  unlogged rows, apart from which sheet shows. (Waits on madCode's question below.)
+  unlogged rows, apart from which sheet shows.
 
 - [ ] The Log screen, second half: "+ Each round", each round a copy of the one before; "Add an
   exercise"; and the person's calls below. *(madCode)* From cycles 11 and 12's reviews:
@@ -93,13 +95,13 @@ Step 3, logging:
 
 From the review of today's logging decisions (also on the morning page). Until answered, the
 app keeps what it does now, except where noted.
+A research pass on these is running (madCode: "shouldn't the science have an opinion?"); its
+notes go in `docs/TRAINING.md`, and the tick, range and ladder rules wait for it.
 
 - **A tick on a fixed count** ("12 x squat", ✓ as listed): up a step every time, as now; up
   after two ticks in a row; or up only with "felt easy"?
 - **A tick on a range** ("8-10 x"): counts as the low end, so the weight holds until "changed"
   says the top was reached. Or offer the top as a second one-tap choice?
-- **The evening before a class**: show tomorrow's sheet as soon as today's class is logged, or
-  keep today's until three hours after it started, as now?
 - **A ladder's weight** ("8 / 6 / 4"): remember the round-one weight, or the heaviest round's?
   Until answered, a ladder logged with one number holds.
 - **Borrowed board, then your own with a different count** (ticked "12 x" on the 3G board, your
@@ -134,6 +136,14 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 - History import from gym-coach's `history.jsonl`: unknown counts stay unknown, decimals round
   down. Its format, with invented rows, is in [HISTORY-FORMAT.md](HISTORY-FORMAT.md). (Step 4.)
+- A replay tool, with step 4 (asked by the gym-coach session for madCode, 2026-11-22): a JVM
+  entry point or Gradle task in the coach, no Android SDK and no network, that takes a
+  `history.jsonl` and a corpus of boards, replays each class using only the history before
+  that day, and writes one scorecard session file per class; a flag turns strength per movement
+  on or off. Built and tested on invented data. madCode grades their real history with it in
+  private; only verdicts come back, never figures. When merged, tell madCode how to run it:
+  this session can't message that one (it needs a trusted device), so put the command on the
+  morning page for them to pass on.
 - Strength per movement, behind a switch, judged on the scorecard. (Step 5.)
 - Progress, the new-word review screen, sharing a board. (Step 6.)
 - The Garmin watch view, a Connect IQ app the phone sends the sheet to. (Step 7.)
