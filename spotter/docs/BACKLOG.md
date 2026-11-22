@@ -61,11 +61,6 @@ Step 3, logging:
 
 ## Your call
 
-- **One logged set is read as the first set.** The Log screen records the heaviest weight and
-  its reps, one number per row, as you asked. The rules then read it as set 1, so one rep short
-  ("7 of 8") counts as a miss on the first set and drops the next number a step, even with a
-  twinge. Keep that, or read a single logged set more gently (hold after one or two short)?
-  *(cycle 12)*
 
 - **Check the export against `scorecard.py`** (cycles can't read gym-coach): run it on
   [scorecard-example.json](scorecard-example.json), an invented class, and say whether it
