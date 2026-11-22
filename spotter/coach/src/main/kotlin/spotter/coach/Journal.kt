@@ -51,6 +51,11 @@ data class JournalEntry(
      */
     val shownLb: Int? = null,
     val shownCount: Int? = null,
+    /**
+     * A ladder's dumbbell for each round, when the person said them. [lb] is then round one's,
+     * the round the sheet's number is for, and [heaviestOnly] is false.
+     */
+    val roundLb: List<Int>? = null,
 ) {
     enum class Kind { LOGGED, CORRECTED, REMOVED }
 }
@@ -73,13 +78,13 @@ object Journal {
         load: Load, target: IntRange?, ladder: List<Int>?, reps: List<Int>,
         hurt: Boolean = false, formBroke: Boolean = false, stopped: Boolean = false,
         easy: Boolean = false, hard: Boolean = false, easier: Boolean = false,
-        heaviestOnly: Boolean = false, shown: Load? = null,
+        heaviestOnly: Boolean = false, shown: Load? = null, roundLb: List<Int>? = null,
     ) = JournalEntry(
         at = at, kind = JournalEntry.Kind.LOGGED, date = date, className = className, row = row, line = line,
         key = exercise.key, parts = exercise.parts.map { LoggedPart(it.movement.name, it.variations) },
         lb = load.lb, count = load.count, targetLow = target?.first, targetHigh = target?.last, ladder = ladder,
         reps = reps, hurt = hurt, formBroke = formBroke, stopped = stopped, easy = easy, hard = hard, easier = easier,
-        heaviestOnly = heaviestOnly, shownLb = shown?.lb, shownCount = shown?.count,
+        heaviestOnly = heaviestOnly, shownLb = shown?.lb, shownCount = shown?.count, roundLb = roundLb,
     )
 
     /**

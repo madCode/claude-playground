@@ -51,6 +51,7 @@ data class EventRow(
     @ColumnInfo(defaultValue = "0") val heaviestOnly: Boolean = false,
     val shownLb: Int? = null,
     val shownCount: Int? = null,
+    val roundLb: String? = null,
 ) {
     fun toEntry() = JournalEntry(
         id = id, at = at, kind = JournalEntry.Kind.valueOf(kind), target = target, date = LocalDate.parse(date),
@@ -58,7 +59,7 @@ data class EventRow(
         count = count, targetLow = targetLow, targetHigh = targetHigh, ladder = ladder?.let(Journal::intsFrom),
         reps = Journal.intsFrom(reps), hurt = hurt, formBroke = formBroke, stopped = stopped,
         easy = easy, hard = hard, easier = easier,
-        heaviestOnly = heaviestOnly, shownLb = shownLb, shownCount = shownCount,
+        heaviestOnly = heaviestOnly, shownLb = shownLb, shownCount = shownCount, roundLb = roundLb?.let(Journal::intsFrom),
     )
 
     companion object {
@@ -68,7 +69,7 @@ data class EventRow(
             targetLow = e.targetLow, targetHigh = e.targetHigh, ladder = e.ladder?.let(Journal::intsJson),
             reps = Journal.intsJson(e.reps), hurt = e.hurt, formBroke = e.formBroke, stopped = e.stopped,
             easy = e.easy, hard = e.hard, easier = e.easier,
-            heaviestOnly = e.heaviestOnly, shownLb = e.shownLb, shownCount = e.shownCount,
+            heaviestOnly = e.heaviestOnly, shownLb = e.shownLb, shownCount = e.shownCount, roundLb = e.roundLb?.let(Journal::intsJson),
         )
     }
 }
@@ -90,9 +91,9 @@ interface EventDao {
 // new version with a migration, checked against the schema kept in app/schemas.
 @Database(
     entities = [EventRow::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2, spec = LogDatabase.OneWeightLadders::class)],
+    autoMigrations = [AutoMigration(from = 1, to = 2, spec = LogDatabase.OneWeightLadders::class), AutoMigration(from = 2, to = 3)],
 )
 abstract class LogDatabase : RoomDatabase() {
     abstract fun events(): EventDao

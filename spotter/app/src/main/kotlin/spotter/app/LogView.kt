@@ -33,11 +33,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import spotter.app.today.Today
+import spotter.coach.Count
 import spotter.coach.JournalEntry
 import spotter.coach.LogDraft
 import spotter.coach.Rack
 import spotter.coach.Reading
 import spotter.coach.RowLog
+import spotter.coach.Scheme
 import spotter.coach.SheetRow
 
 private val ink = Color(0xFF16181D)
@@ -194,14 +196,44 @@ private fun Choice(label: String, selected: Boolean, spoken: String, onClick: ()
 private fun Editor(row: SheetRow, log: RowLog?, onChange: (RowLog) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val last = row.lastHeld?.let { " Last time: ${it.count?.let { c -> "$c×" }.orEmpty()}${it.lb}." }.orEmpty()
+        val rounds = log?.rounds
+        if (rounds != null) {
+            Text("Each round's dumbbell, lb.$last", fontSize = 15.sp, color = muted)
+            // The board's own numbers beside each round; a carried log may have other rounds
+            // than this row, and then they go unnumbered.
+            val ladder = (row.line.scheme as? Scheme.Ladder)?.takeIf { it.rounds.size == rounds.size }
+            val unit = if (ladder?.count == Count.TOTAL) "total" else "reps"
+            rounds.forEachIndexed { i, lb ->
+                Stepper(
+                    "Round ${i + 1}" + ladder?.let { " · ${it.rounds[i]} $unit" }.orEmpty(),
+                    "$lb",
+                    "${row.shown}: round ${i + 1}, $lb pounds",
+                    onDown = Rack.down(lb)?.let { { onChange(log.round(i, it)) } },
+                    onUp = Rack.up(lb)?.let { { onChange(log.round(i, it)) } },
+                )
+            }
+            OutlinedButton(
+                onClick = { onChange(log.at(log.lb)) },
+                modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: one weight" },
+            ) { Text("One weight") }
+            return@Column
+        }
         Text("Heaviest dumbbell, lb.$last", fontSize = 15.sp, color = muted)
         // The whole rack, one tap each: thirteen weights are quicker to hit than to step to.
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Rack.dumbbells.forEach { lb ->
                 Choice("$lb", log?.lb == lb, "${row.shown}: $lb pounds") {
-                    onChange(log?.copy(lb = lb) ?: LogDraft.picked(row, lb))
+                    onChange(log?.at(lb) ?: LogDraft.picked(row, lb))
                 }
             }
+        }
+        // Only once a weight is picked: round one starts from it, and the rest copy it.
+        val ladder = row.line.scheme as? Scheme.Ladder
+        if (ladder != null && log != null) {
+            OutlinedButton(
+                onClick = { onChange(log.eachRound(ladder.rounds.size)) },
+                modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: a weight for each round" },
+            ) { Text("+ Each round") }
         }
     }
 }
@@ -261,7 +293,7 @@ private fun Flag(row: SheetRow, label: String, on: Boolean, onToggle: (Boolean) 
 private const val MAX_REPS = 99
 
 internal fun summary(log: RowLog): String = listOfNotNull(
-    "${log.count?.let { "$it×" } ?: ""}${log.lb}",
+    "${log.count?.let { "$it×" } ?: ""}${log.rounds?.joinToString(" / ") ?: log.lb}",
     log.reps?.let { "$it reps" },
     "felt easy".takeIf { log.easy },
     "felt hard".takeIf { log.hard },

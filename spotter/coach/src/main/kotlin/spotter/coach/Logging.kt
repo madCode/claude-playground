@@ -6,6 +6,9 @@ import java.time.LocalDate
 /**
  * What one row says was done: the heaviest dumbbell held, how many, and reps a side (null for a
  * timed row, and for a ladder, whose rounds stay as listed). The rest is one tap each.
+ *
+ * [rounds] is a ladder's dumbbell for each round, once the person has said them ("+ Each round");
+ * [lb] is then the heaviest of them, so the row still has its one number.
  */
 @Serializable
 data class RowLog(
@@ -19,10 +22,31 @@ data class RowLog(
     /** Had to stop: down a step next time. */
     val stopped: Boolean = false,
     val easier: Boolean = false,
+    val rounds: List<Int>? = null,
 ) {
+    /** One weight for the row: the rounds, if any were said, are dropped and [lb] takes their place. */
+    fun at(lb: Int) = copy(lb = lb, rounds = null)
+
+    /** A weight for each of [n] rounds, each starting as a copy of the row's one weight. */
+    fun eachRound(n: Int) = copy(rounds = List(n) { lb })
+
+    /**
+     * Round [i] at [lb]. The rounds after it that held the same as it did go with it: each round
+     * starts as a copy of the one before, so a ladder that climbs takes one tap a round.
+     */
+    fun round(i: Int, lb: Int): RowLog {
+        val was = rounds ?: return this
+        val copies = was.drop(i).takeWhile { it == was[i] }.size
+        val now = was.mapIndexed { j, w -> if (j in i until i + copies) lb else w }
+        return copy(rounds = now, lb = now.max())
+    }
+
     companion object {
         /** A logged entry in the screen's terms. */
-        fun of(e: JournalEntry) = RowLog(e.lb, e.count, e.reps.singleOrNull()?.takeIf { e.ladder == null }, e.easy, e.hard, e.hurt, e.stopped, e.easier)
+        fun of(e: JournalEntry) = RowLog(
+            e.roundLb?.maxOrNull() ?: e.lb, e.count, e.reps.singleOrNull()?.takeIf { e.ladder == null },
+            e.easy, e.hard, e.hurt, e.stopped, e.easier, e.roundLb?.takeIf { it.isNotEmpty() },
+        )
     }
 }
 
@@ -165,12 +189,13 @@ object Logging {
             // row, and take its terms below.
             before.line != row.shown && now.reps == RowLog.of(before).reps -> before.copy(
                 id = 0, at = at, kind = JournalEntry.Kind.CORRECTED, target = before.id, row = row.id,
-                lb = now.lb, count = now.count, reps = before.ladder ?: listOfNotNull(now.reps),
+                lb = roundOne(now, before.ladder), roundLb = rounds(now, before.ladder),
+                count = now.count, reps = before.ladder ?: listOfNotNull(now.reps),
                 hurt = now.hurt, stopped = now.stopped, easy = now.easy, hard = now.hard, easier = now.easier,
-                // The weight as it was keeps what it meant; another is the heaviest round's
+                // The one weight as it was keeps what it meant; another is the heaviest round's
                 // unless it is the sheet's number, as on a row of its own.
-                heaviestOnly = before.ladder != null &&
-                    if (now.lb == before.lb) before.heaviestOnly else now.lb != LogDraft.asListed(row)?.lb,
+                heaviestOnly = before.ladder != null && rounds(now, before.ladder) == null &&
+                    if (now.lb == before.lb && before.roundLb == null) before.heaviestOnly else now.lb != LogDraft.asListed(row)?.lb,
             )
             // A correction keeps what the sheet showed when the row was first logged: the
             // sheet as rebuilt now may show another number, and the scorecard grades the
@@ -184,13 +209,23 @@ object Logging {
     private fun entry(row: SheetRow, log: RowLog, date: LocalDate, className: String, at: Long): JournalEntry {
         val ladder = (row.line.scheme as? Scheme.Ladder)?.perSide()
         return Journal.logged(
-            at, date, className, row.id, row.shown, row.reading as Reading.Known, Load(log.lb, log.count),
+            at, date, className, row.id, row.shown, row.reading as Reading.Known, Load(roundOne(log, ladder), log.count),
             target = row.target, ladder = ladder, reps = ladder ?: listOfNotNull(log.reps),
             hurt = log.hurt, stopped = log.stopped, easy = log.easy, hard = log.hard, easier = log.easier,
             // A ladder logged at the sheet's number was done at it from round one; another weight
             // is the heaviest round's. Only the weight tells them apart: saying how many
             // dumbbells, or how it felt, doesn't make a listed ladder a changed one.
-            heaviestOnly = ladder != null && log.lb != LogDraft.asListed(row)?.lb, shown = (row.suggestion as? Suggestion.Weight)?.load,
+            heaviestOnly = ladder != null && rounds(log, ladder) == null && log.lb != LogDraft.asListed(row)?.lb,
+            shown = (row.suggestion as? Suggestion.Weight)?.load, roundLb = rounds(log, ladder),
         )
     }
+
+    // Each round's weight, when it was said for exactly the rounds being stored. Any other number
+    // of them (a draft made against a board since revised) can't be set against the rounds, so
+    // the row falls back to its one number, the heaviest.
+    private fun rounds(log: RowLog, ladder: List<Int>?): List<Int>? = log.rounds?.takeIf { ladder != null && it.size == ladder.size }
+
+    // The weight an entry is filed under. With each round's known it is round one's, the round
+    // the sheet's number is for: the coach then reads the ladder as it reads a listed one.
+    private fun roundOne(log: RowLog, ladder: List<Int>?): Int = rounds(log, ladder)?.first() ?: log.lb
 }

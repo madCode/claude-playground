@@ -174,6 +174,10 @@ class ExportTest {
         assertEquals(listOf(3, 4, 5), lines.single { it["line"]!!.jsonPrimitive.content.contains("total") }["ladder"]!!.jsonArray.map { it.jsonPrimitive.int })
         val deadlift = lines.single { it["line"]!!.jsonPrimitive.content == "8 / 6 / 4 x deadlift" }
         assertEquals(true, deadlift["heaviest_only"]!!.jsonPrimitive.boolean)
+        // Each round's weight is in the log when it was said, and null when it wasn't.
+        assertEquals(JsonNull, deadlift["round_lb"])
+        val rounds = Json.parseToJsonElement(Export.line(written.last().copy(roundLb = listOf(20, 25, 30)))).jsonObject
+        assertEquals(listOf(20, 25, 30), rounds["round_lb"]!!.jsonArray.map { it.jsonPrimitive.int })
         assertEquals("deadlift", deadlift["parts"]!!.jsonArray.single().jsonObject["movement"]!!.jsonPrimitive.content)
         // Nothing logged: only the empty log, so the folder shows the export ran.
         assertEquals(mapOf(Export.LOG_FILE to ""), Export.files(emptyList()))

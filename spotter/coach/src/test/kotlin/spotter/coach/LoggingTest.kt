@@ -138,6 +138,49 @@ class LoggingTest {
         assertNull(bySquat.getValue(squat.id).shownLb)
     }
 
+    // A weight for each round: the entry is filed under round one's, the round the sheet's number
+    // is for, so a ladder that climbs can move the number where its heaviest alone only held it.
+    @Test
+    fun aLadderWithEachRoundsWeightIsReadFromRoundOne() {
+        val squat = row(sheet(monday), "10 / 8 / 6 x squat")
+        val picked = LogDraft.picked(squat, 30).copy(count = 2)
+        // Each round starts as a copy of the one before: one tap up on round two takes round
+        // three with it, and one more on round three finishes a ladder that climbs.
+        val each = picked.eachRound(3)
+        assertEquals(listOf(30, 30, 30), each.rounds)
+        val climbed = each.round(1, 35).round(2, 40)
+        assertEquals(listOf(listOf(30, 35, 40), 40), listOf(climbed.rounds, climbed.lb))
+        // A round set apart stays where it is when an earlier one moves.
+        assertEquals(listOf(35, 35, 40), climbed.round(0, 35).rounds)
+        assertEquals(listOf(30, 30, 40), climbed.round(1, 30).rounds)
+
+        val saved = save(monday, LogDraft().with(squat.id, climbed.copy(easy = true))).single()
+        assertEquals(listOf(30, listOf(30, 35, 40), false), listOf(saved.lb, saved.roundLb, saved.heaviestOnly))
+        // Round one at 30 felt easy: up a dumbbell, which one weight for the ladder never does.
+        assertEquals("2×35 ▲", sheet(thursday).glance(row(sheet(thursday), "10 / 8 / 6 x squat")))
+        // The screen reopens with the rounds, and saving it untouched writes nothing.
+        val log = Logging.logged(sheet(monday), written, monday, "2G")
+        val reopened = LogDraft.from(sheet(monday), log.byRow)
+        assertEquals(climbed.copy(easy = true), reopened.rows[squat.id])
+        assertTrue(save(monday, reopened).isEmpty())
+        // Back to one weight: the heaviest, as the row's one number always was.
+        val one = save(monday, reopened.with(squat.id, climbed.at(climbed.lb))).single()
+        assertEquals(listOf(40, null, true), listOf(one.lb, one.roundLb, one.heaviestOnly))
+    }
+
+    // Rounds that don't match the row's (a draft kept from a board since revised) can't be set
+    // against it: the row keeps its one number, the heaviest.
+    @Test
+    fun roundsThatDoNotFitTheRowFallBackToOneWeight() {
+        val squat = row(sheet(monday), "10 / 8 / 6 x squat")
+        val saved = save(monday, LogDraft().with(squat.id, RowLog(30, 2, null, rounds = listOf(25, 30)))).single()
+        assertEquals(listOf(30, null, true), listOf(saved.lb, saved.roundLb, saved.heaviestOnly))
+        // And a straight set has no rounds to keep.
+        val press = row(sheet(monday), "8 x chest press")
+        val straight = save(monday, LogDraft().with(press.id, RowLog(25, 2, 8, rounds = listOf(20, 25)))).single()
+        assertEquals(listOf(25, null), listOf(straight.lb, straight.roundLb))
+    }
+
     // "Last time" is the last logged, also when two fall on one day (one exercise in two blocks).
     @Test
     fun lastHeldIsTheLastLogged() {
@@ -269,6 +312,10 @@ class LoggingTest {
         assertEquals(listOf(listOf(12, 10, 8), listOf(12, 10, 8), false, true), listOf(felt.ladder, felt.reps, felt.heaviestOnly, felt.hard))
         val heavier = Logging.events(LogDraft.from(sheet, log.byRow).with(row.id, listed.copy(lb = listed.lb + 5)), sheet, log, monday, "2G", 2L).single()
         assertEquals(listOf(listOf(12, 10, 8), true), listOf(heavier.ladder, heavier.heaviestOnly))
+        // Each round's weight said on the carried entry: filed under round one's, against the
+        // rounds that were done.
+        val rounds = Logging.events(LogDraft.from(sheet, log.byRow).with(row.id, listed.eachRound(3).round(1, listed.lb + 5)), sheet, log, monday, "2G", 2L).single()
+        assertEquals(listOf(listed.lb, listOf(listed.lb, listed.lb + 5, listed.lb + 5), false, listOf(12, 10, 8)), listOf(rounds.lb, rounds.roundLb, rounds.heaviestOnly, rounds.ladder))
         // Once heaviest-only, the same weight stays so, whatever else is said.
         write(listOf(heavier))
         val again = Logging.logged(sheet, written, monday, "2G")

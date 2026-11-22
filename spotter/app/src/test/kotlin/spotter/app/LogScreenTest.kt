@@ -262,6 +262,47 @@ class LogScreenTest {
         compose.onNodeWithContentDescription("8 x deadlift: done as listed").assertIsNotSelected()
     }
 
+    // A ladder that climbed: a weight for each round, each a copy of the one before, so only what
+    // changed takes a tap. It survives the screen being rebuilt, and is saved as said.
+    @Test
+    fun aLadderTakesAWeightForEachRound() {
+        val ladder = "10 / 8 / 6 x squat"
+        val shown = Today.of(
+            TodaysBoard.Lines(BookedClass("2G", saturday, saturday.atTime(9, 50), "Orange 60 Min 2G"), listOf("* $ladder", "* 8 x deadlift")),
+            emptyList(), identity, vocabulary,
+        ) as Today.Showing
+        var saved: LogDraft? = null
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = shown, onSaveLog = { _, d -> saved = d }) }
+        compose.onNodeWithText("Log this class").performClick()
+        compose.onNodeWithContentDescription("$ladder: changed").performClick()
+        // Offered once there is a weight for round one to start from, and only on a ladder.
+        compose.onNodeWithText("+ Each round").assertDoesNotExist()
+        compose.onNodeWithContentDescription("$ladder: 20 pounds").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: 40 pounds").performClick()
+        compose.onAllNodesWithText("+ Each round").assertCountEquals(1)
+        compose.onNodeWithContentDescription("$ladder: a weight for each round").performClick()
+        compose.onNodeWithText("Round 2 · 8 reps").assertIsDisplayed()
+        // "One weight" goes back to the rack, at the heaviest round's.
+        compose.onNodeWithContentDescription("more, $ladder: round 3, 20 pounds").performClick()
+        compose.onNodeWithContentDescription("$ladder: one weight").performClick()
+        compose.onNodeWithContentDescription("$ladder: 25 pounds").assertIsSelected()
+        compose.onNodeWithContentDescription("$ladder: 20 pounds").performClick()
+        compose.onNodeWithContentDescription("$ladder: a weight for each round").performClick()
+        compose.onNodeWithContentDescription("more, $ladder: round 2, 20 pounds").performClick()
+        compose.onNodeWithContentDescription("more, $ladder: round 3, 25 pounds").performClick()
+        compose.onNodeWithContentDescription("$ladder: two dumbbells").performClick()
+        compose.onNodeWithText("Logged: 2×20 / 25 / 30").performScrollTo().assertIsDisplayed()
+        shoot("log-each-round")
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithText("Logged: 2×20 / 25 / 30").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(listOf(20, 25, 30), saved!!.rows.getValue(shown.sheet.rows[0].id).rounds)
+        val entry = save(shown, saved!!).first()
+        assertEquals(listOf(20, listOf(20, 25, 30), false), listOf(entry.lb, entry.roundLb, entry.heaviestOnly))
+    }
+
     // The sheet has moved on to the next class: the one just done is first on the screen, and
     // logging it saves under its own day.
     @Test
