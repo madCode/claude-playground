@@ -10,6 +10,18 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 2: reading what a line asks for
+- **Why:** every number needs the line's reps first, and three traps live here: "12 total" vs
+  "6 each" (7), ladders (8), and prose read as an exercise (5).
+- **Shipped:** the line reader. On Carry's 919 distinct board lines it reads a scheme from all
+  but 9, and those 9 have none ("burpee", "seated low row … until time is called"). It keeps 5
+  lines out as instructions or headings ("Goal: match or beat your reps…", a run recap).
+- **Review caught**, on the corpus: a trailing "(total)" ignored (trap 7); recap paragraphs
+  that start with a number kept as exercises; "45 sec to do 8 x …" losing its reps; rower
+  lines ("600 m row") becoming dumbbell rows; bulleted lines losing their scheme; a side lost
+  before a timed rest. And on hostile input: a 2 KB line that overflowed the stack, a line of
+  commas that took minutes, and numbers too big for an Int. All fixed and tested.
+
 ### The app, and it updates itself
 - **Why:** madCode asked for automatic updating to be built into the app now.
 - **Shipped:** the first Android app (`com.app.spotter`, beside Carry): an icon, a home screen

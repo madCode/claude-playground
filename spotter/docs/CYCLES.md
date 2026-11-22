@@ -2,6 +2,16 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 2 — build: reading what a line asks for
+
+- Peek at the corpus through the real Kotlin code, not a Python copy: a throwaway JUnit test
+  that writes every line's reading to a file (deleted before commit) found shapes a regex
+  survey missed ("\~10 sec", "on left", counts with no "x").
+- Two of three falsifications first stayed green: a rule with two guards ("!" and "all") needs
+  a test that only one of them catches.
+- `local.properties` is gitignored: a fresh checkout needs `sdk.dir=/opt/android-sdk` before
+  the full build, or it fails in one second with "SDK location not found".
+
 ### Cycle 1 — build: the starting lists
 
 - Run baseline (cloud container): disk 15% used, load 0.00, no emulator.

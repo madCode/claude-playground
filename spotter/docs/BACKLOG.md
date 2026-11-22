@@ -18,8 +18,6 @@ can grade against Carry.
 
 Step 1, the coach core:
 
-- [ ] Board line reading: reps and rep schemes ("6 each", "12 total", ladders, timed), with
-  traps 5, 7 and 8 as tests. *(handoff)*
 - [ ] Identity: movement plus variations, every word accounted for, "not sure" otherwise; trap
   6, 10 and the close-grip and floor cases as tests. Also the refusals DESIGN.md lists under "A
   full read can still be wrong", with the review's corpus lines as tests, and "step-down" used as
@@ -70,6 +68,9 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
   to a folder madCode controls.
 
 ## Done
+
+- [x] Board line reading: rep schemes, labels, sides and rest split from the exercise's words;
+  instructions and headings kept out; traps 5, 7 and 8 tested. Cycle 2, 2026-11-22.
 
 - [x] `app/` with its own icon, `.debug` beside release, the version on screen, and the debug
   channel, which installs newer builds by itself. madCode asked for self-update first,
