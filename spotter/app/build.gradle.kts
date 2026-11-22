@@ -67,6 +67,8 @@ android {
                 // and the screenshots pass while showing nothing.
                 it.setForkEvery(1L)
                 it.systemProperty("screenshotDir", layout.buildDirectory.dir("screenshots").get().asFile.path)
+                // LogMigrationTest builds old databases from these, so a change reruns the tests.
+                it.inputs.dir("schemas")
             }
         }
     }

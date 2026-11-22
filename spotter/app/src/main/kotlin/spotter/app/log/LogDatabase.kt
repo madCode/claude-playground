@@ -1,6 +1,8 @@
 package spotter.app.log
 
 import android.content.Context
+import androidx.room.AutoMigration
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -44,6 +46,9 @@ data class EventRow(
     val easy: Boolean,
     val hard: Boolean,
     val easier: Boolean,
+    @ColumnInfo(defaultValue = "0") val heaviestOnly: Boolean = false,
+    val shownLb: Int? = null,
+    val shownCount: Int? = null,
 ) {
     fun toEntry() = JournalEntry(
         id = id, at = at, kind = JournalEntry.Kind.valueOf(kind), target = target, date = LocalDate.parse(date),
@@ -51,6 +56,7 @@ data class EventRow(
         count = count, targetLow = targetLow, targetHigh = targetHigh, ladder = ladder?.let(Journal::intsFrom),
         reps = Journal.intsFrom(reps), hurt = hurt, formBroke = formBroke, stopped = stopped,
         easy = easy, hard = hard, easier = easier,
+        heaviestOnly = heaviestOnly, shownLb = shownLb, shownCount = shownCount,
     )
 
     companion object {
@@ -60,6 +66,7 @@ data class EventRow(
             targetLow = e.targetLow, targetHigh = e.targetHigh, ladder = e.ladder?.let(Journal::intsJson),
             reps = Journal.intsJson(e.reps), hurt = e.hurt, formBroke = e.formBroke, stopped = e.stopped,
             easy = e.easy, hard = e.hard, easier = e.easier,
+            heaviestOnly = e.heaviestOnly, shownLb = e.shownLb, shownCount = e.shownCount,
         )
     }
 }
@@ -77,7 +84,14 @@ interface EventDao {
     fun all(): List<EventRow>
 }
 
-@Database(entities = [EventRow::class], version = 1, exportSchema = true)
+// A phone has had version 1 since the Log screen shipped, so every change to the table is a
+// new version with a migration, checked against the schema kept in app/schemas.
+@Database(
+    entities = [EventRow::class],
+    version = 2,
+    exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
+)
 abstract class LogDatabase : RoomDatabase() {
     abstract fun events(): EventDao
 

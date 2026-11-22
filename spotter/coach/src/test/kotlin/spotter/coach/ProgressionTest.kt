@@ -65,14 +65,58 @@ class ProgressionTest {
     // Trap 3: a set that hurt never raises a number, as a source or a floor.
     @Test
     fun aSetThatHurtNeverRaisesANumber() {
-        val onlyHurt = suggest(listOf(logged(1, 25, listOf(8, 8, 8), hurt = true)))
-        assertTrue(onlyHurt is Suggestion.NoNumber)
+        // madCode: a twinge holds the weight and notes it, even as the only thing logged.
+        val onlyHurt = weight(listOf(logged(1, 35, listOf(8, 8, 8), hurt = true)))
+        assertEquals(Load(35, 2), onlyHurt.load)
+        assertEquals("it twinged last time at 2×35", onlyHurt.caution)
+        // Short by three as well: a step under.
+        assertEquals(Load(30, 2), weight(listOf(logged(1, 35, listOf(5), hurt = true))).load)
         // Clean at 25, then it hurt at 25: hold, not up to 30.
         val capped = weight(listOf(logged(1, 25, listOf(8, 8, 8)), logged(3, 25, listOf(8, 8, 8), hurt = true)))
         assertEquals(Load(25, 2), capped.load)
         // A clean 25 doesn't step up past a 20 that hurt since.
         val lower = weight(listOf(logged(1, 25, listOf(8, 8, 8)), logged(3, 20, listOf(8, 8, 8), hurt = true)))
         assertEquals(Load(20, 2), lower.load)
+        // The latest twinge caps, not the lowest: 30 twinged, then 35 done in full with a twinge.
+        val latest = weight(listOf(logged(1, 35, listOf(8)), logged(2, 30, listOf(8), hurt = true), logged(3, 35, listOf(8), hurt = true)))
+        assertEquals(Load(35, 2), latest.load)
+        // Said even when the cap doesn't bite: clean at 30, then a twinge at 40.
+        val above = weight(listOf(logged(1, 30, listOf(8)), logged(2, 40, listOf(8), hurt = true)))
+        assertEquals(Load(35, 2), above.load)
+        assertTrue(above.reasons.any { it.contains("twinged at 2×40") })
+        assertEquals("it twinged last time at 2×40", above.caution)
+    }
+
+    // Done, but it felt hard: weak evidence against a step, so it waits a session.
+    @Test
+    fun feltHardDelaysAStep() {
+        val hard = Logged(day(1), press, Load(30, 2), 8..8, listOf(8), hard = true)
+        assertEquals(Load(30, 2), weight(listOf(hard)).load)
+        assertEquals(Load(35, 2), weight(listOf(hard, logged(3, 30, listOf(8)))).load)
+    }
+
+    // A ladder logged with one weight, its heaviest round's, never raises round one's number.
+    @Test
+    fun aLadderLoggedWithOneWeightHolds() {
+        val ladder = Logged(day(1), press, Load(30, 2), null, listOf(8, 6, 4), ladder = listOf(8, 6, 4), heaviestOnly = true)
+        val s = weight(listOf(ladder), target = 8..8)
+        assertEquals(Load(30, 2), s.load)
+        assertEquals(Change.SAME, s.change)
+        // With each round's weight known, a clean ladder goes up as before.
+        assertEquals(Load(35, 2), weight(listOf(ladder.copy(heaviestOnly = false)), target = 8..8).load)
+    }
+
+    // A conversion starts from the reps done, and never rides on a step up.
+    @Test
+    fun aConversionStartsFromWhatWasDone() {
+        // A range ticked at its low end: 8 done at 30, and 6 asked now. From 8, not 12.
+        val ticked = logged(1, 30, listOf(8), target = 8..12)
+        assertEquals(Load(30, 2), weight(listOf(ticked), target = 6..6).load)
+        // Clean at 12, 6 asked: from the 30 held, not from a step up to 35.
+        val clean = logged(1, 30, listOf(12), target = 12..12)
+        val s = weight(listOf(clean), target = 6..6)
+        assertEquals(Load(35, 2), s.load)
+        assertEquals(Change.SAME, s.change)
     }
 
     // Trap 4: clean at 40 on Tuesday, 3 of 8 at 35 on Thursday: under 35, not 40.
