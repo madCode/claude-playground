@@ -50,7 +50,7 @@ both are installed side by side.
     screen's heaviest, often from a tired later round) has no first set to miss: one or two short
     holds (madCode, 2026-11-22); *hurt* when it twinged. A hurt
     set is never the basis and caps the number at what hurt, or a step under it if it was also
-    short; the cap comes last, so no other rule lifts a number past it, and no test weight is
+    a miss; the cap comes last, so no other rule lifts a number past it, and no test weight is
     offered at or above it. A ladder's sets are each judged against their own round. A timed set
     holds its weight, since it says nothing about reps in reserve, and a timed set and a counted
     one don't convert into each other. A rep target with no reps logged says nothing. A step more than 20% heavier (12 to 15, 20 to 25) is a
