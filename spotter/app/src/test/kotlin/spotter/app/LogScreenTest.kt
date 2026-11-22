@@ -98,8 +98,8 @@ class LogScreenTest {
         assertEquals(2, again.logged.size)
         val next = today(saturday.plusDays(3))
         assertEquals("2×35 ▲", next.sheet.glance(next.sheet.rows[0]))
-        // A twinge holds the weight.
-        assertEquals("2×45 =", next.sheet.glance(next.sheet.rows[1]))
+        // Short of the reps on the one set logged is a miss on the first set: down a step.
+        assertEquals("2×40 ▼", next.sheet.glance(next.sheet.rows[1]))
     }
 
     // Reopened, the screen shows what is logged, and the button says so.
