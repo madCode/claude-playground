@@ -98,6 +98,11 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 - Strength per movement, behind a switch, judged on the scorecard. (Step 5.)
 - Progress, the new-word review screen, sharing a board. (Step 6.)
 - The Garmin watch view, a Connect IQ app the phone sends the sheet to. (Step 7.)
+- Choose which calendar Spotter reads, for privacy. Android's calendar permission covers every
+  calendar on the phone, so the choice lives in Spotter: list the calendars by name, let the
+  person pick one or more, and query only those (`Calendar`, `CalendarContract.Instances` by
+  calendar id). Until they pick, it reads all visible calendars as now. Say plainly on the
+  screen that Android's permission still covers all of them. *(madCode, 2026-11-22)*
 
 ## Not doing
 
