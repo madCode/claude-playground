@@ -201,12 +201,16 @@ class LoggingTest {
         assertEquals(written[0].copy(id = 0, at = 2L, kind = JournalEntry.Kind.CORRECTED, target = 1L, row = sheet.rows[0].id), settled)
         // Corrected, it keeps its own words and target: 10 asked and 10 done, not 10 done of the
         // 8 this row asks, and a twinge said now is kept.
-        val moved = Logging.events(draft.with(sheet.rows[0].id, RowLog(30, 2, 9, hurt = true)), sheet, log, monday, "2G", 2L).single()
+        val moved = Logging.events(draft.with(sheet.rows[0].id, RowLog(30, 2, 10, hurt = true)), sheet, log, monday, "2G", 2L).single()
         assertEquals(
-            written[0].copy(id = 0, at = 2L, kind = JournalEntry.Kind.CORRECTED, target = 1L, row = sheet.rows[0].id, lb = 30, reps = listOf(9), hurt = true),
+            written[0].copy(id = 0, at = 2L, kind = JournalEntry.Kind.CORRECTED, target = 1L, row = sheet.rows[0].id, lb = 30, hurt = true),
             moved,
         )
-        assertEquals(listOf("10 x chest press", 10, 10), listOf(moved.line, moved.targetLow, moved.targetHigh))
+        assertEquals(listOf("10 x chest press", 10, 10, listOf(10)), listOf(moved.line, moved.targetLow, moved.targetHigh, moved.reps))
+        // Entered anew from this row (a fresh pick gives its 8 reps), it is this row's set: 8 of
+        // the 8 asked here, not 8 of the old board's 10.
+        val anew = Logging.events(draft.with(sheet.rows[0].id, LogDraft.picked(sheet.rows[0], 30).copy(count = 2)), sheet, log, monday, "2G", 2L).single()
+        assertEquals(listOf(JournalEntry.Kind.CORRECTED, 1L, "8 x chest press", 8, 8, listOf(8)), listOf(anew.kind, anew.target, anew.line, anew.targetLow, anew.targetHigh, anew.reps))
         // Cleared, the stray is removed, and nothing but it.
         val removed = Logging.events(draft.copy(cleared = setOf(log.strays.single().id, 99L)), sheet, log, monday, "2G", 2L).single { it.kind == JournalEntry.Kind.REMOVED }
         assertEquals(listOf(JournalEntry.Kind.REMOVED, 2L), listOf(removed.kind, removed.target))
@@ -258,6 +262,18 @@ class LoggingTest {
         assertEquals(listOf(listOf(12, 10, 8), listOf(12, 10, 8), false, true), listOf(felt.ladder, felt.reps, felt.heaviestOnly, felt.hard))
         val heavier = Logging.events(LogDraft.from(sheet, log.byRow).with(row.id, listed.copy(lb = listed.lb + 5)), sheet, log, monday, "2G", 2L).single()
         assertEquals(listOf(listOf(12, 10, 8), true), listOf(heavier.ladder, heavier.heaviestOnly))
+        // Once heaviest-only, the same weight stays so, whatever else is said.
+        write(listOf(heavier))
+        val again = Logging.logged(sheet, written, monday, "2G")
+        val still = Logging.events(LogDraft.from(sheet, again.byRow).with(row.id, RowLog.of(heavier).copy(easy = true)), sheet, again, monday, "2G", 3L).single()
+        assertEquals(true, still.heaviestOnly)
+        // Ticked as listed on a sheet that has a number, it was done at that number from round one.
+        val numbered = Sheet.make(own, listOf(Logged(monday.minusDays(7), identity.read(BoardLine.read("8 x squat").words) as Reading.Known, Load(30, 2), 8..8, listOf(8))), identity)
+        val asListed = LogDraft.asListed(numbered.rows[2])!!
+        assertTrue(asListed.lb != heavier.lb)
+        val carried = Logging.logged(numbered, written, monday, "2G")
+        val ticked = Logging.events(LogDraft.from(numbered, carried.byRow).with(numbered.rows[2].id, asListed), numbered, carried, monday, "2G", 4L).single()
+        assertEquals(listOf(false, asListed.lb), listOf(ticked.heaviestOnly, ticked.lb))
     }
 
     // A straight set done isn't a ladder done: it doesn't carry to a row counted another way.
