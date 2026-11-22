@@ -103,7 +103,7 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
             val reading = identity.read(line.words)
             val target = when (val s = line.scheme) {
                 is Scheme.Reps -> s.perSide()
-                is Scheme.Ladder -> s.firstRound..s.firstRound
+                is Scheme.Ladder -> s.perSide().first().let { it..it }
                 else -> null
             }
             if (reading !is Reading.Known) {

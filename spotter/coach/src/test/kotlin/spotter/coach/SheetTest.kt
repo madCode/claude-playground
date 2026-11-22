@@ -91,9 +91,11 @@ class SheetTest {
     // Trap 8 and trap 7: a ladder's number is for its first round; "12 total" is 6 a side.
     @Test
     fun theTargetIsRepsASideForTheFirstRound() {
-        val rows = Sheet.make(listOf("10 / 8 / 6 x squat", "12 total x alt reverse lunge"), emptyList(), identity).rows
+        val rows = Sheet.make(listOf("10 / 8 / 6 x squat", "12 total x alt reverse lunge", "6 / 8 / 10 total x goblet alt lateral lunge"), emptyList(), identity).rows
         assertEquals(10..10, rows[0].target)
         assertEquals(6..6, rows[1].target)
+        // A ladder in totals is a side's half too (from the corpus).
+        assertEquals(3..3, rows[2].target)
     }
 
     // An imported load with no count takes the row's count when the row's words fix it.

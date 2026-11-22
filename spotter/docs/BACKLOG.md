@@ -43,8 +43,12 @@ Step 2, the phone shows today's sheet: done (see Done).
 
 Step 3, logging:
 
-- [ ] The event log in Room, with exported schemas. *(design)*
-- [ ] The Log screen: ✓ as listed, changed, feel, each round copying the one before. *(madCode)*
+- [ ] Before the Log screen, from cycle 10's architecture review: a stable id for a sheet row
+  (the kept sheet is swapped for the fetched one, so a row's index can shift between showing
+  and logging); a typed "new, go light" instead of matching its text; JVM tests for a row's
+  "why" and "understood", which logging reuses. *(cycle 10 review)*
+- [ ] The Log screen: ✓ as listed, changed, feel, each round copying the one before; written
+  as `JournalEntry` events, a ladder's reps a side. *(madCode)*
 - [ ] Export in the scorecard's shape and the full log, on a schedule, to a folder madCode
   picks; Android backup. *(madCode)*
 
@@ -66,8 +70,22 @@ Step 3, logging:
 See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 - [ ] Security and supply chain: before the first release
-- [ ] Architecture and test health: cycle 10 (moved from 8 for the step 2 work)
+- [x] Architecture and test health: cycle 10, 2026-11-22. Its smaller findings are under
+  "Tidy-up", below.
 - [ ] Skills and instructions: around cycle 12
+
+## Tidy-up (from the cycle 10 review, when a cycle has room)
+
+- Move `spoken` and the sheet's title and notes into the coach; make `glance` a row member;
+  one label for "not sure" (it's built in three places).
+- Unused or unwired: `Load.splitSharedDumbbell` and `total` (DESIGN describes the goblet
+  conversion as live), `Movement.muscles`, `BoardLine.label`/`side`/`rest` outside tests, an
+  unreachable branch in `TodaysBoard.fromDay`.
+- `BoardLine.read` classifies and parses in one 65-line function: split out the kind.
+- Tests: `MainActivityTest` returns early on local runs (use `Assume`); one shared `shoot()`;
+  UI tests that assert whole reason sentences.
+- Comments: `Sheet.make`'s doc sits above a private field; plan and date notes in
+  `MainActivity` and `Identity`.
 
 ## Later
 
@@ -84,6 +102,10 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
   to a folder madCode controls.
 
 ## Done
+
+- [x] The event log: Room, append-only (insert only), schema exported to `app/schemas`; corrections
+  and removals are events; a logged row keeps the identity it was read with. Also from the
+  review: a ladder in totals is reps a side. Cycle 10, 2026-11-22.
 
 - [x] The sheet on the phone: the class and its date, notes for a borrowed or earlier board,
   warnings first, rows in board order under their blocks with the board's words, what Spotter

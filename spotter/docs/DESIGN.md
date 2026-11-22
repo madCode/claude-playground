@@ -162,6 +162,22 @@ what is on the board, and nothing says so.
   which one a line meant never depends on file order. The longest phrase wins when reading:
   "high plank" is a position before "high pull" could be a movement.
 
+## The log
+
+- **Append-only** (`Journal` in the coach, `LogDatabase` in the app): each row logged is an event;
+  a correction is a new event naming the one it replaces, and a removal one naming what it
+  removes. The table is only ever inserted into. `Journal.history` folds the events, in the
+  order written, into what the coach reads: each row as last corrected, removed ones left out.
+  A correction or removal of an entry that isn't there is skipped, and so is a stored row that
+  can't be read (damaged, impossible weight, a kind from a newer build): damage costs one entry,
+  never the log. A ladder is stored in reps a side, as the reps are.
+- **Identity fixed when logged**: an event keeps the movements and variations as they were read.
+  A later change to the word lists never relabels a logged row; a movement the lists no longer
+  hold keeps its logged name. The key is rebuilt from them, so a change to the key's format
+  changes logged and new keys alike.
+- **The schema is kept in the repository** (`app/schemas`), one file per version, so a change
+  is reviewed and a migration can be tested against what a phone has.
+
 ## Loads
 
 Dumbbells come in 3, 5, 8, 10, 12, 15, 20, 25, 30, 35, 40, 45 and 50 lb; "one step" means the
