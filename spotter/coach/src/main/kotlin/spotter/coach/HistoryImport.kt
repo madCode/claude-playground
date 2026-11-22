@@ -44,9 +44,31 @@ object HistoryImport {
         REPS_UNCLEAR,
     }
 
-    data class Result(val rows: List<Imported>, val left: Map<Left, Int>) {
+    data class Result(val rows: List<Imported>, val left: Map<Left, Int>, val all: List<Row> = emptyList()) {
         val logged: List<Logged> get() = rows.map { it.logged }
     }
+
+    /**
+     * A row of the file as it stands, read or not, for [Replay]: grading the coach needs what
+     * was lifted on the rows it couldn't read too, since a blank row counts against it.
+     */
+    data class Row(
+        val date: LocalDate,
+        val className: String?,
+        /** The line as written, or the name an old row was filed under. */
+        val line: String?,
+        /** One dumbbell's weight as the file has it, not brought down to the rack. */
+        val weight: Double?,
+        val reps: Int?,
+        val skipped: Boolean,
+        val hurt: Boolean,
+        val easy: Boolean,
+        val hard: Boolean,
+        val easier: Boolean,
+        /** What the coach made of it; null when [left] says why it made nothing. */
+        val logged: Logged?,
+        val left: Left?,
+    )
 
     /** More than any history holds; a file built to exhaust memory stops here. */
     const val MAX_LINES = 200_000
@@ -56,27 +78,41 @@ object HistoryImport {
     /** [today] bounds the dates: a row dated after it was never logged, and would outrank every real one. */
     fun read(text: String, identity: Identity, today: LocalDate): Result {
         val rows = mutableListOf<Imported>()
+        val all = mutableListOf<Row>()
         val left = sortedMapOf<Left, Int>()
         // A byte-order mark some editors put first would cost the first row.
         val lines = text.removePrefix("\uFEFF").lineSequence().filter { it.isNotBlank() }.toList()
         // The file is appended to, so the newest rows are last: those are the ones to keep.
         if (lines.size > MAX_LINES) left[Left.TOO_MANY] = lines.size - MAX_LINES
         lines.takeLast(MAX_LINES).forEach { line ->
-            when (val row = row(line, identity, today)) {
+            val o = line.takeIf { it.length <= MAX_ROW }?.let { runCatching { json.parseToJsonElement(it) as? JsonObject }.getOrNull() }
+            val date = o?.let { date(it, today) }
+            val row = if (o == null || date == null) Left.UNREADABLE else row(o, date, identity)
+            when (row) {
                 is Left -> left.merge(row, 1, Int::plus)
                 is Imported -> rows += row
             }
+            if (o != null && date != null) {
+                all += Row(
+                    date, o.string("class"), o.string("line") ?: filedAs(o), o.number("weight")?.takeIf { it > 0 }, o.int("reps"),
+                    o.flag("skipped"), o.flag("hurt"), o.flag("easy"), o.flag("hard"), o.flag("easier"),
+                    (row as? Imported)?.logged, row as? Left,
+                )
+            }
         }
         // Appended roughly by date, not strictly: the coach reads history in date order.
-        return Result(rows.sortedBy { it.logged.date }, left)
+        return Result(rows.sortedBy { it.logged.date }, left, all.sortedBy { it.date })
     }
 
+    private fun date(o: JsonObject, today: LocalDate): LocalDate? =
+        o.string("date")?.let { runCatching { LocalDate.parse(it) }.getOrNull() }?.takeIf { it <= today && it.year >= 2000 }
+
+    // The name an old row was filed under: its exercise, or a combo's parts.
+    private fun filedAs(o: JsonObject): String? =
+        o.string("exercise") ?: (o["components"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }?.takeIf { it.isNotEmpty() }?.joinToString(" to ")
+
     // An Imported, or the reason there isn't one.
-    private fun row(text: String, identity: Identity, today: LocalDate): Any {
-        if (text.length > MAX_ROW) return Left.UNREADABLE
-        val o = runCatching { json.parseToJsonElement(text) as? JsonObject }.getOrNull() ?: return Left.UNREADABLE
-        val date = o.string("date")?.let { runCatching { LocalDate.parse(it) }.getOrNull() }?.takeIf { it <= today && it.year >= 2000 }
-            ?: return Left.UNREADABLE
+    private fun row(o: JsonObject, date: LocalDate, identity: Identity): Any {
         if (o.flag("skipped")) return Left.SKIPPED
         val weight = o.number("weight")?.takeIf { it > 0 } ?: return Left.NO_WEIGHT
         // Down to a dumbbell that exists, never up: 22.5 is read as 20. The sheet can then say
@@ -88,7 +124,7 @@ object HistoryImport {
         val written = o.string("line")
         val line = written?.let(BoardLine::read)
         // The line as written says most; an old row has only the name it was filed under.
-        val words = line?.words ?: o.string("exercise") ?: (o["components"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }?.joinToString(" to ")
+        val words = line?.words ?: filedAs(o)
         val exercise = words?.let { identity.read(it) } as? Reading.Known ?: return Left.NOT_NAMED
 
         val variant = o["variant"] as? JsonObject

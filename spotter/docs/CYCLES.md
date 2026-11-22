@@ -2,6 +2,11 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 20 — build: the replay tool
+
+- Run a new command for real once, with the arguments a person would type, before writing its
+  doc: the test called the function, and only the run showed how relative paths resolve.
+
 ### Cycle 19 — build: reading the history file
 
 - Carry's fixtures hold an invented history in the real format: look at a sample of real-shaped
