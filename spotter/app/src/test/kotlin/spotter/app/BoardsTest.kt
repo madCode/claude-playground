@@ -115,4 +115,37 @@ class BoardsTest {
         val noCalendar = TodayLoader(boards) { null }.load(now)!! as TodaysBoard.Nothing
         assertTrue(noCalendar.reason.contains("calendar"))
     }
+
+    // Logged, the sheet moves on to tomorrow's class, and today's stays loggable from its kept
+    // board: the evening before, and coffee after class.
+    @Test
+    fun aLoggedClassMovesOnAndStaysLoggable() {
+        val tomorrow = day.plusDays(1)
+        val events = listOf(
+            CalendarEvent("Orange 60 Min 2G", day, day.atTime(9, 50)),
+            CalendarEvent("Orange 60 Min 2G", tomorrow, tomorrow.atTime(6, 0)),
+        )
+        val boards = Boards(dir) { url -> ok(file(LocalDate.parse(url.substringAfterLast('/').removeSuffix(".json")))) }
+        // As the phone's calendar answers: the entries on the day asked for and the day after.
+        fun calendar(from: LocalDate) = events.filter { it.date == from || it.date == from.plusDays(1) }
+        val loader = TodayLoader(boards, ::calendar)
+        val after = day.atTime(11, 0)
+        // Not logged: still today's class, and so not offered a second time as an earlier one.
+        assertEquals(day, (loader.load(after)!! as TodaysBoard.Lines).booked.date)
+        assertNull(loader.earlier(after))
+        val logged = setOf(day to "2G")
+        assertEquals(tomorrow, (loader.load(after, logged = logged)!! as TodaysBoard.Lines).booked.date)
+        val earlier = loader.earlier(after, logged)!!
+        assertEquals(day, earlier.booked.date)
+        assertEquals(listOf("* 8 x deadlift"), earlier.lines)
+        // Past its window and never logged: the sheet has moved on, the class is still there.
+        assertEquals(day, loader.earlier(day.atTime(14, 0))!!.booked.date)
+        // Two days on, it comes from the calendar's earlier days, and then no longer.
+        assertEquals(tomorrow, loader.earlier(day.plusDays(2).atTime(9, 0))!!.booked.date)
+        assertNull(loader.earlier(day.plusDays(4).atTime(9, 0)))
+        // A class whose board wasn't kept can't be logged against one.
+        val empty = kotlin.io.path.createTempDirectory("none").toFile()
+        assertNull(TodayLoader(Boards(empty) { throw IOException("offline") }) { events }.earlier(day.atTime(14, 0)))
+        empty.deleteRecursively()
+    }
 }

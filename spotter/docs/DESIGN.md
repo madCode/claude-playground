@@ -228,7 +228,11 @@ next one in that list. A Y-bell is another implement and never steps onto that l
   marked with its date, never a blank or wrong one, and never a later day's. A class with no
   board of its own borrows the other format's, labelled (`TodaysBoard` in the coach).
 - **Which class:** the next booked class in the phone's calendar (`Booking`): today's, until
-  three hours after it starts (long enough to log it in the car), then tomorrow's. The format is in the event title ("Orange 60 Min 2G").
+  it is logged and over (50 minutes after its start, so rows saved mid-class don't swap the
+  sheet) or three hours after it starts (long enough to log it in the car), then tomorrow's. So the evening before a morning class shows that class once today's is logged.
+  The latest class already started stays loggable for two days after the sheet has moved on:
+  "… isn't logged yet · Log it" first on the screen, from that day's board as kept on the
+  phone, or "Change the log for …" once it has rows. The format is in the event title ("Orange 60 Min 2G").
   Nobody picks the class by hand. When Spotter may not read the calendar, it says so rather
   than "no class booked".
 - **The exercise list:** Spotter's own, in the coach's resources (see "Reading a board line").

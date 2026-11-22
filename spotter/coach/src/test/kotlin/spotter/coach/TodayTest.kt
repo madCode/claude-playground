@@ -52,6 +52,65 @@ class TodayTest {
         assertEquals(day.plusDays(1), Booking.next(events, day.atTime(15, 1))?.date)
     }
 
+    // madCode: the evening before a morning class, the sheet is that class's once today's is logged.
+    @Test
+    fun aLoggedClassMovesTheSheetOn() {
+        val tomorrow = day.plusDays(1)
+        val events = listOf(
+            CalendarEvent("Orange 60 - Tornado", day, day.atTime(17, 0)),
+            CalendarEvent("Orange 60 Min 2G", day, day.atTime(17, 0)),
+            CalendarEvent("Orange 60 Min 3G", tomorrow, tomorrow.atTime(6, 0)),
+        )
+        val after = day.atTime(18, 15)
+        // Not logged yet: still today's, to be logged in the car.
+        assertEquals(day, Booking.next(events, after)?.date)
+        // Logged: tomorrow's, though the three hours aren't up; the theme entry doesn't hold the day.
+        val logged = setOf(day to "2G")
+        assertEquals(BookedClass("3G", tomorrow, tomorrow.atTime(6, 0), "Orange 60 Min 3G"), Booking.next(events, after, logged))
+        // A log under that name from before the class has started doesn't skip it.
+        assertEquals(day, Booking.next(events, day.atTime(16, 0), logged)?.date)
+        // Nor does saving the first block's rows mid-class: the class isn't over yet.
+        assertEquals(day, Booking.next(events, day.atTime(17, 30), logged)?.date)
+        // The day stays over after the three hours, with a later or all-day entry that names no
+        // format beside the class.
+        val withTheme = events + CalendarEvent("Orange Tornado week", day, null) + CalendarEvent("Orange social", day, day.atTime(19, 0))
+        assertEquals(tomorrow, Booking.next(withTheme, day.atTime(20, 30), logged)?.date)
+        // Another class's log, or another day's, moves nothing.
+        assertEquals(day, Booking.next(events, after, setOf(day to "3G", tomorrow to "2G"))?.date)
+    }
+
+    // Coffee after class: once the sheet has moved on, the class can still be logged for two days.
+    @Test
+    fun anEarlierClassCanStillBeLogged() {
+        val tomorrow = day.plusDays(1)
+        val events = listOf(
+            CalendarEvent("Orange 60 Min 2G", day, nine),
+            CalendarEvent("Orange 60 - Tornado", day, nine),
+            CalendarEvent("Orange 60 Min 3G", tomorrow, tomorrow.atTime(6, 0)),
+            CalendarEvent("Dentist", day, day.atTime(8, 0)),
+        )
+        val late = day.atTime(14, 0)
+        val current = Booking.next(events, late)
+        assertEquals(tomorrow, current?.date)
+        assertEquals(BookedClass("2G", day, nine, "Orange 60 Min 2G"), Booking.earlier(events, late, current))
+        // While it is still the sheet's class, it isn't offered twice.
+        val soon = day.atTime(10, 30)
+        assertNull(Booking.earlier(events, soon, Booking.next(events, soon)))
+        // Not before it has started, and not after two days.
+        assertNull(Booking.earlier(events, day.atTime(9, 0), null))
+        assertEquals(day, Booking.earlier(events.take(2), day.plusDays(2).atTime(23, 0), null)?.date)
+        assertNull(Booking.earlier(events.take(2), day.plusDays(3).atTime(0, 30), null))
+        // One class in the calendar twice, under two titles, isn't offered beside itself.
+        val twice = events + CalendarEvent("Orange 60 2G (invite)", day, nine)
+        assertNull(Booking.earlier(twice, soon, Booking.next(twice, soon)))
+        // A logged all-day class can be corrected the same day.
+        val allDay = listOf(CalendarEvent("Orange 60 Min 2G", day, null))
+        assertNull(Booking.earlier(allDay, soon, null))
+        assertEquals(day, Booking.earlier(allDay, soon, Booking.next(allDay, soon, setOf(day to "2G")), setOf(day to "2G"))?.date)
+        // The latest of two.
+        assertEquals("3G", Booking.earlier(events, tomorrow.atTime(12, 0), null)?.tag)
+    }
+
     // Review: a class today that names no format stops tomorrow's showing in its place.
     @Test
     fun aClassWithNoFormatIsStillTodaysClass() {

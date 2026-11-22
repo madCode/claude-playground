@@ -54,7 +54,23 @@ sealed interface Today {
             return from(chosen, Journal.history(before, vocabulary), identity, Logging.logged(entries, date, name))
         }
 
-        private fun className(lines: TodaysBoard.Lines) = lines.booked.tag ?: lines.booked.title
+        private fun className(lines: TodaysBoard.Lines) = lines.booked.logName
+
+        /**
+         * What to show once the [kept] board has been looked for and before the fetch returns:
+         * the kept one when there is one. Without one, what is [showing] stays, unless it is a
+         * class since logged: the sheet has moved on from it, so it would sit there with its
+         * log missing for as long as the fetch takes, looking as though the save was lost.
+         */
+        fun afterKept(showing: Today, kept: Today?, logged: Set<Pair<LocalDate, String>>): Today = when {
+            kept != null -> kept
+            showing is Showing && (showing.date to showing.className) in logged -> Loading
+            else -> showing
+        }
+
+        /** The classes with anything logged, as [spotter.coach.Booking.next] takes them. */
+        fun loggedClasses(entries: List<JournalEntry>): Set<Pair<LocalDate, String>> =
+            Journal.live(entries).map { it.date to it.className }.toSet()
 
         /** The screen's state for the board [chosen], with the sheet made from [log]. */
         fun from(chosen: TodaysBoard, log: List<Logged>, identity: Identity, logged: Map<String, JournalEntry> = emptyMap()): Today = when (chosen) {
