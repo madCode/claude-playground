@@ -35,9 +35,9 @@ class EventLogTest {
     @Test
     fun aDamagedRowIsSkipped() {
         val press = exercise("8 x chest press")
-        log.write(Journal.logged(1, day, "2G", 0, "8 x chest press", press, Load(25, 2), 8..8, null, listOf(8, 8, 8)))
-        db.events().insert(spotter.app.log.EventRow.of(Journal.logged(2, day, "2G", 1, "8 x chest press", press, Load(25, 2), 8..8, null, listOf(8))).copy(kind = "FROM_A_NEWER_BUILD"))
-        db.events().insert(spotter.app.log.EventRow.of(Journal.logged(3, day, "2G", 2, "8 x chest press", press, Load(25, 2), 8..8, null, listOf(8))).copy(parts = "[{\"movement\":"))
+        log.write(Journal.logged(1, day, "2G", "row 0", "8 x chest press", press, Load(25, 2), 8..8, null, listOf(8, 8, 8)))
+        db.events().insert(spotter.app.log.EventRow.of(Journal.logged(2, day, "2G", "row 1", "8 x chest press", press, Load(25, 2), 8..8, null, listOf(8))).copy(kind = "FROM_A_NEWER_BUILD"))
+        db.events().insert(spotter.app.log.EventRow.of(Journal.logged(3, day, "2G", "row 2", "8 x chest press", press, Load(25, 2), 8..8, null, listOf(8))).copy(parts = "[{\"movement\":"))
         assertEquals(1, log.entries().size)
     }
 
@@ -45,9 +45,9 @@ class EventLogTest {
     @Test
     fun whatIsWrittenComesBackAsHistory() {
         val ladder = exercise("10 / 8 / 6 x single arm low row")
-        val first = log.write(Journal.logged(1, day, "2G", 0, "10 / 8 / 6 x single arm low row", ladder, Load(20, 1), null, listOf(10, 8, 6), listOf(10, 8, 6)))
+        val first = log.write(Journal.logged(1, day, "2G", "row 0", "10 / 8 / 6 x single arm low row", ladder, Load(20, 1), null, listOf(10, 8, 6), listOf(10, 8, 6)))
         val press = exercise("8 x chest press")
-        val second = log.write(Journal.logged(2, day, "2G", 1, "8 x chest press", press, Load(25, 2), 8..8, null, listOf(8, 8, 7), hurt = true))
+        val second = log.write(Journal.logged(2, day, "2G", "row 1", "8 x chest press", press, Load(25, 2), 8..8, null, listOf(8, 8, 7), hurt = true))
         val entries = log.entries()
         assertEquals(listOf(first, second), entries.map { it.id })
         assertEquals(listOf(10, 8, 6), entries[0].ladder)

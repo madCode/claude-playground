@@ -55,10 +55,10 @@ class SheetTest {
     fun aComboPartCountsOnlyOnTheSameImplement() {
         val log = listOf(logged("8 x bicep curl", 20, listOf(8, 8, 8)))
         val ybell = Sheet.make(listOf("8 x y-bell high row to bicep curl"), log, identity).rows.single()
-        assertEquals(Suggestion.NoNumber("new: go light"), ybell.suggestion)
+        assertEquals(Suggestion.NoNumber.NEW, ybell.suggestion)
         // A part with no number leaves the combo without one, rather than the other part's guess.
         val plain = Sheet.make(listOf("8 x squat to bicep curl"), log, identity).rows.single()
-        assertEquals(Suggestion.NoNumber("new: go light"), plain.suggestion)
+        assertEquals(Suggestion.NoNumber.NEW, plain.suggestion)
         assertTrue(plain.warnings.single().contains("squat"))
         // Parts held differently share no number.
         val mixed = listOf(logged("8 x goblet squat", 30, listOf(8, 8, 8), count = 1), logged("8 x dumbbells shoulder press", 15, listOf(8, 8, 8)))
@@ -85,7 +85,7 @@ class SheetTest {
         val none = listOf("8 x bodyweight squat", "8 x banded squat", "8 x push-up", "8 x TRX low row", "30 sec of squat hold", "8 x squat pulses", "8 x v-up")
         Sheet.make(none, emptyList(), identity).rows.forEach { assertNull(it.shown, it.suggestion) }
         val some = listOf("5 x squat", "8 x dumbbell burpee", "8 each x low band single leg hold with single arm shoulder press", "30 sec of goblet squat hold")
-        Sheet.make(some, emptyList(), identity).rows.forEach { assertEquals(it.shown, Suggestion.NoNumber("new: go light"), it.suggestion) }
+        Sheet.make(some, emptyList(), identity).rows.forEach { assertEquals(it.shown, Suggestion.NoNumber.NEW, it.suggestion) }
     }
 
     // Trap 8 and trap 7: a ladder's number is for its first round; "12 total" is 6 a side.
@@ -142,6 +142,36 @@ class SheetTest {
     @Test
     fun aBalanceCurlBorrowsNothing() {
         val log = listOf(logged("8 x bicep curl", 15, listOf(8, 8, 8)))
-        assertEquals(Suggestion.NoNumber("new: go light"), Sheet.make(listOf("8 each x balance bicep curl"), log, identity).rows.single().suggestion)
+        assertEquals(Suggestion.NoNumber.NEW, Sheet.make(listOf("8 each x balance bicep curl"), log, identity).rows.single().suggestion)
+    }
+
+    // Logging finds its row by id: a row keeps it when the board gains or loses rows around it,
+    // and a line repeated in a block gets one per repeat.
+    @Test
+    fun aRowsIdSurvivesTheBoardChangingAroundIt() {
+        val kept = Sheet.make(board, emptyList(), identity).rows
+        val fetched = Sheet.make(board.take(3) + "* 8 x squat" + board.drop(3), emptyList(), identity).rows
+        val deadlift = kept.first { it.shown == "8 x deadlift" }
+        assertEquals(deadlift.id, fetched.first { it.shown == "8 x deadlift" }.id)
+        assertTrue(kept.indexOf(deadlift) != fetched.indexOfFirst { it.id == deadlift.id })
+        val twice = Sheet.make(listOf("**Floor Block 1**", "* 8 x squat", "* 8 x deadlift", "* 8 x squat", "**Floor Block 2**", "* 8 x squat"), emptyList(), identity).rows
+        assertEquals(4, twice.map { it.id }.toSet().size)
+    }
+
+    // What logging shows back: what Spotter read, and why the number, for each kind of row.
+    @Test
+    fun eachRowSaysWhatWasReadAndWhy() {
+        val log = listOf(logged("8 x deadlift", 40, listOf(8, 8, 8)))
+        val rows = Sheet.make(listOf("8 x deadlift", "8 x close grip chest press", "20 x deadlift", "8 x push-up", "8 x zorbing"), log, identity).rows
+        val (deadlift, press, far, pushUp, unknown) = rows
+        assertEquals("deadlift", deadlift.understood)
+        assertEquals(listOf("clean at 2×40: up a dumbbell"), deadlift.why)
+        assertEquals("chest press [grip=close]", press.understood)
+        assertEquals(listOf("Nothing logged for this exercise yet, and no sound link to one that has: start light."), press.why)
+        // A gap with its own reason says that reason, not the one for a new exercise.
+        assertEquals(listOf("last time was 8 reps and this is 20 reps: no sound conversion"), far.why)
+        assertEquals(listOf("Done without a weight."), pushUp.why)
+        assertEquals("not sure: unknown words (zorbing)", unknown.understood)
+        assertEquals(listOf("Not sure what this is, so no number."), unknown.why)
     }
 }

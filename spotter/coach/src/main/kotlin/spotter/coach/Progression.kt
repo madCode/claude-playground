@@ -66,8 +66,13 @@ sealed interface Suggestion {
      */
     data class Weight(val load: Load, val change: Change, val reasons: List<String>, val test: Load? = null) : Suggestion
 
-    /** No sound basis: "new: go light", or why not. A gap beats a guess. */
-    data class NoNumber(val reason: String) : Suggestion
+    /** No sound basis: [NEW], or why not. A gap beats a guess. */
+    data class NoNumber(val reason: String, val new: Boolean = false) : Suggestion {
+        companion object {
+            /** Nothing logged for the exercise, and no sound link to one that has. */
+            val NEW = NoNumber("new: go light", new = true)
+        }
+    }
 }
 
 /**
@@ -168,9 +173,9 @@ object Progression {
      * lift you've done, at 0.6 (trap 10). A loose relative is no basis (trap 11): no number.
      */
     private fun borrow(exercise: Reading.Known, target: IntRange?, log: List<Logged>): Suggestion {
-        val part = exercise.parts.singleOrNull() ?: return Suggestion.NoNumber("new: go light")
+        val part = exercise.parts.singleOrNull() ?: return Suggestion.NoNumber.NEW
         // One leg is a factor on what the legs move; a curl on one leg is a balance, not a 0.6.
-        if (!part.oneLeg || part.movement.pattern !in setOf("squat", "lunge", "hinge")) return Suggestion.NoNumber("new: go light")
+        if (!part.oneLeg || part.movement.pattern !in setOf("squat", "lunge", "hinge")) return Suggestion.NoNumber.NEW
         val twoLegged = log.filter { logged ->
             val p = logged.exercise.parts.singleOrNull() ?: return@filter false
             // The plain two-legged lift: a sumo or wide stance is a variation of its own.
@@ -179,9 +184,9 @@ object Progression {
         }
         // The plain lift before a "standing" one, then the most recent.
         val source = twoLegged.filter { it.judged }.sortedWith(compareBy({ it.exercise.parts.single().variations["legs"] == null }, { it.date })).lastOrNull()
-            ?: return Suggestion.NoNumber("new: go light")
-        val from = suggest(source.exercise, target, log) as? Suggestion.Weight ?: return Suggestion.NoNumber("new: go light")
-        val lb = Rack.atMost(from.load.lb * ONE_LEG) ?: return Suggestion.NoNumber("new: go light")
+            ?: return Suggestion.NoNumber.NEW
+        val from = suggest(source.exercise, target, log) as? Suggestion.Weight ?: return Suggestion.NoNumber.NEW
+        val lb = Rack.atMost(from.load.lb * ONE_LEG) ?: return Suggestion.NoNumber.NEW
         return Suggestion.Weight(
             from.load.copy(lb = lb),
             Change.NEW,

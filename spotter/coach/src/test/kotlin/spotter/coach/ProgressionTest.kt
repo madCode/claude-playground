@@ -119,7 +119,7 @@ class ProgressionTest {
     fun aLooseRelativeIsNoBasis() {
         val fly = exercise("8 x chest fly")
         val s = suggest(listOf(logged(1, 30, listOf(8, 8, 8))), ex = fly)
-        assertEquals(Suggestion.NoNumber("new: go light"), s)
+        assertEquals(Suggestion.NoNumber.NEW, s)
         // Nor does a two-legged lift with another variation feed a one-legged one.
         val log = listOf(logged(1, 40, listOf(8, 8, 8), ex = exercise("8 x sumo deadlift")))
         assertTrue(suggest(log, ex = exercise("8 x single leg deadlift")) is Suggestion.NoNumber)
@@ -127,7 +127,7 @@ class ProgressionTest {
 
     @Test
     fun nothingLoggedIsGoLight() {
-        assertEquals(Suggestion.NoNumber("new: go light"), suggest(emptyList()))
+        assertEquals(Suggestion.NoNumber.NEW, suggest(emptyList()))
         assertNull((suggest(listOf(logged(1, 25, listOf(8, 8, 8)))) as Suggestion.Weight).test)
     }
 
@@ -147,7 +147,7 @@ class ProgressionTest {
 
     @Test
     fun nothingLoggedOnARepTargetSaysNothing() {
-        assertEquals(Suggestion.NoNumber("new: go light"), suggest(listOf(logged(1, 25, emptyList()))))
+        assertEquals(Suggestion.NoNumber.NEW, suggest(listOf(logged(1, 25, emptyList()))))
     }
 
     @Test

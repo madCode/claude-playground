@@ -14,7 +14,7 @@ class JournalTest {
     private var clock = 0L
 
     private fun logged(id: Long, line: String, lb: Int, reps: List<Int> = listOf(8, 8, 8)) =
-        Journal.logged(++clock, day, "2G", 0, line, exercise(line), Load(lb, 2), 8..8, null, reps).copy(id = id)
+        Journal.logged(++clock, day, "2G", "/ $line / 1", line, exercise(line), Load(lb, 2), 8..8, null, reps).copy(id = id)
 
     @Test
     fun aCorrectionReplacesAndARemovalRemoves() {
