@@ -12,6 +12,21 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 8: today's board on the phone
+- **Why:** step 2 starts: the phone has to know which class is next and have its board.
+- **Shipped:** the phone fetches the day's board from the public feed and keeps a week of them;
+  when the day's can't be fetched it falls back to the last one kept, marked with its date. The
+  class comes from the calendar's next booking, and a class with no board borrows the other
+  format's, labelled. Checked against the real feed: yesterday's file reads, today's isn't
+  posted yet.
+- **Review caught:** every evening, tomorrow's board isn't posted yet, and today's would have
+  shown as tomorrow's, marked as an old board; a "not posted yet" is now told apart from an
+  outage. Also: a class with no format ("Tread 50") let tomorrow's class show in its place; an
+  empty feed file hid the last good board; cancelled and declined bookings counted; and the
+  all-day and timed calendar entries had no test. All fixed and tested.
+- **For the next cycle:** the screen, and the one-time calendar permission prompt. Until then,
+  nothing on the phone changes.
+
 ### Cycle 7: the scorecard export
 - **Why:** the switch from Carry is decided on the scorecard, so Spotter has to write what it
   grades. The last item of step 1.

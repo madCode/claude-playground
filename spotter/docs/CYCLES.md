@@ -2,6 +2,11 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 8 — build: today's board on the phone
+
+- An app falsification run takes minutes: run it in the background and leave the tree alone,
+  even when a stop hook asks for a commit; the breaks restore themselves.
+
 ### Cycle 7 — build: the scorecard export
 
 - When the consumer is out of reach (a private repository), match a file it already reads

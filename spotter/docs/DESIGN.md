@@ -181,13 +181,17 @@ next one in that list. A Y-bell is another implement and never steps onto that l
 ## Where the inputs come from
 
 - **The board:** `boards/YYYY-MM-DD.json` (schema `carry-board/1`) on this repository's
-  `carry-boards` branch, which a scheduled job refreshes every half hour. The last good board
-  is kept, so a Reddit, GitHub or Wi-Fi outage shows yesterday's sheet clearly marked, never a
-  blank or wrong one. A class with no board of its own borrows the other format's, labelled.
-- **Which class:** the next booked class in the phone's calendar, today or tomorrow; the
-  format is in the event title. Nobody picks the class by hand.
-- **The exercise list:** a copy of `carry/brain-fixtures/exercises.json`, in the coach's
-  resources.
+  `carry-boards` branch, which a scheduled job refreshes every half hour, fetched from
+  `raw.githubusercontent.com` with no key (`app/today/Boards`). A file is kept only when it reads
+  as that day's board; the phone keeps a week of them. The last good board is used when the
+  day's can't be fetched, so a Reddit, GitHub or Wi-Fi outage shows an earlier day's sheet
+  marked with its date, never a blank or wrong one, and never a later day's. A class with no
+  board of its own borrows the other format's, labelled (`TodaysBoard` in the coach).
+- **Which class:** the next booked class in the phone's calendar (`Booking`): today's, until an
+  hour after it starts, then tomorrow's. The format is in the event title ("Orange 60 Min 2G").
+  Nobody picks the class by hand. When Spotter may not read the calendar, it says so rather
+  than "no class booked".
+- **The exercise list:** Spotter's own, in the coach's resources (see "Reading a board line").
 
 ## Screens
 
@@ -226,8 +230,9 @@ Spotter does:
   open) and its Install button does it. A build Android asked to confirm isn't downloaded again
   in the background: on Android 8 to 11 that would be every three hours, on mobile data too. On Android 12 and later, once Spotter has installed
   itself once, Android installs without asking (`UPDATE_PACKAGES_WITHOUT_USER_ACTION`).
-- **Debug only.** The permissions to reach the network and install apps are in the debug
-  manifest; a check in the build fails if a release ever has them, or a debug build lacks them.
+- **Debug only.** The permissions to install apps are in the debug manifest; a check in the build
+  fails if a release ever has them, or a debug build lacks them. Both builds reach the network,
+  for the day's board, and the check also fails if either lacks that.
   How to check it on a phone: `docs/DEVICE.md`.
 
 ## Screens so far

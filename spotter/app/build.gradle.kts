@@ -97,7 +97,8 @@ androidComponents {
 
 /**
  * Fails when a variant's merged manifest disagrees about updating itself: the debug build installs
- * newer CI builds (src/debug); a release must not be able to install apps or reach the network.
+ * newer CI builds (src/debug); a release must not be able to install apps. Both reach the network,
+ * for the day's board.
  * Without UPDATE_PACKAGES_WITHOUT_USER_ACTION every install waits for a tap that a background
  * install never shows, so the phone silently stops updating.
  */
@@ -112,10 +113,10 @@ abstract class SelfUpdateManifestCheck : DefaultTask() {
     @TaskAction
     fun check() {
         val text = manifest.get().asFile.readText()
+        if ("android.permission.INTERNET" !in text) throw GradleException("${manifest.get().asFile}: INTERNET should be there, for the day's board")
         for (name in listOf(
             "android.permission.REQUEST_INSTALL_PACKAGES",
             "android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION",
-            "android.permission.INTERNET",
             "spotter.app.update.InstallResult",
         )) {
             if ((name in text) != selfUpdates.get()) {
