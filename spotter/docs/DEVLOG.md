@@ -11,6 +11,17 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 19: reading your history file
+- **Why:** step 4. The sheet says "new: go light" on every row until it has history, and yours
+  is in gym-coach's file.
+- **Shipped:** the coach can read that file's format. Nothing on the phone yet: picking the
+  file is next, then the replay tool. A row is taken only when its exercise, weight and reps
+  can all be read; the rest are counted by reason (skipped, no weight, form broke down, not
+  named, reps unclear). Tested on invented rows only, including the 1,326-row invented
+  history in Carry's fixtures.
+- **Order changed:** this went ahead of the rest of the Log screen (two classes a day, add an
+  exercise, each round), which stay in Next.
+
 ### Cycle 18: a log follows the exercise when the board changes
 - **Why:** your answer ("1 yes"): rows logged from a borrowed board should carry over to your
   own board's rows with the same exercise.
