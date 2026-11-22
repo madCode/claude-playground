@@ -34,3 +34,18 @@ permission prompt, are only visible on a phone.
 3. Turn on flight mode and reopen: the same board shows, from the copy kept on the phone. The
    evening before a class, before the next board is posted, it says "No board posted … yet".
 
+
+## Backup folder
+
+The tests prove which files are written, changed and removed. Android's folder picker, the
+folder's own app (Files, a sync app) and the daily run are only visible on a phone.
+
+1. At the bottom of Spotter it says "Your log is only on this phone." Tap **Choose a backup
+   folder**, pick or make one (say `Download/Spotter`) and allow it.
+2. Within a minute the line reads "Log copied to Spotter · <time>". With a class logged, the
+   folder holds `spotter-log.jsonl` and a `session-<date>-<class>.json` per class.
+3. Log or correct a row and save: the time moves on, and the class's file has the change.
+4. Delete one session file in Files, then save a log again: the file is back. Then delete the
+   folder and save again: the line reads "Couldn't copy your log to
+   Spotter. Choose the folder again."
+5. A day later, without opening Spotter: the files are still current (the daily run).

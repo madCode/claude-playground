@@ -2,6 +2,12 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 17 — build: the log goes to a picked folder
+
+- Put the decisions of anything that talks to Android (which files to write, what to remember
+  after a failure) in a plain class behind a small interface first; the Android half is then
+  thin enough to check on the phone.
+
 ### Cycle 16 — build: the export, from the log
 
 - An assertion where two fields hold the same value (suggested 45, lifted 45) can't tell them

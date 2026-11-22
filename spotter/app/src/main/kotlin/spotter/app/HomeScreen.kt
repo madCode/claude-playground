@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +30,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import spotter.app.today.Today
 import spotter.coach.LogDraft
+
+/** Where the log is copied to, and how the last copy went. [at] is ready to show ("22 Nov, 14:30"). */
+data class BackupState(val folder: String? = null, val at: String? = null, val ok: Boolean = true)
+
+// The log is the person's: where it is kept is said in plain words, with the one thing to do.
+@Composable
+private fun BackupView(backup: BackupState, onChooseFolder: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        val status = when {
+            backup.folder == null -> "Your log is only on this phone."
+            !backup.ok -> "Couldn't copy your log to ${backup.folder}. Choose the folder again."
+            backup.at == null -> "Your log will be copied to ${backup.folder}."
+            else -> "Log copied to ${backup.folder} · ${backup.at}"
+        }
+        Text(status, fontSize = 14.sp, color = if (backup.ok) Color(0xFF5B606B) else Color(0xFF8A4B00))
+        OutlinedButton(onClick = onChooseFolder, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(if (backup.folder == null) "Choose a backup folder" else "Change folder")
+        }
+    }
+}
 
 /**
  * The app's screen: today's sheet in the middle, a newer build waiting when there is one, and the
@@ -44,6 +65,8 @@ fun HomeScreen(
     onAllowCalendar: () -> Unit = {},
     onSaveLog: (Today.Showing, LogDraft) -> Unit = { _, _ -> },
     earlier: Today.Showing? = null,
+    backup: BackupState = BackupState(),
+    onChooseFolder: () -> Unit = {},
 ) {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
@@ -81,6 +104,7 @@ fun HomeScreen(
                 }
                 TodayView(today, onAllowCalendar, onSaveLog, earlier)
                 Spacer(Modifier.heightIn(min = 8.dp))
+                BackupView(backup, onChooseFolder)
                 Text(
                     "Version $version · tap to copy",
                     fontSize = 14.sp,

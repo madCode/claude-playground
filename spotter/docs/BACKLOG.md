@@ -69,10 +69,6 @@ Step 3, logging:
     one's sheet reads the later one's log. Key a class by its start as well. *(cycles 12, 15)*
   - "… isn't logged yet" counts rows by id, so a class logged from a board since changed reads
     as not logged; it also can't be dismissed for a class left unlogged on purpose. *(cycle 15)*
-- [ ] Write the export (`Export.files`) to a folder madCode picks, after each save and on a
-  schedule; Android backup of the log; a DEVICE.md check for the folder. Remove a session file
-  whose class no longer has rows, and pass the count of events the store couldn't read.
-  *(madCode; cycle 16 review)*
 - [ ] Export notes for whoever reads the files (cycle 16 review): a session's `ref` is the row's
   place among logged rows, not on the board, and `borrowed_from` isn't known from the log; a
   timed row's seconds are read from its stored words at export time.
@@ -154,6 +150,9 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] The export goes to a folder madCode picks (cycle 17): after each save, once a day and when
+  the folder is picked; only changed files are written, an emptied class's file is removed, and
+  the home screen says where the log is or that the copy failed. Android backup keeps the log.
 - [x] The export, from the log (cycle 16): a scorecard session per logged class and the full
   event log, with no board needed.
 - [x] Which class, after logging (cycle 15): the sheet moves on once today's class is logged;

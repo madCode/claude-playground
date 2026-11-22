@@ -305,8 +305,15 @@ Spotter does:
 
 ## Backup
 
-Android backup of the log, plus a scheduled export (the scorecard shape and the full log) to
-a folder madCode picks, such as Downloads or a synced folder.
+The log is kept three ways: on the phone, in Android's own backup (the database only), and as
+files in a folder madCode picks on the home screen, such as Downloads or a synced folder.
+
+The files are written after each save, once a day, and when a folder is picked. Only a file
+whose text changed is written, and a class whose rows were all removed loses its file. Spotter
+touches only files it wrote, by name, and writes one again if it has gone from the folder. The
+home screen says which of four states holds: the log is only on this phone, it will be copied to
+the folder, it was copied (and when), or the copy failed and the folder needs choosing again. A
+new folder gets every file afresh; the old folder keeps what it had.
 
 What is written (`Export` in the coach) comes from the event log alone, since each event keeps
 the board's words and what the sheet showed:

@@ -1,6 +1,9 @@
 package spotter.app
 
 import android.graphics.Bitmap
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
@@ -33,6 +36,26 @@ class HomeScreenTest {
         compose.onNodeWithText("Install").performClick()
         assertEquals(1, installs)
         shoot("home-update-waiting")
+    }
+
+    // Where the log is kept is said in plain words, with the one thing to do about it.
+    @Test
+    fun theBackupSaysWhereTheLogIs() {
+        var picks = 0
+        var backup by mutableStateOf(BackupState())
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, backup = backup, onChooseFolder = { picks++ }) }
+        compose.onNodeWithText("Your log is only on this phone.").assertIsDisplayed()
+        compose.onNodeWithText("Choose a backup folder").performClick()
+        assertEquals(1, picks)
+        backup = BackupState("Download/Spotter")
+        compose.onNodeWithText("Your log will be copied to Download/Spotter.").assertIsDisplayed()
+        backup = BackupState("Download/Spotter", "22 Nov, 14:30")
+        compose.onNodeWithText("Log copied to Download/Spotter · 22 Nov, 14:30").assertIsDisplayed()
+        shoot("home-backup")
+        backup = BackupState("Download/Spotter", "22 Nov, 14:30", ok = false)
+        compose.onNodeWithText("Couldn't copy your log to Download/Spotter. Choose the folder again.").assertIsDisplayed()
+        compose.onNodeWithText("Change folder").performClick()
+        assertEquals(2, picks)
     }
 
     @Test

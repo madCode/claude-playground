@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android's own backup (to the person's Google account) keeps the log and nothing else: the
+     boards are fetched again, and the export folder's grant doesn't carry to another phone. -->
+<full-backup-content>
+    <include domain="database" path="." />
+</full-backup-content>

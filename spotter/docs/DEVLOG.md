@@ -7,9 +7,17 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 - **Built so far:** the design; loads per hand on the rack's steps; reading a board line's
   count; naming its exercise, in full on 91% of Carry's board rows; the suggested weight from a
   log; the app, which updates itself; today's sheet on the phone; logging a class.
-- **Waiting on you:** nothing.
+- **Waiting on you:** choose a backup folder on the phone (DEVICE.md, "Backup folder").
 
 ## Sunday 22 November 2026
+
+### Cycle 17: the log goes to a folder you pick
+- **Why:** step 3's backup: the log shouldn't live on one phone only.
+- **Shipped:** the bottom of the home screen says where your log is. Choose a backup folder
+  once, and Spotter copies the log there after each save and once a day: a file per class in
+  the scorecard's shape, and one file with everything. If the copy fails, it says so and asks
+  you to choose the folder again. Android's own backup now keeps the log too.
+- **To check on the phone:** DEVICE.md, "Backup folder".
 
 ### Cycle 16: the export, from the log
 - **Why:** step 3's export: the file the scorecard grades, and a copy of everything you log.
