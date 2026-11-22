@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "043687d50bec1c8ae5e523c473197a41",
+    "identityHash": "92075b8a7facab11269b6409c8644092",
     "entities": [
       {
         "tableName": "events",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `at` INTEGER NOT NULL, `kind` TEXT NOT NULL, `target` INTEGER, `date` TEXT NOT NULL, `className` TEXT NOT NULL, `ref` INTEGER NOT NULL, `line` TEXT NOT NULL, `key` TEXT NOT NULL, `parts` TEXT NOT NULL, `lb` INTEGER NOT NULL, `count` INTEGER, `targetLow` INTEGER, `targetHigh` INTEGER, `ladder` TEXT, `reps` TEXT NOT NULL, `hurt` INTEGER NOT NULL, `formBroke` INTEGER NOT NULL, `stopped` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `at` INTEGER NOT NULL, `kind` TEXT NOT NULL, `target` INTEGER, `date` TEXT NOT NULL, `className` TEXT NOT NULL, `row` TEXT NOT NULL, `line` TEXT NOT NULL, `key` TEXT NOT NULL, `parts` TEXT NOT NULL, `lb` INTEGER NOT NULL, `count` INTEGER, `targetLow` INTEGER, `targetHigh` INTEGER, `ladder` TEXT, `reps` TEXT NOT NULL, `hurt` INTEGER NOT NULL, `formBroke` INTEGER NOT NULL, `stopped` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -44,9 +44,9 @@
             "notNull": true
           },
           {
-            "fieldPath": "ref",
-            "columnName": "ref",
-            "affinity": "INTEGER",
+            "fieldPath": "row",
+            "columnName": "row",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -128,7 +128,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '043687d50bec1c8ae5e523c473197a41')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '92075b8a7facab11269b6409c8644092')"
     ]
   }
 }
