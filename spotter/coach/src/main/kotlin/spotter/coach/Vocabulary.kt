@@ -2,6 +2,8 @@ package spotter.coach
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /** A movement: what is lifted, before any variation. Strength is tracked per movement. */
 @Serializable
@@ -38,7 +40,7 @@ class Vocabulary private constructor(val movements: List<Movement>, private val 
     fun lookup(phrase: String): Meaning? = phrases[normalise(phrase)]
 
     /** The longest phrase any list holds, in words: how far a reader needs to look ahead. */
-    val longestPhrase: Int = phrases.keys.maxOf { it.split(' ').size }
+    val longestPhrase: Int = phrases.keys.maxOfOrNull { it.split(' ').size } ?: 0
 
     companion object {
         private val json = Json { ignoreUnknownKeys = false }
@@ -51,11 +53,13 @@ class Vocabulary private constructor(val movements: List<Movement>, private val 
          * since then which one a line meant would come down to the order the lists were read in.
          */
         fun parse(movementsJson: String, wordsJson: String): Vocabulary {
-            val movementsFile = json.decodeFromString<MovementsFile>(movementsJson)
+            // The schema first, so a newer file says so instead of failing on a field it added.
+            requireSchema(movementsJson, "spotter-movements/1")
+            requireSchema(wordsJson, "spotter-words/1")
+            val movements = json.decodeFromString<MovementsFile>(movementsJson).movements
             val words = json.decodeFromString<WordsFile>(wordsJson)
-            require(movementsFile.schema == "spotter-movements/1") { "unknown schema ${movementsFile.schema}" }
-            require(words.schema == "spotter-words/1") { "unknown schema ${words.schema}" }
-            val movements = movementsFile.movements
+            val names = movements.map { normalise(it.name) }
+            require(names.size == names.toSet().size) { "a movement is listed twice" }
             val phrases = mutableMapOf<String, Meaning>()
             fun add(phrase: String, meaning: Meaning) {
                 val key = normalise(phrase)
@@ -76,11 +80,22 @@ class Vocabulary private constructor(val movements: List<Movement>, private val 
         }
 
         /**
-         * One spelling per phrase: lower case, hyphens and runs of spaces as one space, and no
-         * apostrophes, so "Step-Up", "step up" and "farmers carry" match the lists' spellings.
+         * One spelling per phrase: lower case, "&amp;" as "&", no apostrophes or invisible
+         * characters, and every dash and run of spaces as one space, so "Step-Up", "step up" and
+         * "farmers carry" match the lists' spellings. Boards carry word joiners and HTML entities.
          */
         fun normalise(text: String): String =
-            text.lowercase().replace("'", "").replace("’", "").replace('-', ' ').trim().replace(Regex("\\s+"), " ")
+            text.lowercase()
+                .replace("&amp;", "&")
+                .replace(Regex("['’\u200b\u200c\u200d\u2060\ufeff]"), "")
+                .replace(Regex("[-\u2010\u2011\u2012\u2013\u2014]"), " ")
+                .replace(Regex("[\\s\u00a0]+"), " ")
+                .trim()
+
+        private fun requireSchema(text: String, expected: String) {
+            val schema = runCatching { json.parseToJsonElement(text).jsonObject["schema"]?.jsonPrimitive?.content }.getOrNull()
+            require(schema == expected) { "unknown schema $schema, expected $expected" }
+        }
 
         private fun resource(name: String): String =
             checkNotNull(Vocabulary::class.java.getResource("/spotter/$name")) { "missing resource $name" }.readText()

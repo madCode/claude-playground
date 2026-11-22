@@ -26,9 +26,7 @@
   {
    "name": "back squat",
    "aliases": [
-    "back squats",
-    "barbell squat",
-    "barbell back squat"
+    "back squats"
    ],
    "pattern": "squat",
    "muscles": [
@@ -39,9 +37,7 @@
   {
    "name": "split squat",
    "aliases": [
-    "split squats",
-    "bulgarian split squat",
-    "bulgarian split squats"
+    "split squats"
    ],
    "pattern": "squat",
    "muscles": [
@@ -458,10 +454,7 @@
    "name": "chest fly",
    "aliases": [
     "chest flys",
-    "chest flies",
-    "fly",
-    "flys",
-    "flies"
+    "chest flies"
    ],
    "pattern": "fly",
    "muscles": [
@@ -498,8 +491,7 @@
    "aliases": [
     "bent-over rows",
     "bentover row",
-    "bentover rows",
-    "barbell row"
+    "bentover rows"
    ],
    "pattern": "horizontal_pull",
    "muscles": [
@@ -1016,9 +1008,7 @@
   {
    "name": "v-up",
    "aliases": [
-    "v-ups",
-    "full v-up",
-    "full v-ups"
+    "v-ups"
    ],
    "pattern": "core",
    "muscles": [

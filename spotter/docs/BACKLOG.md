@@ -21,7 +21,9 @@ Step 1, the coach core:
 - [ ] Board line reading: reps and rep schemes ("6 each", "12 total", ladders, timed), with
   traps 5, 7 and 8 as tests. *(handoff)*
 - [ ] Identity: movement plus variations, every word accounted for, "not sure" otherwise; trap
-  6, 10 and the close-grip and floor cases as tests. *(design, madCode)*
+  6, 10 and the close-grip and floor cases as tests. Also the refusals DESIGN.md lists under "A
+  full read can still be wrong", with the review's corpus lines as tests, and "step-down" used as
+  a modifier ("alt step-down reverse lunge"). *(design, madCode, cycle 1 review)*
 - [ ] Words the lists leave over on the corpus, for madCode's first review list: "tap"
   ("alt dumbbell tap"), "step out", "balance", "stand" ("sit-up to stand"), bare "press" and
   "rotation", "jack", "walkout", "ultimate". About 21% of rows still have one. *(cycle 1)*

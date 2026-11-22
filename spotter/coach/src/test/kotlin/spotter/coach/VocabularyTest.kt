@@ -72,6 +72,53 @@ class VocabularyTest {
         assertEquals("plank pop", movement("plank pops"))
     }
 
+    // "wide" is a stance on a squat and a grip on a curl, so on its own it is no one thing.
+    @Test
+    fun aWordThatChangesMeaningByMovementIsLeftUnsure() {
+        assertNull(words.lookup("wide"))
+        assertEquals(Variation("legs", "wide"), words.lookup("wide stance"))
+        assertEquals(Variation("grip", "wide"), words.lookup("wide grip"))
+    }
+
+    // "alt" alternates legs on a lunge and arms on a curl; it isn't an arm count.
+    @Test
+    fun alternatingIsItsOwnAxis() {
+        assertEquals(Variation("alternating", "yes"), words.lookup("alt"))
+        assertEquals(Variation("arms", "single"), words.lookup("single arm"))
+    }
+
+    // Trap 1: "12 x 2 dumbbell bench bridge" says two dumbbells.
+    @Test
+    fun twoDumbbellsIsReadWithOrWithoutAnS() {
+        assertEquals(Variation("implement", "two dumbbells"), words.lookup("2 dumbbell"))
+        assertEquals(Variation("implement", "two dumbbells"), words.lookup("2 dumbbells"))
+    }
+
+    @Test
+    fun aliasesThatHideAVariationAreGone() {
+        // A Bulgarian split squat is rear foot elevated; a bare fly could be a reverse fly.
+        assertNull(words.lookup("bulgarian split squat"))
+        assertNull(words.lookup("fly"))
+        assertNull(words.lookup("full v-up"))
+        assertEquals(Variation("position", "prone"), words.lookup("prone"))
+        assertEquals(Variation("position", "supine"), words.lookup("supine"))
+    }
+
+    // Board text carries word joiners and HTML entities.
+    @Test
+    fun invisibleCharactersAndEntitiesDontHideAWord() {
+        assertEquals(Meaning.Filler, words.lookup("\u2060Finisher"))
+        assertEquals(Meaning.Filler, words.lookup("count &amp; remember reps"))
+        assertEquals("step-up", movement("step\u2011up"))
+    }
+
+    @Test
+    fun aMovementListedTwiceIsRefused() {
+        val movements = """{"schema":"spotter-movements/1","movements":[{"name":"plank"},{"name":"Plank"}]}"""
+        val error = runCatching { Vocabulary.parse(movements, EMPTY_WORDS) }.exceptionOrNull()
+        assertTrue(error is IllegalArgumentException)
+    }
+
     @Test
     fun aWordInNoListIsUnknown() {
         assertNull(words.lookup("windmill"))
@@ -95,12 +142,17 @@ class VocabularyTest {
     }
 
     @Test
-    fun anUnknownSchemaIsRefused() {
+    fun anUnknownSchemaIsRefusedByName() {
+        // A newer file with a field this one doesn't know still fails on its schema, saying so.
         val error = runCatching {
-            Vocabulary.parse("""{"schema":"spotter-movements/2","movements":[]}""",
-                """{"schema":"spotter-words/1","variations":{},"connectors":{},"filler":[],"scheme":[]}""")
+            Vocabulary.parse("""{"schema":"spotter-movements/2","movements":[],"added":1}""", EMPTY_WORDS)
         }.exceptionOrNull()
         assertTrue(error is IllegalArgumentException)
+        assertTrue(error!!.message!!.contains("spotter-movements/2"))
+    }
+
+    private companion object {
+        const val EMPTY_WORDS = """{"schema":"spotter-words/1","variations":{},"connectors":{},"filler":[],"scheme":[]}"""
     }
 
     @Test
