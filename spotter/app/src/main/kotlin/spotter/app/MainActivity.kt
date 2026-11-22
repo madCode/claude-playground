@@ -23,7 +23,6 @@ import kotlinx.coroutines.sync.withLock
 import spotter.app.log.EventLog
 import spotter.app.log.LogDatabase
 import spotter.coach.LogDraft
-import spotter.coach.Logging
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import spotter.app.today.Boards
@@ -118,7 +117,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val log by lazy { EventLog(LogDatabase.get(this).events()) }
+    private val log by lazy { EventLog(LogDatabase.get(this)) }
 
     // Not cancelled by a rotation or leaving the app mid-write: the save happens once, whole.
     // What to write is worked out against the log as stored now, so saving twice writes nothing
@@ -126,10 +125,7 @@ class MainActivity : ComponentActivity() {
     private fun saveLog(shown: Today.Showing, draft: LogDraft) {
         lifecycleScope.launch {
             withContext(NonCancellable + Dispatchers.IO) {
-                saving.withLock {
-                    val logged = Logging.logged(log.entries(), shown.date, shown.className)
-                    Logging.events(draft, shown.sheet, logged, shown.date, shown.className, System.currentTimeMillis()).forEach(log::write)
-                }
+                saving.withLock { log.save(draft, shown.sheet, shown.date, shown.className, System.currentTimeMillis()) }
             }
             load()
         }

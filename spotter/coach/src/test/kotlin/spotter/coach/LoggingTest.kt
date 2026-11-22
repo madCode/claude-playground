@@ -66,13 +66,15 @@ class LoggingTest {
         assertEquals(listOf(JournalEntry.Kind.LOGGED), save(monday, draft).map { it.kind })
         // The screen reopened: it starts from what was logged, and saving it again changes nothing.
         val reopened = LogDraft.from(sheet, Logging.logged(written, monday, "2G"))
-        assertEquals(draft, reopened)
+        assertEquals(draft.rows, reopened.rows)
         assertTrue(save(monday, reopened).isEmpty())
 
         val corrected = save(monday, reopened.with(press.id, RowLog(25, 2, 7, hurt = true)))
         assertEquals(JournalEntry.Kind.CORRECTED, corrected.single().kind)
         assertEquals(1L, corrected.single().target)
-        val removed = save(monday, LogDraft())
+        // Opened from a log written elsewhere since, a row the screen never showed stays logged.
+        assertTrue(save(monday, LogDraft()).isEmpty())
+        val removed = save(monday, LogDraft.from(sheet, Logging.logged(written, monday, "2G")).with(press.id, null))
         assertEquals(JournalEntry.Kind.REMOVED, removed.single().kind)
         // The removal names the correction, and the row is gone from history.
         assertEquals(2L, removed.single().target)
@@ -117,6 +119,15 @@ class LoggingTest {
         assertEquals(3, history.size)
         val next = row(sheet(thursday), "10 / 8 / 6 x squat")
         assertEquals("2×35 ▲", sheet(thursday).glance(next))
+    }
+
+    // An imported number with no count: "changed" asks how many, as listed keeps what the sheet said.
+    @Test
+    fun anUnknownCountIsAskedForWhenChanged() {
+        val imported = Logged(monday, identity.read(BoardLine.read("8 x deadlift").words) as Reading.Known, Load(40, null), 8..8, listOf(8))
+        val deadlift = Sheet.make(listOf("8 x deadlift"), listOf(imported), identity).rows.single()
+        assertEquals(null, LogDraft.asListed(deadlift)!!.count)
+        assertEquals(RowLog(45, 2, 8), LogDraft.startChanged(deadlift))
     }
 
     // Another day's or class's log never shows on this one's screen.

@@ -109,7 +109,7 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (R
                 }
                 Choice("Changed", open, "${row.shown}: changed") {
                     open = true
-                    if (log == null || log == asListed) onChange(log ?: LogDraft.startChanged(row))
+                    if (log == null || log == asListed) onChange(LogDraft.startChanged(row))
                 }
                 if (log != null) {
                     OutlinedButton(
@@ -144,35 +144,34 @@ private fun Editor(row: SheetRow, log: RowLog, onChange: (RowLog) -> Unit) {
             onDown = Rack.down(log.lb)?.let { { onChange(log.copy(lb = it)) } },
             onUp = Rack.up(log.lb)?.let { { onChange(log.copy(lb = it)) } },
         )
-        if (log.count != null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Choice("One dumbbell", log.count == 1, "${row.shown}: one dumbbell") { onChange(log.copy(count = 1)) }
-                Choice("Two", log.count == 2, "${row.shown}: two dumbbells") { onChange(log.copy(count = 2)) }
-            }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Choice("One dumbbell", log.count == 1, "${row.shown}: one dumbbell") { onChange(log.copy(count = 1)) }
+            Choice("Two", log.count == 2, "${row.shown}: two dumbbells") { onChange(log.copy(count = 2)) }
         }
         log.reps?.let { reps ->
             Stepper(
                 "Reps",
                 "$reps",
                 "${row.shown}: $reps reps",
-                onDown = if (reps > 0) ({ onChange(log.copy(reps = reps - 1)) }) else null,
+                onDown = if (reps > 1) ({ onChange(log.copy(reps = reps - 1)) }) else null,
                 onUp = if (reps < MAX_REPS) ({ onChange(log.copy(reps = reps + 1)) }) else null,
             )
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Flag("Felt easy", log.easy) { onChange(log.copy(easy = it, hard = if (it) false else log.hard)) }
-            Flag("Felt hard", log.hard) { onChange(log.copy(hard = it, easy = if (it) false else log.easy)) }
-            Flag("Twinge", log.hurt) { onChange(log.copy(hurt = it)) }
-            Flag("Had to stop", log.stopped) { onChange(log.copy(stopped = it)) }
-            Flag("Easier version", log.easier) { onChange(log.copy(easier = it)) }
+            Flag(row, "Felt easy", log.easy) { onChange(log.copy(easy = it, hard = if (it) false else log.hard)) }
+            Flag(row, "Felt hard", log.hard) { onChange(log.copy(hard = it, easy = if (it) false else log.easy)) }
+            Flag(row, "Twinge", log.hurt) { onChange(log.copy(hurt = it)) }
+            Flag(row, "Had to stop", log.stopped) { onChange(log.copy(stopped = it)) }
+            Flag(row, "Easier version", log.easier) { onChange(log.copy(easier = it)) }
         }
     }
 }
 
 @Composable
 private fun Stepper(label: String, value: String, spoken: String, onDown: (() -> Unit)?, onUp: (() -> Unit)?) {
+    // The label above, so the buttons and the number have the row's width at any text size.
+    Text(label, fontSize = 15.sp, color = muted)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(label, fontSize = 15.sp, color = muted, modifier = Modifier.widthIn(min = 72.dp))
         OutlinedButton(
             onClick = { onDown?.invoke() },
             enabled = onDown != null,
@@ -188,8 +187,13 @@ private fun Stepper(label: String, value: String, spoken: String, onDown: (() ->
 }
 
 @Composable
-private fun Flag(label: String, on: Boolean, onToggle: (Boolean) -> Unit) {
-    FilterChip(selected = on, onClick = { onToggle(!on) }, label = { Text(label) }, modifier = Modifier.heightIn(min = 48.dp))
+private fun Flag(row: SheetRow, label: String, on: Boolean, onToggle: (Boolean) -> Unit) {
+    FilterChip(
+        selected = on,
+        onClick = { onToggle(!on) },
+        label = { Text(label) },
+        modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: ${label.lowercase()}" },
+    )
 }
 
 private const val MAX_REPS = 99

@@ -23,7 +23,7 @@ import java.time.LocalDate
 class EventLogTest {
     private val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), LogDatabase::class.java)
         .allowMainThreadQueries().build()
-    private val log = EventLog(db.events())
+    private val log = EventLog(db)
     private val vocabulary = Vocabulary.starting()
     private val identity = Identity(vocabulary)
     private fun exercise(line: String) = identity.read(BoardLine.read(line).words) as Reading.Known

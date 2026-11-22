@@ -29,6 +29,8 @@ import spotter.coach.BookedClass
 import spotter.coach.Identity
 import spotter.coach.LogDraft
 import spotter.coach.Logging
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import spotter.coach.TodaysBoard
 import spotter.coach.Vocabulary
 import java.io.File
@@ -44,7 +46,7 @@ class LogScreenTest {
     private val out = File(System.getProperty("screenshotDir") ?: "build/screenshots").apply { mkdirs() }
     private val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), LogDatabase::class.java)
         .allowMainThreadQueries().build()
-    private val log = EventLog(db.events())
+    private val log = EventLog(db)
     private val vocabulary = Vocabulary.starting()
     private val identity = Identity(vocabulary)
     private val monday = LocalDate.of(2026, 11, 16)
@@ -62,9 +64,7 @@ class LogScreenTest {
     private fun today(day: LocalDate) = Today.of(board(day), log.entries(), identity, vocabulary) as Today.Showing
 
     // What MainActivity.saveLog does, against the in-memory store.
-    private fun save(shown: Today.Showing, draft: LogDraft) =
-        Logging.events(draft, shown.sheet, Logging.logged(log.entries(), shown.date, shown.className), shown.date, shown.className, 1L)
-            .forEach(log::write)
+    private fun save(shown: Today.Showing, draft: LogDraft) = log.save(draft, shown.sheet, shown.date, shown.className, 1L)
 
     private fun show(today: Today.Showing, onSave: (Today.Showing, LogDraft) -> Unit) = compose.setContent {
         HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = today, onSaveLog = onSave)
@@ -111,18 +111,35 @@ class LogScreenTest {
         compose.onNodeWithText("Logged: 2×40 · 6 reps · had to stop").assertIsDisplayed()
     }
 
-    // Half-logged when the phone turns: still logging, with what was entered.
+    // Half-logged when the phone turns: still logging, with what was entered, and the row being
+    // changed still open although it starts at its listed number.
     @Test
     fun aHalfLoggedClassSurvivesRecreation() {
+        save(today(monday), LogDraft().with(today(monday).sheet.rows[1].id, spotter.coach.RowLog(40, 2, 8)))
         val restore = StateRestorationTester(compose)
         val shown = today(saturday)
         restore.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = shown) }
         compose.onNodeWithText("Log this class").performClick()
         compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
-        compose.onNodeWithContentDescription("more, 8 x deadlift: heaviest two 10 pound dumbbells").performClick()
         restore.emulateSavedInstanceStateRestore()
-        compose.onNodeWithText("Logged: 2×12 · 8 reps").assertIsDisplayed()
-        compose.onNodeWithContentDescription("less, 8 x deadlift: heaviest two 12 pound dumbbells").assertIsDisplayed()
+        compose.onNodeWithText("Logged: 2×45 · 8 reps").assertIsDisplayed()
+        compose.onNodeWithContentDescription("more, 8 x deadlift: heaviest two 45 pound dumbbells").performClick()
+        compose.onNodeWithText("Logged: 2×50 · 8 reps").assertIsDisplayed()
+    }
+
+    // The next class replacing this one mid-log starts that class's screen afresh, rather than
+    // saving these rows under its date.
+    @Test
+    fun anotherClassDoesNotInheritTheDraft() {
+        var shown by androidx.compose.runtime.mutableStateOf(today(saturday))
+        var saved: LogDraft? = null
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = shown, onSaveLog = { _, d -> saved = d }) }
+        compose.onNodeWithText("Log this class").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
+        shown = today(saturday.plusDays(1))
+        compose.onNodeWithText("Log this class").performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertTrue(saved!!.rows.isEmpty())
     }
 
     private fun shoot(name: String) {
@@ -130,5 +147,29 @@ class LogScreenTest {
         val colours = (0 until bitmap.width step 20).flatMap { x -> (0 until bitmap.height step 20).map { y -> bitmap.getPixel(x, y) } }.toSet()
         assertTrue("$name came back flat", colours.size > 2)
         File(out, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+}
+
+// At the largest text, the steppers keep both buttons on screen and big enough to tap.
+@RunWith(AndroidJUnit4::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(qualifiers = "w411dp-h891dp-xxhdpi", fontScale = 2.0f)
+class LogLargeTextTest {
+    @get:Rule val compose = createComposeRule()
+
+    @Test
+    fun theStepperFitsAtTheLargestText() {
+        val identity = Identity(Vocabulary.starting())
+        val day = LocalDate.of(2026, 11, 21)
+        val board = TodaysBoard.Lines(BookedClass("2G", day, day.atTime(9, 50), "Orange 60 Min 2G"), listOf("* 8 x close grip chest press (explosive)"))
+        val shown = Today.of(board, emptyList(), identity, Vocabulary.starting()) as Today.Showing
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = shown) }
+        compose.onNodeWithText("Log this class").performClick()
+        compose.onNodeWithContentDescription("8 x close grip chest press (explosive): changed").performClick()
+        val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        for (label in listOf("more, 8 x close grip chest press (explosive): heaviest two 10 pound dumbbells", "more, 8 x close grip chest press (explosive): 8 reps")) {
+            val plus = compose.onNodeWithContentDescription(label).performScrollTo().fetchSemanticsNode().boundsInRoot
+            assertTrue("$label at ${plus.right} of ${root.right}", plus.right <= root.right && plus.width >= 48f * 3)
+        }
     }
 }

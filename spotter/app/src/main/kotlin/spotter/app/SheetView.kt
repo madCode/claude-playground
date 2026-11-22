@@ -68,8 +68,10 @@ fun TodayView(today: Today, onAllowCalendar: () -> Unit, onSaveLog: (Today.Showi
         is Today.Nothing -> Text(today.reason, fontSize = 17.sp, color = ink)
         is Today.Showing -> {
             // Both survive rotation and the app being killed, so a half-logged class isn't lost.
-            var logging by rememberSaveable { mutableStateOf(false) }
-            var draft by rememberSaveable(stateSaver = draftSaver) { mutableStateOf(LogDraft()) }
+            // Tied to the class: should the next class replace it mid-log, its rows aren't saved
+            // under the other class's date.
+            var logging by rememberSaveable(today.date, today.className) { mutableStateOf(false) }
+            var draft by rememberSaveable(today.date, today.className, stateSaver = draftSaver) { mutableStateOf(LogDraft()) }
             if (logging) {
                 LogView(
                     today,
@@ -105,7 +107,8 @@ private fun SheetView(today: Today.Showing, onLog: () -> Unit) {
         )
         (today.notes + today.sheet.warnings).forEach { Note(it) }
         if (today.sheet.rows.any(LogDraft::loggable)) {
-            val label = if (today.logged.isEmpty()) "Log this class" else "Change the log (${today.logged.size} logged)"
+            val logged = today.sheet.rows.count { it.id in today.logged }
+            val label = if (logged == 0) "Log this class" else "Change the log ($logged logged)"
             Button(
                 onClick = onLog,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),

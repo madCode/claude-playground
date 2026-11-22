@@ -50,7 +50,7 @@ sealed interface Today {
             val lines = chosen as? TodaysBoard.Lines ?: return from(chosen, emptyList(), identity)
             val date = lines.booked.date
             val name = className(lines)
-            val before = entries.filterNot { it.date == date && it.className == name }
+            val before = entries.filter { it.date < date || (it.date == date && it.className != name) }
             return from(chosen, Journal.history(before, vocabulary), identity, Logging.logged(entries, date, name))
         }
 

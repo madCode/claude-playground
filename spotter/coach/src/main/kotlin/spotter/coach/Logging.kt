@@ -27,8 +27,12 @@ data class RowLog(
  * whole, across a rotation or the app being killed.
  */
 @Serializable
-data class LogDraft(val rows: Map<String, RowLog> = emptyMap()) {
-    fun with(id: String, log: RowLog?) = LogDraft(if (log == null) rows - id else rows + (id to log))
+data class LogDraft(
+    val rows: Map<String, RowLog> = emptyMap(),
+    /** The rows logged when the screen opened: only these can be cleared by leaving them out. */
+    val seen: Set<String> = emptySet(),
+) {
+    fun with(id: String, log: RowLog?) = copy(rows = if (log == null) rows - id else rows + (id to log))
 
     companion object {
         /** Whether a row can be logged here: a weighted row Spotter read. */
@@ -50,20 +54,24 @@ data class LogDraft(val rows: Map<String, RowLog> = emptyMap()) {
          * Where "changed" starts: as listed when there is a number, else the lightest pair a
          * new exercise would start from, for the person to step up from.
          */
-        fun startChanged(row: SheetRow): RowLog = asListed(row)
-            ?: RowLog(START_LB, (row.reading as? Reading.Known)?.let(Sheet::rowCount) ?: 2, reps(row))
+        fun startChanged(row: SheetRow): RowLog {
+            val count = (row.reading as? Reading.Known)?.let(Sheet::rowCount) ?: 2
+            // An imported number with no count: logging is the chance to say how many.
+            return asListed(row)?.let { if (it.count == null) it.copy(count = count) else it } ?: RowLog(START_LB, count, reps(row))
+        }
 
         private fun reps(row: SheetRow): Int? = if (row.line.scheme is Scheme.Ladder) null else row.target?.first
 
         private const val START_LB = 10
 
         /** The draft for a class already logged, or partly: what is in the log for its rows. */
-        fun from(sheet: Sheet, logged: Map<String, JournalEntry>): LogDraft = LogDraft(
-            sheet.rows.mapNotNull { row ->
+        fun from(sheet: Sheet, logged: Map<String, JournalEntry>): LogDraft {
+            val rows = sheet.rows.mapNotNull { row ->
                 val e = logged[row.id] ?: return@mapNotNull null
                 row.id to RowLog(e.lb, e.count, e.reps.singleOrNull()?.takeIf { e.ladder == null }, e.easy, e.hard, e.hurt, e.stopped, e.easier)
-            }.toMap(),
-        )
+            }.toMap()
+            return LogDraft(rows, rows.keys)
+        }
     }
 }
 
@@ -76,6 +84,9 @@ object Logging {
      * The events to write for [draft] against what is [logged] already: a new row is logged, a
      * changed one corrected, one cleared removed, and one unchanged left alone, so saving twice
      * writes nothing the second time. Rows no longer on the sheet are left as they are.
+     *
+     * Only a row the screen opened with ([LogDraft.seen]) and then cleared is removed: a row logged
+     * since the screen opened, which it never showed, isn't the person's to have cleared.
      */
     fun events(
         draft: LogDraft, sheet: Sheet, logged: Map<String, JournalEntry>, date: LocalDate, className: String, at: Long,
@@ -84,7 +95,7 @@ object Logging {
         val before = logged[row.id]
         when {
             now == null && before == null -> null
-            now == null -> before!!.copy(id = 0, at = at, kind = JournalEntry.Kind.REMOVED, target = before.id)
+            now == null -> if (row.id !in draft.seen) null else before!!.copy(id = 0, at = at, kind = JournalEntry.Kind.REMOVED, target = before.id)
             before != null && LogDraft.from(sheet, logged).rows[row.id] == now -> null
             else -> {
                 val e = entry(row, now, date, className, at)

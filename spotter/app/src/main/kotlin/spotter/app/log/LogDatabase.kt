@@ -11,6 +11,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import spotter.coach.Journal
 import spotter.coach.JournalEntry
+import spotter.coach.LogDraft
+import spotter.coach.Logging
+import spotter.coach.Sheet
 import java.time.LocalDate
 
 /**
@@ -67,6 +70,9 @@ interface EventDao {
     @Insert
     fun insert(row: EventRow): Long
 
+    @Insert
+    fun insertAll(rows: List<EventRow>)
+
     @Query("SELECT * FROM events ORDER BY id")
     fun all(): List<EventRow>
 }
@@ -85,7 +91,9 @@ abstract class LogDatabase : RoomDatabase() {
 }
 
 /** The log as the coach reads it. Call off the main thread. */
-class EventLog(private val dao: EventDao) {
+class EventLog(private val db: LogDatabase) {
+    private val dao = db.events()
+
     fun write(entry: JournalEntry): Long = dao.insert(EventRow.of(entry))
 
     /**
@@ -93,4 +101,15 @@ class EventLog(private val dao: EventDao) {
      * newer build after a downgrade) is skipped: it costs that one entry, not the whole log.
      */
     fun entries(): List<JournalEntry> = dao.all().mapNotNull { runCatching { it.toEntry() }.getOrNull() }
+
+    /**
+     * Saves a class's log screen: works out what changed against the log as stored now and writes
+     * it in one transaction, so a reader never sees half a save and a killed app leaves none.
+     */
+    fun save(draft: LogDraft, sheet: Sheet, date: LocalDate, className: String, at: Long): List<JournalEntry> =
+        db.runInTransaction<List<JournalEntry>> {
+            val events = Logging.events(draft, sheet, Logging.logged(entries(), date, className), date, className, at)
+            dao.insertAll(events.map(EventRow::of))
+            events
+        }
 }
