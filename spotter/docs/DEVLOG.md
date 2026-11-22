@@ -7,10 +7,24 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 - **Built so far:** the design; loads per hand on the rack's steps; reading a board line's
   count; naming its exercise, in full on 83% of Carry's board rows; the app, which updates
   itself.
-- **Waiting on you:** the board words to sort (BACKLOG.md, "Your call"), and whether history
-  import moves up.
+- **Waiting on you:** a few board words still unsorted (BACKLOG.md, "Your call").
 
 ## Sunday 22 November 2026
+
+### madCode's answers on the board words
+- **Why:** madCode went through the words cycle 4 couldn't sort, in chat.
+- **Shipped:** each answer as a word in the lists, or a rule for words that only mean something
+  on certain movements or after certain words. Named in full: 1,276 of Carry's 1,546 rows before,
+  1,379 (89%) after; rows with an unknown word: 209 before, 98 after.
+- **Learned from the boards:** "anchor" is the move a circuit comes back to between the others,
+  not a partner; it changes nothing about the exercise.
+- **Review caught:** "switch" as filler made a switch lunge (a jumping lunge) a plain lunge, now
+  only "switch alt" is; "with rotation" after a plank or deadbug became a torso rotation; a
+  "press" after a Y-raise became a shoulder press (the Y-raise was filed as a lunge); "single arm
+  squat to press" lost "single arm" on the press; and a combo's "hands on bosu" overrode a squat's
+  own "bosu". All fixed and tested.
+- **Changed:** rows with "feet on bosu" now name it, so they are no longer the same exercise as a
+  line that only says "bosu".
 
 ### Cycle 4: words the boards use
 - **Why:** a row with an unknown word gets no number, and 311 of Carry's 1,546 exercise rows

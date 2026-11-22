@@ -21,7 +21,7 @@ Step 1, the coach core:
 - [ ] One exercise, one key, found by cycle 3's review: "dumbbell" and a bare line on a
   lift ("dumbbell alt lateral lunge" and "alt lateral lunge"), "lying on bench" and "bench",
   "rows" and "low row" and "bent-over row", "trx row" and "TRX low row", "bench RFE split squat" and "RFE split squat", "high side
-  plank" and "side plank [high plank]". Settle per movement
+  plank" and "side plank [high plank]", "bosu bridge" and "bridge (feet on bosu)". Settle per movement
   with the corpus grade. *(cycle 3)*
 - [ ] Refused but readable, from the same review: `position` holds what you're on, your body
   shape and where the weight sits, so "low bench high plank … row" and "incline bench chest
@@ -50,25 +50,12 @@ Step 3, logging:
 
 ## Your call
 
-- **Board words for madCode to sort**, from the public corpus, with the line they come from.
-  Each stays "not sure" until answered; a guess, where there is one, is in brackets. *(cycle 4)*
-  - "tap": "high plank alt dumbbell tap", "tap front squat". (Touch the dumbbell; a front-loaded
-    tap squat?)
-  - "to stand": "sit-up to stand", "seated shoulder press to stand". (Its own exercise, or
-    ignore?)
-  - "balance": "balance bicep curl". (On one leg?)
-  - "with rotation": "push press with rotation", "thruster with rotation". (Which rotation?)
-  - bare "press": "squat to press", "reverse lunge to press". (Shoulder press?)
-  - "step-out deadlift", "step back low row".
-  - "wide": "wide bicep curl". (Wide grip?)
-  - Setup: "feet on bench", "hands on bosu", "hand on bench", "foot on bench" on a bridge,
-    "shoulders on bench" (a bench bridge; on a press, a press in a bridge), "feet in straps".
-  - "anchor": "chest fly (anchor)", "knee drive (feet on bosu) - anchor".
-  - "switch": "bear plank switch alt low row". "hinge": "split squat with hinge".
-  - "tap squat jump", "single leg hop", "split squat hop", "ultimate burpee", "b-stance goblet
-    squat", "bent arm lateral raise", "straight arm sit-up".
+- **Board words still unsorted**, after madCode's answers of 2026-11-22. Each stays "not sure"
+  until answered. *(cycle 4)*
+  - Setup: "hand on bench" on a row, "foot on bench" on a single-leg bridge, "feet in straps".
+  - "tap squat jump", "single leg hop", "split squat hop", "bent arm lateral raise", "straight
+    arm sit-up".
   - "reach": "with overhead reach", "chest press to reach".
-  - "high plank jack" and "high plank pop": a plank jack or pop done in high plank?
 
 ## Recurring reviews
 
@@ -93,6 +80,11 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
   to a folder madCode controls.
 
 ## Done
+
+- [x] madCode's answers on the board words: "to stand", "balance", "press" after a squat or lunge,
+  "with rotation", "wide" on a curl, "step-out deadlift", "anchor", "switch", "hinge", high plank
+  jack and pop, "ultimate burpee", "b-stance", "dumbbell tap", "tap front squat", feet on a bench
+  for a climber, shoulders on a bench for a bridge, and hands or feet on the Bosu. 2026-11-22.
 
 - [x] Board words with a plain meaning: 22 exercises, "rear foot on bench", "moderate", "buy-out" and "recover when done"; the rest on madCode's list above. Cycle 4,
   2026-11-22.
