@@ -77,8 +77,11 @@ what is on the board, and nothing says so.
   - Labels ("Finisher:", "Bonus:", "Buy-in:"), a side ("(R)", "on left") and a trailing "rest"
     come off.
   - Lines that tell the class something ("Goal: match or beat…", "Repeat until time is
-    called…", a cheer, a question, a run recap) and block headings are never exercises
-    (trap 5), even when they hold an exercise's name.
+    called…", a cheer, a question, a sentence to the reader, a run recap), tread and rower
+    lines ("600 m row", "1 min all out"), and block headings are never exercises (trap 5),
+    even when they hold an exercise's name.
+  - A line over 300 characters is commentary, unread: that also keeps a hostile line from
+    stalling the reader.
 - **A line is fully read, or it is "not sure".** Filler is a closed list too ("rest",
   "finisher", "count & remember reps"). A word that is none of these leaves the row unsure: it
   is shown, it can be logged, but it borrows no number.
