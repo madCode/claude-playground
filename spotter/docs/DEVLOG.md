@@ -17,8 +17,9 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   the same move without them. Tap squat jump, single leg hop, split squat hop (same lead leg),
   bent arm lateral raise, straight arm sit-up (arms straight overhead, as in your video), overhead
   reach (one arm or both, so neither is recorded) and the reach after a chest press are moves of
-  their own. Rows named in full: 1,379 to 1,405 of 1,546 (91%). Also read now, from the same
-  word: "high plank alt lateral reach", a reach from a high plank, with no weight.
+  their own. Rows named in full: 1,379 to 1,404 of 1,546 (91%). A "reach" anywhere but after a
+  chest press stays "not sure": the review caught "high plank alt lateral reach" being read as
+  the press's reach.
 - **Also:** a row logged from a borrowed board carries over to your own board's row with the
   same exercise, your call; it's built with the Log screen's second half.
 
