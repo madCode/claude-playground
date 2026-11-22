@@ -6,10 +6,22 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 - **Built so far:** the design; loads per hand on the rack's steps; reading a board line's
   count; naming its exercise, in full on 91% of Carry's board rows; the suggested weight from a
-  log; the app, which updates itself; today's sheet on the phone; logging a class.
-- **Waiting on you:** choose a backup folder on the phone (DEVICE.md, "Backup folder").
+  log; the app, which updates itself; today's sheet on the phone; logging a class; the export
+  and backup; reading a history file, on the phone and in the replay tool.
+- **Waiting on you:** choose a backup folder, and import your history file, on the phone
+  (DEVICE.md, "Backup folder" and "History import").
 
 ## Sunday 22 November 2026
+
+### Cycle 21: your history on the phone
+- **Why:** step 4's last part: the sheet says "new: go light" on every row until it has
+  history.
+- **Shipped:** "Import a history file" at the bottom of the home screen. Pick your
+  `history.jsonl` once and the sheet's numbers come from it and from what you log. The screen
+  says how many rows were read and how many were left out, by reason. You can replace or
+  remove it; your own log is never touched. A day that is in both your log and the file
+  counts once, as you logged it here.
+- **To check on the phone:** DEVICE.md, "History import".
 
 ### Cycle 20: the replay tool
 - **Why:** the gym-coach session asked for a way to grade Spotter's coach on your real history

@@ -21,6 +21,9 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import spotter.app.export.ExportStore
+import spotter.app.history.HistoryPick
+import spotter.app.history.HistoryState
+import spotter.app.history.HistoryStore
 import spotter.app.export.ExportWorker
 import spotter.app.log.EventLog
 import spotter.app.log.LogDatabase
@@ -34,6 +37,7 @@ import spotter.app.today.TodayLoader
 import spotter.coach.Identity
 import spotter.coach.Vocabulary
 import java.io.File
+import java.time.LocalDate
 import java.time.LocalDateTime
 import spotter.app.update.Installer
 import spotter.app.update.UpdateStore
@@ -44,6 +48,30 @@ class MainActivity : ComponentActivity() {
     private val today = mutableStateOf<Today>(Today.Loading)
     private val earlier = mutableStateOf<Today.Showing?>(null)
     private val backup = mutableStateOf(BackupState())
+    private val history = mutableStateOf(HistoryState())
+    private val imported by lazy { HistoryStore(filesDir) }
+
+    // Android's own file picker: Spotter reads the one file picked, once, and keeps its own copy.
+    private val pickHistory = registerForActivityResult(ActivityResultContracts.OpenDocument()) { file ->
+        if (file == null) return@registerForActivityResult
+        lifecycleScope.launch {
+            // Not cancelled by a rotation mid-read: the pick is taken once, whole.
+            val state = withContext(NonCancellable + Dispatchers.IO) {
+                val bytes = runCatching { contentResolver.openInputStream(file)?.use(HistoryPick::read) }.getOrNull()
+                HistoryPick.take(bytes?.takeIf { it.size <= HistoryPick.MAX_BYTES }, tooBig = bytes != null && bytes.size > HistoryPick.MAX_BYTES, imported, identity, LocalDate.now())
+            }
+            history.value = state
+            load()
+        }
+    }
+
+    private fun removeHistory() {
+        lifecycleScope.launch {
+            withContext(NonCancellable + Dispatchers.IO) { imported.clear() }
+            history.value = HistoryState()
+            load()
+        }
+    }
     private val export by lazy { ExportStore(this) }
     private var stopListeningToExport: () -> Unit = {}
 
@@ -94,6 +122,10 @@ class MainActivity : ComponentActivity() {
                 earlier = earlier.value,
                 backup = backup.value,
                 onChooseFolder = { pickFolder.launch(null) },
+                history = history.value,
+                // Any type: a ".jsonl" file has none the picker knows.
+                onImportHistory = { pickHistory.launch(arrayOf("*/*")) },
+                onRemoveHistory = ::removeHistory,
             )
         }
     }
@@ -108,6 +140,12 @@ class MainActivity : ComponentActivity() {
         stopListening = store.listen { waiting.intValue = store.waiting }
         showBackup()
         stopListeningToExport = export.listen { showBackup() }
+        // Here and not with the sheet: the history is said also while the calendar isn't allowed.
+        lifecycleScope.launch {
+            val read = withContext(Dispatchers.IO) { imported.result(identity, LocalDate.now()) }
+            // What a refused pick said stays until the next pick.
+            history.value = HistoryPick.state(read).copy(refused = history.value.refused)
+        }
     }
 
     override fun onStop() {
@@ -151,14 +189,16 @@ class MainActivity : ComponentActivity() {
         loading = lifecycleScope.launch {
             val loader = TodayLoader(Boards(File(filesDir, "boards")), calendar::events)
             val entries = withContext(Dispatchers.IO) { log.entries() }
+            val read = withContext(Dispatchers.IO) { imported.result(identity, LocalDate.now()) }
+            val beside = HistoryPick.beside(read?.logged.orEmpty(), entries)
             val logged = Today.loggedClasses(entries)
             // The kept board first, then the fetched one.
             val kept = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), fetch = false, logged) }
-            today.value = Today.afterKept(today.value, kept?.let { Today.of(it, entries, identity, vocabulary) }, logged)
+            today.value = Today.afterKept(today.value, kept?.let { Today.of(it, entries, identity, vocabulary, beside) }, logged)
             earlier.value = withContext(Dispatchers.IO) { loader.earlier(LocalDateTime.now(), logged) }
-                ?.let { Today.of(it, entries, identity, vocabulary) as? Today.Showing }
+                ?.let { Today.of(it, entries, identity, vocabulary, beside) as? Today.Showing }
             val fetched = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), logged = logged) }
-            if (fetched != null) today.value = Today.of(fetched, entries, identity, vocabulary)
+            if (fetched != null) today.value = Today.of(fetched, entries, identity, vocabulary, beside)
         }
     }
 

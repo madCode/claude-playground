@@ -2,6 +2,11 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 21 — build: the history on the phone
+
+- Check each Java call against the project's lowest Android version before the review does:
+  `readNBytes` compiled, and would have crashed on Android 8 to 12.
+
 ### Cycle 20 — build: the replay tool
 
 - Run a new command for real once, with the arguments a person would type, before writing its

@@ -221,8 +221,20 @@ next one in that list. A Y-bell is another implement and never steps onto that l
 ## History import
 
 `HistoryImport` in the coach reads gym-coach's `history.jsonl`
-([HISTORY-FORMAT.md](HISTORY-FORMAT.md)) into the coach's own history. The phone's screen for
-picking the file comes next; the reading is done and tested on invented rows.
+([HISTORY-FORMAT.md](HISTORY-FORMAT.md)) into the coach's own history.
+
+On the phone, "Import a history file" on the home screen opens Android's file picker. Spotter
+reads the one file picked, once, and keeps its own copy in the app's storage, beside the log
+and never in it: the log is what was logged here, the import is another app's record. The copy
+is read again by the rules as they are now, so a better reader later reads more of the same
+file. It isn't in Android backup; the file it came from is the copy to keep.
+
+- The home screen says how many rows were read and how many were left out, by reason, and
+  offers "Replace the history" and "Remove the history" (which asks first; the log stays).
+- A file that is too big (5 MB), can't be opened, or has nothing that reads as a history is
+  refused with the reason, and the history already kept is unchanged.
+- **A day in both counts once**, as it was logged here: imported rows from a day the log has
+  are not read. Within a day order isn't known, so the two are never mixed.
 
 A row becomes history only when all of it can be read. Otherwise it is left out and counted by
 reason, so the import can say what it didn't take:

@@ -49,3 +49,16 @@ folder's own app (Files, a sync app) and the daily run are only visible on a pho
    folder and save again: the line reads "Couldn't copy your log to
    Spotter. Choose the folder again."
 5. A day later, without opening Spotter: the files are still current (the daily run).
+
+## History import
+
+The tests prove what is read from a file and what the sheet makes of it, on invented rows.
+Android's file picker and your real file are only visible on a phone.
+
+1. At the bottom of Spotter it says "No history imported." Tap **Import a history file** and
+   pick your `history.jsonl` (from Downloads, or wherever you put it).
+2. The line reads "History imported: N rows read." with what was left out, by reason. Rows for
+   exercises you've lifted before now show a number on the sheet, not "new: go light".
+3. Pick a file that isn't a history (a photo): it says nothing could be read, and the history
+   you had is unchanged.
+4. **Remove the history** asks first. Removed, the sheet goes back to what your own log says.

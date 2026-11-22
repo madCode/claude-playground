@@ -58,6 +58,35 @@ class HomeScreenTest {
         assertEquals(2, picks)
     }
 
+    // What the numbers are made from is said, with what the import left out, and removing it
+    // asks first.
+    @Test
+    fun theHistorySaysWhatWasReadAndLeftOut() {
+        var imports = 0
+        var removals = 0
+        var history by mutableStateOf(spotter.app.history.HistoryState())
+        compose.setContent {
+            HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, history = history, onImportHistory = { imports++ }, onRemoveHistory = { removals++ })
+        }
+        compose.onNodeWithText("No history imported. Until you log an exercise, its row says \"new: go light\".").assertIsDisplayed()
+        compose.onNodeWithText("Import a history file").performClick()
+        assertEquals(1, imports)
+        history = spotter.app.history.HistoryState(698, listOf("409 no weight", "91 form broke down"), "Nothing in that file could be read as a history.")
+        compose.onNodeWithText("History imported: 698 rows read.").assertIsDisplayed()
+        compose.onNodeWithText("Left out: 409 no weight, 91 form broke down.").assertIsDisplayed()
+        compose.onNodeWithText("Nothing in that file could be read as a history.").assertIsDisplayed()
+        shoot("home-history")
+        compose.onNodeWithText("Replace the history").performClick()
+        assertEquals(2, imports)
+        compose.onNodeWithText("Remove the history").performClick()
+        compose.onNodeWithText("Remove the imported history? Your own log stays.").assertIsDisplayed()
+        assertEquals(0, removals)
+        compose.onNodeWithText("Keep").performClick()
+        compose.onNodeWithText("Remove the history").performClick()
+        compose.onNodeWithText("Remove").performClick()
+        assertEquals(1, removals)
+    }
+
     @Test
     fun theVersionCopiesInOneTap() {
         var copies = 0
