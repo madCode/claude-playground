@@ -61,6 +61,8 @@ object HistoryImport {
         val weight: Double?,
         val reps: Int?,
         val skipped: Boolean,
+        /** A timed or bodyweight row finished. */
+        val done: Boolean,
         val hurt: Boolean,
         val easy: Boolean,
         val hard: Boolean,
@@ -95,7 +97,7 @@ object HistoryImport {
             if (o != null && date != null) {
                 all += Row(
                     date, o.string("class"), o.string("line") ?: filedAs(o), o.number("weight")?.takeIf { it > 0 }, o.int("reps"),
-                    o.flag("skipped"), o.flag("hurt"), o.flag("easy"), o.flag("hard"), o.flag("easier"),
+                    o.flag("skipped"), o.flag("done"), o.flag("hurt"), o.flag("easy"), o.flag("hard"), o.flag("easier"),
                     (row as? Imported)?.logged, row as? Left,
                 )
             }

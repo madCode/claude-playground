@@ -45,24 +45,34 @@ object Replay {
         }
         // What was lifted is the file's word, whatever the coach made of the row: the weight as
         // written (22.5 stays 22.5), so the grade is against the lift and not the coach's reading.
+        // Reps only where the coach read the row: the file's own number may count both sides,
+        // and beside the line's reps a side a failed set could look like more than was asked.
         return made.copy(
             weight = row.weight.takeUnless { row.skipped },
-            reps = made.reps ?: row.reps.takeIf { row.weight != null && !row.skipped },
-            hurt = row.hurt, easy = row.easy, hard = row.hard, easier = row.easier,
+            done = row.done, hurt = row.hurt, easy = row.easy, hard = row.hard, easier = row.easier,
         )
     }
 
     /** Writes each class's session into [out] and says what it did in counts. */
     fun write(historyFile: File, out: File, today: LocalDate = LocalDate.now()): String {
         // Sessions are someone's training data: never into a folder git would offer to commit.
-        generateSequence(out.absoluteFile) { it.parentFile }.firstOrNull { File(it, ".git").exists() }?.let {
+        // The folder as it really is: a link into a checkout is in it, "../.." out of one is not.
+        val folder = out.canonicalFile
+        generateSequence(folder) { it.parentFile }.firstOrNull { File(it, ".git").exists() }?.let {
             throw IllegalArgumentException("$out is inside a git checkout ($it). Choose a folder outside it: the sessions are private.")
         }
+        // A session left from another run would be graded as this one's.
+        require(!folder.exists() || (folder.isDirectory && folder.list().isNullOrEmpty())) { "$out isn't an empty folder. Choose a new or empty one." }
         val identity = Identity(Vocabulary.starting())
         val history = HistoryImport.read(historyFile.readText(), identity, today)
         val replayed = run(history, identity)
-        out.mkdirs()
-        replayed.forEach { File(out, it.file).writeText(it.session.toJson() + "\n") }
+        try {
+            folder.mkdirs()
+            replayed.forEach { File(folder, it.file).writeText(it.session.toJson() + "\n") }
+        } catch (e: java.io.IOException) {
+            // Without the file's name, which holds a date and a class.
+            throw IllegalStateException("couldn't write the sessions to $out")
+        }
         val sets = replayed.sumOf { it.session.sets.size }
         val numbered = replayed.sumOf { r -> r.session.sets.count { it.suggestedWeight != null && it.weight != null } }
         val weighted = replayed.sumOf { r -> r.session.sets.count { it.weight != null } }

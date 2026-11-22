@@ -25,7 +25,7 @@ class ReplayTest {
 
     private val history = listOf(
         row("2026-03-02", "2G", "8 x chest press", "25", 8),
-        row("2026-03-02", "2G", "8 x zorbing", "20", 8),
+        row("2026-03-02", "2G", "8 x zorbing", "20", 8, """, "hurt": true, "done": true"""),
         row("2026-03-02", "3G", "8 x chest press", "30", 8),
         // Appended late, out of date order.
         row("2026-03-09", "2G", "8 x deadlift", "22.5", 8, """, "hurt": true"""),
@@ -63,7 +63,10 @@ class ReplayTest {
     fun everyRowIsInItsSession() {
         val sessions = replay()
         val zorbing = sessions[0].session.sets[1]
-        assertEquals(listOf("8 x zorbing", null, 20.0, 8, null), listOf(zorbing.line, zorbing.suggestedWeight, zorbing.weight, zorbing.reps, zorbing.key))
+        // No reps on a row the coach didn't read: the file's number may count both sides.
+        assertEquals(listOf("8 x zorbing", null, 20.0, null, null), listOf(zorbing.line, zorbing.suggestedWeight, zorbing.weight, zorbing.reps, zorbing.key))
+        assertEquals(listOf(true, true), listOf(zorbing.hurt, zorbing.done))
+        assertEquals(listOf(8, false), sessions[0].session.sets[0].let { listOf(it.reps, it.done) })
         val skipped = sessions[2].session.sets[1]
         assertEquals(listOf("8 x deadlift", null, null, true), listOf(skipped.line, skipped.weight, skipped.reps, skipped.skipped))
         val decimal = sessions[3].session.sets[0]
@@ -108,6 +111,36 @@ class ReplayTest {
             assertTrue(e.message!!.contains("private"))
         }
         assertTrue(!out.exists())
+        // Nor through a link into one; and a path that climbs out of the checkout is fine.
+        val link = File(tmp.root, "link")
+        java.nio.file.Files.createSymbolicLink(link.toPath(), repo.toPath())
+        try {
+            Replay.write(file, File(link, "out"), today)
+            fail("wrote into a checkout through a link")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(!File(repo, "out").exists())
+        }
+        Replay.write(file, File(repo, "../outside"), today)
+        assertEquals(5, File(tmp.root, "outside").list()!!.size)
+    }
+
+    // A folder with files in it may hold another run's sessions, which would be graded with these.
+    @Test
+    fun itRefusesAFolderThatIsntEmpty() {
+        val file = tmp.newFile("history.jsonl").apply { writeText(history) }
+        val out = tmp.newFolder("used").also { File(it, "session-2026-01-01-2G.json").writeText("{}") }
+        try {
+            Replay.write(file, out, today)
+            fail("wrote beside an earlier run")
+        } catch (e: IllegalArgumentException) {
+            assertEquals(1, out.list()!!.size)
+        }
+        try {
+            Replay.write(file, file, today)
+            fail("took a file for a folder")
+        } catch (e: IllegalArgumentException) {
+            assertEquals(history, file.readText())
+        }
     }
 
     // Carry's invented lifter, 163 classes of public board lines: every row of every class comes
@@ -122,6 +155,11 @@ class ReplayTest {
         assertEquals(sessions.size, sessions.map { it.file }.toSet().size)
         val first = sessions.first().session
         assertNull(first.sets.firstNotNullOfOrNull { it.suggestedWeight })
+        // No class's sheet uses its own day or a later one: cut the history off half way, and the
+        // sessions before the cut come out the same.
+        val cut = sessions[sessions.size / 2].session.date
+        val early = HistoryImport.read(rows.filter { it.jsonObject.getValue("date").jsonPrimitive.content < cut }.joinToString("\n") { it.toString() }, identity, LocalDate.of(2030, 1, 1))
+        assertEquals(sessions.filter { it.session.date < cut }, Replay.run(early, identity))
         // Some rows get a number once there is history to make it from.
         assertTrue(sessions.sumOf { s -> s.session.sets.count { it.suggestedWeight != null && it.weight != null } } > 100)
     }
