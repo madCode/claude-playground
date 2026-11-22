@@ -43,12 +43,14 @@ Step 2, the phone shows today's sheet: done (see Done).
 
 Step 3, logging:
 
-- [ ] Before the Log screen, from cycle 10's architecture review: a stable id for a sheet row
-  (the kept sheet is swapped for the fetched one, so a row's index can shift between showing
-  and logging); a typed "new, go light" instead of matching its text; JVM tests for a row's
-  "why" and "understood", which logging reuses. *(cycle 10 review)*
 - [ ] The Log screen: ✓ as listed, changed, feel, each round copying the one before; written
-  as `JournalEntry` events, a ladder's reps a side. *(madCode)*
+  as `JournalEntry` events, a ladder's reps a side. *(madCode)* Two things cycle 11's review
+  left for it, as how the screen matches events to rows:
+  - A row logged from a stale or borrowed board matches the real board's row by name the next
+    time; say whether that's wanted, or store the board's date and source with the event.
+  - A repeat of a line added above the one done shifts the repeat number, so the log moves to
+    the other copy (same words, so the same weight).
+  - The scorecard takes rows by index (`ScorecardSession.from`): map ids to places there.
 - [ ] Export in the scorecard's shape and the full log, on a schedule, to a folder madCode
   picks; Android backup. *(madCode)*
 
@@ -103,6 +105,8 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] Before the Log screen (cycle 11): a sheet row's stable id, which events record; a typed
+  "new: go light"; JVM tests for a row's "why" and "understood".
 - [x] The event log: Room, append-only (insert only), schema exported to `app/schemas`; corrections
   and removals are events; a logged row keeps the identity it was read with. Also from the
   review: a ladder in totals is reps a side. Cycle 10, 2026-11-22.

@@ -12,6 +12,17 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 11: ready for the Log screen
+- **Why:** the three things cycle 10's review said the Log screen needs first.
+- **Shipped:** each row on the sheet has an id that stays put when the kept board is swapped for
+  the fetched one, or the board is tidied after posting, so a set you log lands on the row you
+  did. "New: go light" is now a fact the app knows, not words it matches. What Spotter read and
+  why the number, the two lines logging shows back, now have their own tests. Nothing on
+  screen changes.
+- **Review caught:** the first id took the line's raw text and the block's full heading, so a
+  fixed capital or a changed "12.5 minutes" would have orphaned logged sets. Fixed and tested.
+  Two smaller cases are left for the Log screen (BACKLOG.md).
+
 ### Cycle 10: the log, and a review of the whole
 - **Why:** step 3 starts: classes have to be kept before they can be logged on screen.
 - **Shipped:** the event log on the phone. It only ever grows: a correction or a removal is a new

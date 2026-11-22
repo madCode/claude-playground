@@ -2,6 +2,11 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 11 — build: a stable row id, a typed "new", tests for why and understood
+
+- An id made from a line's text should come from what the reader made of it, not the raw post:
+  boards are refreshed after posting, and raw text changes when the meaning doesn't.
+
 ### Cycle 10 — build and audit: the event log; architecture and test health
 
 - A read-only audit can run in a worktree of origin/main while the cycle builds in the main
