@@ -77,8 +77,12 @@ object HistoryImport {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** [today] bounds the dates: a row dated after it was never logged, and would outrank every real one. */
-    fun read(text: String, identity: Identity, today: LocalDate): Result {
+    /**
+     * [today] bounds the dates: a row dated after it was never logged, and would outrank every
+     * real one. [everyRow] also keeps each row as the file has it ([Result.all]), which only the
+     * replay wants: on a phone it would hold a second copy of a history in memory for nothing.
+     */
+    fun read(text: String, identity: Identity, today: LocalDate, everyRow: Boolean = true): Result {
         val rows = mutableListOf<Imported>()
         val all = mutableListOf<Row>()
         val left = sortedMapOf<Left, Int>()
@@ -94,7 +98,7 @@ object HistoryImport {
                 is Left -> left.merge(row, 1, Int::plus)
                 is Imported -> rows += row
             }
-            if (o != null && date != null) {
+            if (everyRow && o != null && date != null) {
                 all += Row(
                     date, o.string("class"), o.string("line") ?: filedAs(o), o.number("weight")?.takeIf { it > 0 }, o.int("reps"),
                     o.flag("skipped"), o.flag("done"), o.flag("hurt"), o.flag("easy"), o.flag("hard"), o.flag("easier"),

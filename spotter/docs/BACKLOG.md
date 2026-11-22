@@ -15,7 +15,7 @@ or the docs rather than guess: the order may change, nothing is built on a guess
 - [x] The phone shows today's sheet from the board feed and the calendar.
 - [ ] Classes can be logged, kept in the event log, exported in the scorecard's shape and backed
   up.
-- [ ] History import (step 4): a `history.jsonl` madCode picks on the phone; tested on invented
+- [x] History import (step 4): a `history.jsonl` madCode picks on the phone; tested on invented
   data only.
 - [ ] Strength per movement (step 5), built behind a switch and left off: turning it on waits
   for the scorecard on madCode's real history.
@@ -124,9 +124,6 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Later
 
-- History import, on the phone: pick a `history.jsonl`, show what was read and what was left
-  out by reason, keep it beside the log (not in it), and feed the sheet. The reading is done
-  (`HistoryImport`, cycle 19). An imported day that is also in the log must count once. (Step 4.)
 - The replay tool's switch for strength per movement, when step 5 is built
   ([REPLAY.md](REPLAY.md)). The gym-coach session asked for it (2026-11-22).
 - Strength per movement, behind a switch, judged on the scorecard. (Step 5.)
@@ -148,6 +145,9 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] History import on the phone (cycle 21): pick a `history.jsonl`, kept beside the log; the
+  sheet reads it; the home screen says what was read and left out; replace or remove it; a day
+  in both counts once.
 - [x] The replay tool (cycle 20, asked by the gym-coach session for madCode): `:coach:replay`
   takes a `history.jsonl` and writes a scorecard session per class, each made from the days
   before it only. How to run it: [REPLAY.md](REPLAY.md). madCode grades in private; nothing

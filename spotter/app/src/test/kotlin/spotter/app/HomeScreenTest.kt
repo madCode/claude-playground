@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -56,6 +57,63 @@ class HomeScreenTest {
         compose.onNodeWithText("Couldn't copy your log to Download/Spotter. Choose the folder again.").assertIsDisplayed()
         compose.onNodeWithText("Change folder").performClick()
         assertEquals(2, picks)
+    }
+
+    // What the numbers are made from is said, with what the import left out, and removing it
+    // asks first.
+    @Test
+    fun theHistorySaysWhatWasReadAndLeftOut() {
+        var imports = 0
+        var removals = 0
+        var stops = 0
+        var history by mutableStateOf(spotter.app.history.HistoryState())
+        compose.setContent {
+            HomeScreen(
+                "v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, history = history,
+                onImportHistory = { imports++ }, onRemoveHistory = { removals++ }, onStopHistory = { stops++ },
+            )
+        }
+        compose.onNodeWithText("No history imported. Until you log an exercise, its row says \"new: go light\".").assertIsDisplayed()
+        compose.onNodeWithText("Import a history file").performClick()
+        assertEquals(1, imports)
+        history = spotter.app.history.HistoryState(698, listOf("409 no weight", "91 form broke down"), "Nothing in that file could be read as a history.")
+        compose.onNodeWithText("History imported: 698 rows read.").assertIsDisplayed()
+        compose.onNodeWithText("Left out: 409 no weight, 91 form broke down.").assertIsDisplayed()
+        compose.onNodeWithText("Nothing in that file could be read as a history.").assertIsDisplayed()
+        shoot("home-history")
+        compose.onNodeWithText("Replace the history").performClick()
+        assertEquals(2, imports)
+        compose.onNodeWithText("Remove the history").performClick()
+        compose.onNodeWithText("Remove the imported history? Your own log stays.").assertIsDisplayed()
+        assertEquals(0, removals)
+        compose.onNodeWithContentDescription("Keep the imported history").performClick()
+        compose.onNodeWithText("Remove the history").performClick()
+        compose.onNodeWithContentDescription("Remove the imported history").performClick()
+        assertEquals(1, removals)
+        // While a file is being read it says so, and the one thing to tap is Stop.
+        history = history.copy(reading = true)
+        compose.onNodeWithText("Reading the file…").assertIsDisplayed()
+        compose.onNodeWithText("Replace the history").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Stop reading the file").performClick()
+        assertEquals(1, stops)
+    }
+
+    // At the largest text both history buttons are whole: the second wraps under the first, it
+    // isn't squeezed to nothing beside it.
+    @Test
+    fun theHistoryButtonsStayWholeAtLargeText() {
+        compose.setContent {
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, fontScale = 2f),
+            ) {
+                HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, history = spotter.app.history.HistoryState(698))
+            }
+        }
+        val replace = compose.onNodeWithText("Replace the history").fetchSemanticsNode().boundsInRoot
+        val remove = compose.onNodeWithText("Remove the history").fetchSemanticsNode().boundsInRoot
+        assertTrue("$remove under $replace", remove.top >= replace.bottom && remove.width >= replace.width * 0.8f)
+        shoot("home-history-large-text")
     }
 
     @Test

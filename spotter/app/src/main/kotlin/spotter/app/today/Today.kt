@@ -48,12 +48,18 @@ sealed interface Today {
          * The screen's state from the whole event log. The sheet's numbers come from before this
          * class, so logging it shows what was done, not next time's number in its place.
          */
-        fun of(chosen: TodaysBoard, entries: List<JournalEntry>, identity: Identity, vocabulary: Vocabulary): Today {
+        fun of(
+            chosen: TodaysBoard, entries: List<JournalEntry>, identity: Identity, vocabulary: Vocabulary,
+            /** History from elsewhere ([spotter.app.history.HistoryPick.beside]), read with the log's. */
+            imported: List<Logged> = emptyList(),
+        ): Today {
             val lines = chosen as? TodaysBoard.Lines ?: return from(chosen, emptyList(), identity)
             val date = lines.booked.date
             val name = className(lines)
             val before = entries.filter { it.date < date || (it.date == date && it.className != name) }
-            return from(chosen, Journal.history(before, vocabulary), identity, entries)
+            // By date, the imported rows first within a day: what was logged here is the later word.
+            val history = (imported.filter { it.date < date } + Journal.history(before, vocabulary)).sortedBy { it.date }
+            return from(chosen, history, identity, entries)
         }
 
         private fun className(lines: TodaysBoard.Lines) = lines.booked.logName

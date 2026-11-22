@@ -3,6 +3,8 @@ package spotter.app
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,11 +25,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import spotter.app.history.HistoryState
 import spotter.app.today.Today
 import spotter.coach.LogDraft
 
@@ -51,6 +61,59 @@ private fun BackupView(backup: BackupState, onChooseFolder: () -> Unit) {
     }
 }
 
+// What the sheet's numbers are made from besides the log, and what the import didn't take.
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: () -> Unit, onStop: () -> Unit) {
+    var removing by rememberSaveable { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        val grey = Color(0xFF5B606B)
+        // Said aloud when it changes: a pick ends on its own time, with nothing tapped.
+        Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (history.read == null) {
+                Text("No history imported. Until you log an exercise, its row says \"new: go light\".", fontSize = 14.sp, color = grey)
+            } else {
+                Text("History imported: ${history.read} rows read.", fontSize = 14.sp, color = grey)
+                if (history.left.isNotEmpty()) Text("Left out: ${history.left.joinToString(", ")}.", fontSize = 14.sp, color = grey)
+            }
+            history.refused?.let { Text(it, fontSize = 14.sp, color = Color(0xFF8A4B00)) }
+            if (history.reading) Text("Reading the file…", fontSize = 14.sp, color = Color(0xFF16181D))
+        }
+        when {
+            // No second pick while a file is read: it would race the first. Stopping is offered,
+            // since a file on a drive that never answers would otherwise never end.
+            history.reading -> OutlinedButton(onClick = onStop, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Stop reading the file" }) { Text("Stop") }
+            removing -> {
+                Text(
+                    "Remove the imported history? Your own log stays.",
+                    fontSize = 14.sp,
+                    color = Color(0xFF16181D),
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                )
+                // Wrapping, so both buttons stay whole at large text on a narrow phone.
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { removing = false; onRemove() },
+                        modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Remove the imported history" },
+                    ) { Text("Remove") }
+                    OutlinedButton(
+                        onClick = { removing = false },
+                        modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Keep the imported history" },
+                    ) { Text("Keep") }
+                }
+            }
+            else -> FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onImport, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(if (history.read == null) "Import a history file" else "Replace the history")
+                }
+                if (history.read != null) {
+                    OutlinedButton(onClick = { removing = true }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Remove the history") }
+                }
+            }
+        }
+    }
+}
+
 /**
  * The app's screen: today's sheet in the middle, a newer build waiting when there is one, and the
  * version, copyable in one tap.
@@ -67,6 +130,10 @@ fun HomeScreen(
     earlier: Today.Showing? = null,
     backup: BackupState = BackupState(),
     onChooseFolder: () -> Unit = {},
+    history: HistoryState = HistoryState(),
+    onImportHistory: () -> Unit = {},
+    onRemoveHistory: () -> Unit = {},
+    onStopHistory: () -> Unit = {},
 ) {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
@@ -104,6 +171,7 @@ fun HomeScreen(
                 }
                 TodayView(today, onAllowCalendar, onSaveLog, earlier)
                 Spacer(Modifier.heightIn(min = 8.dp))
+                HistoryView(history, onImportHistory, onRemoveHistory, onStopHistory)
                 BackupView(backup, onChooseFolder)
                 Text(
                     "Version $version · tap to copy",
