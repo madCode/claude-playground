@@ -67,6 +67,18 @@ what is on the board, and nothing says so.
   variation match, one value per axis. That identity is fixed when a row is logged.
 - **Intensity words are hints, not identity.** "Heavy" and "lighter" can shape the number on
   the sheet, but a heavy sumo deadlift is the same exercise as a sumo deadlift.
+- **First the line is split** (`BoardLine`): what it asks for, and the words left for identity.
+  - Rep schemes: a count ("12 x", "8 lateral lunge"), a range ("6 - 10"), "each" or
+    "total", a ladder ("10 / 8 / 6"), a time ("30 sec of", "1 min of"), or AMRepsAP.
+  - "6 each" and "12 total" are both 6 a side (trap 7). A ladder's weight is for its first
+    round (trap 8).
+  - A number that belongs to the exercise stays in it: "12 x 2 dumbbell bench bridge" is 12
+    reps of a two-dumbbell bridge.
+  - Labels ("Finisher:", "Bonus:", "Buy-in:"), a side ("(R)", "on left") and a trailing "rest"
+    come off.
+  - Lines that tell the class something ("Goal: match or beat…", "Repeat until time is
+    called…", a cheer, a question, a run recap) and block headings are never exercises
+    (trap 5), even when they hold an exercise's name.
 - **A line is fully read, or it is "not sure".** Filler is a closed list too ("rest",
   "finisher", "count & remember reps"). A word that is none of these leaves the row unsure: it
   is shown, it can be logged, but it borrows no number.

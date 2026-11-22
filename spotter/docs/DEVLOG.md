@@ -10,6 +10,13 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 2: reading what a line asks for
+- **Why:** every number needs the line's reps first, and three traps live here: "12 total" vs
+  "6 each" (7), ladders (8), and prose read as an exercise (5).
+- **Shipped:** the line reader. On Carry's 919 distinct board lines it reads a scheme from all
+  but 9, and those 9 have none ("burpee", "seated low row … until time is called"). It keeps 5
+  lines out as instructions or headings ("Goal: match or beat your reps…", a run recap).
+
 ### The app, and it updates itself
 - **Why:** madCode asked for automatic updating to be built into the app now.
 - **Shipped:** the first Android app (`com.app.spotter`, beside Carry): an icon, a home screen

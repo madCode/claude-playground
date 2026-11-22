@@ -58,6 +58,8 @@ class BoardLineTest {
         assertEquals(Reps(12, 12, Count.PLAIN), bridge.scheme)
         assertEquals("2 dumbbell bench bridge", bridge.words)
         assertNull(read("alt 90 degree pop squat").scheme)
+        assertNull(read("2 dumbbell bench bridge hold").scheme)
+        assertNull(read("90 degree pop squat").scheme)
         assertEquals("alt 90 degree pop squat", read("alt 90 degree pop squat").words)
     }
 
@@ -87,6 +89,8 @@ class BoardLineTest {
     fun proseAndHeadingsAreNotExercises() {
         assertEquals(LineKind.INSTRUCTION, read("Good morning, all!").kind)
         assertEquals(LineKind.EXERCISE, read("8 x good morning").kind)
+        assertEquals(LineKind.INSTRUCTION, read("Great class today!").kind)
+        assertEquals(LineKind.INSTRUCTION, read("Anyone else find the floor brutal?").kind)
         assertEquals(LineKind.INSTRUCTION, read("Goal: match or beat your reps in the push-ups from block 1").kind)
         assertEquals(LineKind.INSTRUCTION, read("Repeat until time is called, increase reps of the reverse lunge by 2 each round").kind)
         assertEquals(LineKind.HEADING, read("Push Press Challenge:").kind)
