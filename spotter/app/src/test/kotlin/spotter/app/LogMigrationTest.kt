@@ -23,14 +23,44 @@ import java.io.File
 class LogMigrationTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
-    @Test
-    fun aLogFromVersion1IsKept() {
-        val schema = Json.parseToJsonElement(File("schemas/spotter.app.log.LogDatabase/1.json").readText()).jsonObject["database"]!!.jsonObject
+    // The database as the build at [version] made it, with [insert] run on it.
+    private fun made(version: Int, name: String, insert: (SQLiteDatabase) -> Unit) {
+        val schema = Json.parseToJsonElement(File("schemas/spotter.app.log.LogDatabase/$version.json").readText()).jsonObject["database"]!!.jsonObject
         val events = schema["entities"]!!.jsonArray.single().jsonObject
-        val file = context.getDatabasePath("old-log.db").apply { parentFile!!.mkdirs() }
+        val file = context.getDatabasePath(name).apply { parentFile!!.mkdirs() }
         SQLiteDatabase.openOrCreateDatabase(file, null).use { db ->
             db.execSQL(events["createSql"]!!.jsonPrimitive.content.replace("\${TABLE_NAME}", "events"))
             schema["setupQueries"]!!.jsonArray.forEach { db.execSQL(it.jsonPrimitive.content) }
+            insert(db)
+            db.version = version
+        }
+    }
+
+    // Version 2 knew which ladders had one weight; version 3 adds each round's, not said so far.
+    @Test
+    fun aLogFromVersion2IsKept() {
+        made(2, "log-2.db") { db ->
+            db.execSQL(
+                """INSERT INTO events (at, kind, date, className, row, line, key, parts, lb, count, ladder, reps, hurt, formBroke, stopped, easy, hard, easier, heaviestOnly, shownLb, shownCount)
+                   VALUES (1, 'LOGGED', '2026-03-01', '2G', 's', '10 / 8 / 6 x squat', 'squat', '[{"movement":"squat","variations":{}}]', 30, 2, '[10,8,6]', '[10,8,6]', 0, 0, 0, 0, 0, 0, 1, 25, 2)""",
+            )
+        }
+        val db = Room.databaseBuilder(context, LogDatabase::class.java, "log-2.db").allowMainThreadQueries().build()
+        try {
+            val log = EventLog(db)
+            val ladder = log.entries().single()
+            assertEquals(listOf(30, true, 25), listOf(ladder.lb, ladder.heaviestOnly, ladder.shownLb))
+            assertNull(ladder.roundLb)
+            log.write(ladder.copy(id = 0, lb = 20, heaviestOnly = false, roundLb = listOf(20, 25, 30)))
+            assertEquals(listOf(20, 25, 30), log.entries().last().roundLb)
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun aLogFromVersion1IsKept() {
+        made(1, "old-log.db") { db ->
             // An invented row, as version 1 stored it.
             db.execSQL(
                 """INSERT INTO events (at, kind, date, className, row, line, key, parts, lb, count, targetLow, targetHigh, reps, hurt, formBroke, stopped, easy, hard, easier)
@@ -41,7 +71,6 @@ class LogMigrationTest {
                 """INSERT INTO events (at, kind, date, className, row, line, key, parts, lb, count, ladder, reps, hurt, formBroke, stopped, easy, hard, easier)
                    VALUES (2, 'LOGGED', '2026-03-01', '2G', 's', '10 / 8 / 6 x squat', 'squat', '[{"movement":"squat","variations":{}}]', 30, 2, '[10,8,6]', '[10,8,6]', 0, 0, 0, 0, 0, 0)""",
             )
-            db.version = 1
         }
         val db = Room.databaseBuilder(context, LogDatabase::class.java, "old-log.db").allowMainThreadQueries().build()
         try {

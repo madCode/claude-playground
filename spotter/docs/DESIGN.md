@@ -73,7 +73,12 @@ both are installed side by side.
     A ladder's sets are each judged against their own round. A ladder logged as "changed" has
     one weight, its heaviest round's: it never raises a number, and stands for that round's
     reps, so round one gets what it converts to. A ladder ticked as listed was done at the
-    sheet's number from round one. A timed set
+    sheet's number from round one. A ladder logged with a weight for each round counts at
+    round one's, like a listed one, so it can raise the number. Two exceptions, so that saying
+    more never gives a worse number than saying only the heaviest: a ladder that climbed to
+    more than round one's weight is worth (started light), or one with a twinge or a stop, is
+    read by its heaviest round as a one-weight ladder is; and one that went lighter in a later
+    round of no more reps holds, as if it felt hard. A timed set
     holds its weight, since it says nothing about reps in reserve, and a timed set and a counted
     one don't convert into each other. A rep target with no reps logged says nothing. A step more than 20% heavier (12 to 15, 20 to 25) is a
     big jump: the number holds and the heavier one is offered as a test. A new exercise borrows
@@ -198,7 +203,8 @@ what is on the board, and nothing says so.
   order written, into what the coach reads: each row as last corrected, removed ones left out.
   A correction or removal of an entry that isn't there is skipped, and so is a stored row that
   can't be read (damaged, impossible weight, a kind from a newer build): damage costs one entry,
-  never the log. A ladder is stored in reps a side, as the reps are.
+  never the log. A ladder is stored in reps a side, as the reps are; with a weight for each
+  round, the event's own weight is round one's and the rounds' weights sit beside it.
 - **Identity fixed when logged**: an event keeps the movements and variations as they were read.
   A later change to the word lists never relabels a logged row; a movement the lists no longer
   hold keeps its logged name. The key is rebuilt from them, so a change to the key's format
@@ -326,9 +332,11 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   its own words, target, weight and reps, also when corrected there: 8 done of 8 asked stays
   that, whatever the new row asks. The next save settles it on that row. Entries with no such row are listed under "Logged, but not on this
   board", each with Clear; they still count until cleared.
-- Still to come on the Log screen: "+ Each round" (each new round a copy of the previous one,
-  so only what changed needs a tap; the heaviest stays the row's one number), and "Add an
-  exercise" for one the board missed.
+- A ladder that changed weight between rounds: once a weight is picked, "+ Each round" gives
+  each round its own, on a stepper along the rack. Each round starts as a copy of the one
+  before, and stepping a round takes the later ones that matched it along, so a ladder that
+  climbs is one tap a round. "One weight" goes back to the rack, at the heaviest.
+- Still to come on the Log screen: "Add an exercise" for one the board missed.
 
 Later: progress, review of new exercise names, sharing a board for others, the watch.
 
@@ -380,7 +388,8 @@ the board's words and what the sheet showed:
   weight no load can have. `suggested_weight` is what the sheet showed when the row was first
   logged; a correction keeps it. A class name that isn't plain, or that would match another's
   that day, carries a mark so no file overwrites another.
-- `spotter-log.jsonl`: every event, a line each, corrections and removals included. When the
+- `spotter-log.jsonl`: every event, a line each, corrections and removals included
+  (`round_lb` is a ladder's weight for each round, when said; `lb` is then round one's). When the
   store couldn't read some events, the first line says how many.
 
 ## The watch (later)

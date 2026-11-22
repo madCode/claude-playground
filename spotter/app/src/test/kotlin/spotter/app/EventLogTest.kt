@@ -51,13 +51,16 @@ class EventLogTest {
         val entries = log.entries()
         assertEquals(listOf(first, second), entries.map { it.id })
         assertEquals(listOf(10, 8, 6), entries[0].ladder)
+        // Each round's weight comes back as said, and as "not said" where it wasn't.
+        log.write(entries[0].copy(id = 0, roundLb = listOf(20, 25, 25)))
+        assertEquals(listOf(null, null, listOf(20, 25, 25)), log.entries().map { it.roundLb })
         val history = Journal.history(entries, vocabulary)
         assertEquals(listOf("low row [arms=single]", "chest press"), history.map { it.key })
         assertEquals(true, history[1].hurt)
         // A correction is a new row; the first stays as it was written.
         log.write(entries[1].copy(id = 0, at = 3, kind = JournalEntry.Kind.CORRECTED, target = second, lb = 20, hurt = false))
-        assertEquals(3, log.entries().size)
+        assertEquals(4, log.entries().size)
         assertEquals(25, log.entries()[1].lb)
-        assertEquals(listOf(20, 20), Journal.history(log.entries(), vocabulary).map { it.load.lb })
+        assertEquals(listOf(20, 20, 20), Journal.history(log.entries(), vocabulary).map { it.load.lb })
     }
 }

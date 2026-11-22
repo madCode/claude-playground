@@ -27,6 +27,11 @@ data class Logged(
      * each round held: it can hold the number but never raise it, since the number is round one's.
      */
     val heaviestOnly: Boolean = false,
+    /**
+     * A ladder whose weight came down in a later round of no more reps than the first: round
+     * one's weight wasn't kept, which is as good as "felt hard".
+     */
+    val faded: Boolean = false,
 ) {
     val key: String get() = exercise.key
 
@@ -195,6 +200,8 @@ object Progression {
             // Weak evidence against a step, so it delays one rather than cancels it (TRAINING.md, 3).
             basis.outcome == Outcome.CLEAN && basis.hard && basis.firstTarget != null ->
                 held.also { reasons += "done at ${basis.load.label} but it felt hard: same again" }
+            basis.outcome == Outcome.CLEAN && basis.faded ->
+                held.also { reasons += "started at ${basis.load.label} and went lighter in a later round: same again" }
             // A timed set says nothing about reps in reserve.
             basis.outcome == Outcome.CLEAN && basis.firstTarget == null -> held.also { reasons += "a timed set at ${basis.load.label}: same again" }
             // One clean session isn't enough to go up on (madCode, 2026-11-22; TRAINING.md, 1): a
@@ -289,6 +296,9 @@ object Progression {
         }
         return Suggestion.Weight(load, change, reasons, test, caution)
     }
+
+    /** [lb] done for [from] reps as a weight for [to], rounded down to the rack; null where Epley doesn't hold. */
+    internal fun converted(lb: Int, from: Int, to: Int): Int? = if (from in epleyReps && to in epleyReps) convert(lb, from, to) else null
 
     private fun convert(lb: Int, from: Int, to: Int): Int? = Rack.atMost(lb * (1 + from / 30.0) / (1 + to / 30.0))
 

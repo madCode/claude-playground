@@ -139,6 +139,7 @@ object Export {
             put("heaviest_only", e.heaviestOnly)
             put("shown_lb", e.shownLb)
             put("shown_count", e.shownCount)
+            put("round_lb", e.roundLb?.let { l -> buildJsonArray { l.forEach { add(it) } } } ?: kotlinx.serialization.json.JsonNull)
         },
     )
 }

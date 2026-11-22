@@ -15,6 +15,22 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 24: a weight for each round of a ladder
+- **Why:** next on the Log screen, and you asked what would make a ladder's number better.
+- **Shipped:** on a ladder row, pick a weight under "Changed", then "+ Each round": each
+  round gets its own weight on a − / + stepper. Every round starts as a copy of the one
+  before, so "20 / 25 / 30" is two taps. "One weight" goes back.
+- **What it changes on the sheet:** a ladder logged this way counts at round one's weight, so
+  it can go up like any other row. A ladder logged with one weight still only holds.
+- **The review ran real sequences and found the first version could make a number worse:**
+  "20 / 25 / 30" dropped the sheet to 20 where "30, the heaviest" held 25, and "30 / 25 / 20"
+  twice went up to 35. Now a ladder that started light is read by its heaviest round, as
+  before; one that went lighter as it went on holds; a stop or a twinge is put on the heaviest
+  round. Also fixed: rounds said on a log carried over from another board were dropped.
+- **Not yet:** a later round's weight says nothing to a straight row of those reps (BACKLOG).
+- **The log's table gained a column** (version 3); a log from the build on your phone is kept,
+  and a test opens one to prove it.
+
 ### Cycle 23: a documentation pass
 - **Why:** due, after eleven PRs in a day.
 - **Done:** the docs checked against the code by a reader with no stake in them. DESIGN said

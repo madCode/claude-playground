@@ -2,6 +2,15 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 24 — build: a weight for each round
+
+- When the screen lets the person say more, check that saying more never gives a worse number
+  than saying less: compare the two on the same class before the review does.
+- Store what was said and derive the reading when the coach reads it (`Journal.read`), so a
+  better reading later needs no migration.
+- The reviewer was right that a test fed rounds no screen could produce; the reachable case
+  (a carried log with another number of rounds) was the one that was broken.
+
 ### Cycle 23 — audit: the docs against the code
 
 - Have the audit done by a reader given only the docs and the code, with the day's PR list:

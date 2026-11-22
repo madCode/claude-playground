@@ -51,7 +51,15 @@ data class JournalEntry(
      */
     val shownLb: Int? = null,
     val shownCount: Int? = null,
+    /**
+     * A ladder's dumbbell for each round, when the person said them. [lb] is then round one's,
+     * the round the sheet's number is for, and [heaviestOnly] is false.
+     */
+    val roundLb: List<Int>? = null,
 ) {
+    /** [roundLb] when it can be set against the ladder, round for round; null when not said, or damaged. */
+    val rounds: List<Int>? get() = roundLb?.takeIf { ladder != null && it.size == ladder.size && it.all { lb -> lb > 0 } }
+
     enum class Kind { LOGGED, CORRECTED, REMOVED }
 }
 
@@ -73,13 +81,13 @@ object Journal {
         load: Load, target: IntRange?, ladder: List<Int>?, reps: List<Int>,
         hurt: Boolean = false, formBroke: Boolean = false, stopped: Boolean = false,
         easy: Boolean = false, hard: Boolean = false, easier: Boolean = false,
-        heaviestOnly: Boolean = false, shown: Load? = null,
+        heaviestOnly: Boolean = false, shown: Load? = null, roundLb: List<Int>? = null,
     ) = JournalEntry(
         at = at, kind = JournalEntry.Kind.LOGGED, date = date, className = className, row = row, line = line,
         key = exercise.key, parts = exercise.parts.map { LoggedPart(it.movement.name, it.variations) },
         lb = load.lb, count = load.count, targetLow = target?.first, targetHigh = target?.last, ladder = ladder,
         reps = reps, hurt = hurt, formBroke = formBroke, stopped = stopped, easy = easy, hard = hard, easier = easier,
-        heaviestOnly = heaviestOnly, shownLb = shown?.lb, shownCount = shown?.count,
+        heaviestOnly = heaviestOnly, shownLb = shown?.lb, shownCount = shown?.count, roundLb = roundLb,
     )
 
     /**
@@ -129,13 +137,41 @@ object Journal {
         // The parts are the identity. Should the key's format ever change, keys rebuilt from them
         // change with the sheet's, so history still matches rather than vanishing.
         val exercise = Reading.Known(parts, emptySet())
+        val read = read(e)
         // A damaged row loses itself: a weight or count no load can have, an empty ladder.
-        val load = runCatching { Load(e.lb, e.count) }.getOrNull() ?: return null
+        val load = runCatching { Load(read.lb, e.count) }.getOrNull() ?: return null
         val target = if (e.targetLow != null && e.targetHigh != null) e.targetLow..e.targetHigh else null
         return Logged(
             e.date, exercise, load, target, e.reps,
             hurt = e.hurt, formBroke = e.formBroke, stopped = e.stopped, ladder = e.ladder?.takeIf { it.isNotEmpty() },
-            hard = e.hard, easy = e.easy, heaviestOnly = e.heaviestOnly,
+            hard = e.hard, easy = e.easy, heaviestOnly = read.heaviestOnly, faded = read.faded,
         )
+    }
+
+    private class Read(val lb: Int, val heaviestOnly: Boolean, val faded: Boolean = false)
+
+    /**
+     * The one weight the coach reads a ladder at. With a weight for each round there are two
+     * sound readings, and the entry gets whichever says more without saying too much:
+     *
+     * - Round one's weight, done from round one: it can raise the number, like a listed ladder.
+     * - The heaviest round's, held for the ladder's fewest reps or more, as a one-weight ladder is read: it only
+     *   holds a number. Taken when the ladder climbed to more than round one's weight is worth
+     *   (started light, so round one says too little), and when something went wrong (a twinge,
+     *   a stop), since the heaviest round is where that is assumed to have happened.
+     */
+    private fun read(e: JournalEntry): Read {
+        val rounds = e.rounds
+        val ladder = e.ladder
+        if (rounds == null || ladder == null) return Read(e.lb, e.heaviestOnly)
+        val first = rounds.first()
+        val top = rounds.max()
+        if (top > first) {
+            // Whichever round the heaviest fell in, it was held for at least the ladder's fewest
+            // reps, which is what a one-weight ladder's number stands for.
+            val worth = Progression.converted(top, ladder.min(), ladder.first())
+            if (e.hurt || e.stopped || e.formBroke || (worth != null && worth > first)) return Read(top, heaviestOnly = true)
+        }
+        return Read(first, heaviestOnly = false, faded = rounds.indices.any { rounds[it] < first && ladder[it] <= ladder.first() })
     }
 }
