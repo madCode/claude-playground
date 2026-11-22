@@ -6,11 +6,29 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 - **Built so far:** the design; loads per hand on the rack's steps; reading a board line's
   count; naming its exercise, in full on 89% of Carry's board rows; the suggested weight from a
-  log; the app, which updates itself.
-- **Waiting on you:** running `scorecard.py` on the example export; a few board words still
+  log; the app, which updates itself; today's sheet on the phone; logging a class.
+- **Waiting on you:** whether one rep short on a single logged set should drop the next number
+  (BACKLOG.md, "Your call"); running `scorecard.py` on the example export; a few board words still
   unsorted (BACKLOG.md, "Your call").
 
 ## Sunday 22 November 2026
+
+### Cycle 12: the Log screen
+- **Why:** step 3's centre: what was done, logged in the car in under a minute.
+- **Shipped:** "Log this class" under the sheet. Each row is "✓ as listed" or "changed": the
+  heaviest dumbbell, one or two, and the reps, with felt easy or hard, twinge, had to stop and
+  easier version one tap away. Save keeps it in the log, and the next class's numbers come from
+  it. Reopened, the screen shows what you logged, and saving again only writes what changed.
+  "+ Each round" and "Add an exercise" are next.
+- **Review caught:** the class moved on to tomorrow's an hour after it started, so it could
+  never be logged in the car (now three hours); a screen opened on an out-of-date log could have
+  removed rows saved since; a save could be seen half-written; a number with no count couldn't
+  be given one; the steppers' + went off screen at large text; TalkBack didn't say which row a
+  "twinge" was for; and the next class replacing this one mid-log would have saved the rows
+  under its date. All fixed and tested. Rows logged on a board since replaced can't be cleared
+  yet: in BACKLOG.md.
+- **For you:** one question in BACKLOG.md's "Your call": one rep short on the one set logged
+  drops the next number a step.
 
 ### Cycle 11: ready for the Log screen
 - **Why:** the three things cycle 10's review said the Log screen needs first.

@@ -43,18 +43,29 @@ Step 2, the phone shows today's sheet: done (see Done).
 
 Step 3, logging:
 
-- [ ] The Log screen: ✓ as listed, changed, feel, each round copying the one before; written
-  as `JournalEntry` events, a ladder's reps a side. *(madCode)* Two things cycle 11's review
-  left for it, as how the screen matches events to rows:
+- [ ] The Log screen, second half: "+ Each round", each round a copy of the one before; "Add an
+  exercise"; and the person's calls below. *(madCode)* From cycles 11 and 12's reviews:
+  - Logged rows no longer on the sheet (a borrowed board replaced by the class's own, a line
+    the board's poster revised) can't be seen or cleared, and stay in history beside the new
+    board's rows. Show them, with Clear.
   - A row logged from a stale or borrowed board matches the real board's row by name the next
     time; say whether that's wanted, or store the board's date and source with the event.
   - A repeat of a line added above the one done shifts the repeat number, so the log moves to
     the other copy (same words, so the same weight).
-  - The scorecard takes rows by index (`ScorecardSession.from`): map ids to places there.
+  - Two classes of the same format on one day share one log (keyed by date and "2G").
+  - A class after 23:00 is gone at midnight, before it can be logged.
+- [ ] The scorecard export from the log: it takes rows by index (`ScorecardSession.from`); map
+  ids to places. *(cycle 11 review)*
 - [ ] Export in the scorecard's shape and the full log, on a schedule, to a folder madCode
   picks; Android backup. *(madCode)*
 
 ## Your call
+
+- **One logged set is read as the first set.** The Log screen records the heaviest weight and
+  its reps, one number per row, as you asked. The rules then read it as set 1, so one rep short
+  ("7 of 8") counts as a miss on the first set and drops the next number a step, even with a
+  twinge. Keep that, or read a single logged set more gently (hold after one or two short)?
+  *(cycle 12)*
 
 - **Check the export against `scorecard.py`** (cycles can't read gym-coach): run it on
   [scorecard-example.json](scorecard-example.json), an invented class, and say whether it
@@ -105,6 +116,9 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] The Log screen, first half (cycle 12): ✓ as listed or changed (weight, one or two, reps),
+  how it felt, saved as events in one transaction; the sheet reads the log; the class stays
+  three hours after it starts so it can be logged in the car.
 - [x] Before the Log screen (cycle 11): a sheet row's stable id, which events record; a typed
   "new: go light"; JVM tests for a row's "why" and "understood".
 - [x] The event log: Room, append-only (insert only), schema exported to `app/schemas`; corrections

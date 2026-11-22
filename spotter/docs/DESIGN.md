@@ -207,8 +207,8 @@ next one in that list. A Y-bell is another implement and never steps onto that l
   day's can't be fetched, so a Reddit, GitHub or Wi-Fi outage shows an earlier day's sheet
   marked with its date, never a blank or wrong one, and never a later day's. A class with no
   board of its own borrows the other format's, labelled (`TodaysBoard` in the coach).
-- **Which class:** the next booked class in the phone's calendar (`Booking`): today's, until an
-  hour after it starts, then tomorrow's. The format is in the event title ("Orange 60 Min 2G").
+- **Which class:** the next booked class in the phone's calendar (`Booking`): today's, until
+  three hours after it starts (long enough to log it in the car), then tomorrow's. The format is in the event title ("Orange 60 Min 2G").
   Nobody picks the class by hand. When Spotter may not read the calendar, it says so rather
   than "no class booked".
 - **The exercise list:** Spotter's own, in the coach's resources (see "Reading a board line").
@@ -218,12 +218,17 @@ next one in that list. A Y-bell is another implement and never steps onto that l
 - **Sheet.** Today's (or tomorrow's) class and its board's age. One row per exercise in block
   order: name, the number, ▲ ▼ = against last time. Warnings at the top and on their rows
   (a miss, pain, a run of unfinished sets). A tap on a row opens why.
-- **Log.** The same rows. Each is "✓ as listed" or "changed" (heaviest weight from the rack,
-  reps), with "felt easy / hard", "twinge", "had to stop" and "did an easier version" one tap
-  away. "+ Each round" is optional: each new round starts as a copy of the previous one, so
-  only what changed needs a tap. The row's heaviest weight and reps stay its one number.
-  Untouched rows stay unlogged, never "skipped". "Add an exercise" records one the board
-  missed by picking it from the list.
+- **Log** ("Log this class" on the sheet). The same rows. Each weighted row is "✓ as listed"
+  (the sheet's number, and the board's reps: a range's low end) or "changed" (the heaviest
+  dumbbell, one or two, and reps, on steppers), with "felt easy / hard", "twinge", "had to stop"
+  and "easier version" one tap away. A row with no number yet has only "changed". Untouched rows
+  stay unlogged, never "skipped". Save writes events (`Logging` in the coach, one transaction):
+  a new row is logged, a changed one corrected, one cleared removed, an unchanged one left
+  alone. Reopened, the screen shows what is logged. A class's own sheet keeps the numbers from
+  before it; the next class reads what was done.
+- Still to come on the Log screen: "+ Each round" (each new round a copy of the previous one,
+  so only what changed needs a tap; the heaviest stays the row's one number), and "Add an
+  exercise" for one the board missed.
 
 Later: progress, review of new exercise names, sharing a board for others, the watch.
 
