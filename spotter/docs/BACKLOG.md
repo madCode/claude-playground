@@ -48,8 +48,8 @@ Step 3, logging:
   - Logged rows no longer on the sheet (a borrowed board replaced by the class's own, a line
     the board's poster revised) can't be seen or cleared, and stay in history beside the new
     board's rows. Show them, with Clear.
-  - A row logged from a stale or borrowed board matches the real board's row by name the next
-    time; say whether that's wanted, or store the board's date and source with the event.
+  - A row logged from a stale or borrowed board: madCode said (2026-11-22) it carries over to
+    the real board's row with the same exercise; rows with no match are shown with Clear.
   - A repeat of a line added above the one done shifts the repeat number, so the log moves to
     the other copy (same words, so the same weight).
   - Two classes of the same format on one day share one log (keyed by date and "2G").
@@ -61,13 +61,8 @@ Step 3, logging:
 
 ## Your call
 
-
-- **Board words still unsorted**, after madCode's answers of 2026-11-22. Each stays "not sure"
-  until answered. *(cycle 4)*
-  - Setup: "hand on bench" on a row, "foot on bench" on a single-leg bridge, "feet in straps".
-  - "tap squat jump", "single leg hop", "split squat hop", "bent arm lateral raise", "straight
-    arm sit-up".
-  - "reach": "with overhead reach", "chest press to reach".
+Nothing waiting. New board words that stay "not sure" are worth a look on the corpus now and
+then; 141 rows still are.
 
 ## Recurring reviews
 

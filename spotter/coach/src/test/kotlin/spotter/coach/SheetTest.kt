@@ -19,7 +19,7 @@ class SheetTest {
         "**Floor Block 1 - 12.5 minutes circuit**",
         "* 8 x close grip chest press (explosive)",
         "* 8 x deadlift",
-        "* 8 each x bodyweight lateral lunge to single leg hop",
+        "* 8 each x swing lunge with rotation",
         "* Repeat until time is called",
         "**Floor Block 2 - 9.5 minutes circuit**",
         "* 8 x tricep push-up",
@@ -37,11 +37,11 @@ class SheetTest {
         val text = Sheet.make(board, log, identity).text()
         assertEquals(
             """
-            ! 8 each x bodyweight lateral lunge to single leg hop: not sure what this is (unknown words)
+            ! 8 each x swing lunge with rotation: not sure what this is (unknown words)
             == floor block 1 - 12.5 minutes circuit
             8 x close grip chest press (explosive)  2×30 ▲
             8 x deadlift  2×45 ▲
-            8 each x bodyweight lateral lunge to single leg hop  ?
+            8 each x swing lunge with rotation  ?
             == floor block 2 - 9.5 minutes circuit
             8 x tricep push-up  no weight
             8 x deadlift to bicep curl  2×20 new

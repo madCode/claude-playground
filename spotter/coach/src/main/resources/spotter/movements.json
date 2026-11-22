@@ -1571,6 +1571,95 @@
     "legs",
     "glutes"
    ]
+  },
+  {
+   "name": "tap squat jump",
+   "aliases": [
+    "tap squat jumps"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs",
+    "glutes",
+    "cardio"
+   ],
+   "bodyweight": true
+  },
+  {
+   "name": "single leg hop",
+   "aliases": [
+    "single leg hops",
+    "single-leg hop",
+    "single-leg hops"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs",
+    "cardio"
+   ],
+   "bodyweight": true,
+   "oneLeg": true
+  },
+  {
+   "name": "split squat hop",
+   "aliases": [
+    "split squat hops"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs",
+    "glutes",
+    "cardio"
+   ],
+   "bodyweight": true
+  },
+  {
+   "name": "bent arm lateral raise",
+   "aliases": [
+    "bent arm lateral raises",
+    "bent-arm lateral raise",
+    "bent-arm lateral raises"
+   ],
+   "pattern": "raise",
+   "muscles": [
+    "shoulders"
+   ]
+  },
+  {
+   "name": "straight arm sit-up",
+   "aliases": [
+    "straight arm sit-ups",
+    "straight-arm sit-up",
+    "straight-arm sit-ups"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ],
+   "bodyweight": true
+  },
+  {
+   "name": "overhead reach",
+   "aliases": [
+    "overhead reaches"
+   ],
+   "pattern": null,
+   "muscles": [
+    "shoulders",
+    "core"
+   ],
+   "bodyweight": true
+  },
+  {
+   "name": "reach",
+   "aliases": [
+    "reaches"
+   ],
+   "pattern": null,
+   "muscles": [
+    "shoulders"
+   ],
+   "bodyweight": true
   }
  ]
 }
