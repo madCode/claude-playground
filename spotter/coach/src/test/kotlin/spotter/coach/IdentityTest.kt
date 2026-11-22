@@ -229,7 +229,8 @@ class IdentityTest {
     // A reach and the hops are done without a weight; the press before a reach takes the number.
     @Test
     fun theNewMovesWantNoWeightOfTheirOwn() {
-        val sheet = Sheet.make(listOf("10 x chest press to reach", "6 each x bodyweight split squat hop", "12 x low bench straight arm sit-up"), emptyList(), identity).rows
+        // Lines that don't say "bodyweight": the move itself must.
+        val sheet = Sheet.make(listOf("10 x chest press to reach", "8 x tap squat jump, rest", "12 x low bench straight arm sit-up"), emptyList(), identity).rows
         assertEquals(Suggestion.NoNumber.NEW, sheet[0].suggestion)
         assertNull(sheet[1].suggestion)
         assertNull(sheet[2].suggestion)
