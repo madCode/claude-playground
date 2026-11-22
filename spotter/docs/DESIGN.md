@@ -56,6 +56,17 @@ both are installed side by side.
     only through a stated factor: one leg from the plain two-legged lift at 0.6; anything else
     is "new: go light".
   - *Explanations:* every number carries the reasons behind it.
+  - *The sheet* (`Sheet`): a class's board lines in order, under their block headings, each
+    exercise row with the board's own words, what Spotter read, its reps a side (round 1 of a
+    ladder) and its number. Warnings go first. A heading inside a block ("Back-to-back
+    complex:") names part of that block. A combo with no history of its own takes the lightest
+    of its weighted parts, but only when every one has a number of its own and all are held the
+    same way; otherwise it has none, and says which part is missing. A row wants no weight when
+    it says bodyweight or TRX; when it wears a band, holds or pulses with nothing held; or when
+    it is a movement done without one (push-up, plank, burpee) and names nothing to hold. ▲ ▼ =
+    say what the rules decided; a change of reps alone is not a drop. An imported
+    load with no count takes the row's when the row's words fix it (goblet, two dumbbells,
+    single arm).
   - *Scorecard rows:* per logged row, `date`, `suggested_weight` and `weight`, the shape
     gym-coach's `scorecard.py` grades.
 - **`app/`** (Android, Compose). Fetches the board, reads the calendar, stores the log, shows

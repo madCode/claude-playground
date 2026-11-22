@@ -120,6 +120,7 @@ object Progression {
                 ?: held.also { reasons += "missed at ${basis.load.label}, the lightest there is: same again" }
         }
 
+        var decided = lb
         // Different reps from last time: Epley, only where it holds. A timed set and a counted one
         // don't convert either way.
         val from = basis.firstTarget
@@ -143,6 +144,7 @@ object Progression {
             } else {
                 hurt.load.lb
             }
+            decided = minOf(decided, cap)
             if (lb > cap) {
                 lb = cap
                 reasons += "it hurt at ${hurt.load.label}, so ${if (hurt.hurtAndMissed) "under that" else "no higher"}"
@@ -152,9 +154,10 @@ object Progression {
         }
 
         val load = basis.load.copy(lb = lb)
+        // ▲ ▼ = say what the rules decided, not what a change of reps converted to.
         val change = when {
-            lb > last.load.lb -> Change.UP
-            lb < last.load.lb -> Change.DOWN
+            decided > last.load.lb -> Change.UP
+            decided < last.load.lb -> Change.DOWN
             else -> Change.SAME
         }
         return Suggestion.Weight(load, change, reasons, test)
@@ -166,7 +169,8 @@ object Progression {
      */
     private fun borrow(exercise: Reading.Known, target: IntRange?, log: List<Logged>): Suggestion {
         val part = exercise.parts.singleOrNull() ?: return Suggestion.NoNumber("new: go light")
-        if (!part.oneLeg) return Suggestion.NoNumber("new: go light")
+        // One leg is a factor on what the legs move; a curl on one leg is a balance, not a 0.6.
+        if (!part.oneLeg || part.movement.pattern !in setOf("squat", "lunge", "hinge")) return Suggestion.NoNumber("new: go light")
         val twoLegged = log.filter { logged ->
             val p = logged.exercise.parts.singleOrNull() ?: return@filter false
             // The plain two-legged lift: a sumo or wide stance is a variation of its own.

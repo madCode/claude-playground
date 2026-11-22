@@ -58,7 +58,8 @@
     "legs",
     "glutes",
     "cardio"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "pop squat",
@@ -72,7 +73,8 @@
     "legs",
     "glutes",
     "cardio"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "cossack squat",
@@ -473,7 +475,8 @@
     "chest",
     "triceps",
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "row",
@@ -591,7 +594,8 @@
    "muscles": [
     "back",
     "biceps"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "chin-up",
@@ -604,7 +608,8 @@
    "muscles": [
     "back",
     "biceps"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "reverse fly",
@@ -873,7 +878,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "plank pull through",
@@ -896,7 +902,8 @@
    "muscles": [
     "core",
     "obliques"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "mountain climber",
@@ -907,7 +914,8 @@
    "muscles": [
     "core",
     "cardio"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "back extension",
@@ -922,7 +930,8 @@
     "lower back",
     "shoulders",
     "glutes"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "superhero",
@@ -936,7 +945,8 @@
     "back",
     "lower back",
     "shoulders"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "bird dog",
@@ -947,7 +957,8 @@
    "muscles": [
     "core",
     "back"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "deadbug",
@@ -959,7 +970,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "sit-up",
@@ -971,7 +983,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "crunch",
@@ -981,7 +994,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "double crunch",
@@ -991,7 +1005,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "bicycle crunch",
@@ -1003,7 +1018,8 @@
    "muscles": [
     "core",
     "obliques"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "v-up",
@@ -1013,7 +1029,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "roll up",
@@ -1025,7 +1042,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "rollout",
@@ -1049,7 +1067,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "knee tuck",
@@ -1059,7 +1078,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "knee raise",
@@ -1072,7 +1092,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "knee drive",
@@ -1083,7 +1104,8 @@
    "muscles": [
     "core",
     "cardio"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "leg lift",
@@ -1094,7 +1116,8 @@
    "muscles": [
     "legs",
     "inner thigh"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "box jump",
@@ -1106,7 +1129,8 @@
     "legs",
     "glutes",
     "cardio"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "burpee",
@@ -1117,7 +1141,8 @@
    "muscles": [
     "full body",
     "cardio"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "speed skater",
@@ -1129,7 +1154,8 @@
     "legs",
     "glutes",
     "cardio"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "lateral hop",
@@ -1144,7 +1170,8 @@
    "muscles": [
     "legs",
     "cardio"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "sled push",
@@ -1155,7 +1182,8 @@
    "muscles": [
     "legs",
     "cardio"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "plank pop",
@@ -1167,7 +1195,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "plank jack",
@@ -1179,7 +1208,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "jumping jack",
@@ -1190,7 +1220,8 @@
    "muscles": [
     "full body",
     "cardio"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "toe tap",
@@ -1235,7 +1266,8 @@
    "muscles": [
     "legs",
     "cardio"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "split squat jump",
@@ -1249,7 +1281,8 @@
     "legs",
     "glutes",
     "cardio"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "speed squat",
@@ -1260,7 +1293,8 @@
    "muscles": [
     "legs",
     "glutes"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "uppercut",
@@ -1306,7 +1340,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "shoulder tap",
@@ -1317,7 +1352,8 @@
    "muscles": [
     "core",
     "shoulders"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "knee tap",
@@ -1327,7 +1363,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "hip extension",
@@ -1360,7 +1397,8 @@
    "muscles": [
     "core",
     "glutes"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "lateral walk",
@@ -1405,7 +1443,8 @@
    "muscles": [
     "triceps",
     "chest"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "bicycle press",
@@ -1427,7 +1466,8 @@
    "pattern": "horizontal_push",
    "muscles": [
     "chest"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "high side plank",
@@ -1437,7 +1477,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "low side plank",
@@ -1447,7 +1488,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "sit-up to stand",
@@ -1503,7 +1545,8 @@
    "pattern": null,
    "muscles": [
     "cardio"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "dumbbell tap",
