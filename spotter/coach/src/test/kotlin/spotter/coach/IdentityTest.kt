@@ -106,11 +106,11 @@ class IdentityTest {
 
     @Test
     fun anUnknownWordIsNotSureAndNamed() {
-        val tap = notSure("6 - 10 total x high plank alt dumbbell tap, rest")
-        assertEquals(Why.UNKNOWN_WORDS, tap.why)
-        assertEquals(listOf("tap"), tap.words)
-        // "wide" alone is a stance on a squat and a grip on a curl.
-        assertEquals(listOf("wide"), notSure("8 x wide bicep curl").words)
+        val zigzag = notSure("6 - 10 total x zigzag lunge, rest")
+        assertEquals(Why.UNKNOWN_WORDS, zigzag.why)
+        assertEquals(listOf("zigzag"), zigzag.words)
+        // "wide" alone is a grip on a curl, and on a squat a stance no list settles.
+        assertEquals(listOf("wide"), notSure("8 x wide squat").words)
     }
 
     @Test
@@ -171,6 +171,50 @@ class IdentityTest {
         assertEquals(Why.UNKNOWN_WORDS, notSure("8 x close grip chest press (shoulders on bench)").why)
         // Feet in the straps is a different push-up from hands in them.
         assertEquals(Why.UNKNOWN_WORDS, notSure("10 x push-up (feet in straps)").why)
-        assertEquals(Why.UNKNOWN_WORDS, notSure("10 total x mountain climber (feet on bench)").why)
+        // madCode: feet on the bench is feet up on a climber, and a hip thrust on a bridge.
+        assertEquals("mountain climber [position=decline]", known("10 total x mountain climber (feet on bench)").key)
+        assertEquals(known("8 x bench bridge").key, known("8 x bridge (shoulders on bench)").key)
+    }
+
+    // madCode's answers on the board words, 2026-11-22.
+    @Test
+    fun madCodesAnswersOnBoardWords() {
+        assertEquals("sit-up to stand [implement=dumbbell, position=bench]", known("8 x dumbbell bench sit-up to stand").key)
+        assertEquals("shoulder press [legs=seated] + stand", known("10 x seated shoulder press to stand").key)
+        assertEquals("single", known("6 each x balance bicep curl").parts.single().variations["legs"])
+        // A bare "press" after a squat or lunge is a shoulder press; after a deadbug it isn't.
+        assertEquals("squat + shoulder press", known("30 sec of squat to press").key)
+        assertEquals(Why.UNKNOWN_WORDS, notSure("8 total x alt deadbug with press").why)
+        assertEquals(Why.UNKNOWN_WORDS, notSure("8 x deadbug to press").why)
+        assertEquals(Why.UNKNOWN_WORDS, notSure("8 x y-raise to press").why)
+        assertEquals("single", known("4 each x single arm squat to press").parts[1].variations["arms"])
+        // "with rotation" is a torso rotation; "trx rotation chest press" is unknown.
+        assertEquals("torso rotation", known("8 total x alt neutral grip push press with rotation").parts[1].movement.name)
+        assertEquals(Why.UNKNOWN_WORDS, notSure("8 x high plank with rotation").why)
+        assertEquals(Why.UNKNOWN_WORDS, notSure("8 x deadbug with rotation").why)
+        assertEquals("grip", known("8 x wide bicep curl").parts.single().variations.entries.single { it.value == "wide" }.key)
+        assertEquals("hinged", known("8 each x single arm split squat with hinge").parts.single().variations["torso"])
+        // "switch" passes the one dumbbell between hands; "anchor" is the move a circuit returns to.
+        assertEquals(known("12 total x bear plank alt low row").key, known("12 total x bear plank switch alt low row").key)
+        // A switch lunge is a jumping lunge, not a lunge.
+        assertEquals(Why.UNKNOWN_WORDS, notSure("8 x switch lunge").why)
+        assertEquals(known("8 x chest fly").key, known("8 x chest fly (anchor)").key)
+        assertEquals("plank jack", known("8 x high plank jack").parts.single().movement.name)
+        assertEquals("b-stance", known("6 each x low bench b-stance goblet squat").parts.single().variations["legs"])
+        assertEquals("ultimate burpee", known("30 sec of ultimate burpee").key)
+        assertEquals("dumbbell tap [alternating=yes, position=high plank]", known("6 - 10 total x high plank alt dumbbell tap, rest").key)
+    }
+
+    // Hands on the Bosu and feet on it are different exercises; "bosu … (feet on bosu)" says
+    // where, and isn't two Bosus.
+    @Test
+    fun whereOnTheBosuIsKeptApart() {
+        val feet = known("16 total x high plank alt knee drive (feet on bosu)")
+        val hands = known("16 total x high plank alt knee drive (hands on bosu)")
+        assertNotEquals(feet.key, hands.key)
+        assertEquals("feet on bosu", known("8 x bosu high plank alt knee drive (feet on bosu)").parts.single().variations["stability"])
+        // In a combo each part keeps where it says: a squat on a Bosu is not hands on it.
+        val combo = known("30 sec of bosu squat to push-up (hands on bosu)")
+        assertEquals(listOf("bosu", "hands on bosu"), combo.parts.map { it.variations["stability"] })
     }
 }

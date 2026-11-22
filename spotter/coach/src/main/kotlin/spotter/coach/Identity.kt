@@ -56,6 +56,30 @@ class Identity(private val vocabulary: Vocabulary) {
         "high plank" to "plank", "low plank" to "plank", "bear plank" to "plank", "bridge hold" to "glute bridge",
     )
 
+    // A value that says more about another on the same axis.
+    private val refines = mapOf("hands on bosu" to "bosu", "feet on bosu" to "bosu")
+
+    // Words that name a movement only next to certain others, as madCode read the boards
+    // (2026-11-22): "with rotation" is a torso rotation, while "trx rotation chest press" isn't;
+    // a bare "press" after a squat or lunge is a shoulder press, while "deadbug with press" lies
+    // on its back. Anywhere else the word stays unknown.
+    private fun fromNeighbours(token: String, before: List<Pair<String, Meaning>>): Meaning? {
+        val (lastPhrase, last) = before.lastOrNull() ?: return null
+        if (last !is Meaning.Connector || last.kind != "combo") return null
+        fun movement(name: String) = vocabulary.movements.firstOrNull { it.name == name }?.let { Meaning.OfMovement(it) }
+        return when {
+            // A plank, side plank or deadbug "with rotation" is a rotation of its own, not this one.
+            token == "rotation" && lastPhrase == "with" ->
+                if (previous(before)?.pattern.let { it != null && it != "core" }) movement("torso rotation") else null
+            token == "press" && lastPhrase in setOf("to", "into") ->
+                if (previous(before)?.name?.let { it.endsWith("squat") || it.endsWith("lunge") } == true) movement("shoulder press") else null
+            else -> null
+        }
+    }
+
+    private fun previous(before: List<Pair<String, Meaning>>): Movement? =
+        (before.lastOrNull { it.second is Meaning.OfMovement }?.second as? Meaning.OfMovement)?.movement
+
     fun read(words: String): Reading {
         val tokens = Vocabulary.normalise(words).replace(Regex("""[:;.]"""), " ").split(' ').filter { it.isNotEmpty() }
         if (tokens.isEmpty()) return Reading.NotSure(Why.EMPTY, emptyList())
@@ -75,7 +99,8 @@ class Identity(private val vocabulary: Vocabulary) {
                 break
             }
             if (!matched) {
-                unknown += tokens[i]
+                val guessed = fromNeighbours(tokens[i], meanings)
+                if (guessed != null) meanings += tokens[i] to guessed else unknown += tokens[i]
                 i++
             }
         }
@@ -124,7 +149,12 @@ class Identity(private val vocabulary: Vocabulary) {
             }
             if (movements.size > 1) return Reading.NotSure(Why.TWO_MOVEMENTS, segment.map { it.first })
             val variations = mutableMapOf<String, String>()
-            for ((phrase, meaning) in segment) {
+            for ((phrase, m) in segment) {
+                val meaning = when (m) {
+                    is Meaning.Scoped -> m.byMovement[movements.single().name]
+                        ?: return Reading.NotSure(Why.UNKNOWN_WORDS, listOf(phrase))
+                    else -> m
+                }
                 if (meaning !is Meaning.Variation) continue
                 if (meaning.axis == "intensity") {
                     hints += meaning.value
@@ -132,7 +162,12 @@ class Identity(private val vocabulary: Vocabulary) {
                 }
                 val earlier = variations.put(meaning.axis, meaning.value)
                 if (earlier != null && earlier != meaning.value) {
-                    return Reading.NotSure(Why.CONFLICT, listOf(phrase))
+                    // "bosu … (feet on bosu)": the second says where on the Bosu, not a second one.
+                    when {
+                        refines[meaning.value] == earlier -> Unit
+                        refines[earlier] == meaning.value -> variations[meaning.axis] = earlier
+                        else -> return Reading.NotSure(Why.CONFLICT, listOf(phrase))
+                    }
                 }
             }
             parts += Part(movements.single(), variations)
@@ -142,12 +177,12 @@ class Identity(private val vocabulary: Vocabulary) {
     }
 
     // A combo names what is held, stood on or worn once, for every part: "TRX high row to bicep
-    // curl" is a TRX curl too, and "cross-back lunge to knee raise (bodyweight)" a bodyweight
+    // curl" is a TRX curl too, "single arm squat to press" a single-arm press, and "cross-back lunge to knee raise (bodyweight)" a bodyweight
     // lunge. A part that says otherwise keeps its own, and two parts that disagree share nothing.
     private fun shareAcross(parts: List<Part>): List<Part> {
         if (parts.size < 2) return parts
         var shared = parts
-        for (axis in listOf("implement", "stability", "band")) {
+        for (axis in listOf("implement", "stability", "band", "arms")) {
             val values = shared.mapNotNull { it.variations[axis] }.toSet()
             if (values.size != 1) continue
             shared = shared.map { p -> if (axis in p.variations) p else p.copy(variations = p.variations + (axis to values.single())) }

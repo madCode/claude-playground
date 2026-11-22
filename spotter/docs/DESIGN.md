@@ -89,8 +89,8 @@ what is on the board, and nothing says so.
   - combo connectors ("to", "into", "and") start a new part; "with" does only when a movement
     follows and one came before ("bridge hold with chest press" is a press in a bridge hold),
     and a "hold" before it is a stance, not an isometric ("single leg hold with … press");
-  - what a combo holds, stands on or wears (implement, Bosu, band) is named once for every
-    part: "TRX high row to bicep curl" is a TRX curl too, unless a part says otherwise;
+  - what a combo holds, stands on or wears (implement, Bosu, band, single arm) is named once
+    for every part: "TRX high row to bicep curl" is a TRX curl too, unless a part says otherwise;
   - a plank or bridge hold on its own is the exercise ("1 min of low plank");
   - the identity key is each movement with its variations in a fixed order, parts joined by
     " + ", without intensity hints.
@@ -127,6 +127,14 @@ what is on the board, and nothing says so.
   phrase is added only when it settles one variation on any movement ("rear foot on bench" is
   rear foot elevated); one that could be two exercises ("feet on bench" on a climber,
   "shoulders on bench" on a press) stays unknown, and so on madCode's review list.
+- **Some words mean something only on certain movements**, so they are listed with them
+  (`scoped` in `words.json`): "wide" is a grip on a bicep curl, "feet on bench" is a decline on
+  a mountain climber, "shoulders on bench" the bench on a bridge. On any other movement the word
+  stays unknown. Two words take their meaning from the words before them: "rotation" after "with"
+  is a torso rotation, unless the movement before is a core one ("high plank with rotation"),
+  and a bare "press" after a squat or lunge is a shoulder press.
+- **"Feet on bosu" and "hands on bosu" say where on the Bosu**, so they are kept apart, and a
+  line that also says "bosu" is not two Bosus. In a combo each part keeps where it says.
 - **Every phrase means one thing.** Loading the lists fails if a phrase is in two places, so
   which one a line meant never depends on file order. The longest phrase wins when reading:
   "high plank" is a position before "high pull" could be a movement.

@@ -718,7 +718,7 @@
    "aliases": [
     "y-raises"
    ],
-   "pattern": "lunge",
+   "pattern": "raise",
    "muscles": [
     "legs",
     "glutes",
@@ -1160,7 +1160,9 @@
   {
    "name": "plank pop",
    "aliases": [
-    "plank pops"
+    "plank pops",
+    "high plank pop",
+    "high plank pops"
    ],
    "pattern": "core",
    "muscles": [
@@ -1170,7 +1172,9 @@
   {
    "name": "plank jack",
    "aliases": [
-    "plank jacks"
+    "plank jacks",
+    "high plank jack",
+    "high plank jacks"
    ],
    "pattern": "core",
    "muscles": [
@@ -1443,6 +1447,86 @@
    "pattern": "core",
    "muscles": [
     "core"
+   ]
+  },
+  {
+   "name": "sit-up to stand",
+   "aliases": [
+    "sit-ups to stand",
+    "situp to stand"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "legs"
+   ]
+  },
+  {
+   "name": "stand",
+   "aliases": [
+    "stand up"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs"
+   ]
+  },
+  {
+   "name": "step-out deadlift",
+   "aliases": [
+    "step out deadlift",
+    "step-out deadlifts",
+    "step out deadlifts"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "hamstrings",
+    "glutes"
+   ]
+  },
+  {
+   "name": "step back low row",
+   "aliases": [
+    "step-back low row",
+    "step back low rows"
+   ],
+   "pattern": "horizontal_pull",
+   "muscles": [
+    "back"
+   ]
+  },
+  {
+   "name": "ultimate burpee",
+   "aliases": [
+    "ultimate burpees"
+   ],
+   "pattern": null,
+   "muscles": [
+    "cardio"
+   ]
+  },
+  {
+   "name": "dumbbell tap",
+   "aliases": [
+    "dumbbell taps"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "shoulders"
+   ]
+  },
+  {
+   "name": "tap front squat",
+   "aliases": [
+    "front tap squat",
+    "tap front squats",
+    "front tap squats"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "legs",
+    "glutes"
    ]
   }
  ]

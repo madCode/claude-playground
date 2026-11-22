@@ -27,6 +27,11 @@ sealed interface Meaning {
     data object Scheme : Meaning
     /** Carries nothing for identity or load: "rest", "finisher". */
     data object Filler : Meaning
+    /**
+     * A variation only on the movements named: "wide" is a grip on a bicep curl, and on a squat
+     * a stance no list settles. On any other movement the phrase is an unknown word.
+     */
+    data class Scoped(val byMovement: Map<String, Variation>) : Meaning
 }
 
 /**
@@ -76,6 +81,14 @@ class Vocabulary private constructor(val movements: List<Movement>, private val 
             for ((kind, list) in words.connectors) list.forEach { add(it, Meaning.Connector(kind)) }
             words.scheme.forEach { add(it, Meaning.Scheme) }
             words.filler.forEach { add(it, Meaning.Filler) }
+            for ((phrase, byMovement) in words.scoped) {
+                val resolved = byMovement.mapValues { (name, axisValue) ->
+                    require(names.contains(normalise(name))) { "\"$phrase\" is scoped to $name, which no list has" }
+                    require(axisValue.size == 2) { "\"$phrase\" on $name needs an axis and a value" }
+                    Meaning.Variation(axisValue[0], axisValue[1])
+                }
+                add(phrase, Meaning.Scoped(resolved))
+            }
             return Vocabulary(movements, phrases)
         }
 
@@ -121,4 +134,5 @@ private data class WordsFile(
     val connectors: Map<String, List<String>>,
     val filler: List<String>,
     val scheme: List<String>,
+    val scoped: Map<String, Map<String, List<String>>> = emptyMap(),
 )

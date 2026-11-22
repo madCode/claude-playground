@@ -68,14 +68,15 @@ class VocabularyTest {
     @Test
     fun whereTheBandOrBosuGoesIsAVariation() {
         assertEquals(Variation("band", "mid"), words.lookup("mid band"))
-        assertEquals(Variation("stability", "bosu"), words.lookup("feet on bosu"))
+        assertEquals(Variation("stability", "feet on bosu"), words.lookup("feet on bosu"))
         assertEquals("plank pop", movement("plank pops"))
     }
 
-    // "wide" is a stance on a squat and a grip on a curl, so on its own it is no one thing.
+    // "wide" is a stance on a squat and a grip on a curl, so on its own it is a grip only on the
+    // curl madCode named.
     @Test
     fun aWordThatChangesMeaningByMovementIsLeftUnsure() {
-        assertNull(words.lookup("wide"))
+        assertEquals(Meaning.Scoped(mapOf("bicep curl" to Variation("grip", "wide"))), words.lookup("wide"))
         assertEquals(Variation("legs", "wide"), words.lookup("wide stance"))
         assertEquals(Variation("grip", "wide"), words.lookup("wide grip"))
     }
@@ -121,7 +122,7 @@ class VocabularyTest {
 
     @Test
     fun aWordInNoListIsUnknown() {
-        assertNull(words.lookup("anchor"))
+        assertNull(words.lookup("zigzag"))
     }
 
     @Test

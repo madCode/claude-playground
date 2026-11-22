@@ -60,7 +60,8 @@
     "single-leg",
     "one leg",
     "one-leg",
-    "sl"
+    "sl",
+    "balance"
    ],
    "split": [
     "split stance",
@@ -96,6 +97,9 @@
     "rear foot elevated",
     "rear-foot elevated",
     "rear foot on bench"
+   ],
+   "b-stance": [
+    "b-stance"
    ]
   },
   "position": {
@@ -141,8 +145,14 @@
    "bosu": [
     "bosu",
     "on bosu",
-    "feet on bosu",
     "on the bosu"
+   ],
+   "feet on bosu": [
+    "feet on bosu"
+   ],
+   "hands on bosu": [
+    "hands on bosu",
+    "hand on bosu"
    ]
   },
   "grip": {
@@ -255,7 +265,8 @@
   "alternating": {
    "yes": [
     "alt",
-    "alternating"
+    "alternating",
+    "switch alt"
    ]
   },
   "range": {
@@ -278,6 +289,11 @@
    "supine": [
     "supine",
     "face up"
+   ]
+  },
+  "torso": {
+   "hinged": [
+    "hinge"
    ]
   }
  },
@@ -320,7 +336,8 @@
   "on",
   "for",
   "count & check reps",
-  "count and check reps"
+  "count and check reps",
+  "anchor"
  ],
  "scheme": [
   "x",
@@ -343,5 +360,29 @@
   "l",
   "right",
   "left"
- ]
+ ],
+ "scoped": {
+  "wide": {
+   "bicep curl": [
+    "grip",
+    "wide"
+   ]
+  },
+  "shoulders on bench": {
+   "glute bridge": [
+    "position",
+    "bench"
+   ]
+  },
+  "feet on bench": {
+   "mountain climber": [
+    "position",
+    "decline"
+   ],
+   "knee drive": [
+    "position",
+    "decline"
+   ]
+  }
+ }
 }
