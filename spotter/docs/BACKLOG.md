@@ -49,8 +49,12 @@ Step 3, logging:
   a straight "8 x" row, which is more sets at 8 than were done. *(cycle 13 review)*
 
 - [ ] A ladder's later rounds, now that their weights can be logged: 30 held for the 6 of
-  "10 / 8 / 6" says nothing yet to a later "6 x" row, which converts from round one's.
+  "10 / 8 / 6" says nothing yet to a later "6 x" row, which converts from round one's. And a
+  twinge or a stop is put on the heaviest round, since the screen doesn't ask which.
   *(cycle 24)*
+- [ ] Log screen, from the cycle 24 review: "Last time" under "Heaviest dumbbell" shows the
+  weight the coach read a ladder at, which can be round one's; a carried ladder's rounds are
+  labelled with this row's reps when the two have as many rounds.
 - [ ] The Log screen, second half: "Add an exercise"; and the person's calls below.
   *(madCode)* From reviews:
   - With two logged rows of one exercise and one row for it on the new board, clearing the

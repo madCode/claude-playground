@@ -57,6 +57,9 @@ data class JournalEntry(
      */
     val roundLb: List<Int>? = null,
 ) {
+    /** [roundLb] when it can be set against the ladder, round for round; null when not said, or damaged. */
+    val rounds: List<Int>? get() = roundLb?.takeIf { ladder != null && it.size == ladder.size && it.all { lb -> lb > 0 } }
+
     enum class Kind { LOGGED, CORRECTED, REMOVED }
 }
 
@@ -134,13 +137,39 @@ object Journal {
         // The parts are the identity. Should the key's format ever change, keys rebuilt from them
         // change with the sheet's, so history still matches rather than vanishing.
         val exercise = Reading.Known(parts, emptySet())
+        val read = read(e)
         // A damaged row loses itself: a weight or count no load can have, an empty ladder.
-        val load = runCatching { Load(e.lb, e.count) }.getOrNull() ?: return null
+        val load = runCatching { Load(read.lb, e.count) }.getOrNull() ?: return null
         val target = if (e.targetLow != null && e.targetHigh != null) e.targetLow..e.targetHigh else null
         return Logged(
             e.date, exercise, load, target, e.reps,
             hurt = e.hurt, formBroke = e.formBroke, stopped = e.stopped, ladder = e.ladder?.takeIf { it.isNotEmpty() },
-            hard = e.hard, easy = e.easy, heaviestOnly = e.heaviestOnly,
+            hard = e.hard, easy = e.easy, heaviestOnly = read.heaviestOnly, faded = read.faded,
         )
+    }
+
+    private class Read(val lb: Int, val heaviestOnly: Boolean, val faded: Boolean = false)
+
+    /**
+     * The one weight the coach reads a ladder at. With a weight for each round there are two
+     * sound readings, and the entry gets whichever says more without saying too much:
+     *
+     * - Round one's weight, done from round one: it can raise the number, like a listed ladder.
+     * - The heaviest round's, held for the fewest reps, as a one-weight ladder is read: it only
+     *   holds a number. Taken when the ladder climbed to more than round one's weight is worth
+     *   (started light, so round one says too little), and when something went wrong (a twinge,
+     *   a stop), since the heaviest round is where that is assumed to have happened.
+     */
+    private fun read(e: JournalEntry): Read {
+        val rounds = e.rounds
+        val ladder = e.ladder
+        if (rounds == null || ladder == null) return Read(e.lb, e.heaviestOnly)
+        val first = rounds.first()
+        val top = rounds.indices.maxBy { rounds[it] }
+        if (rounds[top] > first && ladder[top] == ladder.min()) {
+            val worth = Progression.converted(rounds[top], ladder[top], ladder.first())
+            if (e.hurt || e.stopped || e.formBroke || (worth != null && worth > first)) return Read(rounds[top], heaviestOnly = true)
+        }
+        return Read(first, heaviestOnly = false, faded = rounds.indices.any { rounds[it] < first && ladder[it] <= ladder.first() })
     }
 }

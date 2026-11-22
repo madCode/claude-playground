@@ -74,8 +74,11 @@ both are installed side by side.
     one weight, its heaviest round's: it never raises a number, and stands for that round's
     reps, so round one gets what it converts to. A ladder ticked as listed was done at the
     sheet's number from round one. A ladder logged with a weight for each round counts at
-    round one's, like a listed one, so it can raise the number; the later rounds' weights are
-    kept but not yet read. A timed set
+    round one's, like a listed one, so it can raise the number. Two exceptions, so that saying
+    more never gives a worse number than saying only the heaviest: a ladder that climbed to
+    more than round one's weight is worth (started light), or one with a twinge or a stop, is
+    read by its heaviest round as a one-weight ladder is; and one that went lighter in a later
+    round of no more reps holds, as if it felt hard. A timed set
     holds its weight, since it says nothing about reps in reserve, and a timed set and a counted
     one don't convert into each other. A rep target with no reps logged says nothing. A step more than 20% heavier (12 to 15, 20 to 25) is a
     big jump: the number holds and the heavier one is offered as a test. A new exercise borrows
