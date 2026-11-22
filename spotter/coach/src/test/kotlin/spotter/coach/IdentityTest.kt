@@ -223,7 +223,10 @@ class IdentityTest {
         assertEquals("straight arm sit-up [position=low bench]", known("12 x low bench straight arm sit-up").key)
         // One arm or both reach overhead, so the reach says neither.
         assertEquals("overhead reach", known("5 each x bodyweight lateral lunge to knee raise with overhead reach, rest").parts.last().movement.name)
-        assertEquals("chest press + reach", known("10 x chest press to reach").key)
+        assertEquals("chest press + press reach", known("10 x chest press to reach").key)
+        // A reach elsewhere is another move: a plank's lateral reach isn't the press's.
+        assertEquals(Why.UNKNOWN_WORDS, notSure("8 total x high plank alt lateral reach, rest").why)
+        assertEquals(Why.UNKNOWN_WORDS, notSure("8 x squat to reach").why)
     }
 
     // A reach and the hops are done without a weight; the press before a reach takes the number.

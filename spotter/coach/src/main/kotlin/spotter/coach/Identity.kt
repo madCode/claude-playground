@@ -71,6 +71,10 @@ class Identity(private val vocabulary: Vocabulary) {
             // A plank, side plank or deadbug "with rotation" is a rotation of its own, not this one.
             token == "rotation" && lastPhrase == "with" ->
                 if (previous(before)?.pattern.let { it != null && it != "core" }) movement("torso rotation") else null
+            // The reach at the top of a chest press (madCode, 2026-11-22). Elsewhere ("high plank
+            // lateral reach") a reach is some other move, so it stays unknown.
+            token == "reach" && lastPhrase in setOf("to", "into") ->
+                if (previous(before)?.name == "chest press") movement("press reach") else null
             token == "press" && lastPhrase in setOf("to", "into") ->
                 if (previous(before)?.name?.let { it.endsWith("squat") || it.endsWith("lunge") } == true) movement("shoulder press") else null
             else -> null

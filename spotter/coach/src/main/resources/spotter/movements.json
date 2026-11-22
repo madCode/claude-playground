@@ -1651,10 +1651,8 @@
    "bodyweight": true
   },
   {
-   "name": "reach",
-   "aliases": [
-    "reaches"
-   ],
+   "name": "press reach",
+   "aliases": [],
    "pattern": null,
    "muscles": [
     "shoulders"
