@@ -38,12 +38,16 @@ data class EventRow(
     val hurt: Boolean,
     val formBroke: Boolean,
     val stopped: Boolean,
+    val easy: Boolean,
+    val hard: Boolean,
+    val easier: Boolean,
 ) {
     fun toEntry() = JournalEntry(
         id = id, at = at, kind = JournalEntry.Kind.valueOf(kind), target = target, date = LocalDate.parse(date),
         className = className, row = row, line = line, key = key, parts = Journal.partsFrom(parts), lb = lb,
         count = count, targetLow = targetLow, targetHigh = targetHigh, ladder = ladder?.let(Journal::intsFrom),
         reps = Journal.intsFrom(reps), hurt = hurt, formBroke = formBroke, stopped = stopped,
+        easy = easy, hard = hard, easier = easier,
     )
 
     companion object {
@@ -52,6 +56,7 @@ data class EventRow(
             row = e.row, line = e.line, key = e.key, parts = Journal.partsJson(e.parts), lb = e.lb, count = e.count,
             targetLow = e.targetLow, targetHigh = e.targetHigh, ladder = e.ladder?.let(Journal::intsJson),
             reps = Journal.intsJson(e.reps), hurt = e.hurt, formBroke = e.formBroke, stopped = e.stopped,
+            easy = e.easy, hard = e.hard, easier = e.easier,
         )
     }
 }

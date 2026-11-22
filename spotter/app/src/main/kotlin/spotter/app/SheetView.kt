@@ -31,7 +31,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.saveable.Saver
+import kotlinx.serialization.json.Json
 import spotter.app.today.Today
+import spotter.coach.LogDraft
 import spotter.coach.Sheet
 import spotter.coach.SheetRow
 import spotter.coach.Change
@@ -47,7 +50,7 @@ private val warnBg = Color(0xFFFFF1DB)
  * order under their blocks, warnings first; a tap on a row shows why its number is what it is.
  */
 @Composable
-fun TodayView(today: Today, onAllowCalendar: () -> Unit) {
+fun TodayView(today: Today, onAllowCalendar: () -> Unit, onSaveLog: (Today.Showing, LogDraft) -> Unit = { _, _ -> }) {
     when (today) {
         Today.Loading -> Text("Reading today's board…", fontSize = 17.sp, color = muted)
         Today.NeedsCalendar -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -63,12 +66,35 @@ fun TodayView(today: Today, onAllowCalendar: () -> Unit) {
             ) { Text("Allow the calendar") }
         }
         is Today.Nothing -> Text(today.reason, fontSize = 17.sp, color = ink)
-        is Today.Showing -> SheetView(today)
+        is Today.Showing -> {
+            // Both survive rotation and the app being killed, so a half-logged class isn't lost.
+            var logging by rememberSaveable { mutableStateOf(false) }
+            var draft by rememberSaveable(stateSaver = draftSaver) { mutableStateOf(LogDraft()) }
+            if (logging) {
+                LogView(
+                    today,
+                    draft,
+                    onChange = { draft = it },
+                    onSave = {
+                        logging = false
+                        onSaveLog(today, draft)
+                    },
+                    onCancel = { logging = false },
+                )
+            } else {
+                SheetView(today) {
+                    draft = LogDraft.from(today.sheet, today.logged)
+                    logging = true
+                }
+            }
+        }
     }
 }
 
+private val draftSaver = Saver<LogDraft, String>(save = { Json.encodeToString(it) }, restore = { Json.decodeFromString(it) })
+
 @Composable
-private fun SheetView(today: Today.Showing) {
+private fun SheetView(today: Today.Showing, onLog: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
             today.title,
@@ -78,6 +104,14 @@ private fun SheetView(today: Today.Showing) {
             modifier = Modifier.semantics { heading() },
         )
         (today.notes + today.sheet.warnings).forEach { Note(it) }
+        if (today.sheet.rows.any(LogDraft::loggable)) {
+            val label = if (today.logged.isEmpty()) "Log this class" else "Change the log (${today.logged.size} logged)"
+            Button(
+                onClick = onLog,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) { Text(label) }
+        }
         var block: String? = null
         today.sheet.rows.forEachIndexed { i, row ->
             if (row.block != block) {

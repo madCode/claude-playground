@@ -38,6 +38,11 @@ data class JournalEntry(
     val hurt: Boolean = false,
     val formBroke: Boolean = false,
     val stopped: Boolean = false,
+    // How it felt, for the scorecard and later rules; the coach doesn't read them yet.
+    val easy: Boolean = false,
+    val hard: Boolean = false,
+    /** An easier version was done than the one listed. */
+    val easier: Boolean = false,
 ) {
     enum class Kind { LOGGED, CORRECTED, REMOVED }
 }
@@ -59,11 +64,12 @@ object Journal {
         at: Long, date: LocalDate, className: String, row: String, line: String, exercise: Reading.Known,
         load: Load, target: IntRange?, ladder: List<Int>?, reps: List<Int>,
         hurt: Boolean = false, formBroke: Boolean = false, stopped: Boolean = false,
+        easy: Boolean = false, hard: Boolean = false, easier: Boolean = false,
     ) = JournalEntry(
         at = at, kind = JournalEntry.Kind.LOGGED, date = date, className = className, row = row, line = line,
         key = exercise.key, parts = exercise.parts.map { LoggedPart(it.movement.name, it.variations) },
         lb = load.lb, count = load.count, targetLow = target?.first, targetHigh = target?.last, ladder = ladder,
-        reps = reps, hurt = hurt, formBroke = formBroke, stopped = stopped,
+        reps = reps, hurt = hurt, formBroke = formBroke, stopped = stopped, easy = easy, hard = hard, easier = easier,
     )
 
     /**
@@ -71,7 +77,11 @@ object Journal {
      * as last corrected, removed rows left out. A correction or removal of an entry that isn't
      * there is ignored, so a damaged log loses that one change, not the rest.
      */
-    fun history(entries: List<JournalEntry>, vocabulary: Vocabulary): List<Logged> {
+    fun history(entries: List<JournalEntry>, vocabulary: Vocabulary): List<Logged> =
+        live(entries).mapNotNull { toLogged(it, vocabulary) }
+
+    /** Each row as last corrected, removed rows left out, in the order first logged. */
+    fun live(entries: List<JournalEntry>): List<JournalEntry> {
         // Each live row, by the id of the entry that first logged it.
         val rows = linkedMapOf<Long, JournalEntry>()
         // Any entry's id, to the row it belongs to: corrections can target a correction.
@@ -96,7 +106,7 @@ object Journal {
                 }
             }
         }
-        return rows.values.mapNotNull { toLogged(it, vocabulary) }
+        return rows.values.toList()
     }
 
     private fun toLogged(e: JournalEntry, vocabulary: Vocabulary): Logged? {
