@@ -40,6 +40,7 @@ import spotter.app.update.UpdateWorker
 class MainActivity : ComponentActivity() {
     private val waiting = mutableIntStateOf(0)
     private val today = mutableStateOf<Today>(Today.Loading)
+    private val earlier = mutableStateOf<Today.Showing?>(null)
     private var stopListening: () -> Unit = {}
     private val calendar by lazy { Calendar(this) }
     private val askCalendar = registerForActivityResult(ActivityResultContracts.RequestPermission()) { calendarAnswered(it) }
@@ -57,6 +58,7 @@ class MainActivity : ComponentActivity() {
                 today = today.value,
                 onAllowCalendar = ::allowCalendar,
                 onSaveLog = ::saveLog,
+                earlier = earlier.value,
             )
         }
     }
@@ -110,9 +112,12 @@ class MainActivity : ComponentActivity() {
         loading = lifecycleScope.launch {
             val loader = TodayLoader(Boards(File(filesDir, "boards")), calendar::events)
             val entries = withContext(Dispatchers.IO) { log.entries() }
+            val logged = Today.loggedClasses(entries)
             // The kept board first, then the fetched one.
-            withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), fetch = false) }?.let { today.value = Today.of(it, entries, identity, vocabulary) }
-            val fetched = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now()) }
+            withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), fetch = false, logged) }?.let { today.value = Today.of(it, entries, identity, vocabulary) }
+            earlier.value = withContext(Dispatchers.IO) { loader.earlier(LocalDateTime.now(), logged) }
+                ?.let { Today.of(it, entries, identity, vocabulary) as? Today.Showing }
+            val fetched = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), logged = logged) }
             if (fetched != null) today.value = Today.of(fetched, entries, identity, vocabulary)
         }
     }

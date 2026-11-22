@@ -11,6 +11,14 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 15: which class, once you've logged
+- **Why:** your answer ("tomorrow's sheet as soon as today's is logged"), and the review's
+  finding that a class not logged within three hours could never be logged.
+- **Shipped:** once today's class is logged, the sheet shows your next one, so the evening
+  before a morning class you see that class. And a class you haven't logged stays at the top
+  of the screen for two days ("… isn't logged yet · Log it"), whatever the sheet below shows;
+  once logged it becomes a quiet "Change the log for …".
+
 ### Cycle 14: pick the weight from the rack
 - **Why:** the logging review found "changed" on a new row saved a made-up 2×10 before you'd
   picked anything, assumed two dumbbells, and took eight taps to reach 40.

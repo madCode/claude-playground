@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +51,68 @@ private val warnBg = Color(0xFFFFF1DB)
  * order under their blocks, warnings first; a tap on a row shows why its number is what it is.
  */
 @Composable
-fun TodayView(today: Today, onAllowCalendar: () -> Unit, onSaveLog: (Today.Showing, LogDraft) -> Unit = { _, _ -> }) {
+fun TodayView(
+    today: Today,
+    onAllowCalendar: () -> Unit,
+    onSaveLog: (Today.Showing, LogDraft) -> Unit = { _, _ -> },
+    /** A class already started that can still be logged, after the sheet has moved on. */
+    earlier: Today.Showing? = null,
+) {
+    // Which class is being logged, if any, and what has been entered. Both survive rotation and
+    // the app being killed, so a half-logged class isn't lost. Tied to the class by name: should
+    // another class replace it mid-log, its rows aren't saved under the other class's date.
+    var loggingClass by rememberSaveable { mutableStateOf<String?>(null) }
+    var draft by rememberSaveable(stateSaver = draftSaver) { mutableStateOf(LogDraft()) }
+    fun name(s: Today.Showing) = "${s.date} ${s.className}"
+    fun start(s: Today.Showing) {
+        draft = LogDraft.from(s.sheet, s.logged)
+        loggingClass = name(s)
+    }
+    val logging = listOfNotNull(today as? Today.Showing, earlier).firstOrNull { name(it) == loggingClass }
+    if (logging != null) {
+        LogView(
+            logging,
+            draft,
+            onChange = { draft = it },
+            onSave = {
+                loggingClass = null
+                onSaveLog(logging, draft)
+            },
+            onCancel = { loggingClass = null },
+        )
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        earlier?.let { EarlierClass(it) { start(it) } }
+        TodayBody(today, onAllowCalendar) { start(it) }
+    }
+}
+
+// First on the screen: the class just done matters more than the next one's sheet until it is logged.
+@Composable
+private fun EarlierClass(earlier: Today.Showing, onLog: () -> Unit) {
+    val logged = earlier.sheet.rows.count { it.id in earlier.logged }
+    if (logged == 0) {
+        Column(
+            Modifier.fillMaxWidth().background(warnBg, RoundedCornerShape(8.dp)).padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("${earlier.title} isn't logged yet.", fontSize = 15.sp, color = warn)
+            Button(
+                onClick = onLog,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
+                modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Log ${earlier.title}" },
+            ) { Text("Log it") }
+        }
+    } else {
+        OutlinedButton(onClick = onLog, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text("Change the log for ${earlier.title}")
+        }
+    }
+}
+
+@Composable
+private fun TodayBody(today: Today, onAllowCalendar: () -> Unit, onLog: (Today.Showing) -> Unit) {
     when (today) {
         Today.Loading -> Text("Reading today's board…", fontSize = 17.sp, color = muted)
         Today.NeedsCalendar -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -66,30 +128,7 @@ fun TodayView(today: Today, onAllowCalendar: () -> Unit, onSaveLog: (Today.Showi
             ) { Text("Allow the calendar") }
         }
         is Today.Nothing -> Text(today.reason, fontSize = 17.sp, color = ink)
-        is Today.Showing -> {
-            // Both survive rotation and the app being killed, so a half-logged class isn't lost.
-            // Tied to the class: should the next class replace it mid-log, its rows aren't saved
-            // under the other class's date.
-            var logging by rememberSaveable(today.date, today.className) { mutableStateOf(false) }
-            var draft by rememberSaveable(today.date, today.className, stateSaver = draftSaver) { mutableStateOf(LogDraft()) }
-            if (logging) {
-                LogView(
-                    today,
-                    draft,
-                    onChange = { draft = it },
-                    onSave = {
-                        logging = false
-                        onSaveLog(today, draft)
-                    },
-                    onCancel = { logging = false },
-                )
-            } else {
-                SheetView(today) {
-                    draft = LogDraft.from(today.sheet, today.logged)
-                    logging = true
-                }
-            }
-        }
+        is Today.Showing -> SheetView(today) { onLog(today) }
     }
 }
 

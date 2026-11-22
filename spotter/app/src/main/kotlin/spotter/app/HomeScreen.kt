@@ -43,6 +43,7 @@ fun HomeScreen(
     today: Today = Today.Loading,
     onAllowCalendar: () -> Unit = {},
     onSaveLog: (Today.Showing, LogDraft) -> Unit = { _, _ -> },
+    earlier: Today.Showing? = null,
 ) {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
@@ -78,7 +79,7 @@ fun HomeScreen(
                         }
                     }
                 }
-                TodayView(today, onAllowCalendar, onSaveLog)
+                TodayView(today, onAllowCalendar, onSaveLog, earlier)
                 Spacer(Modifier.heightIn(min = 8.dp))
                 Text(
                     "Version $version · tap to copy",

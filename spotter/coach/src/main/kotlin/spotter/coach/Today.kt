@@ -50,7 +50,10 @@ data class DayBoard(val date: LocalDate, val classes: Map<String, List<String>>)
  * null when the booking names no format ("Orange 60 Min Tread 50"): that class is still the next
  * one, so tomorrow's isn't shown in its place.
  */
-data class BookedClass(val tag: String?, val date: LocalDate, val start: LocalDateTime?, val title: String = "")
+data class BookedClass(val tag: String?, val date: LocalDate, val start: LocalDateTime?, val title: String = "") {
+    /** The name its log is kept under, with [date]. */
+    val logName: String get() = tag ?: title
+}
 
 /** A calendar entry, as the phone's calendar gives it. */
 data class CalendarEvent(val title: String, val date: LocalDate, val start: LocalDateTime?)
@@ -64,22 +67,50 @@ object Booking {
     private val orange = Regex("""^\W*orange\b""", RegexOption.IGNORE_CASE)
     private val format = Regex("""orange.*?(\dg)\b""", RegexOption.IGNORE_CASE)
 
+    /** How far back a class can still be logged, or its log changed, from the home screen. */
+    const val EARLIER_DAYS = 2L
+
+    private fun classes(events: List<CalendarEvent>): List<BookedClass> = events
+        .filter { orange.containsMatchIn(it.title) }
+        .sortedWith(compareBy({ it.date }, { it.start ?: it.date.atStartOfDay() }))
+        .map { e -> BookedClass(format.find(e.title)?.groupValues?.get(1)?.uppercase(), e.date, e.start, e.title) }
+
     /**
      * The next booked class in [events] from [now]: today's until [KEPT_AFTER_START] after it
      * starts (or all day when it has no time), otherwise tomorrow's. Nobody picks the class by
-     * hand. The class stays long enough to be logged in the car afterwards.
+     * hand. The class stays long enough to be logged in the car afterwards, and once it is
+     * [logged] (by date and [BookedClass.logName]) the sheet moves on to the next one, so the
+     * evening before a morning class shows that class (madCode, 2026-11-22).
      */
-    fun next(events: List<CalendarEvent>, now: LocalDateTime): BookedClass? =
-        events.asSequence()
-            .filter { it.date == now.toLocalDate() || it.date == now.toLocalDate().plusDays(1) }
-            .sortedWith(compareBy({ it.date }, { it.start ?: it.date.atStartOfDay() }))
+    fun next(events: List<CalendarEvent>, now: LocalDateTime, logged: Set<Pair<LocalDate, String>> = emptySet()): BookedClass? {
+        val today = now.toLocalDate()
+        fun done(c: BookedClass) = (c.date to c.logName) in logged && (c.start == null || !c.start.isAfter(now))
+        val upcoming = classes(events)
+            .filter { it.date == today || it.date == today.plusDays(1) }
             .filter { it.start == null || !it.start.isBefore(now.minus(KEPT_AFTER_START)) }
-            .filter { orange.containsMatchIn(it.title) }
+        // A day whose class is logged is over: an entry beside it that names no format ("Orange
+        // 60 - Tornado", the day's theme) doesn't keep the day open.
+        val over = upcoming.filter(::done).map { it.date }.toSet()
+        return upcoming.filterNot { done(it) || (it.tag == null && it.date in over) }
             .groupBy { it.date }.entries.firstOrNull()?.value
             // A day's class with a format first ("Orange 60 - Tornado" may be a theme beside it);
             // a day with only one that names none still stops tomorrow's showing in its place.
-            ?.let { day -> day.firstOrNull { format.containsMatchIn(it.title) } ?: day.first() }
-            ?.let { e -> BookedClass(format.find(e.title)?.groupValues?.get(1)?.uppercase(), e.date, e.start, e.title) }
+            ?.let { day -> day.firstOrNull { it.tag != null } ?: day.first() }
+    }
+
+    /**
+     * The latest class that has started, within [EARLIER_DAYS], other than the one the sheet
+     * shows ([current]): still loggable after the sheet has moved on, so coffee after class
+     * doesn't cost the log. Only a class that names its format has a board to log against.
+     */
+    fun earlier(events: List<CalendarEvent>, now: LocalDateTime, current: BookedClass?): BookedClass? {
+        val today = now.toLocalDate()
+        return classes(events).lastOrNull { c ->
+            c.tag != null && c != current && !c.date.isBefore(today.minusDays(EARLIER_DAYS)) &&
+                // An all-day entry has started once its day is past.
+                (c.start?.let { !it.isAfter(now) } ?: c.date.isBefore(today))
+        }
+    }
 }
 
 /** Which board lines the sheet is made from, and what the sheet must say about them. */

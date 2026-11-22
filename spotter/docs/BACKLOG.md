@@ -54,11 +54,6 @@ Step 3, logging:
   - "+ Each round" will need a weight per round, not one per row.
   - A ladder done clean with each round's weight known ("8 / 6 / 4") counts as clean at 8 for
     a straight "8 x" row, which is more sets at 8 than were done. *(cycle 13 review)*
-- [ ] The evening before: once today's class is logged, the sheet shows the next class
-  (madCode, 2026-11-22).
-- [ ] Logging a class after its window: the sheet moves on three hours after the start, and
-  then the class can't be logged at all. Keep a "Log <day>'s class" way in while it has
-  unlogged rows, apart from which sheet shows.
 
 - [ ] The Log screen, second half: "+ Each round", each round a copy of the one before; "Add an
   exercise"; and the person's calls below. *(madCode)* From cycles 11 and 12's reviews:
@@ -70,7 +65,6 @@ Step 3, logging:
   - A repeat of a line added above the one done shifts the repeat number, so the log moves to
     the other copy (same words, so the same weight).
   - Two classes of the same format on one day share one log (keyed by date and "2G").
-  - A class after 23:00 is gone at midnight, before it can be logged.
 - [ ] The scorecard export from the log: it takes rows by index (`ScorecardSession.from`); map
   ids to places. *(cycle 11 review)*
 - [ ] Export in the scorecard's shape and the full log, on a schedule, to a folder madCode
@@ -153,6 +147,9 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] Which class, after logging (cycle 15): the sheet moves on once today's class is logged;
+  an earlier class stays loggable for two days, which also covers a late-evening class past
+  midnight.
 - [x] "Changed" picks from the rack (cycle 14): one tap on any of the thirteen weights, nothing
   logged before the pick, the count never guessed, last time's weight shown.
 - [x] The coach's half of the logging review (cycle 13): a one-weight ladder holds; twinges cap
