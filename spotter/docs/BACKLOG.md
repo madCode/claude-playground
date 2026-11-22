@@ -11,7 +11,7 @@ can grade against Carry.
 
 - [x] The coach reads boards, names exercises, and suggests weights, with every trap tested
   (traps 12 and 13 are checked on the scorecard and after a release, not by rule tests).
-- [ ] The phone shows today's sheet from the board feed and the calendar.
+- [x] The phone shows today's sheet from the board feed and the calendar.
 - [ ] Classes can be logged, kept in the event log, exported in the scorecard's shape and backed
   up.
 
@@ -38,10 +38,8 @@ Step 1, the coach core:
   hand-checked answers for a sample. Moved after the sheet: it checks readings, but puts no
   number on the screen. *(design)*
 
-Step 2, the phone shows today's sheet:
-- [ ] Ask for the calendar once, on first open (madCode chose "once at setup" for Carry), and
-  show the sheet; with the next item. *(cycle 8)*
-- [ ] Sheet and "Why this number" screens, with screenshot tests. *(mockups)*
+Step 2, the phone shows today's sheet: done (see Done).
+
 
 Step 3, logging:
 
@@ -68,7 +66,7 @@ Step 3, logging:
 See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 - [ ] Security and supply chain: before the first release
-- [ ] Architecture and test health: cycle 9 (moved from 8 for the step 2 work)
+- [ ] Architecture and test health: cycle 10 (moved from 8 for the step 2 work)
 - [ ] Skills and instructions: around cycle 12
 
 ## Later
@@ -86,6 +84,11 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
   to a folder madCode controls.
 
 ## Done
+
+- [x] The sheet on the phone: the class and its date, notes for a borrowed or earlier board,
+  warnings first, rows in board order under their blocks with the board's words, what Spotter
+  read and the number; a tap shows why. The calendar is asked for once, on first open. Cycle 9,
+  2026-11-22.
 
 - [x] The day's board from the feed, a week kept on the phone, the last good one marked with its
   date when the day's can't be fetched; the class from the calendar's next booking; the other

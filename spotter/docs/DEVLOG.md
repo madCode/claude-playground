@@ -12,6 +12,22 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 9: the sheet on the phone
+- **Why:** the end of step 2: the glance before class.
+- **Shipped:** the home screen now shows the next class's sheet: its date and start, notes when
+  the board is borrowed or from an earlier day, warnings first, then each row with the board's
+  words, what Spotter read, and the number. A tap on a row says why. Spotter asks for the
+  calendar once, on first open. **Step 2 is done.**
+- **Review caught:** a rotation or a cold start blanked the sheet until the fetch finished, up
+  to about 45 seconds on weak gym signal; the board kept on the phone now shows at once and the
+  fetch refreshes it. Also: "Allow the calendar" lingered after it was allowed; dismissing the
+  dialog once sent the next tap to settings; two loads could write one file; a long reason
+  squeezed the board's words to a sliver at large text; the outage note said "today's" for
+  tomorrow's class; "why" on a new row said nothing; and TalkBack read "▲" as a triangle. All
+  fixed and tested.
+- **For you:** after this update, open Spotter and allow the calendar; DEVICE.md says what to
+  check. Until logging (step 3), weighted rows say "new: go light".
+
 ### Cycle 8: today's board on the phone
 - **Why:** step 2 starts: the phone has to know which class is next and have its board.
 - **Shipped:** the phone fetches the day's board from the public feed and keeps a week of them;

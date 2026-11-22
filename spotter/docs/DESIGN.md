@@ -237,8 +237,19 @@ Spotter does:
 
 ## Screens so far
 
-- **Home**, until today's sheet takes its place: the name, the update box when a build is
-  waiting, and the version at the bottom, copied in one tap.
+- **Home**: the name, the update box when a build is waiting, today's sheet, and the version at
+  the bottom, copied in one tap.
+- **The sheet** (`SheetView`): the class, its date and start ("2G · Sat 21 Nov · 9:50"); notes
+  when the board is borrowed or from an earlier day; the warnings; then each row in board order
+  under its block, with the board's own words, what Spotter read beneath, and the number on the
+  right. A tap on a row shows why, and stays open through a rotation. With no class booked,
+  no board yet or no calendar, it says which in a sentence. The board kept on the phone shows
+  at once and the fetched one replaces it, so weak signal never blanks the sheet. TalkBack
+  hears the number in words ("two 30 pound dumbbells, up from last time"). Nothing is logged yet, so every
+  weighted row says "new: go light" until step 3.
+- **The calendar** is asked for once, on first open. Refused, the sheet explains what is read
+  (titles and times of today's and tomorrow's entries) and offers the ask again, or Android's
+  settings once Android stops asking.
 
 ## Backup
 
