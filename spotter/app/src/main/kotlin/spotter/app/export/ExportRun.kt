@@ -11,13 +11,17 @@ interface ExportTarget {
 
     /** Removes the file [name]; nothing to do when it isn't there. */
     fun delete(name: String)
+
+    /** The names of the files in the folder now. Throws when the folder can't be read. */
+    fun names(): Set<String>
 }
 
 /**
  * One export of the log to the picked folder (DESIGN.md, "Backup"). Only files whose text has
  * changed since the last run are written, and a session file whose class no longer has rows is
  * removed, so the folder holds what the log says and no more. Only files this app wrote are ever
- * touched: what was written is remembered in [Store], and the folder is never listed.
+ * touched: what was written is remembered in [Store]. A file since deleted from the folder by
+ * hand is written again.
  */
 class ExportRun(private val store: Store, private val target: ExportTarget) {
     interface Store {
@@ -29,12 +33,18 @@ class ExportRun(private val store: Store, private val target: ExportTarget) {
     fun run(entries: List<JournalEntry>, unreadable: Int = 0): Boolean {
         val files = Export.files(entries, unreadable)
         val before = store.written
+        // A folder that can't be read can't be trusted to take writes either.
+        val present = try {
+            target.names()
+        } catch (e: Exception) {
+            return false
+        }
         val now = before.toMutableMap()
         var ok = true
         // What a failed write leaves is retried next time: only what succeeded is remembered.
         for ((name, text) in files) {
             val digest = digest(text)
-            if (before[name] == digest) continue
+            if (before[name] == digest && name in present) continue
             if (attempt { target.write(name, text) }) now[name] = digest else ok = false
         }
         for (name in before.keys - files.keys) {

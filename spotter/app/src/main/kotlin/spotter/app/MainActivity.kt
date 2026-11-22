@@ -52,18 +52,26 @@ class MainActivity : ComponentActivity() {
     private val pickFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
         if (tree == null) return@registerForActivityResult
         val both = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        val old = export.folder
+        // A provider that gives no lasting grant can't be a backup folder: what is set stays.
+        try {
+            contentResolver.takePersistableUriPermission(tree, both)
+        } catch (e: SecurityException) {
+            return@registerForActivityResult
+        }
         // Grants are limited in number: the folder being replaced gives its back.
-        export.folder?.let { old -> runCatching { contentResolver.releasePersistableUriPermission(Uri.parse(old), both) } }
-        contentResolver.takePersistableUriPermission(tree, both)
+        if (old != null && old != tree.toString()) runCatching { contentResolver.releasePersistableUriPermission(Uri.parse(old), both) }
         export.folder = tree.toString()
-        export.folderName = FolderTarget.name(tree)
+        export.folderName = FolderTarget.name(this, tree)
         ExportWorker.runNow(this)
     }
 
     private fun showBackup() {
         val at = export.lastAt.takeIf { it > 0 }?.let {
-            java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault())
-                .format(java.time.format.DateTimeFormatter.ofPattern("d MMM, H:mm", java.util.Locale.UK))
+            // The phone's own way of writing a date and a time, 12 or 24 hour as it is set.
+            android.text.format.DateUtils.formatDateTime(
+                this, it, android.text.format.DateUtils.FORMAT_SHOW_DATE or android.text.format.DateUtils.FORMAT_SHOW_TIME or android.text.format.DateUtils.FORMAT_ABBREV_MONTH,
+            )
         }
         backup.value = BackupState(export.folderName.takeIf { export.folder != null }, at, export.lastOk)
     }
@@ -165,8 +173,9 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             withContext(NonCancellable + Dispatchers.IO) {
                 saving.withLock { log.save(draft, shown.sheet, shown.date, shown.className, System.currentTimeMillis()) }
+                // Here, so the copy is asked for also when the screen went away during the write.
+                ExportWorker.runNow(applicationContext)
             }
-            ExportWorker.runNow(this@MainActivity)
             load()
         }
     }
