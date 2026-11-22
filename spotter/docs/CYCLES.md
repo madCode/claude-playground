@@ -2,6 +2,14 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 5 — build: the suggested weight
+
+- A break that stays green can be masked by a second rule giving the same answer (a timed 20
+  holds anyway because 20 to 25 is a big jump); pick inputs where only the rule under test
+  decides.
+- Cycles now run 30 minutes apart at madCode's ask: take a whole step-sized slice (progression
+  with all its traps) rather than one rule.
+
 ### Cycle 4 — build: words the boards use
 
 - Adding a new movement name is low-risk, since it borrows nothing; a variation word can

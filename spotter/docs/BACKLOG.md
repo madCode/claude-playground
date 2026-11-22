@@ -28,14 +28,18 @@ Step 1, the coach core:
   press" clash; "high plank jack" loses "plank jack" to "high plank". *(cycle 3)*
 - [ ] With load: a banded line with no implement ("banded squat") doesn't want a weight
   (trap 6). *(cycle 3)*
-- [ ] The corpus grade: every line of `boards.jsonl` read fully, unsure or wrong, against
-  hand-checked answers for a sample. *(design)*
-- [ ] Progression: up, hold, down from a history of sets; traps 3 and 4 as tests; Epley only in
-  3 to 12 reps. *(handoff)*
 - [ ] The sheet: rows in block order, warnings first, ▲ ▼ =, a reason for every number, test
-  numbers; traps 2, 9, 11. *(design)*
+  numbers; traps 2, 9, 11. Feeds each row's history to `Progression`, checks an imported load's
+  unknown count can't contradict the row (DESIGN.md, "Loads"), and credits combo parts on the
+  same implement. *(design)*
+- [ ] More stated factors for borrowing, madCode asked for them (2026-11-22): single arm from two,
+  Bosu, a b-stance or balance version from the plain one, each conservative and in the reason.
+  One leg from two (0.6) is in. *(madCode)*
 - [ ] The scorecard shape, as DESIGN.md's scorecard section says: one session file per class.
   *(handoff; the shape from the session that wrote `scorecard.py`)*
+- [ ] The corpus grade: every line of `boards.jsonl` read fully, unsure or wrong, against
+  hand-checked answers for a sample. Moved after the sheet: it checks readings, but puts no
+  number on the screen. *(design)*
 
 Step 2, the phone shows today's sheet:
 - [ ] Fetch the board feed, keep the last good board, and pick the class from the calendar.
@@ -80,6 +84,11 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
   to a folder madCode controls.
 
 ## Done
+
+- [x] Progression: up, hold, down from a log of sets; a hurt set never raises a number (trap 3);
+  a later miss caps an older success (trap 4); Epley only in 3 to 12 reps; a test number on a
+  big jump; one leg borrows 0.6 of the plain two-legged lift (trap 10), a loose relative
+  nothing (trap 11). Cycle 5, 2026-11-22.
 
 - [x] madCode's answers on the board words: "to stand", "balance", "press" after a squat or lunge,
   "with rotation", "wide" on a curl, "step-out deadlift", "anchor", "switch", "hinge", high plank

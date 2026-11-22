@@ -43,6 +43,18 @@ both are installed side by side.
     first set, broken form or having to stop. A later miss caps an older success. Epley only
     within 3–12 reps. A test number ("12 · try 15 if set 1 felt easy") when the next dumbbell
     is a big jump.
+    How a session went (`Progression`): *clean* when every set reaches the target's top;
+    *in range* when every set is in the range but not at its top (hold); a *near miss* when a
+    later set is one or two short (hold); a *miss* when the first set is short, any set is three
+    or more short, form broke or the set stopped (down a step); *hurt* when it twinged. A hurt
+    set is never the basis and caps the number at what hurt, or a step under it if it was also
+    short; the cap comes last, so no other rule lifts a number past it, and no test weight is
+    offered at or above it. A ladder's sets are each judged against their own round. A timed set
+    holds its weight, since it says nothing about reps in reserve, and a timed set and a counted
+    one don't convert into each other. A rep target with no reps logged says nothing. A step more than 20% heavier (12 to 15, 20 to 25) is a
+    big jump: the number holds and the heavier one is offered as a test. A new exercise borrows
+    only through a stated factor: one leg from the plain two-legged lift at 0.6; anything else
+    is "new: go light".
   - *Explanations:* every number carries the reasons behind it.
   - *Scorecard rows:* per logged row, `date`, `suggested_weight` and `weight`, the shape
     gym-coach's `scorecard.py` grades.

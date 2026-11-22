@@ -5,11 +5,27 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 ## Status
 
 - **Built so far:** the design; loads per hand on the rack's steps; reading a board line's
-  count; naming its exercise, in full on 83% of Carry's board rows; the app, which updates
-  itself.
+  count; naming its exercise, in full on 89% of Carry's board rows; the suggested weight from a
+  log; the app, which updates itself.
 - **Waiting on you:** a few board words still unsorted (BACKLOG.md, "Your call").
 
 ## Sunday 22 November 2026
+
+### Cycle 5: the suggested weight
+- **Why:** the first piece that puts a number on a row; madCode asked for faster progress on
+  step 1, so progression came before the corpus grade.
+- **Shipped:** `Progression`, from a log of sets to a weight with its reasons and ▲ ▼ =
+  against last time. Up a dumbbell after a clean session, hold in range or after a near miss,
+  down after a miss; a set that hurt never raises a number; a later miss caps an older
+  success; Epley only within 3 to 12 reps; a test weight when the next dumbbell is a big jump;
+  a one-legged version borrows 0.6 of the two-legged lift, said in its reason.
+- **Review caught**, on invented logs: a set that hurt and was short didn't step down; a
+  conversion to fewer reps lifted the number past what hurt; a test weight was offered at what
+  hurt; a session with no reps logged counted as clean; timed and counted sets converted into
+  each other unchecked; ladders couldn't be judged; and a miss at the lightest dumbbell said
+  "down a step". All fixed and tested. Left for the sheet: an imported load with an unknown
+  count feeding a row whose count it contradicts.
+- **Next:** the sheet, which feeds each row's history in, then more borrowing factors.
 
 ### madCode's answers on the board words
 - **Why:** madCode went through the words cycle 4 couldn't sort, in chat.
