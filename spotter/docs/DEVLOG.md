@@ -5,12 +5,23 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 ## Status
 
 - **Built so far:** the design; loads per hand on the rack's steps; reading a board line's
-  count; naming its exercise, in full on 89% of Carry's board rows; the suggested weight from a
+  count; naming its exercise, in full on 91% of Carry's board rows; the suggested weight from a
   log; the app, which updates itself; today's sheet on the phone; logging a class.
-- **Waiting on you:** a few board words still
-  unsorted (BACKLOG.md, "Your call").
+- **Waiting on you:** nothing.
 
 ## Sunday 22 November 2026
+
+### Your answers: the last board words
+- **Asked:** ten words the boards use that Spotter couldn't read. You answered all ten.
+- **Shipped:** "hand on bench", "foot on bench" and "feet in straps" are setups, kept apart from
+  the same move without them. Tap squat jump, single leg hop, split squat hop (same lead leg),
+  bent arm lateral raise, straight arm sit-up (arms straight overhead, as in your video), overhead
+  reach (one arm or both, so neither is recorded) and the reach after a chest press are moves of
+  their own. Rows named in full: 1,379 to 1,404 of 1,546 (91%). A "reach" anywhere but after a
+  chest press stays "not sure": the review caught "high plank alt lateral reach" being read as
+  the press's reach.
+- **Also:** a row logged from a borrowed board carries over to your own board's row with the
+  same exercise, your call; it's built with the Log screen's second half.
 
 ### Your answer: one set short
 - **Asked:** with one set logged, should one rep short drop the next number? You chose "hold

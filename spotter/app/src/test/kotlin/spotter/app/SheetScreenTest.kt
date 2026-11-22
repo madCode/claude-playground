@@ -31,7 +31,8 @@ import spotter.coach.Vocabulary
 import java.io.File
 import java.time.LocalDate
 
-// The real 2026-11-21 board from the public feed, and an invented lifter's log.
+// The real 2026-11-21 board from the public feed, its unread line swapped for one still unread
+// (a corpus line), and an invented lifter's log.
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w411dp-h891dp-xxhdpi")
@@ -46,7 +47,7 @@ class SheetScreenTest {
         "**Floor Block 1 - 12.5 minutes circuit**",
         "* 8 x close grip chest press (explosive)",
         "* 8 x deadlift",
-        "* 8 each x bodyweight lateral lunge to single leg hop",
+        "* 8 each x swing lunge with rotation",
         "* 8 x dumbbell sit-up with torso rotation",
         "**Floor Block 2 - 9.5 minutes circuit**",
         "* 8 x tricep push-up",
@@ -72,7 +73,7 @@ class SheetScreenTest {
         // What Spotter read, beneath the board's words, so a misreading shows at the gym.
         compose.onNodeWithText("chest press [grip=close, tempo=explosive]").assertIsDisplayed()
         // Warnings first: the line Spotter couldn't read.
-        compose.onNodeWithText("8 each x bodyweight lateral lunge to single leg hop: not sure what this is (unknown words)").assertIsDisplayed()
+        compose.onNodeWithText("8 each x swing lunge with rotation: not sure what this is (unknown words)").assertIsDisplayed()
         compose.onNodeWithText("no weight").performScrollTo().assertIsDisplayed()
         shoot("sheet")
     }

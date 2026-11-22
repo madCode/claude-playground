@@ -170,7 +170,7 @@ class IdentityTest {
         // On a bridge it is a bench bridge, on a press a press in a bridge: not one word.
         assertEquals(Why.UNKNOWN_WORDS, notSure("8 x close grip chest press (shoulders on bench)").why)
         // Feet in the straps is a different push-up from hands in them.
-        assertEquals(Why.UNKNOWN_WORDS, notSure("10 x push-up (feet in straps)").why)
+        assertNotEquals(known("10 x push-up").key, known("10 x push-up (feet in straps)").key)
         // madCode: feet on the bench is feet up on a climber, and a hip thrust on a bridge.
         assertEquals("mountain climber [position=decline]", known("10 total x mountain climber (feet on bench)").key)
         assertEquals(known("8 x bench bridge").key, known("8 x bridge (shoulders on bench)").key)
@@ -203,6 +203,44 @@ class IdentityTest {
         assertEquals("b-stance", known("6 each x low bench b-stance goblet squat").parts.single().variations["legs"])
         assertEquals("ultimate burpee", known("30 sec of ultimate burpee").key)
         assertEquals("dumbbell tap [alternating=yes, position=high plank]", known("6 - 10 total x high plank alt dumbbell tap, rest").key)
+    }
+
+    // madCode's second round of answers, 2026-11-22, on corpus lines.
+    @Test
+    fun madCodesSecondAnswers() {
+        // Setups: what a hand or foot rests on, kept apart from the same move without it.
+        assertEquals("low row [arms=single, legs=split, stability=hand on bench]", known("8 each x split stance single arm low row (hand on bench)").key)
+        assertEquals("foot on bench", known("6 each x low bench single leg bridge (foot on bench)").parts.single().variations["stability"])
+        assertEquals("knee tuck [implement=trx, position=high plank, stability=feet in straps]", known("1 min of TRX high plank knee tuck (feet in straps)").key)
+        // A rear foot on the bench is still a split squat's elevation, not this setup.
+        assertEquals("rear foot elevated", known("8 each x bench RFE split squat (rear foot on bench)").parts.single().variations["legs"])
+        // Moves of their own.
+        assertEquals("tap squat jump", known("8 x tap squat jump, rest").key)
+        assertEquals(listOf("lateral lunge", "single leg hop"), known("4 each x lateral lunge to single leg hop").parts.map { it.movement.name })
+        assertEquals("split squat hop [implement=bodyweight]", known("6 each x bodyweight split squat hop").key)
+        assertEquals("bent arm lateral raise", known("10 x bent arm lateral raise").key)
+        assertNotEquals(known("10 x lateral raise").key, known("10 x bent arm lateral raise").key)
+        assertEquals("straight arm sit-up [position=low bench]", known("12 x low bench straight arm sit-up").key)
+        // One arm or both reach overhead, so the reach says neither.
+        assertEquals("overhead reach", known("5 each x bodyweight lateral lunge to knee raise with overhead reach, rest").parts.last().movement.name)
+        assertEquals("chest press + press reach", known("10 x chest press to reach").key)
+        // A reach elsewhere is another move: a plank's lateral reach isn't the press's.
+        assertEquals(Why.UNKNOWN_WORDS, notSure("8 total x high plank alt lateral reach, rest").why)
+        assertEquals(Why.UNKNOWN_WORDS, notSure("8 x squat to reach").why)
+    }
+
+    // A reach and the hops are done without a weight; the press before a reach takes the number.
+    @Test
+    fun theNewMovesWantNoWeightOfTheirOwn() {
+        // Lines that don't say "bodyweight": the move itself must.
+        val sheet = Sheet.make(listOf("10 x chest press to reach", "8 x tap squat jump, rest", "12 x low bench straight arm sit-up"), emptyList(), identity).rows
+        assertEquals(Suggestion.NoNumber.NEW, sheet[0].suggestion)
+        assertNull(sheet[1].suggestion)
+        assertNull(sheet[2].suggestion)
+        // With a chest press logged, the reach doesn't stand in the way of its number.
+        val press = Logged(java.time.LocalDate.of(2026, 3, 1), known("10 x chest press"), Load(25, 2), 10..10, listOf(10))
+        val withLog = Sheet.make(listOf("10 x chest press to reach"), listOf(press), identity).rows.single()
+        assertEquals(Load(30, 2), (withLog.suggestion as Suggestion.Weight).load)
     }
 
     // Hands on the Bosu and feet on it are different exercises; "bosu … (feet on bosu)" says
