@@ -20,6 +20,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import spotter.app.export.ExportStore
+import spotter.app.export.ExportWorker
+import spotter.app.export.FolderTarget
 import spotter.app.log.EventLog
 import spotter.app.log.LogDatabase
 import spotter.coach.LogDraft
@@ -41,6 +44,29 @@ class MainActivity : ComponentActivity() {
     private val waiting = mutableIntStateOf(0)
     private val today = mutableStateOf<Today>(Today.Loading)
     private val earlier = mutableStateOf<Today.Showing?>(null)
+    private val backup = mutableStateOf(BackupState())
+    private val export by lazy { ExportStore(this) }
+    private var stopListeningToExport: () -> Unit = {}
+
+    // Android's own folder picker. The grant is kept, so the export still works after a restart.
+    private val pickFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
+        if (tree == null) return@registerForActivityResult
+        val both = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        // Grants are limited in number: the folder being replaced gives its back.
+        export.folder?.let { old -> runCatching { contentResolver.releasePersistableUriPermission(Uri.parse(old), both) } }
+        contentResolver.takePersistableUriPermission(tree, both)
+        export.folder = tree.toString()
+        export.folderName = FolderTarget.name(tree)
+        ExportWorker.runNow(this)
+    }
+
+    private fun showBackup() {
+        val at = export.lastAt.takeIf { it > 0 }?.let {
+            java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault())
+                .format(java.time.format.DateTimeFormatter.ofPattern("d MMM, H:mm", java.util.Locale.UK))
+        }
+        backup.value = BackupState(export.folderName.takeIf { export.folder != null }, at, export.lastOk)
+    }
     private var stopListening: () -> Unit = {}
     private val calendar by lazy { Calendar(this) }
     private val askCalendar = registerForActivityResult(ActivityResultContracts.RequestPermission()) { calendarAnswered(it) }
@@ -48,6 +74,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         UpdateWorker.schedule(this)
+        ExportWorker.schedule(this)
         val version = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
         setContent {
             HomeScreen(
@@ -59,6 +86,8 @@ class MainActivity : ComponentActivity() {
                 onAllowCalendar = ::allowCalendar,
                 onSaveLog = ::saveLog,
                 earlier = earlier.value,
+                backup = backup.value,
+                onChooseFolder = { pickFolder.launch(null) },
             )
         }
     }
@@ -71,10 +100,13 @@ class MainActivity : ComponentActivity() {
         val store = UpdateStore(this)
         waiting.intValue = store.waiting
         stopListening = store.listen { waiting.intValue = store.waiting }
+        showBackup()
+        stopListeningToExport = export.listen { showBackup() }
     }
 
     override fun onStop() {
         stopListening()
+        stopListeningToExport()
         super.onStop()
     }
 
@@ -134,6 +166,7 @@ class MainActivity : ComponentActivity() {
             withContext(NonCancellable + Dispatchers.IO) {
                 saving.withLock { log.save(draft, shown.sheet, shown.date, shown.className, System.currentTimeMillis()) }
             }
+            ExportWorker.runNow(this@MainActivity)
             load()
         }
     }

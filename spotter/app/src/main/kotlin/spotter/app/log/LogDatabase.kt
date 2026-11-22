@@ -123,7 +123,14 @@ class EventLog(private val db: LogDatabase) {
      * Every entry, in the order written. A row that can't be read (damaged, or a kind from a
      * newer build after a downgrade) is skipped: it costs that one entry, not the whole log.
      */
-    fun entries(): List<JournalEntry> = dao.all().mapNotNull { runCatching { it.toEntry() }.getOrNull() }
+    fun entries(): List<JournalEntry> = read().first
+
+    /** The entries, and how many stored rows couldn't be read, for the export to own up to. */
+    fun read(): Pair<List<JournalEntry>, Int> {
+        val rows = dao.all()
+        val entries = rows.mapNotNull { runCatching { it.toEntry() }.getOrNull() }
+        return entries to rows.size - entries.size
+    }
 
     /**
      * Saves a class's log screen: works out what changed against the log as stored now and writes
