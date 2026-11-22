@@ -175,6 +175,10 @@ what is on the board, and nothing says so.
   A later change to the word lists never relabels a logged row; a movement the lists no longer
   hold keeps its logged name. The key is rebuilt from them, so a change to the key's format
   changes logged and new keys alike.
+- **Each event names its sheet row by id**, not by place: the block's name (without its
+  minutes) and the line as read, with its count, plus which repeat of that line in the block it
+  is. The kept board and the fetched one give a row the same id, and so does a board fixed after
+  posting (a capital, a quote, the block's minutes).
 - **The schema is kept in the repository** (`app/schemas`), one file per version, so a change
   is reviewed and a migration can be tested against what a phone has.
 

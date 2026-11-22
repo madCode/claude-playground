@@ -2,6 +2,12 @@ package spotter.coach
 
 /** One exercise row on the sheet: the board's own words, what Spotter read, and the number. */
 data class SheetRow(
+    /**
+     * Which row this is, stable across sheets made from the same board: the kept board and the
+     * fetched one give a row the same id even when other rows come or go around it, as an index
+     * wouldn't. Its block, its words, and which repeat of those words in the block it is.
+     */
+    val id: String,
     val block: String?,
     val line: BoardLine,
     val reading: Reading,
@@ -28,7 +34,7 @@ data class SheetRow(
         get() = when (val s = suggestion) {
             is Suggestion.Weight -> s.reasons
             is Suggestion.NoNumber -> listOf(
-                if (s.reason == "new: go light") "Nothing logged for this exercise yet, and no sound link to one that has: start light." else s.reason,
+                if (s.new) "Nothing logged for this exercise yet, and no sound link to one that has: start light." else s.reason,
             )
             null -> listOf(if (reading is Reading.NotSure) "Not sure what this is, so no number." else "Done without a weight.")
         }
@@ -84,6 +90,7 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
         fun make(lines: List<String>, log: List<Logged>, identity: Identity, borrowedFrom: String? = null): Sheet {
             var block: String? = null
             val rows = mutableListOf<SheetRow>()
+            val seen = mutableMapOf<Pair<String, String>, Int>()
             for (raw in lines) {
                 val line = BoardLine.read(raw)
                 when (line.kind) {
@@ -93,13 +100,20 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
                         block = if (topLevel.containsMatchIn(name) || block == null) name else "${block.substringBefore(" · ")} · $name"
                     }
                     LineKind.INSTRUCTION -> Unit
-                    LineKind.EXERCISE -> rows += row(block, line, log, identity)
+                    LineKind.EXERCISE -> {
+                        // From what the reader made of the line and the block's name, not their
+                        // raw text: a later fix to a capital, a quote or a block's minutes keeps it.
+                        val name = block?.split(" · ")?.joinToString(" · ") { it.substringBefore(" - ").trim() }.orEmpty()
+                        val read = listOfNotNull(line.label, line.scheme?.toString(), line.words, line.side).joinToString(" ")
+                        val n = seen.merge(name to read, 1, Int::plus)!!
+                        rows += row("$name / $read / $n", block, line, log, identity)
+                    }
                 }
             }
             return Sheet(rows, borrowedFrom)
         }
 
-        private fun row(block: String?, line: BoardLine, log: List<Logged>, identity: Identity): SheetRow {
+        private fun row(id: String, block: String?, line: BoardLine, log: List<Logged>, identity: Identity): SheetRow {
             val reading = identity.read(line.words)
             val target = when (val s = line.scheme) {
                 is Scheme.Reps -> s.perSide()
@@ -108,12 +122,12 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
             }
             if (reading !is Reading.Known) {
                 val why = (reading as Reading.NotSure).why
-                return SheetRow(block, line, reading, target, null, listOf("not sure what this is (${why.name.lowercase().replace('_', ' ')})"))
+                return SheetRow(id, block, line, reading, target, null, listOf("not sure what this is (${why.name.lowercase().replace('_', ' ')})"))
             }
-            if (!wantsWeight(reading)) return SheetRow(block, line, reading, target, null, emptyList())
+            if (!wantsWeight(reading)) return SheetRow(id, block, line, reading, target, null, emptyList())
             val warnings = mutableListOf<String>()
             val suggestion = withRowCount(combo(reading, target, log, warnings), reading)
-            return SheetRow(block, line, reading, target, suggestion, warnings)
+            return SheetRow(id, block, line, reading, target, suggestion, warnings)
         }
 
         // Trap 6: a bare squat wants a weight. Bodyweight and TRX don't, nor a band, hold or pulse

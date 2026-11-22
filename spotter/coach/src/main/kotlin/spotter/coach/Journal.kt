@@ -22,8 +22,8 @@ data class JournalEntry(
     val target: Long? = null,
     val date: LocalDate,
     val className: String,
-    /** The row's place on that day's sheet. */
-    val ref: Int,
+    /** The sheet row it was logged from ([SheetRow.id]). */
+    val row: String,
     /** The board's own words. */
     val line: String,
     val key: String,
@@ -56,11 +56,11 @@ object Journal {
 
     /** An entry for a row logged now. [ladder] is in reps a side ([Scheme.Ladder.perSide]). */
     fun logged(
-        at: Long, date: LocalDate, className: String, ref: Int, line: String, exercise: Reading.Known,
+        at: Long, date: LocalDate, className: String, row: String, line: String, exercise: Reading.Known,
         load: Load, target: IntRange?, ladder: List<Int>?, reps: List<Int>,
         hurt: Boolean = false, formBroke: Boolean = false, stopped: Boolean = false,
     ) = JournalEntry(
-        at = at, kind = JournalEntry.Kind.LOGGED, date = date, className = className, ref = ref, line = line,
+        at = at, kind = JournalEntry.Kind.LOGGED, date = date, className = className, row = row, line = line,
         key = exercise.key, parts = exercise.parts.map { LoggedPart(it.movement.name, it.variations) },
         lb = load.lb, count = load.count, targetLow = target?.first, targetHigh = target?.last, ladder = ladder,
         reps = reps, hurt = hurt, formBroke = formBroke, stopped = stopped,

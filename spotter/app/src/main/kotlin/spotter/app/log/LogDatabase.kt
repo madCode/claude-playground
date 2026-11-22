@@ -25,7 +25,7 @@ data class EventRow(
     val target: Long?,
     val date: String,
     val className: String,
-    val ref: Int,
+    val row: String,
     val line: String,
     val key: String,
     val parts: String,
@@ -41,7 +41,7 @@ data class EventRow(
 ) {
     fun toEntry() = JournalEntry(
         id = id, at = at, kind = JournalEntry.Kind.valueOf(kind), target = target, date = LocalDate.parse(date),
-        className = className, ref = ref, line = line, key = key, parts = Journal.partsFrom(parts), lb = lb,
+        className = className, row = row, line = line, key = key, parts = Journal.partsFrom(parts), lb = lb,
         count = count, targetLow = targetLow, targetHigh = targetHigh, ladder = ladder?.let(Journal::intsFrom),
         reps = Journal.intsFrom(reps), hurt = hurt, formBroke = formBroke, stopped = stopped,
     )
@@ -49,7 +49,7 @@ data class EventRow(
     companion object {
         fun of(e: JournalEntry) = EventRow(
             at = e.at, kind = e.kind.name, target = e.target, date = e.date.toString(), className = e.className,
-            ref = e.ref, line = e.line, key = e.key, parts = Journal.partsJson(e.parts), lb = e.lb, count = e.count,
+            row = e.row, line = e.line, key = e.key, parts = Journal.partsJson(e.parts), lb = e.lb, count = e.count,
             targetLow = e.targetLow, targetHigh = e.targetHigh, ladder = e.ladder?.let(Journal::intsJson),
             reps = Journal.intsJson(e.reps), hurt = e.hurt, formBroke = e.formBroke, stopped = e.stopped,
         )
