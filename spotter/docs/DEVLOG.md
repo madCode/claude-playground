@@ -11,6 +11,17 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Research: what the rules rest on
+- **Asked:** "shouldn't the science have an opinion?" on when a tick raises the number, and to
+  check gym-coach's research list rather than trust it.
+- **Shipped:** `docs/TRAINING.md`: eight topics, each with how sure it is, what it means for
+  Spotter, and sources checked against the papers. gym-coach's 16 sources are all real; five
+  citations were corrected and one dropped.
+- **What it says, in short:** no trial settles when to go up; the consensus is two good
+  sessions in a row, and reaching the top of a range first. "Felt easy" is trustworthy,
+  "felt hard" weakly so. Converting between rep counts is a rough guess. The pain rules and the
+  0.6 one-leg factor are choices, not findings.
+
 ### Your answers: the last board words
 - **Asked:** ten words the boards use that Spotter couldn't read. You answered all ten.
 - **Shipped:** "hand on bench", "foot on bench" and "feet in straps" are setups, kept apart from
