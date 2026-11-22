@@ -65,3 +65,4 @@ Android's file picker and your real file are only visible on a phone.
    it says "Reading the file…": the result still shows.
 5. **Remove the history** asks first. Removed, the sheet goes back to what your own log says.
 6. With the phone's font size at its largest, both buttons are whole and can be tapped.
+7. With TalkBack on, a refused file and "Reading the file…" are spoken without touching them.

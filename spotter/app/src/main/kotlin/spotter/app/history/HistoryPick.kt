@@ -29,7 +29,12 @@ object HistoryPick {
      * history already kept as it was and says why in [HistoryStore.refused]. [bytes] is null when
      * the file couldn't be opened; [tooBig] when it ran past [MAX_BYTES].
      */
-    fun take(bytes: ByteArray?, tooBig: Boolean, store: HistoryStore, identity: Identity, today: LocalDate) {
+    fun take(
+        bytes: ByteArray?, tooBig: Boolean, store: HistoryStore, identity: Identity, today: LocalDate,
+        /** False once the pick was stopped: what it read is then dropped, unsaid. */
+        wanted: () -> Boolean = { true },
+    ) {
+        if (!wanted()) return
         store.refused = when {
             tooBig -> "That file is too big to be a training history."
             bytes == null -> "Couldn't open that file."
@@ -41,6 +46,7 @@ object HistoryPick {
                     "Nothing in that file could be read as a history." + if (store.result(identity, today) != null) " The one you have is unchanged." else ""
                 } else {
                     try {
+                        if (!wanted()) return
                         store.save(text, result, today)
                         null
                     } catch (e: java.io.IOException) {

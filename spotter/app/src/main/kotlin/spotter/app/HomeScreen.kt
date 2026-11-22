@@ -64,7 +64,7 @@ private fun BackupView(backup: BackupState, onChooseFolder: () -> Unit) {
 // What the sheet's numbers are made from besides the log, and what the import didn't take.
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: () -> Unit) {
+private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: () -> Unit, onStop: () -> Unit) {
     var removing by rememberSaveable { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         val grey = Color(0xFF5B606B)
@@ -80,8 +80,9 @@ private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: (
             if (history.reading) Text("Reading the file…", fontSize = 14.sp, color = Color(0xFF16181D))
         }
         when {
-            // Nothing to tap while a file is read: a second pick would race the first.
-            history.reading -> Unit
+            // No second pick while a file is read: it would race the first. Stopping is offered,
+            // since a file on a drive that never answers would otherwise never end.
+            history.reading -> OutlinedButton(onClick = onStop, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Stop reading the file" }) { Text("Stop") }
             removing -> {
                 Text(
                     "Remove the imported history? Your own log stays.",
@@ -132,6 +133,7 @@ fun HomeScreen(
     history: HistoryState = HistoryState(),
     onImportHistory: () -> Unit = {},
     onRemoveHistory: () -> Unit = {},
+    onStopHistory: () -> Unit = {},
 ) {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
@@ -169,7 +171,7 @@ fun HomeScreen(
                 }
                 TodayView(today, onAllowCalendar, onSaveLog, earlier)
                 Spacer(Modifier.heightIn(min = 8.dp))
-                HistoryView(history, onImportHistory, onRemoveHistory)
+                HistoryView(history, onImportHistory, onRemoveHistory, onStopHistory)
                 BackupView(backup, onChooseFolder)
                 Text(
                     "Version $version · tap to copy",

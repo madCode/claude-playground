@@ -65,9 +65,13 @@ class HomeScreenTest {
     fun theHistorySaysWhatWasReadAndLeftOut() {
         var imports = 0
         var removals = 0
+        var stops = 0
         var history by mutableStateOf(spotter.app.history.HistoryState())
         compose.setContent {
-            HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, history = history, onImportHistory = { imports++ }, onRemoveHistory = { removals++ })
+            HomeScreen(
+                "v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, history = history,
+                onImportHistory = { imports++ }, onRemoveHistory = { removals++ }, onStopHistory = { stops++ },
+            )
         }
         compose.onNodeWithText("No history imported. Until you log an exercise, its row says \"new: go light\".").assertIsDisplayed()
         compose.onNodeWithText("Import a history file").performClick()
@@ -86,10 +90,12 @@ class HomeScreenTest {
         compose.onNodeWithText("Remove the history").performClick()
         compose.onNodeWithContentDescription("Remove the imported history").performClick()
         assertEquals(1, removals)
-        // While a file is being read there is nothing to tap, and it says so.
+        // While a file is being read it says so, and the one thing to tap is Stop.
         history = history.copy(reading = true)
         compose.onNodeWithText("Reading the file…").assertIsDisplayed()
         compose.onNodeWithText("Replace the history").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Stop reading the file").performClick()
+        assertEquals(1, stops)
     }
 
     // At the largest text both history buttons are whole: the second wraps under the first, it

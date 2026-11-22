@@ -38,17 +38,48 @@ class HistoryStore(dir: File) {
     /** Moves whenever the history, [refused] or [reading] changes. */
     val changed: StateFlow<Int> get() = changes
 
-    /** Marks a pick under way, or says one already is: two at once would race to be the history. */
+    // Which pick is under way: one stopped or overtaken finds its ticket no longer current,
+    // and what it read is dropped.
+    private var ticket = 0
+
+    /**
+     * Marks a pick under way and gives its ticket, or null when one already is: two at once would
+     * race to be the history.
+     */
     @Synchronized
-    fun begin(): Boolean {
-        if (reading) return false
+    fun begin(): Int? {
+        if (reading) return null
         reading = true
         changes.value++
-        return true
+        return ++ticket
     }
 
-    fun end() {
+    /** Whether the pick holding [of] is still the one under way. */
+    @Synchronized
+    fun current(of: Int): Boolean = reading && of == ticket
+
+    /** The pick holding [of] is over; nothing happens when it was stopped first. */
+    @Synchronized
+    fun end(of: Int) {
+        if (!current(of)) return
         reading = false
+        changes.value++
+    }
+
+    /**
+     * Gives up on the pick under way: a file on a drive that never answers would otherwise keep
+     * the screen waiting for as long as the app lives. Its read may go on, but is no longer wanted.
+     */
+    @Synchronized
+    fun stop() {
+        ticket++
+        reading = false
+        changes.value++
+    }
+
+    /** Says something changed that a screen should show. */
+    @Synchronized
+    fun touch() {
         changes.value++
     }
 

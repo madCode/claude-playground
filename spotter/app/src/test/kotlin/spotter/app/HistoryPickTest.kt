@@ -98,13 +98,31 @@ class HistoryPickTest {
     @Test
     fun aPickUnderWayIsSaidAndASecondIsTurnedAway() {
         val before = store.changed.value
-        assertTrue(store.begin())
-        assertEquals(false, store.begin())
+        val ticket = store.begin()!!
+        assertEquals(null, store.begin())
         assertEquals(true, HistoryPick.state(store, identity, today).reading)
-        store.end()
+        store.end(ticket)
         assertEquals(false, HistoryPick.state(store, identity, today).reading)
         assertEquals(before + 2, store.changed.value)
-        assertTrue(store.begin())
+        assertTrue(store.begin() != null)
+    }
+
+    // A pick that never ends (a drive that doesn't answer) can be stopped: the screen is free
+    // again, and whatever that pick reads afterwards is dropped, as is its ending.
+    @Test
+    fun aStoppedPickIsDropped() {
+        val stalled = store.begin()!!
+        store.stop()
+        assertEquals(false, HistoryPick.state(store, identity, today).reading)
+        val next = store.begin()!!
+        // The stalled read comes back at last: not kept, not said, and it doesn't end the new pick.
+        HistoryPick.take(file, false, store, identity, today, wanted = { store.current(stalled) })
+        HistoryPick.take(null, false, store, identity, today, wanted = { store.current(stalled) })
+        store.end(stalled)
+        assertEquals(HistoryState(reading = true), HistoryPick.state(store, identity, today))
+        HistoryPick.take(file, false, store, identity, today, wanted = { store.current(next) })
+        store.end(next)
+        assertEquals(1, HistoryPick.state(store, identity, today).read)
     }
 
     // No stray copy is left by a process killed mid-save, and Remove takes one too.

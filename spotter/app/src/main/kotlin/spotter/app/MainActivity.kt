@@ -56,15 +56,18 @@ class MainActivity : ComponentActivity() {
     // Read in the store's own scope, not this screen's: a rotation mid-read must not lose the
     // pick, and the screen that is showing when it ends hears of it from the store.
     private val pickHistory = registerForActivityResult(ActivityResultContracts.OpenDocument()) { file ->
-        if (file == null || !imported.begin()) return@registerForActivityResult
-        val resolver = applicationContext.contentResolver
         val store = imported
+        val ticket = (if (file == null) null else store.begin()) ?: return@registerForActivityResult
+        val resolver = applicationContext.contentResolver
         HistoryStore.scope.launch {
             try {
-                val bytes = runCatching { resolver.openInputStream(file)?.use(HistoryPick::read) }.getOrNull()
-                HistoryPick.take(bytes?.takeIf { it.size <= HistoryPick.MAX_BYTES }, tooBig = bytes != null && bytes.size > HistoryPick.MAX_BYTES, store, identity, LocalDate.now())
+                val bytes = runCatching { resolver.openInputStream(file!!)?.use(HistoryPick::read) }.getOrNull()
+                HistoryPick.take(
+                    bytes?.takeIf { it.size <= HistoryPick.MAX_BYTES }, tooBig = bytes != null && bytes.size > HistoryPick.MAX_BYTES,
+                    store, identity, LocalDate.now(), wanted = { store.current(ticket) },
+                )
             } finally {
-                store.end()
+                store.end(ticket)
             }
         }
     }
@@ -74,7 +77,7 @@ class MainActivity : ComponentActivity() {
         HistoryStore.scope.launch {
             store.clear()
             store.refused = null
-            store.end()
+            store.touch()
         }
     }
 
@@ -132,6 +135,7 @@ class MainActivity : ComponentActivity() {
                 // Any type: a ".jsonl" file has none the picker knows.
                 onImportHistory = { pickHistory.launch(arrayOf("*/*")) },
                 onRemoveHistory = ::removeHistory,
+                onStopHistory = { imported.stop() },
             )
         }
     }
