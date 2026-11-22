@@ -99,7 +99,12 @@ object Logging {
             before != null && LogDraft.from(sheet, logged).rows[row.id] == now -> null
             else -> {
                 val e = entry(row, now, date, className, at)
-                if (before == null) e else e.copy(kind = JournalEntry.Kind.CORRECTED, target = before.id)
+                // A correction keeps what the sheet showed when the row was first logged: the
+                // sheet as rebuilt now may show another number, and the scorecard grades the
+                // one the person lifted from.
+                if (before == null) e else e.copy(
+                    kind = JournalEntry.Kind.CORRECTED, target = before.id, shownLb = before.shownLb, shownCount = before.shownCount,
+                )
             }
         }
     }

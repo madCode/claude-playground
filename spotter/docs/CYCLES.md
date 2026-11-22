@@ -2,6 +2,13 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 16 — build: the export, from the log
+
+- An assertion where two fields hold the same value (suggested 45, lifted 45) can't tell them
+  apart: make the fixture's values differ wherever two fields could be swapped.
+- Tests that pass first time on new code: check the result file says they ran, then ask what
+  they'd miss.
+
 ### Cycle 15 — build: which class, after logging
 
 - "Logged" is not "finished": a rule keyed on any saved row fires mid-class. Ask what state
