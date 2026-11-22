@@ -131,6 +131,28 @@ class LoggingTest {
         assertNull(bySquat.getValue(squat.id).shownLb)
     }
 
+    // "Last time" is the last logged, also when two fall on one day (one exercise in two blocks).
+    @Test
+    fun lastHeldIsTheLastLogged() {
+        val deadlift = identity.read(BoardLine.read("8 x deadlift").words) as Reading.Known
+        val log = listOf(Logged(monday, deadlift, Load(40, 2), 8..8, listOf(8)), Logged(monday, deadlift, Load(45, 1), 8..8, listOf(8)))
+        assertEquals(Load(45, 1), Sheet.make(listOf("8 x deadlift"), log, identity).rows.single().lastHeld)
+    }
+
+    // A ladder done at the sheet's number is a listed one, whatever else is said about it; only
+    // another weight makes it the heaviest round's.
+    @Test
+    fun onlyAnotherWeightMakesALadderHeaviestOnly() {
+        val squat = identity.read(BoardLine.read("8 x squat").words) as Reading.Known
+        val history = listOf(Logged(monday, squat, Load(30, 2), 8..8, listOf(8, 6, 4), ladder = listOf(8, 6, 4)))
+        val sheet = Sheet.make(listOf("8 / 6 / 4 x squat"), history, identity)
+        val row = sheet.rows.single()
+        val listed = LogDraft.asListed(row)!!
+        fun saved(log: RowLog) = Logging.events(LogDraft().with(row.id, log), sheet, emptyMap(), thursday, "2G", 1L).single()
+        assertEquals(false, saved(listed.copy(count = 1, hard = true, hurt = true)).heaviestOnly)
+        assertEquals(true, saved(listed.copy(lb = 50)).heaviestOnly)
+    }
+
     // A count nobody has said stays unknown, for the screen to ask; it is never guessed.
     @Test
     fun anUnknownCountStaysUnknown() {

@@ -139,7 +139,7 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
             val warnings = mutableListOf<String>()
             val suggestion = withRowCount(combo(reading, target, log, warnings), reading)
             (suggestion as? Suggestion.Weight)?.caution?.let { warnings += it }
-            val lastHeld = log.filter { it.key == reading.key && it.judged }.maxByOrNull { it.date }?.load
+            val lastHeld = log.filter { it.key == reading.key && it.judged }.sortedBy { it.date }.lastOrNull()?.load
             return SheetRow(id, block, line, reading, target, suggestion, warnings, lastHeld)
         }
 

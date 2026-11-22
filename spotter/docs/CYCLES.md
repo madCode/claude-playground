@@ -2,6 +2,12 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 14 — build: the rack picker
+
+- A line added above the controls on the first tap moves them under the thumb: put what
+  appears after a tap below what was tapped.
+- `assertIsDisplayed` fails on what has moved below the fold: scroll to it first.
+
 ### Cycle 13 — build: the coach's logging rules
 
 - Trace a new progression rule over three or four sessions in a row, not one: the conversion

@@ -16,7 +16,12 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   picked anything, assumed two dumbbells, and took eight taps to reach 40.
 - **Shipped:** "changed" opens the whole rack, thirteen weights, one tap each, with last time's
   weight shown above it. Nothing is logged until you pick. "One dumbbell / Two" starts from what
-  is known (the board's words, the sheet's number, your last log) and otherwise from neither.
+  is known (the board's words, the sheet's number, your last log) and otherwise from neither,
+  with "One dumbbell or two?" asked on the row.
+- **Review caught:** a mis-tapped "changed" couldn't be closed; "as listed" and "changed" could
+  both look selected; nothing asked for a count that wasn't known; saying how many dumbbells
+  on a listed ladder made it count as a changed one; the rack jumped down a line after the
+  first pick; "last time" could show the earlier of two logs from one day. All fixed.
 
 ### Cycle 13: the logging rules, after their review
 - **Why:** the review of the day's logging decisions found numbers going wrong; these are the

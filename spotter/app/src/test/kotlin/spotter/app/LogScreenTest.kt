@@ -2,7 +2,11 @@ package spotter.app
 
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -79,13 +83,14 @@ class LogScreenTest {
         compose.onNodeWithText("Log this class").performClick()
         compose.onNodeWithContentDescription("8 x close grip chest press (explosive): done as listed").performClick()
         compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
-        // Opening the rack logs nothing: no made-up set until a weight is picked.
-        compose.onNodeWithText("Logged: 2×45 · 8 reps").assertDoesNotExist()
+        // Opening the rack logs nothing: no made-up set until a weight is picked. Only the row
+        // ticked above says "Logged".
+        compose.onAllNodesWithText("Logged:", substring = true).assertCountEquals(1)
         compose.onNodeWithText("Heaviest dumbbell, lb. Last time: 2×40.").assertIsDisplayed()
         compose.onNodeWithContentDescription("8 x deadlift: 45 pounds").performClick()
         compose.onNodeWithContentDescription("less, 8 x deadlift: 8 reps").performClick()
         compose.onNodeWithText("Twinge").performClick()
-        compose.onNodeWithText("Logged: 2×45 · 7 reps · twinge").assertIsDisplayed()
+        compose.onNodeWithText("Logged: 2×45 · 7 reps · twinge").performScrollTo().assertIsDisplayed()
         // A bodyweight row has nothing to log, and says so.
         compose.onNodeWithText("No weight to log").performScrollTo().assertIsDisplayed()
         shoot("log")
@@ -112,7 +117,7 @@ class LogScreenTest {
         save(today(saturday), LogDraft().with(today(saturday).sheet.rows[1].id, spotter.coach.RowLog(40, 2, 6, stopped = true)))
         show(today(saturday)) { _, _ -> }
         compose.onNodeWithText("Change the log (1 logged)").performClick()
-        compose.onNodeWithText("Logged: 2×40 · 6 reps · had to stop").assertIsDisplayed()
+        compose.onNodeWithText("Logged: 2×40 · 6 reps · had to stop").performScrollTo().assertIsDisplayed()
     }
 
     // Half-logged when the phone turns: still logging, with what was entered, and the row being
@@ -127,10 +132,10 @@ class LogScreenTest {
         compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
         compose.onNodeWithContentDescription("8 x deadlift: 45 pounds").performClick()
         restore.emulateSavedInstanceStateRestore()
-        compose.onNodeWithText("Logged: 2×45 · 8 reps").assertIsDisplayed()
+        compose.onNodeWithText("Logged: 2×45 · 8 reps").performScrollTo().assertIsDisplayed()
         // The rack is still open, one tap from another weight.
         compose.onNodeWithContentDescription("8 x deadlift: 50 pounds").performClick()
-        compose.onNodeWithText("Logged: 2×50 · 8 reps").assertIsDisplayed()
+        compose.onNodeWithText("Logged: 2×50 · 8 reps").performScrollTo().assertIsDisplayed()
     }
 
     // The next class replacing this one mid-log starts that class's screen afresh, rather than
@@ -143,14 +148,50 @@ class LogScreenTest {
         compose.onNodeWithText("Log this class").performClick()
         compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
         compose.onNodeWithContentDescription("8 x deadlift: 40 pounds").performClick()
-        // A new row's count isn't guessed: it shows without one until said.
-        compose.onNodeWithText("Logged: 40 · 8 reps").assertIsDisplayed()
+        // A new row's count isn't guessed: it is asked for, and shows without one until said.
+        compose.onNodeWithText("Logged: 40 · 8 reps").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("One dumbbell or two?").assertIsDisplayed()
         compose.onNodeWithContentDescription("8 x deadlift: two dumbbells").performClick()
-        compose.onNodeWithText("Logged: 2×40 · 8 reps").assertIsDisplayed()
+        compose.onNodeWithText("Logged: 2×40 · 8 reps").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("One dumbbell or two?").assertDoesNotExist()
         shown = today(saturday.plusDays(1))
         compose.onNodeWithText("Log this class").performClick()
         compose.onNodeWithText("Save").performScrollTo().performClick()
         assertTrue(saved!!.rows.isEmpty())
+    }
+
+    // "Changed" tapped by mistake closes again, and a rack left open with nothing picked saves
+    // nothing for its row.
+    @Test
+    fun anOpenRackWithNothingPickedLogsNothing() {
+        save(today(monday), LogDraft().with(today(monday).sheet.rows[1].id, spotter.coach.RowLog(40, 2, 8)))
+        var saved: LogDraft? = null
+        show(today(saturday)) { _, d -> saved = d }
+        compose.onNodeWithText("Log this class").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: 45 pounds").assertDoesNotExist()
+        compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: 45 pounds").assertIsDisplayed()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertTrue(saved!!.rows.isEmpty())
+    }
+
+    // Ticked as listed, then the rack opened to look: still as listed, and only that says so.
+    @Test
+    fun asListedStaysSelectedWithTheRackOpen() {
+        save(today(monday), LogDraft().with(today(monday).sheet.rows[1].id, spotter.coach.RowLog(40, 2, 8)))
+        show(today(saturday)) { _, _ -> }
+        compose.onNodeWithText("Log this class").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: done as listed").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: done as listed").assertIsSelected()
+        compose.onNodeWithContentDescription("8 x deadlift: changed").assertIsNotSelected()
+        compose.onNodeWithContentDescription("8 x deadlift: 45 pounds").assertIsSelected()
+        // Another weight, and it is a change.
+        compose.onNodeWithContentDescription("8 x deadlift: 40 pounds").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: changed").assertIsSelected()
+        compose.onNodeWithContentDescription("8 x deadlift: done as listed").assertIsNotSelected()
     }
 
     private fun shoot(name: String) {
