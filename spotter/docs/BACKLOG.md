@@ -6,14 +6,20 @@ usable on its own.
 
 ## Done when
 
-The first run of cycles stops when build steps 1 to 3 are done: the first version the scorecard
-can grade against Carry.
+The run of cycles stops when build steps 1 to 6 are done (madCode extended it from step 3 on
+2026-11-22). When the next item waits on madCode's answer, a cycle takes another item, a review
+or the docs rather than guess: the order may change, nothing is built on a guess.
 
 - [x] The coach reads boards, names exercises, and suggests weights, with every trap tested
   (traps 12 and 13 are checked on the scorecard and after a release, not by rule tests).
 - [x] The phone shows today's sheet from the board feed and the calendar.
 - [ ] Classes can be logged, kept in the event log, exported in the scorecard's shape and backed
   up.
+- [ ] History import (step 4): a `history.jsonl` madCode picks on the phone; tested on invented
+  data only.
+- [ ] Strength per movement (step 5), built behind a switch and left off: turning it on waits
+  for the scorecard on madCode's real history.
+- [ ] Progress, the new-word review screen, sharing a board (step 6).
 
 ## Next
 
