@@ -155,7 +155,7 @@ object Journal {
      * sound readings, and the entry gets whichever says more without saying too much:
      *
      * - Round one's weight, done from round one: it can raise the number, like a listed ladder.
-     * - The heaviest round's, held for the fewest reps, as a one-weight ladder is read: it only
+     * - The heaviest round's, held for the ladder's fewest reps or more, as a one-weight ladder is read: it only
      *   holds a number. Taken when the ladder climbed to more than round one's weight is worth
      *   (started light, so round one says too little), and when something went wrong (a twinge,
      *   a stop), since the heaviest round is where that is assumed to have happened.
@@ -165,10 +165,12 @@ object Journal {
         val ladder = e.ladder
         if (rounds == null || ladder == null) return Read(e.lb, e.heaviestOnly)
         val first = rounds.first()
-        val top = rounds.indices.maxBy { rounds[it] }
-        if (rounds[top] > first && ladder[top] == ladder.min()) {
-            val worth = Progression.converted(rounds[top], ladder[top], ladder.first())
-            if (e.hurt || e.stopped || e.formBroke || (worth != null && worth > first)) return Read(rounds[top], heaviestOnly = true)
+        val top = rounds.max()
+        if (top > first) {
+            // Whichever round the heaviest fell in, it was held for at least the ladder's fewest
+            // reps, which is what a one-weight ladder's number stands for.
+            val worth = Progression.converted(top, ladder.min(), ladder.first())
+            if (e.hurt || e.stopped || e.formBroke || (worth != null && worth > first)) return Read(top, heaviestOnly = true)
         }
         return Read(first, heaviestOnly = false, faded = rounds.indices.any { rounds[it] < first && ladder[it] <= ladder.first() })
     }

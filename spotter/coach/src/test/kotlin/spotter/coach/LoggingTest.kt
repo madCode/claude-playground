@@ -187,6 +187,9 @@ class LoggingTest {
         // Started light and climbed to 30 for the 6: round one's 20 would pull the number down,
         // so it is read as the one weight is.
         assertEquals(oneWeight, afterLadder { it.at(20).eachRound(3).round(1, 25).round(2, 30) })
+        // The same when the heaviest was reached early and kept, or fell in the middle.
+        assertEquals(oneWeight, afterLadder { it.at(20).eachRound(3).round(1, 30) })
+        assertEquals(oneWeight, afterLadder { it.at(20).eachRound(3).round(1, 30).round(2, 25) })
         // Started at 30 and came down as the reps did: 30 wasn't kept, so it holds, and "felt
         // easy" doesn't lift it.
         val faded = afterLadder { it.eachRound(3).round(1, 25).round(2, 20).copy(easy = true) }
@@ -194,6 +197,8 @@ class LoggingTest {
         // Had to stop somewhere in a ladder that climbed: taken as the heaviest round, as with
         // one weight, not as a stop at the lightest.
         assertEquals(afterLadder { it.copy(stopped = true) }, afterLadder { it.at(20).eachRound(3).round(1, 25).round(2, 30).copy(stopped = true) })
+        // Also when the climb was too small to change the number by itself.
+        assertEquals(afterLadder { it.copy(hurt = true) }, afterLadder { it.at(25).eachRound(3).round(2, 30).copy(hurt = true) })
         // 30 throughout is 30 from round one, clean: more than one weight alone could say.
         assertTrue(afterLadder { it.eachRound(3) }.startsWith("2×30 ="))
     }
