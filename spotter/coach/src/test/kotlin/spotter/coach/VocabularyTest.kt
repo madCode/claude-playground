@@ -121,7 +121,7 @@ class VocabularyTest {
 
     @Test
     fun aWordInNoListIsUnknown() {
-        assertNull(words.lookup("windmill"))
+        assertNull(words.lookup("anchor"))
     }
 
     @Test
@@ -157,7 +157,7 @@ class VocabularyTest {
 
     @Test
     fun theLongestPhraseIsKnown() {
-        // "count and remember reps" is four words; a reader looks that far ahead.
-        assertEquals(4, words.longestPhrase)
+        // "side-to-side push-up" is five words once hyphens fold; a reader looks that far ahead.
+        assertEquals(5, words.longestPhrase)
     }
 }

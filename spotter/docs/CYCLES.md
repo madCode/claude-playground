@@ -2,6 +2,14 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 4 — build: words the boards use
+
+- Adding a new movement name is low-risk, since it borrows nothing; a variation word can
+  merge two exercises, so diff every new reading against the old ones and read each, not only
+  the count.
+- The corpus peek reads `expected.matched[].line` (1,546 exercise rows), the same set every
+  cycle's numbers use; grepping every `"line"` field counts other fields too.
+
 ### Cycle 3 — build: naming the exercise
 
 - Read refusals as hard as successes: four wrong refusals ("pulsing half squat", "mini band

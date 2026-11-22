@@ -18,13 +18,10 @@ can grade against Carry.
 
 Step 1, the coach core:
 
-- [ ] Words the lists leave over on the corpus, for madCode's first review list: "tap"
-  ("alt dumbbell tap"), "step out", "balance", "stand" ("sit-up to stand"), bare "press" and
-  "rotation", "jack", "walkout", "ultimate". Of 1,546 exercise rows, 311 have such a word (cycle 3's count); "tap" alone is 45. Also: "low
-  bench high plank" is refused as two positions. *(cycle 1, cycle 3)*
 - [ ] One exercise, one key, found by cycle 3's review: "dumbbell" and a bare line on a
   lift ("dumbbell alt lateral lunge" and "alt lateral lunge"), "lying on bench" and "bench",
-  "rows" and "low row" and "bent-over row", "trx row" and "TRX low row". Settle per movement
+  "rows" and "low row" and "bent-over row", "trx row" and "TRX low row", "bench RFE split squat" and "RFE split squat", "high side
+  plank" and "side plank [high plank]". Settle per movement
   with the corpus grade. *(cycle 3)*
 - [ ] Refused but readable, from the same review: `position` holds what you're on, your body
   shape and where the weight sits, so "low bench high plank … row" and "incline bench chest
@@ -51,6 +48,28 @@ Step 3, logging:
 - [ ] Export in the scorecard's shape and the full log, on a schedule, to a folder madCode
   picks; Android backup. *(madCode)*
 
+## Your call
+
+- **Board words for madCode to sort**, from the public corpus, with the line they come from.
+  Each stays "not sure" until answered; a guess, where there is one, is in brackets. *(cycle 4)*
+  - "tap": "high plank alt dumbbell tap", "tap front squat". (Touch the dumbbell; a front-loaded
+    tap squat?)
+  - "to stand": "sit-up to stand", "seated shoulder press to stand". (Its own exercise, or
+    ignore?)
+  - "balance": "balance bicep curl". (On one leg?)
+  - "with rotation": "push press with rotation", "thruster with rotation". (Which rotation?)
+  - bare "press": "squat to press", "reverse lunge to press". (Shoulder press?)
+  - "step-out deadlift", "step back low row".
+  - "wide": "wide bicep curl". (Wide grip?)
+  - Setup: "feet on bench", "hands on bosu", "hand on bench", "foot on bench" on a bridge,
+    "shoulders on bench" (a bench bridge; on a press, a press in a bridge), "feet in straps".
+  - "anchor": "chest fly (anchor)", "knee drive (feet on bosu) - anchor".
+  - "switch": "bear plank switch alt low row". "hinge": "split squat with hinge".
+  - "tap squat jump", "single leg hop", "split squat hop", "ultimate burpee", "b-stance goblet
+    squat", "bent arm lateral raise", "straight arm sit-up".
+  - "reach": "with overhead reach", "chest press to reach".
+  - "high plank jack" and "high plank pop": a plank jack or pop done in high plank?
+
 ## Recurring reviews
 
 See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
@@ -74,6 +93,9 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
   to a folder madCode controls.
 
 ## Done
+
+- [x] Board words with a plain meaning: 22 exercises, "rear foot on bench", "moderate", "buy-out" and "recover when done"; the rest on madCode's list above. Cycle 4,
+  2026-11-22.
 
 - [x] Identity: each line's words named as movements with variations, or "not sure" with why;
   traps 6 and 10, the close-grip floor press, and the review's refusals tested. Cycle 3,

@@ -122,6 +122,11 @@ what is on the board, and nothing says so.
   as aliases ("hammer curl" under bicep curl, a bare "rotation" under torso rotation). Here an
   alias is only another spelling, a named variation is a word on its axis, and a combo ("lunge
   with torso rotation") is two movements and a connector, never a list entry.
+- **A new name is added only when its meaning is plain from the boards**, and then as its own
+  exercise ("tap squat", "tricep push-up"), so it borrows no number until it is logged. A setup
+  phrase is added only when it settles one variation on any movement ("rear foot on bench" is
+  rear foot elevated); one that could be two exercises ("feet on bench" on a climber,
+  "shoulders on bench" on a press) stays unknown, and so on madCode's review list.
 - **Every phrase means one thing.** Loading the lists fails if a phrase is in two places, so
   which one a line meant never depends on file order. The longest phrase wins when reading:
   "high plank" is a position before "high pull" could be a movement.

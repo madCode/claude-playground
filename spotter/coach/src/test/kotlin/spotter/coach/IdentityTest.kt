@@ -147,4 +147,30 @@ class IdentityTest {
         assertEquals(Why.UNKNOWN_WORDS, notSure("8 x close squat").why)
         assertEquals(known("8 x dumbbells bicep curl").key, known("8 x dbs bicep curl").key)
     }
+
+    // Words from the corpus whose meaning is plain: each is its own exercise, so it borrows no
+    // number from a plainer one ("tap squat" is not a squat, "tricep push-up" not a push-up).
+    @Test
+    fun corpusExercisesAreTheirOwn() {
+        assertEquals("tap squat [position=bench]", known("10 x bench tap squat").key)
+        assertEquals(
+            "step-out squat [alternating=yes, implement=one dumbbell, both hands]",
+            known("10 total x goblet alt step-out squat").key,
+        )
+        assertEquals("tricep push-up", known("8 x tricep push-up, rest").key)
+        assertEquals("squat jack", known("30 sec of squat jacks").key)
+        assertEquals(setOf("moderate"), known("5 x sumo goblet squat (moderate)").hints)
+    }
+
+    // Setup words that settle a variation read as it; ones that could mean either of two
+    // exercises stay unknown.
+    @Test
+    fun setupWordsReadOnlyWhenTheyAreUnambiguous() {
+        assertEquals("rear foot elevated", known("8 each x RFE split squat (rear foot on bench)").parts.single().variations["legs"])
+        // On a bridge it is a bench bridge, on a press a press in a bridge: not one word.
+        assertEquals(Why.UNKNOWN_WORDS, notSure("8 x close grip chest press (shoulders on bench)").why)
+        // Feet in the straps is a different push-up from hands in them.
+        assertEquals(Why.UNKNOWN_WORDS, notSure("10 x push-up (feet in straps)").why)
+        assertEquals(Why.UNKNOWN_WORDS, notSure("10 total x mountain climber (feet on bench)").why)
+    }
 }

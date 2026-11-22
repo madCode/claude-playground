@@ -4,11 +4,28 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Status
 
-- **Built so far:** the design, and the coach's first piece: loads per hand with a count, and
-  the rack's uneven steps.
-- **Waiting on you:** installing the first debug build on your phone, once it's published.
+- **Built so far:** the design; loads per hand on the rack's steps; reading a board line's
+  count; naming its exercise, in full on 83% of Carry's board rows; the app, which updates
+  itself.
+- **Waiting on you:** the board words to sort (BACKLOG.md, "Your call"), and whether history
+  import moves up.
 
 ## Sunday 22 November 2026
+
+### Cycle 4: words the boards use
+- **Why:** a row with an unknown word gets no number, and 311 of Carry's 1,546 exercise rows
+  had one.
+- **Shipped:** 22 exercises whose meaning is plain from the boards ("tap squat", "step-out
+  squat", "squat jack", "tricep push-up", "windmill"), each its own exercise so it borrows no
+  number; "rear foot on bench" as rear foot elevated; "moderate" as a hint; "buy-out" as a label; and "recover when done until
+  next round begins" taken off. Named in full: 1,191 rows before, 1,276 (83%) after; rows with an
+  unknown word: 311 before, 209 after.
+- **Review caught:** "shoulders on bench" read as a flat bench on a press, and "feet in straps"
+  as a TRX push-up, which puts hands in the straps; both now stay unknown. Also "band walk"
+  filed as a lateral walk, and labels matched inside longer words. All fixed.
+- **Left for you:** words whose meaning isn't plain, like "tap" alone, "to stand", "balance",
+  and "feet on bench" (which could be either of two climbers). They're listed with their board
+  lines in BACKLOG.md.
 
 ### Cycle 3: naming the exercise
 - **Why:** the number for a row is only as good as knowing which exercise it is; this is where

@@ -181,4 +181,16 @@ class BoardLineTest {
         assertNull(read("2147483648 x squat").scheme)
         assertNull(read(" ,".repeat(140) + " rest").scheme)
     }
+
+    // A buy-out is a label like a buy-in, and a round's "recover when done" is not the exercise.
+    @Test
+    fun aBuyOutAndARecoveryComeOff() {
+        val out = read("Buy-out: 1 min of low plank")
+        assertEquals("buy-out", out.label)
+        assertEquals(Timed(60), out.scheme)
+        val round = read("20 sec to complete 8 x bench tap squat, recover when done until next round begins")
+        assertEquals(Reps(8, 8, Count.PLAIN), round.scheme)
+        assertEquals("bench tap squat", round.words)
+        assertNull(read("buy-outs: 10 x squat").label)
+    }
 }

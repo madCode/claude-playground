@@ -94,7 +94,8 @@
    "rear foot elevated": [
     "rfe",
     "rear foot elevated",
-    "rear-foot elevated"
+    "rear-foot elevated",
+    "rear foot on bench"
    ]
   },
   "position": {
@@ -228,6 +229,9 @@
    "light": [
     "light",
     "lighter"
+   ],
+   "moderate": [
+    "moderate"
    ]
   },
   "band": {
@@ -314,7 +318,9 @@
   "the",
   "a",
   "on",
-  "for"
+  "for",
+  "count & check reps",
+  "count and check reps"
  ],
  "scheme": [
   "x",
