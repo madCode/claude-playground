@@ -154,6 +154,11 @@ class SheetTest {
         val deadlift = kept.first { it.shown == "8 x deadlift" }
         assertEquals(deadlift.id, fetched.first { it.shown == "8 x deadlift" }.id)
         assertTrue(kept.indexOf(deadlift) != fetched.indexOfFirst { it.id == deadlift.id })
+        // A board fixed after posting: a capital, a double space, the block's minutes.
+        val edited = Sheet.make(listOf("**Floor Block 1 - 13 minutes circuit**", "* 8 x close grip chest press (explosive)", "* 8 x  Deadlift"), emptyList(), identity).rows
+        assertEquals(deadlift.id, edited.first { it.shown.endsWith("Deadlift") }.id)
+        // The count is part of the row.
+        assertTrue(Sheet.make(listOf("**Floor Block 1 - 12.5 minutes circuit**", "* 10 x deadlift"), emptyList(), identity).rows.single().id != deadlift.id)
         val twice = Sheet.make(listOf("**Floor Block 1**", "* 8 x squat", "* 8 x deadlift", "* 8 x squat", "**Floor Block 2**", "* 8 x squat"), emptyList(), identity).rows
         assertEquals(4, twice.map { it.id }.toSet().size)
     }

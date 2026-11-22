@@ -19,7 +19,7 @@ data class SheetRow(
     val warnings: List<String>,
 ) {
     /** The board's own words, as posted, without the bullet. */
-    val shown: String get() = shownWords(line)
+    val shown: String get() = line.raw.trim().trimStart('*', '•', '-', ' ').replace("**", "")
 
     /** What Spotter read the line as, shown beneath the board's words so a misreading is visible. */
     val understood: String
@@ -39,8 +39,6 @@ data class SheetRow(
             null -> listOf(if (reading is Reading.NotSure) "Not sure what this is, so no number." else "Done without a weight.")
         }
 }
-
-private fun shownWords(line: BoardLine) = line.raw.trim().trimStart('*', '•', '-', ' ').replace("**", "")
 
 /** Today's sheet for one class, rows in board order. */
 data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
@@ -92,7 +90,7 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
         fun make(lines: List<String>, log: List<Logged>, identity: Identity, borrowedFrom: String? = null): Sheet {
             var block: String? = null
             val rows = mutableListOf<SheetRow>()
-            val seen = mutableMapOf<Pair<String?, String>, Int>()
+            val seen = mutableMapOf<Pair<String, String>, Int>()
             for (raw in lines) {
                 val line = BoardLine.read(raw)
                 when (line.kind) {
@@ -103,9 +101,12 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
                     }
                     LineKind.INSTRUCTION -> Unit
                     LineKind.EXERCISE -> {
-                        val words = shownWords(line)
-                        val n = seen.merge(block to words, 1, Int::plus)!!
-                        rows += row("${block.orEmpty()} / $words / $n", block, line, log, identity)
+                        // From what the reader made of the line and the block's name, not their
+                        // raw text: a later fix to a capital, a quote or a block's minutes keeps it.
+                        val name = block?.split(" · ")?.joinToString(" · ") { it.substringBefore(" - ").trim() }.orEmpty()
+                        val read = listOfNotNull(line.label, line.scheme?.toString(), line.words, line.side).joinToString(" ")
+                        val n = seen.merge(name to read, 1, Int::plus)!!
+                        rows += row("$name / $read / $n", block, line, log, identity)
                     }
                 }
             }
