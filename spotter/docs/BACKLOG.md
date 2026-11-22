@@ -28,10 +28,8 @@ Step 1, the coach core:
   press" clash; "high plank jack" loses "plank jack" to "high plank". *(cycle 3)*
 - [ ] With load: a banded line with no implement ("banded squat") doesn't want a weight
   (trap 6). *(cycle 3)*
-- [ ] The sheet: rows in block order, warnings first, ▲ ▼ =, a reason for every number, test
-  numbers; traps 2, 9, 11. Feeds each row's history to `Progression`, checks an imported load's
-  unknown count can't contradict the row (DESIGN.md, "Loads"), and credits combo parts on the
-  same implement. *(design)*
+- [ ] The sheet's "why this number" detail and warnings shown on screen: step 2's screens.
+  *(design)*
 - [ ] More stated factors for borrowing, madCode asked for them (2026-11-22): single arm from two,
   Bosu, a b-stance or balance version from the plain one, each conservative and in the reason.
   One leg from two (0.6) is in. *(madCode)*
@@ -84,6 +82,12 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
   to a folder madCode controls.
 
 ## Done
+
+- [x] The sheet: rows in board order under their blocks, warnings first, ▲ ▼ =, a test weight
+  on a big jump; combos from their parts held the same way, the lightest (trap 2); bodyweight,
+  banded and bare push-ups want no weight (trap 6); ladders and totals as reps a side for round 1
+  (traps 7, 8); a borrowed board says so (trap 9); an imported count takes the row's. Cycle 6,
+  2026-11-22.
 
 - [x] Progression: up, hold, down from a log of sets; a hurt set never raises a number (trap 3);
   a later miss caps an older success (trap 4); Epley only in 3 to 12 reps; a test number on a

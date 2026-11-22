@@ -2,6 +2,11 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 6 — build: the sheet
+
+- Run a real day's board (the `carry-boards` branch) through the new piece before review: a
+  made-up board passed, the real one showed four kinds of noise rows at once.
+
 ### Cycle 5 — build: the suggested weight
 
 - A break that stays green can be masked by a second rule giving the same answer (a timed 20

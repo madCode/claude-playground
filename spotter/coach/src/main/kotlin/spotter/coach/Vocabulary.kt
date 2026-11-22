@@ -14,6 +14,8 @@ data class Movement(
     val muscles: List<String> = emptyList(),
     /** Done on one leg even when the line has no stance word: lunges, step-ups (trap 10). */
     val oneLeg: Boolean = false,
+    /** Done without a weight unless the line names one: a bare "push-up" wants none (trap 6). */
+    val bodyweight: Boolean = false,
 )
 
 /** What a phrase on a board line means. Every phrase means exactly one thing. */

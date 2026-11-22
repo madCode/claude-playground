@@ -193,4 +193,26 @@ class BoardLineTest {
         assertEquals("bench tap squat", round.words)
         assertNull(read("buy-outs: 10 x squat").label)
     }
+
+    // From a real board through the sheet: the post's title, the time between blocks and a
+    // lone backslash are not exercises.
+    @Test
+    fun titlesRecoveriesAndBlankLinesAreNotExercises() {
+        assertEquals(LineKind.HEADING, read("# **2G intel**").kind)
+        assertEquals(LineKind.INSTRUCTION, read("**90 sec recovery**").kind)
+        assertEquals(LineKind.INSTRUCTION, read("* 1 min to transition to the rower").kind)
+        assertEquals(LineKind.INSTRUCTION, read("**90 sec WR, get to base when ready**").kind)
+        assertEquals(LineKind.INSTRUCTION, read("\\").kind)
+        assertEquals(LineKind.INSTRUCTION, read("* 45 sec base").kind)
+        assertEquals(LineKind.INSTRUCTION, read("* 30 sec rest").kind)
+        assertEquals(LineKind.INSTRUCTION, read("* row (20 - 24 strokes / minute)").kind)
+        assertEquals(LineKind.INSTRUCTION, read("* Check &amp; remember distance").kind)
+        assertEquals(LineKind.INSTRUCTION, read("Member choice - lift more OR row more:").kind)
+        assertEquals(LineKind.HEADING, read("**Row Block - 2.5 minutes**").kind)
+        assertEquals(LineKind.INSTRUCTION, read("* WR until ready to begin next round").kind)
+        assertEquals(LineKind.INSTRUCTION, read("Nice template - endurance and power on the treads and the opportunity to lifting or rowing on the floor.").kind)
+        // Only a whole line of recovery: an exercise done as the recovery is still one.
+        assertEquals(LineKind.EXERCISE, read("30 sec of active recovery: bird dog").kind)
+        assertEquals(LineKind.EXERCISE, read("8 x reverse lunge (transition)").kind)
+    }
 }

@@ -11,6 +11,24 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 6: the sheet
+- **Why:** the last piece of the coach before the phone can show today's numbers.
+- **Shipped:** `Sheet`, from a class's board lines and the log to the rows the glance shows: the
+  board's words, then the number with ▲ ▼ =, a test weight on a big jump, or "no weight", "new:
+  go light", or "?" with the reason on top. Combos take the lightest of their parts done the
+  same way; push-ups, planks and bodyweight lines want no weight.
+- **Review caught**, on the corpus and the feed: a combo took its heavier part's number when
+  the lighter part had none, or hurt, or was held differently ("deadlift to high pull" at the
+  deadlift's weight); TRX, holds, pulses and unflagged bodyweight moves (pull-up, v-up) wanted a
+  weight, while a single-arm press with a mini band didn't; a nested "Back-to-back complex:"
+  heading lost its block; "45 sec base", "30 sec rest", stroke-rate and "member choice" lines
+  showed as rows; a change of reps showed ▼; and a curl on one leg borrowed 0.6 of a curl. All
+  fixed and tested. The first recovery rule also hid "30 sec of active recovery: bird dog"; it
+  now takes only a whole line of recovery.
+- **Found on a real board:** the post's title, "90 sec recovery", "1 min to transition to the
+  rower" and lone backslashes were rows. Now they're not, and Carry's 1,546 exercise rows are
+  unchanged.
+
 ### Cycle 5: the suggested weight
 - **Why:** the first piece that puts a number on a row; madCode asked for faster progress on
   step 1, so progression came before the corpus grade.

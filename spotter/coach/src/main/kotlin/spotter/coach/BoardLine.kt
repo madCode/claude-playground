@@ -76,13 +76,18 @@ data class BoardLine(
 
         // Lines that tell the class what to do, rather than naming an exercise. Reading one as an
         // exercise is how "Good morning, all!" once became the good-morning lift (trap 5).
-        private val instructionStart = Regex("""^(repeat|goal|until|match|increase|then|complete|rest)\b""")
+        private val instructionStart = Regex("""^(repeat|goal|until|match|increase|then|complete|rest|member|check|wr)\b""")
         // A second sentence of five words or more; "alt." and a short cue ("count & check reps")
         // after a full stop are still part of a workout line.
         private val moreSentences = Regex("""\.\s+\S+(?:\s+\S+){4,}""")
+        // One long sentence with no count in front: "Nice template - endurance and power … floor."
+        private val sentence = Regex("""^[^\d~].*\s\S+(?:\s+\S+){8,}\.$""")
         private val talk = Regex("""\b(you|your|we|our|i|my)\b""")
         // Tread and rower lines name no dumbbell lift, though "row" is a movement's name.
-        private val cardio = Regex("""\b\d+\s?m\b|%|\ball[- ]?outs?\b|\bao\b|\bpush pace\b|\bmph\b|\brower\b|\btread\b|\bjog\b|\brun\b""")
+        private val cardio = Regex("""\b\d+\s?m\b|%|\ball[- ]?outs?\b|\bao\b|\bpush pace\b|\bmph\b|\brower\b|\btread\b|\bjog\b|\brun\b|\bstrokes\b|\bdistance\b""")
+        // Time between blocks: "90 sec recovery", "1 min to transition to the rower", "90 sec WR".
+        // Only a whole line of it: "30 sec of active recovery: bird dog" is still a bird dog.
+        private val between = Regex("""^~?\d{1,4}\s*(?:sec|secs|seconds|min|mins|minutes)\s+(?:of\s+)?(?:active\s+)?(?:recovery|rest|base|wr\b.*|to transition\b.*)$""")
 
         fun read(raw: String): BoardLine {
             if (raw.length > MAX_LENGTH) return other(raw, LineKind.INSTRUCTION, raw.take(80))
@@ -97,15 +102,19 @@ data class BoardLine(
                 label = m.groups[1]!!.value.replace("buy in", "buy-in").replace("buy out", "buy-out")
                 text = text.substring(m.range.last + 1)
             }
+            // A line with no letters (a lone backslash between paragraphs) says nothing.
+            if (text.none { it.isLetter() }) return other(raw, LineKind.INSTRUCTION, text)
+            // "# 2G intel": the post's title.
+            if (text.startsWith("#")) return other(raw, LineKind.HEADING, text.trimStart('#', ' '))
             if (instructionStart.containsMatchIn(text)) return other(raw, LineKind.INSTRUCTION, text)
-            if (text.endsWith(":") || Regex("""^floor block|^block \d|^tread block|\bchallenge:?$""").containsMatchIn(text)) {
+            if (text.endsWith(":") || Regex("""^(?:floor|tread|row|tread / row|tread/row) block|^block \d|\bchallenge:?$""").containsMatchIn(text)) {
                 return other(raw, LineKind.HEADING, text)
             }
             // Commentary: a cheer, a question, a sentence to the reader, or more than one sentence.
-            if (text.contains('!') || text.contains('?') || talk.containsMatchIn(text) || moreSentences.containsMatchIn(text)) {
+            if (text.contains('!') || text.contains('?') || talk.containsMatchIn(text) || moreSentences.containsMatchIn(text) || sentence.matches(text)) {
                 return other(raw, LineKind.INSTRUCTION, text)
             }
-            if (cardio.containsMatchIn(text)) return other(raw, LineKind.INSTRUCTION, text)
+            if (cardio.containsMatchIn(text) || between.containsMatchIn(text)) return other(raw, LineKind.INSTRUCTION, text)
 
             var count: Count? = null
             trailingCount.find(text)?.let { m ->
