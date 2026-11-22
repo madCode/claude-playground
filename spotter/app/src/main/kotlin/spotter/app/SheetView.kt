@@ -68,7 +68,9 @@ fun TodayView(
         draft = LogDraft.from(s.sheet, s.logged)
         loggingClass = name(s)
     }
-    val logging = listOfNotNull(today as? Today.Showing, earlier).firstOrNull { name(it) == loggingClass }
+    // The earlier one first: just after a save both can briefly be the same class, and it is
+    // the one that carries the fresh log.
+    val logging = listOfNotNull(earlier, today as? Today.Showing).firstOrNull { name(it) == loggingClass }
     if (logging != null) {
         LogView(
             logging,
@@ -83,7 +85,8 @@ fun TodayView(
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        earlier?.let { EarlierClass(it) { start(it) } }
+        // Only a class with something to log is worth the top of the screen.
+        earlier?.takeIf { it.sheet.rows.any(LogDraft::loggable) }?.let { EarlierClass(it) { start(it) } }
         TodayBody(today, onAllowCalendar) { start(it) }
     }
 }

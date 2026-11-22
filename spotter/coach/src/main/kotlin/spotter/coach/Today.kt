@@ -67,6 +67,12 @@ object Booking {
     private val orange = Regex("""^\W*orange\b""", RegexOption.IGNORE_CASE)
     private val format = Regex("""orange.*?(\dg)\b""", RegexOption.IGNORE_CASE)
 
+    /**
+     * How long after its start a logged class is still the sheet's: saving the first block's rows
+     * mid-class mustn't swap the sheet for tomorrow's before the class is over.
+     */
+    val CLASS_LENGTH: java.time.Duration = java.time.Duration.ofMinutes(50)
+
     /** How far back a class can still be logged, or its log changed, from the home screen. */
     const val EARLIER_DAYS = 2L
 
@@ -84,13 +90,12 @@ object Booking {
      */
     fun next(events: List<CalendarEvent>, now: LocalDateTime, logged: Set<Pair<LocalDate, String>> = emptySet()): BookedClass? {
         val today = now.toLocalDate()
-        fun done(c: BookedClass) = (c.date to c.logName) in logged && (c.start == null || !c.start.isAfter(now))
-        val upcoming = classes(events)
-            .filter { it.date == today || it.date == today.plusDays(1) }
-            .filter { it.start == null || !it.start.isBefore(now.minus(KEPT_AFTER_START)) }
+        fun done(c: BookedClass) = (c.date to c.logName) in logged && (c.start == null || !c.start.plus(CLASS_LENGTH).isAfter(now))
+        val days = classes(events).filter { it.date == today || it.date == today.plusDays(1) }
         // A day whose class is logged is over: an entry beside it that names no format ("Orange
-        // 60 - Tornado", the day's theme) doesn't keep the day open.
-        val over = upcoming.filter(::done).map { it.date }.toSet()
+        // 60 - Tornado", the day's theme) doesn't keep the day open, at any hour.
+        val over = days.filter(::done).map { it.date }.toSet()
+        val upcoming = days.filter { it.start == null || !it.start.isBefore(now.minus(KEPT_AFTER_START)) }
         return upcoming.filterNot { done(it) || (it.tag == null && it.date in over) }
             .groupBy { it.date }.entries.firstOrNull()?.value
             // A day's class with a format first ("Orange 60 - Tornado" may be a theme beside it);
@@ -103,12 +108,17 @@ object Booking {
      * shows ([current]): still loggable after the sheet has moved on, so coffee after class
      * doesn't cost the log. Only a class that names its format has a board to log against.
      */
-    fun earlier(events: List<CalendarEvent>, now: LocalDateTime, current: BookedClass?): BookedClass? {
+    fun earlier(
+        events: List<CalendarEvent>, now: LocalDateTime, current: BookedClass?, logged: Set<Pair<LocalDate, String>> = emptySet(),
+    ): BookedClass? {
         val today = now.toLocalDate()
+        // By day and name, as the log is kept: one class entered twice in the calendar under
+        // two titles isn't offered beside itself.
+        val shown = current?.let { it.date to it.logName }
         return classes(events).lastOrNull { c ->
-            c.tag != null && c != current && !c.date.isBefore(today.minusDays(EARLIER_DAYS)) &&
-                // An all-day entry has started once its day is past.
-                (c.start?.let { !it.isAfter(now) } ?: c.date.isBefore(today))
+            c.tag != null && (c.date to c.logName) != shown && !c.date.isBefore(today.minusDays(EARLIER_DAYS)) &&
+                // An all-day entry has started once its day is past, or once it is logged.
+                (c.start?.let { !it.isAfter(now) } ?: (c.date.isBefore(today) || (c.date to c.logName) in logged))
         }
     }
 }

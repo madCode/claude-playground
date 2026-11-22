@@ -218,6 +218,31 @@ class LogScreenTest {
         compose.onNodeWithText("2G · Sat 21 Nov · 9:50 isn't logged yet.").assertDoesNotExist()
     }
 
+    // Just saved, and the next class's board isn't on the phone yet: the logged class's sheet
+    // doesn't sit there without its log while the fetch runs.
+    @Test
+    fun aLoggedClassDoesNotLingerWhileTheNextIsFetched() {
+        val shown = today(saturday)
+        val logged = setOf(saturday to "2G")
+        assertEquals(Today.Loading, Today.afterKept(shown, null, logged))
+        // Not logged, or nothing changed: what is showing stays until the fetch says otherwise.
+        assertEquals(shown, Today.afterKept(shown, null, emptySet()))
+        val next = today(saturday.plusDays(1))
+        assertEquals(next, Today.afterKept(shown, next, logged))
+    }
+
+    // A class with nothing to log isn't put at the top of the screen.
+    @Test
+    fun anEarlierClassWithNothingToLogIsNotOffered() {
+        val bodyweight = Today.of(
+            TodaysBoard.Lines(BookedClass("2G", saturday, saturday.atTime(9, 50), "Orange 60 Min 2G"), listOf("* 8 x tricep push-up")),
+            emptyList(), identity, vocabulary,
+        ) as Today.Showing
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = today(saturday.plusDays(1)), earlier = bodyweight) }
+        compose.onNodeWithText("Log this class").assertIsDisplayed()
+        compose.onNodeWithText("isn't logged yet", substring = true).assertDoesNotExist()
+    }
+
     private fun shoot(name: String) {
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         val colours = (0 until bitmap.width step 20).flatMap { x -> (0 until bitmap.height step 20).map { y -> bitmap.getPixel(x, y) } }.toSet()

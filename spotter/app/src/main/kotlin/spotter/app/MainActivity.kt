@@ -103,6 +103,7 @@ class MainActivity : ComponentActivity() {
     private fun load() {
         if (!calendar.allowed()) {
             today.value = Today.NeedsCalendar
+            earlier.value = null
             if (!getSharedPreferences("spotter", MODE_PRIVATE).getBoolean(ASKED_CALENDAR, false)) allowCalendar()
             return
         }
@@ -114,7 +115,8 @@ class MainActivity : ComponentActivity() {
             val entries = withContext(Dispatchers.IO) { log.entries() }
             val logged = Today.loggedClasses(entries)
             // The kept board first, then the fetched one.
-            withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), fetch = false, logged) }?.let { today.value = Today.of(it, entries, identity, vocabulary) }
+            val kept = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), fetch = false, logged) }
+            today.value = Today.afterKept(today.value, kept?.let { Today.of(it, entries, identity, vocabulary) }, logged)
             earlier.value = withContext(Dispatchers.IO) { loader.earlier(LocalDateTime.now(), logged) }
                 ?.let { Today.of(it, entries, identity, vocabulary) as? Today.Showing }
             val fetched = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), logged = logged) }

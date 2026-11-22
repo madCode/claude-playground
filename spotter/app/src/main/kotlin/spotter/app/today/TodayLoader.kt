@@ -32,7 +32,7 @@ class TodayLoader(private val boards: Boards, private val events: (LocalDate) ->
         val today = now.toLocalDate()
         val recent = events(today) ?: return null
         val past = events(today.minusDays(Booking.EARLIER_DAYS)) ?: return null
-        val booked = Booking.earlier((past + recent).distinct(), now, Booking.next(recent, now, logged)) ?: return null
+        val booked = Booking.earlier((past + recent).distinct(), now, Booking.next(recent, now, logged), logged) ?: return null
         val board = boards.lastGood(booked.date)?.takeIf { it.date == booked.date } ?: return null
         return TodaysBoard.choose(booked, board, null) as? TodaysBoard.Lines
     }

@@ -2,6 +2,13 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 15 — build: which class, after logging
+
+- "Logged" is not "finished": a rule keyed on any saved row fires mid-class. Ask what state
+  the person is in when the rule first becomes true.
+- A fake that ignores its argument (a calendar lambda returning one list for any date) can't
+  see a dropped query: make the fake answer as the real thing does.
+
 ### Cycle 14 — build: the rack picker
 
 - A line added above the controls on the first tap moves them under the thumb: put what

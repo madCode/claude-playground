@@ -64,7 +64,11 @@ Step 3, logging:
     the real board's row with the same exercise; rows with no match are shown with Clear.
   - A repeat of a line added above the one done shifts the repeat number, so the log moves to
     the other copy (same words, so the same weight).
-  - Two classes of the same format on one day share one log (keyed by date and "2G").
+  - Two classes of the same format on one day share one log (keyed by date and "2G"), so
+    logging the first skips the second's sheet; and with two formats in a day, the earlier
+    one's sheet reads the later one's log. Key a class by its start as well. *(cycles 12, 15)*
+  - "… isn't logged yet" counts rows by id, so a class logged from a board since changed reads
+    as not logged; it also can't be dismissed for a class left unlogged on purpose. *(cycle 15)*
 - [ ] The scorecard export from the log: it takes rows by index (`ScorecardSession.from`); map
   ids to places. *(cycle 11 review)*
 - [ ] Export in the scorecard's shape and the full log, on a schedule, to a folder madCode
