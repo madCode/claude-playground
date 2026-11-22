@@ -56,20 +56,24 @@ data class BookedClass(val tag: String?, val date: LocalDate, val start: LocalDa
 data class CalendarEvent(val title: String, val date: LocalDate, val start: LocalDateTime?)
 
 object Booking {
+    /** A 60-minute class, the drive and the logging, with room to spare. */
+    val KEPT_AFTER_START: java.time.Duration = java.time.Duration.ofHours(3)
+
     // "Orange 60 Min 2G": the format is in the title, as the studio's booking puts it there.
     // A booking's title starts with the studio's name; "Lunch with an orange" isn't one.
     private val orange = Regex("""^\W*orange\b""", RegexOption.IGNORE_CASE)
     private val format = Regex("""orange.*?(\dg)\b""", RegexOption.IGNORE_CASE)
 
     /**
-     * The next booked class in [events] from [now]: today's if one hasn't started yet (or has no
-     * time), otherwise tomorrow's. Nobody picks the class by hand.
+     * The next booked class in [events] from [now]: today's until [KEPT_AFTER_START] after it
+     * starts (or all day when it has no time), otherwise tomorrow's. Nobody picks the class by
+     * hand. The class stays long enough to be logged in the car afterwards.
      */
     fun next(events: List<CalendarEvent>, now: LocalDateTime): BookedClass? =
         events.asSequence()
             .filter { it.date == now.toLocalDate() || it.date == now.toLocalDate().plusDays(1) }
             .sortedWith(compareBy({ it.date }, { it.start ?: it.date.atStartOfDay() }))
-            .filter { it.start == null || !it.start.isBefore(now.minusHours(1)) }
+            .filter { it.start == null || !it.start.isBefore(now.minus(KEPT_AFTER_START)) }
             .filter { orange.containsMatchIn(it.title) }
             .groupBy { it.date }.entries.firstOrNull()?.value
             // A day's class with a format first ("Orange 60 - Tornado" may be a theme beside it);

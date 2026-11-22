@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "92075b8a7facab11269b6409c8644092",
+    "identityHash": "9dc7ba34fec8100f1f1d2c30611d212a",
     "entities": [
       {
         "tableName": "events",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `at` INTEGER NOT NULL, `kind` TEXT NOT NULL, `target` INTEGER, `date` TEXT NOT NULL, `className` TEXT NOT NULL, `row` TEXT NOT NULL, `line` TEXT NOT NULL, `key` TEXT NOT NULL, `parts` TEXT NOT NULL, `lb` INTEGER NOT NULL, `count` INTEGER, `targetLow` INTEGER, `targetHigh` INTEGER, `ladder` TEXT, `reps` TEXT NOT NULL, `hurt` INTEGER NOT NULL, `formBroke` INTEGER NOT NULL, `stopped` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `at` INTEGER NOT NULL, `kind` TEXT NOT NULL, `target` INTEGER, `date` TEXT NOT NULL, `className` TEXT NOT NULL, `row` TEXT NOT NULL, `line` TEXT NOT NULL, `key` TEXT NOT NULL, `parts` TEXT NOT NULL, `lb` INTEGER NOT NULL, `count` INTEGER, `targetLow` INTEGER, `targetHigh` INTEGER, `ladder` TEXT, `reps` TEXT NOT NULL, `hurt` INTEGER NOT NULL, `formBroke` INTEGER NOT NULL, `stopped` INTEGER NOT NULL, `easy` INTEGER NOT NULL, `hard` INTEGER NOT NULL, `easier` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -116,6 +116,24 @@
             "columnName": "stopped",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "easy",
+            "columnName": "easy",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hard",
+            "columnName": "hard",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "easier",
+            "columnName": "easier",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -128,7 +146,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '92075b8a7facab11269b6409c8644092')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9dc7ba34fec8100f1f1d2c30611d212a')"
     ]
   }
 }

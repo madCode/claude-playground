@@ -17,6 +17,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import spotter.app.log.EventLog
+import spotter.app.log.LogDatabase
+import spotter.coach.LogDraft
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import spotter.app.today.Boards
@@ -50,6 +56,7 @@ class MainActivity : ComponentActivity() {
                 onCopyVersion = { copy(version) },
                 today = today.value,
                 onAllowCalendar = ::allowCalendar,
+                onSaveLog = ::saveLog,
             )
         }
     }
@@ -102,10 +109,25 @@ class MainActivity : ComponentActivity() {
         loading?.cancel()
         loading = lifecycleScope.launch {
             val loader = TodayLoader(Boards(File(filesDir, "boards")), calendar::events)
-            // The kept board first, then the fetched one. Nothing is logged yet: logging is step 3.
-            withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), fetch = false) }?.let { today.value = Today.from(it, emptyList(), identity) }
+            val entries = withContext(Dispatchers.IO) { log.entries() }
+            // The kept board first, then the fetched one.
+            withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), fetch = false) }?.let { today.value = Today.of(it, entries, identity, vocabulary) }
             val fetched = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now()) }
-            if (fetched != null) today.value = Today.from(fetched, emptyList(), identity)
+            if (fetched != null) today.value = Today.of(fetched, entries, identity, vocabulary)
+        }
+    }
+
+    private val log by lazy { EventLog(LogDatabase.get(this)) }
+
+    // Not cancelled by a rotation or leaving the app mid-write: the save happens once, whole.
+    // What to write is worked out against the log as stored now, so saving twice writes nothing
+    // the second time.
+    private fun saveLog(shown: Today.Showing, draft: LogDraft) {
+        lifecycleScope.launch {
+            withContext(NonCancellable + Dispatchers.IO) {
+                saving.withLock { log.save(draft, shown.sheet, shown.date, shown.className, System.currentTimeMillis()) }
+            }
+            load()
         }
     }
 
@@ -130,6 +152,10 @@ class MainActivity : ComponentActivity() {
 
         // Faster than any person can read a dialog and tap.
         const val NO_DIALOG_MS = 300L
-        val identity by lazy { Identity(Vocabulary.starting()) }
+        val vocabulary by lazy { Vocabulary.starting() }
+        val identity by lazy { Identity(vocabulary) }
+
+        // One save at a time, across activities recreated by a rotation.
+        val saving = Mutex()
     }
 }

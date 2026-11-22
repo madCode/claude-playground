@@ -43,13 +43,13 @@ class TodayTest {
         )
         assertEquals(BookedClass("3G", day, day.atTime(12, 0), "Orange 60 Min 3G"), Booking.next(events, nine))
         // After today's class, tomorrow's.
-        assertEquals("2G", Booking.next(events, day.atTime(14, 0))?.tag)
+        assertEquals("2G", Booking.next(events, day.atTime(16, 0))?.tag)
         // Lower case and an all-day entry.
         assertEquals(BookedClass("2G", day, null, "orange 60 min 2g"), Booking.next(listOf(CalendarEvent("orange 60 min 2g", day, null)), nine))
         assertNull(Booking.next(listOf(CalendarEvent("Lunch with an orange", day, nine)), nine))
-        // An hour after it starts, today's class is still the one.
-        assertEquals(day, Booking.next(events, day.atTime(12, 59))?.date)
-        assertEquals(day.plusDays(1), Booking.next(events, day.atTime(13, 1))?.date)
+        // Three hours after it starts, today's class is still the one, so it can be logged in the car.
+        assertEquals(day, Booking.next(events, day.atTime(14, 59))?.date)
+        assertEquals(day.plusDays(1), Booking.next(events, day.atTime(15, 1))?.date)
     }
 
     // Review: a class today that names no format stops tomorrow's showing in its place.

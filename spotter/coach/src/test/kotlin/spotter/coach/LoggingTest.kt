@@ -1,0 +1,148 @@
+package spotter.coach
+
+import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.time.LocalDate
+
+// An invented lifter logging a board made of public board lines.
+class LoggingTest {
+    private val vocabulary = Vocabulary.starting()
+    private val identity = Identity(vocabulary)
+    private val monday = LocalDate.of(2026, 3, 2)
+    private val thursday = LocalDate.of(2026, 3, 5)
+    private val board = listOf(
+        "**Floor Block 1 - 12 minutes**",
+        "* 8 x chest press",
+        "* 8-10 x deadlift",
+        "* 10 / 8 / 6 x squat",
+        "* 8 x push-up",
+        "* 8 x zorbing",
+        "* 30 sec of goblet squat hold",
+    )
+
+    // A store's ids, as the log assigns them.
+    private val written = mutableListOf<JournalEntry>()
+    private fun write(events: List<JournalEntry>) = events.forEach { written += it.copy(id = written.size + 1L) }
+
+    private fun sheet(day: LocalDate) =
+        Sheet.make(board, Journal.history(written.filter { it.date < day }, vocabulary), identity)
+
+    private fun save(day: LocalDate, draft: LogDraft): List<JournalEntry> {
+        val sheet = sheet(day)
+        val events = Logging.events(draft, sheet, Logging.logged(written, day, "2G"), day, "2G", at = written.size + 100L)
+        write(events)
+        return events
+    }
+
+    private fun row(sheet: Sheet, words: String) = sheet.rows.first { it.shown == words }
+
+    // The whole loop: logged as listed on Monday, the sheet goes up a dumbbell on Thursday.
+    @Test
+    fun aClassLoggedAsListedRaisesTheNextSheet() {
+        val first = sheet(monday)
+        val press = row(first, "8 x chest press")
+        assertEquals(Suggestion.NoNumber.NEW, press.suggestion)
+        // Nothing to have done "as listed" on a new row: it says what was held.
+        assertNull(LogDraft.asListed(press))
+        save(monday, LogDraft().with(press.id, LogDraft.startChanged(press).copy(lb = 25)))
+
+        // 8 reps at 25 was clean: up a dumbbell.
+        val next = row(sheet(thursday), "8 x chest press")
+        assertEquals("2×30 ▲", sheet(thursday).glance(next))
+        save(thursday, LogDraft().with(next.id, LogDraft.asListed(next)))
+        val friday = thursday.plusDays(1)
+        assertEquals("2×35 ▲", sheet(friday).glance(row(sheet(friday), "8 x chest press")))
+    }
+
+    // Saving again writes nothing; a change is a correction; clearing a row removes it.
+    @Test
+    fun savingWritesOnlyWhatChanged() {
+        val sheet = sheet(monday)
+        val press = row(sheet, "8 x chest press")
+        val draft = LogDraft().with(press.id, RowLog(25, 2, 8))
+        assertEquals(listOf(JournalEntry.Kind.LOGGED), save(monday, draft).map { it.kind })
+        // The screen reopened: it starts from what was logged, and saving it again changes nothing.
+        val reopened = LogDraft.from(sheet, Logging.logged(written, monday, "2G"))
+        assertEquals(draft.rows, reopened.rows)
+        assertTrue(save(monday, reopened).isEmpty())
+
+        val corrected = save(monday, reopened.with(press.id, RowLog(25, 2, 7, hurt = true)))
+        assertEquals(JournalEntry.Kind.CORRECTED, corrected.single().kind)
+        assertEquals(1L, corrected.single().target)
+        // Opened from a log written elsewhere since, a row the screen never showed stays logged.
+        assertTrue(save(monday, LogDraft()).isEmpty())
+        val removed = save(monday, LogDraft.from(sheet, Logging.logged(written, monday, "2G")).with(press.id, null))
+        assertEquals(JournalEntry.Kind.REMOVED, removed.single().kind)
+        // The removal names the correction, and the row is gone from history.
+        assertEquals(2L, removed.single().target)
+        assertTrue(Journal.history(written, vocabulary).isEmpty())
+    }
+
+    // A row with nothing to log (bodyweight, not read) writes nothing, whatever the draft says.
+    @Test
+    fun onlyWeightedRowsSpotterReadAreLogged() {
+        val sheet = sheet(monday)
+        val pushUp = row(sheet, "8 x push-up")
+        val unknown = row(sheet, "8 x zorbing")
+        assertEquals(listOf(false, false), listOf(pushUp, unknown).map(LogDraft::loggable))
+        val draft = LogDraft().with(pushUp.id, RowLog(10, 2, 8)).with(unknown.id, RowLog(10, 2, 8))
+        assertTrue(save(monday, draft).isEmpty())
+    }
+
+    // A range is logged at its low end; a ladder keeps its rounds, a side each; a timed row no reps.
+    @Test
+    fun eachKindOfRowIsLoggedInItsOwnTerms() {
+        val sheet = sheet(monday)
+        val deadlift = row(sheet, "8-10 x deadlift")
+        val squat = row(sheet, "10 / 8 / 6 x squat")
+        val hold = row(sheet, "30 sec of goblet squat hold")
+        assertEquals(RowLog(10, 2, 8), LogDraft.startChanged(deadlift))
+        // A goblet hold is one dumbbell in both hands: the row's own count.
+        assertEquals(RowLog(10, 1, null), LogDraft.startChanged(hold))
+        val events = save(
+            monday,
+            LogDraft()
+                .with(deadlift.id, LogDraft.startChanged(deadlift).copy(lb = 40))
+                .with(squat.id, LogDraft.startChanged(squat).copy(lb = 30))
+                .with(hold.id, LogDraft.startChanged(hold).copy(lb = 35)),
+        )
+        val bySquat = events.associateBy { it.row }
+        assertEquals(listOf(8), bySquat.getValue(deadlift.id).reps)
+        assertEquals(listOf(10, 8, 6), bySquat.getValue(squat.id).ladder)
+        assertEquals(listOf(10, 8, 6), bySquat.getValue(squat.id).reps)
+        assertEquals(emptyList<Int>(), bySquat.getValue(hold.id).reps)
+        // Each comes back as the coach reads it, and the squat as a ladder done clean.
+        val history = Journal.history(written, vocabulary)
+        assertEquals(3, history.size)
+        val next = row(sheet(thursday), "10 / 8 / 6 x squat")
+        assertEquals("2×35 ▲", sheet(thursday).glance(next))
+    }
+
+    // An imported number with no count: "changed" asks how many, as listed keeps what the sheet said.
+    @Test
+    fun anUnknownCountIsAskedForWhenChanged() {
+        val imported = Logged(monday, identity.read(BoardLine.read("8 x deadlift").words) as Reading.Known, Load(40, null), 8..8, listOf(8))
+        val deadlift = Sheet.make(listOf("8 x deadlift"), listOf(imported), identity).rows.single()
+        assertEquals(null, LogDraft.asListed(deadlift)!!.count)
+        assertEquals(RowLog(45, 2, 8), LogDraft.startChanged(deadlift))
+    }
+
+    // Another day's or class's log never shows on this one's screen.
+    @Test
+    fun theScreenStartsFromThisClassOnly() {
+        val press = row(sheet(monday), "8 x chest press")
+        save(monday, LogDraft().with(press.id, RowLog(25, 2, 8)))
+        assertTrue(Logging.logged(written, thursday, "2G").isEmpty())
+        assertTrue(Logging.logged(written, monday, "3G").isEmpty())
+    }
+
+    // The draft survives the app being killed as text.
+    @Test
+    fun aDraftRoundTrips() {
+        val draft = LogDraft().with("a", RowLog(25, 2, 8, easy = true, stopped = true)).with("b", RowLog(40, null, null, easier = true))
+        assertEquals(draft, Json.decodeFromString<LogDraft>(Json.encodeToString(draft)))
+    }
+}

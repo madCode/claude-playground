@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import spotter.app.today.Today
+import spotter.coach.LogDraft
 
 /**
  * The app's screen: today's sheet in the middle, a newer build waiting when there is one, and the
@@ -41,6 +42,7 @@ fun HomeScreen(
     onCopyVersion: () -> Unit,
     today: Today = Today.Loading,
     onAllowCalendar: () -> Unit = {},
+    onSaveLog: (Today.Showing, LogDraft) -> Unit = { _, _ -> },
 ) {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
@@ -76,7 +78,7 @@ fun HomeScreen(
                         }
                     }
                 }
-                TodayView(today, onAllowCalendar)
+                TodayView(today, onAllowCalendar, onSaveLog)
                 Spacer(Modifier.heightIn(min = 8.dp))
                 Text(
                     "Version $version · tap to copy",

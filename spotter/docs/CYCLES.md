@@ -2,6 +2,13 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 12 — build: the Log screen, first half
+
+- A screen that writes to the log needs its review pointed at *when* it is used (the car after
+  class), not only at what it writes: the class had already moved on by then.
+- A test helper that copies the activity's save tests the copy: move the save into the store
+  (`EventLog.save`) and call that from both.
+
 ### Cycle 11 — build: a stable row id, a typed "new", tests for why and understood
 
 - An id made from a line's text should come from what the reader made of it, not the raw post:

@@ -11,6 +11,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import spotter.coach.Journal
 import spotter.coach.JournalEntry
+import spotter.coach.LogDraft
+import spotter.coach.Logging
+import spotter.coach.Sheet
 import java.time.LocalDate
 
 /**
@@ -38,12 +41,16 @@ data class EventRow(
     val hurt: Boolean,
     val formBroke: Boolean,
     val stopped: Boolean,
+    val easy: Boolean,
+    val hard: Boolean,
+    val easier: Boolean,
 ) {
     fun toEntry() = JournalEntry(
         id = id, at = at, kind = JournalEntry.Kind.valueOf(kind), target = target, date = LocalDate.parse(date),
         className = className, row = row, line = line, key = key, parts = Journal.partsFrom(parts), lb = lb,
         count = count, targetLow = targetLow, targetHigh = targetHigh, ladder = ladder?.let(Journal::intsFrom),
         reps = Journal.intsFrom(reps), hurt = hurt, formBroke = formBroke, stopped = stopped,
+        easy = easy, hard = hard, easier = easier,
     )
 
     companion object {
@@ -52,6 +59,7 @@ data class EventRow(
             row = e.row, line = e.line, key = e.key, parts = Journal.partsJson(e.parts), lb = e.lb, count = e.count,
             targetLow = e.targetLow, targetHigh = e.targetHigh, ladder = e.ladder?.let(Journal::intsJson),
             reps = Journal.intsJson(e.reps), hurt = e.hurt, formBroke = e.formBroke, stopped = e.stopped,
+            easy = e.easy, hard = e.hard, easier = e.easier,
         )
     }
 }
@@ -61,6 +69,9 @@ interface EventDao {
     // No update or delete here, on purpose: the log only grows.
     @Insert
     fun insert(row: EventRow): Long
+
+    @Insert
+    fun insertAll(rows: List<EventRow>)
 
     @Query("SELECT * FROM events ORDER BY id")
     fun all(): List<EventRow>
@@ -80,7 +91,9 @@ abstract class LogDatabase : RoomDatabase() {
 }
 
 /** The log as the coach reads it. Call off the main thread. */
-class EventLog(private val dao: EventDao) {
+class EventLog(private val db: LogDatabase) {
+    private val dao = db.events()
+
     fun write(entry: JournalEntry): Long = dao.insert(EventRow.of(entry))
 
     /**
@@ -88,4 +101,15 @@ class EventLog(private val dao: EventDao) {
      * newer build after a downgrade) is skipped: it costs that one entry, not the whole log.
      */
     fun entries(): List<JournalEntry> = dao.all().mapNotNull { runCatching { it.toEntry() }.getOrNull() }
+
+    /**
+     * Saves a class's log screen: works out what changed against the log as stored now and writes
+     * it in one transaction, so a reader never sees half a save and a killed app leaves none.
+     */
+    fun save(draft: LogDraft, sheet: Sheet, date: LocalDate, className: String, at: Long): List<JournalEntry> =
+        db.runInTransaction<List<JournalEntry>> {
+            val events = Logging.events(draft, sheet, Logging.logged(entries(), date, className), date, className, at)
+            dao.insertAll(events.map(EventRow::of))
+            events
+        }
 }
