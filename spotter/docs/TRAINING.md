@@ -99,8 +99,8 @@ doesn't cancel one. The reps done decide; the feel breaks ties.
   group.
 
 For Spotter: pick one anchor and keep it. The heaviest round is judged against its own round's
-reps (the "4" of "8 / 6 / 4"), never converted to an 8-rep weight (see 5). A drop set counts
-from its first, heaviest part.
+reps (the "4" of "8 / 6 / 4"), never converted to an 8-rep weight (see 5). A drop set would count
+from its first, heaviest part; the coach doesn't read drop sets yet.
 
 - Angleri et al. 2017, doi:10.1007/s00421-016-3529-1 (abstract): ladders, drop sets and
   ordinary sets, 12 weeks, same gains.

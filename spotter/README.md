@@ -5,7 +5,7 @@ you walk in, and a one-minute log in the car afterwards.
 
 - It reads the day's workout from the boards members post on r/orangetheory, and which class
   you're taking from your calendar.
-- Every number says why, one tap away, and warnings (a miss, a twinge) come first.
+- Every number says why, one tap away, and warnings (a twinge last time, a line it couldn't read) come first.
 - Your history stays on your phone, in Android backup and in exports to a folder you pick.
 
 Install it on an Android phone from

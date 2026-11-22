@@ -9,9 +9,21 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   log; the app, which updates itself; today's sheet on the phone; logging a class; the export
   and backup; reading a history file, on the phone and in the replay tool.
 - **Waiting on you:** choose a backup folder, and import your history file, on the phone
-  (DEVICE.md, "Backup folder" and "History import").
+  (DEVICE.md, "Backup folder" and "History import"); and four questions in BACKLOG, "Your
+  call" (range ticks, an Epley "try" offer, variations that share a weight, coming back to a
+  lighter weight).
 
 ## Sunday 22 November 2026
+
+### Cycle 23: a documentation pass
+- **Why:** due, after eleven PRs in a day.
+- **Done:** the docs checked against the code by a reader with no stake in them. DESIGN said
+  nothing was logged yet, had two Screens sections, and described four things as working that
+  aren't built (the review list, a second borrowing factor, the corpus grade, a miss warning);
+  BACKLOG still listed two done items as open and step 3 as unticked. All corrected; "Your
+  call" now holds the four questions that are open and what was settled.
+- **Found and not fixed here** (in BACKLOG): the calendar note on screen understates what is
+  read by two days.
 
 ### Cycle 22: two clean sessions to go up
 - **Why:** your answer on the morning page and in chat: up after two ticks, or one that felt

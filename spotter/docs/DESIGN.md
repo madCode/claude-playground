@@ -1,8 +1,7 @@
 # Design
 
 How Spotter works now, for someone about to change it. Plans go in BACKLOG.md; history in
-DEVLOG.md and the PRs. Until the first code lands this describes what is being built; each
-section is updated to "now" as its piece ships.
+DEVLOG.md and the PRs. The few parts that aren't built yet say so.
 
 ## What it's for
 
@@ -22,7 +21,7 @@ both are installed side by side.
 - **What's logged never changes meaning.** History is an append-only log of events. A
   correction is a new event; an exercise's identity is fixed when it is logged.
 - **Weight is per hand plus a count:** `2×25`, `1×50`, never a bare total. Imported rows whose
-  count is unknown say so and count as weaker evidence.
+  count is unknown say so, and feed only rows whose count they can't contradict.
 - **Every word on a board line is accounted for.** Each is part of the movement, a variation
   the coach knows, or known filler. A word left over makes the row "not sure what this is",
   with no number borrowed from a plainer exercise. The sheet shows the board's own words, with
@@ -94,8 +93,12 @@ both are installed side by side.
     single arm).
   - *Scorecard rows:* per logged row, `date`, `suggested_weight` and `weight`, the shape
     gym-coach's `scorecard.py` grades.
+  - *The log and its files:* the append-only events and the history folded from them
+    (`Journal`), what a save of the Log screen writes (`Logging`), the export's files
+    (`Export`), reading another app's history (`HistoryImport`) and replaying one for grading
+    (`Replay`).
 - **`app/`** (Android, Compose). Fetches the board, reads the calendar, stores the log, shows
-  the screens, runs the export. Package `com.app.spotter`, so it installs beside Carry.
+  the screens, runs the export, keeps an imported history. Package `com.app.spotter`, so it installs beside Carry.
 
 ## Reading a board line
 
@@ -113,8 +116,8 @@ what is on the board, and nothing says so.
   placement, direction, and hold; then combos ("A to B") and the rep scheme (reps, "6 each",
   "12 total", ladder, timed). Two rows are the same exercise only when movement and every
   variation match, one value per axis. That identity is fixed when a row is logged.
-- **Intensity words are hints, not identity.** "Heavy" and "lighter" can shape the number on
-  the sheet, but a heavy sumo deadlift is the same exercise as a sumo deadlift.
+- **Intensity words are hints, not identity.** A heavy sumo deadlift is the same exercise as a
+  sumo deadlift. The hint is read and kept; it doesn't change the number yet.
 - **First the line is split** (`BoardLine`): what it asks for, and the words left for identity.
   - Rep schemes: a count ("12 x", "8 lateral lunge"), a range ("6 - 10"), "each" or
     "total", a ladder ("10 / 8 / 6"), a time ("30 sec of", "1 min of"), or AMRepsAP.
@@ -132,7 +135,7 @@ what is on the board, and nothing says so.
     stalling the reader.
 - **Then the words are named** (`Identity`), longest phrase first, into one or more parts,
   each a movement with one value per axis, or "not sure" with the reason:
-  - a word in no list (kept for the review list), a choice ("or"), two movements side by side,
+  - a word in no list, a choice ("or"), two movements side by side,
     two values on one axis, or no movement at all;
   - combo connectors ("to", "into", "and") start a new part; "with" does only when a movement
     follows and one came before ("bridge hold with chest press" is a press in a bridge hold),
@@ -152,11 +155,11 @@ what is on the board, and nothing says so.
     them ("wide stance", "wide grip");
   - "with" before only an implement or a modifier ("press with y-bell", "with power"): that is
     a variation of the movement before it, not a combo.
-- **Related exercises are linked by stated factors**, shown in "Why this number" ("close grip,
-  floor: about 0.85 of chest press"). Where no sound factor exists, the row says "new: go
-  light". Until strength per movement is switched on (see the scorecard), only identical
-  exercises share history.
-- **New words go to a review list.** madCode sorts each new word or name once: which movement,
+- **Related exercises are linked by stated factors**, shown in "Why this number". One exists so
+  far: one leg from the two-legged lift, at about 0.6. Where no sound factor exists, the row
+  says "new: go light". Until strength per movement is built and switched on (see the
+  scorecard), only identical exercises share history.
+- **New words go to a review list** (not built yet: step 6). madCode sorts each new word or name once: which movement,
   which variation, harder or easier, or filler. The answer is an event in the phone's log, so it
   never relabels history already logged and is backed up with it. A useful answer can be
   proposed back to the starting list in a PR.
@@ -216,8 +219,9 @@ Dumbbells come in 3, 5, 8, 10, 12, 15, 20, 25, 30, 35, 40, 45 and 50 lb; "one st
 next one in that list. A Y-bell is another implement and never steps onto that list.
 
 - A load is a count of dumbbells and the weight of each: `2×25`, `1×40`.
-- The one conversion between counts: one dumbbell held in both hands (goblet) to two dumbbells
-  whose total is no more than it, rounded down to the rack (1×40 → 2×20). Two dumbbells are
+- The one conversion between counts (written and tested, not used by the sheet yet): one
+  dumbbell held in both hands (goblet) to two dumbbells whose total is no more than it, rounded
+  down to the rack (1×40 → 2×20). Two dumbbells are
   never merged into one: a single-arm lift relates to a two-dumbbell one through a variation
   factor, not arithmetic.
 - Imported history gives the weight of each dumbbell but often not how many. Such a load can
@@ -290,9 +294,21 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
 
 ## Screens
 
-- **Sheet.** Today's (or tomorrow's) class and its board's age. One row per exercise in block
-  order: name, the number, ▲ ▼ = against last time. Warnings at the top and on their rows
-  (a miss, pain, a run of unfinished sets). A tap on a row opens why.
+- **Home**: the name, the update box when a build is waiting, today's sheet, then the imported
+  history and the backup folder (each with what to do about it), and the version at the bottom,
+  copied in one tap.
+- **The sheet** (`SheetView`): the class, its date and start ("2G · Sat 21 Nov · 9:50"); notes
+  when the board is borrowed or from an earlier day; the warnings; then each row in board order
+  under its block, with the board's own words, what Spotter read beneath, and the number on the
+  right. A tap on a row shows why, and stays open through a rotation. With no class booked,
+  no board yet or no calendar, it says which in a sentence. The board kept on the phone shows
+  at once and the fetched one replaces it, so weak signal never blanks the sheet. TalkBack
+  hears the number in words ("two 30 pound dumbbells, up from last time"). Warnings
+  are a twinge last time, a line Spotter couldn't read, and a combo part with no number.
+- **The calendar** is asked for once, on first open. Refused, the sheet explains what is read
+  (titles and times of entries from two days back to tomorrow: the two days back are for a
+  class not yet logged) and offers the ask again, or Android's
+  settings once Android stops asking.
 - **Log** ("Log this class" on the sheet). The same rows. Each weighted row is "✓ as listed"
   (the sheet's number, and the board's reps: a range's low end) or "changed": the heaviest
   dumbbell picked from the whole rack in one tap, one or two, and reps on a stepper. Opening
@@ -345,22 +361,6 @@ Spotter does:
   for the day's board, and the check also fails if either lacks that.
   How to check it on a phone: `docs/DEVICE.md`.
 
-## Screens so far
-
-- **Home**: the name, the update box when a build is waiting, today's sheet, and the version at
-  the bottom, copied in one tap.
-- **The sheet** (`SheetView`): the class, its date and start ("2G · Sat 21 Nov · 9:50"); notes
-  when the board is borrowed or from an earlier day; the warnings; then each row in board order
-  under its block, with the board's own words, what Spotter read beneath, and the number on the
-  right. A tap on a row shows why, and stays open through a rotation. With no class booked,
-  no board yet or no calendar, it says which in a sentence. The board kept on the phone shows
-  at once and the fetched one replaces it, so weak signal never blanks the sheet. TalkBack
-  hears the number in words ("two 30 pound dumbbells, up from last time"). Nothing is logged yet, so every
-  weighted row says "new: go light" until step 3.
-- **The calendar** is asked for once, on first open. Refused, the sheet explains what is read
-  (titles and times of today's and tomorrow's entries) and offers the ask again, or Android's
-  settings once Android stops asking.
-
 ## Backup
 
 The log is kept three ways: on the phone, in Android's own backup (the database only), and as
@@ -408,8 +408,9 @@ to what the code writes.
 
 Over every logged weighted set: did the sheet give a number (*numbered*), was it within one
 dumbbell of what was lifted (*close*), and how many were more than a step *high* or *low*.
-Beside it, the board corpus is graded line by line: how many rows are read fully, unsure, or
-wrong against hand-checked answers. Wrong stays at zero; unsure falls as the review list grows.
+Beside it, the board corpus is to be graded line by line (not built yet: BACKLOG, "the corpus
+grade"): how many rows are read fully, unsure, or wrong against hand-checked answers. Wrong
+stays at zero; unsure falls as the review list grows.
 Spotter switches on for real when, over the same weeks of real classes, it numbers more rows
 than Carry, gets more close, and is high no more often. Strength per movement (variations
 reading one estimate through stated factors) ships behind a switch and is judged the same way

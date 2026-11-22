@@ -13,8 +13,8 @@ or the docs rather than guess: the order may change, nothing is built on a guess
 - [x] The coach reads boards, names exercises, and suggests weights, with every trap tested
   (traps 12 and 13 are checked on the scorecard and after a release, not by rule tests).
 - [x] The phone shows today's sheet from the board feed and the calendar.
-- [ ] Classes can be logged, kept in the event log, exported in the scorecard's shape and backed
-  up.
+- [x] Classes can be logged, kept in the event log, exported in the scorecard's shape and backed
+  up. (What the Log screen still lacks is under Next.)
 - [x] History import (step 4): a `history.jsonl` madCode picks on the phone; tested on invented
   data only.
 - [ ] Strength per movement (step 5), built behind a switch and left off: turning it on waits
@@ -23,7 +23,7 @@ or the docs rather than guess: the order may change, nothing is built on a guess
 
 ## Next
 
-Step 1, the coach core:
+Step 1, the coach core (ticked above; these are its leftovers):
 
 - [ ] One exercise, one key, found by cycle 3's review: "dumbbell" and a bare line on a
   lift ("dumbbell alt lateral lunge" and "alt lateral lunge"), "lying on bench" and "bench",
@@ -33,10 +33,6 @@ Step 1, the coach core:
 - [ ] Refused but readable, from the same review: `position` holds what you're on, your body
   shape and where the weight sits, so "low bench high plank … row" and "incline bench chest
   press" clash; "high plank jack" loses "plank jack" to "high plank". *(cycle 3)*
-- [ ] With load: a banded line with no implement ("banded squat") doesn't want a weight
-  (trap 6). *(cycle 3)*
-- [ ] The sheet's "why this number" detail and warnings shown on screen: step 2's screens.
-  *(design)*
 - [ ] More stated factors for borrowing, madCode asked for them (2026-11-22): single arm from two,
   Bosu, a b-stance or balance version from the plain one, each conservative and in the reason.
   One leg from two (0.6) is in. *(madCode)*
@@ -49,14 +45,14 @@ Step 2, the phone shows today's sheet: done (see Done).
 
 Step 3, logging:
 
-- [ ] Fixes from the review of today's logging decisions (cycle 13), before more is built on
-  them. Each is a wrong number or a guess entering history:
-  - "+ Each round" will need a weight per round, not one per row.
-  - A ladder done clean with each round's weight known ("8 / 6 / 4") counts as clean at 8 for
-    a straight "8 x" row, which is more sets at 8 than were done. *(cycle 13 review)*
+- [ ] The sheet's calendar note says it reads "today's and tomorrow's" entries; it also reads
+  the two days before, for a class not yet logged. Fix the words on screen (`SheetView`) and
+  in `Calendar`'s doc. *(cycle 23 docs pass)*
+- [ ] A ladder done clean with each round's weight known ("8 / 6 / 4") counts as clean at 8 for
+  a straight "8 x" row, which is more sets at 8 than were done. *(cycle 13 review)*
 
-- [ ] The Log screen, second half: "+ Each round", each round a copy of the one before; "Add an
-  exercise"; and the person's calls below. *(madCode)* From cycles 11 and 12's reviews:
+- [ ] The Log screen, second half: "+ Each round" (a weight per round, each round a copy of the
+  one before); "Add an exercise"; and the person's calls below. *(madCode)* From reviews:
   - With two logged rows of one exercise and one row for it on the new board, clearing the
     carried one brings the other onto that row at the next read. *(cycle 18 review)*
   - The Log screen reopened from a sheet shown before the last save finished loading can save
@@ -84,23 +80,28 @@ Step 3, logging:
 
 ## Your call
 
-From the review of today's logging decisions (also on the morning page). Until answered, the
-app keeps what it does now, except where noted.
-The research is in [TRAINING.md](TRAINING.md) (madCode: "shouldn't the science have an
-opinion?"). What it says is beside each question; the choice is still madCode's.
+Asked in chat on 2026-11-22; until answered, the app keeps what it does now. The research is in
+[TRAINING.md](TRAINING.md); the choice is madCode's.
 
-- **A tick on a range** ("8-10 x"): counts as the low end, so the weight holds until "changed"
-  says the top was reached. Or offer the top as a second one-tap choice? Research: working up
-  to the top before adding weight is the best-supported rule, so the top needs to be easy to
-  log. Proposed in chat (2026-11-22), waiting for a yes: add a one-tap tick for the top.
-- **A ladder's weight** ("8 / 6 / 4"): remember the round-one weight, or the heaviest round's?
-  Until answered, a ladder logged with one number holds. Research: nothing direct; the shape
-  doesn't change results, so either works if kept consistent, and the heaviest round must be
-  judged against its own reps, never converted to round one's. Proposed in chat, waiting for a
-  yes: keep the heaviest round's as the one number; "+ Each round" for the rest.
-- **Borrowed board, then your own with a different count** (ticked "12 x" on the 3G board, your
-  2G board says "8 x"): trust your board's count, or ask? Proposed in chat, waiting for a yes: no
-  prompt; cycle 18 keeps what was ticked ("12 of 12") and a fresh tick on the new row replaces it.
+- **Ticks on a range** ("8-10 x"). Today "✓ as listed" logs the low end without saying so.
+  Proposed: two ticks that carry their number, "✓ 8" and "✓ 10", in its place; the rest through
+  "Changed". Research: reach the top before adding weight, so the top should be one tap.
+- **An Epley "try" offer.** A conversion from other reps never sets a step up (the estimate is
+  off by as much as a dumbbell). Proposed: when it predicts the next dumbbell, offer it as
+  "try 30 if set 1 feels easy", as a big jump does.
+- **Variations that share a weight.** madCode: Orange Theory varies exercises a lot, so two
+  clean sessions should be derivable from very similar ones. Proposed: stated groups where the
+  weight carries straight across, each approved by madCode, sharing the number and the
+  two-clean count; built behind step 5's switch and graded with the replay tool first.
+  Candidates to rule on: front and regular squat; sumo or wide stance and regular; close or
+  neutral grip and regular; tempo words ("explosive", "pause"); alternating and both sides.
+  Not candidates: one dumbbell against two (a goblet squat and a two-dumbbell squat).
+- **Coming back to a lighter weight.** After 30 clean, a clean 25 goes back up after that one
+  session, however long ago the 30 was. Keep, or add a time limit?
+
+Settled on 2026-11-22: up after two clean sessions or one that felt easy (built, cycle 22); a
+ladder's one number is its heaviest round's (as built; "+ Each round" for the rest); a log from
+a borrowed board is trusted as logged, with no prompt (built, cycle 18).
 
 New board words that stay "not sure" are worth a look on the corpus now and then; 142 rows
 still are.
@@ -112,27 +113,25 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 - [ ] Security and supply chain: before the first release
 - [x] Architecture and test health: cycle 10, 2026-11-22. Its smaller findings are under
   "Tidy-up", below.
-- [ ] Skills and instructions: around cycle 12
+- [ ] Skills and instructions: overdue (was due around cycle 12). Cycle 23 checked the docs
+  against the code, not the skills.
 
 ## Tidy-up (from the cycle 10 review, when a cycle has room)
 
 - Move `spoken` and the sheet's title and notes into the coach; make `glance` a row member;
   one label for "not sure" (it's built in three places).
-- Unused or unwired: `Load.splitSharedDumbbell` and `total` (DESIGN describes the goblet
-  conversion as live), `Movement.muscles`, `BoardLine.label`/`side`/`rest` outside tests, an
-  unreachable branch in `TodaysBoard.fromDay`.
+- Unused or unwired: `Load.splitSharedDumbbell` and `total`, `Movement.muscles`,
+  `Reading.Known.hints`, `BoardLine.rest` outside tests, an unreachable branch in
+  `TodaysBoard.fromDay`.
 - `BoardLine.read` classifies and parses in one 65-line function: split out the kind.
 - Tests: `MainActivityTest` returns early on local runs (use `Assume`); one shared `shoot()`;
   UI tests that assert whole reason sentences.
-- Comments: `Sheet.make`'s doc sits above a private field; plan and date notes in
-  `MainActivity` and `Identity`.
+- Comments: `Sheet.make`'s doc sits above a private field; date notes in `Identity`.
 
 ## Later
 
 - The replay tool's switch for strength per movement, when step 5 is built
   ([REPLAY.md](REPLAY.md)). The gym-coach session asked for it (2026-11-22).
-- Strength per movement, behind a switch, judged on the scorecard. (Step 5.)
-- Progress, the new-word review screen, sharing a board. (Step 6.)
 - The Garmin watch view, a Connect IQ app the phone sends the sheet to. (Step 7.)
 - Choose which calendar Spotter reads, for privacy. Android's calendar permission covers every
   calendar on the phone, so the choice lives in Spotter: list the calendars by name, let the
@@ -140,7 +139,7 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
   calendar id). Until they pick, it reads all visible calendars as now. Say plainly on the
   screen that Android's permission still covers all of them. *(madCode, 2026-11-22)* Low
   priority: it limits only what Spotter reads, not what Android allows, and Spotter already reads
-  just today's and tomorrow's titles and times and keeps nothing.
+  only titles and times from two days back to tomorrow, and keeps nothing.
 
 ## Not doing
 
