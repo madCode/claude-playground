@@ -141,7 +141,7 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
   `history.jsonl` and a corpus of boards, replays each class using only the history before
   that day, and writes one scorecard session file per class; a flag turns strength per movement
   on or off. Built and tested on invented data. madCode grades their real history with it in
-  private; only verdicts come back, never figures. When merged, tell madCode how to run it:
+  private and gives the feedback themselves: nothing comes back from that session. When merged, tell madCode how to run it:
   this session can't message that one (it needs a trusted device), so put the command on the
   morning page for them to pass on.
 - Strength per movement, behind a switch, judged on the scorecard. (Step 5.)
