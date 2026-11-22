@@ -70,6 +70,12 @@ Step 3, logging:
     one's sheet reads the later one's log. Key a class by its start as well. *(cycles 12, 15)*
   - "… isn't logged yet" counts rows by id, so a class logged from a board since changed reads
     as not logged; it also can't be dismissed for a class left unlogged on purpose. *(cycle 15)*
+- [ ] A board that alternates 8s and 12s, following the sheet: the 12s stall behind the big
+  jump from 20 to 25, and then the 8s read the latest 20 as overruling their clean 30 and drop
+  to 20. The reason also mentions a test weight that isn't shown. *(cycle 22 review; older)*
+- [ ] A range ticked at its low end holds whether or not it "felt easy", and reaching the top
+  takes "Changed": waits on the range ticks ("✓ 8" / "✓ 10") in Your call. *(cycle 22 review)*
+- [ ] "Felt easy" before a big jump (12 to 15) still holds and offers the test. *(cycle 22 review)*
 - [ ] "Felt hard" (and an imported unfinished set) delays a step only at the same reps: a
   clean set at other reps from before it can still raise the number. *(cycle 19 review)*
 - [ ] Export notes for whoever reads the files (cycle 16 review): a session's `ref` is the row's

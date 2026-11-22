@@ -42,6 +42,28 @@ class ProgressionTest {
         assertEquals(Load(25, 2), weight(listOf(tens, logged(5, 25, clean))).load)
     }
 
+    // What counts as two sessions in a row, from the cases a review ran through the rule.
+    @Test
+    fun whatSettlesAWeightAndWhatDoesnt() {
+        val clean = listOf(8, 8, 8)
+        // The same exercise twice in one class is one session.
+        assertEquals(Load(25, 2), weight(listOf(logged(1, 25, clean), logged(1, 25, clean))).load)
+        // A twinge between two clean sessions breaks the run, and so does a miss at other reps.
+        assertEquals(Load(25, 2), weight(listOf(logged(1, 25, clean), logged(3, 25, clean, hurt = true), logged(5, 25, clean))).load)
+        assertEquals(Load(25, 2), weight(listOf(logged(1, 25, clean), logged(3, 20, listOf(5), target = 12..12), logged(5, 25, clean))).load)
+        // One dumbbell and two aren't the same weight twice.
+        assertEquals(25, weight(listOf(logged(1, 25, clean, count = 1), logged(3, 25, clean))).load.lb)
+        // Back at a weight done clean before, after a lighter day: the lighter day isn't new.
+        assertEquals(Load(30, 2), weight(listOf(logged(1, 30, clean), logged(3, 25, clean))).load)
+        // The promise of a step is made only where one would follow: not at the top of the rack,
+        // not before a big jump, not when the reps differ.
+        fun why(log: List<Logged>, target: IntRange = 8..8) = weight(log, target = target).reasons.first()
+        assertEquals("clean at 2×25 once: up after one more clean session, or one that felt easy", why(listOf(logged(1, 25, clean))))
+        assertEquals("clean at 2×50 once: same again", why(listOf(logged(1, 50, clean))))
+        assertEquals("clean at 2×12 once: same again", why(listOf(logged(1, 12, clean))))
+        assertEquals("clean at 2×25 once: same again", why(listOf(logged(1, 25, clean)), target = 12..12))
+    }
+
     // One clean session that felt easy is enough.
     @Test
     fun feltEasyGoesUpAfterOne() {

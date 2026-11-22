@@ -160,6 +160,23 @@ class LogScreenTest {
         compose.onNodeWithText("Logged: 1×35 · 12 reps").performScrollTo().assertIsDisplayed()
     }
 
+    // "Felt easy" is one tap beside the tick, and the row is still as listed with it.
+    @Test
+    fun feltEasyIsOneTapOnATickedRow() {
+        save(today(monday), LogDraft().with(today(monday).sheet.rows[1].id, spotter.coach.RowLog(40, 2, 8)))
+        var saved: LogDraft? = null
+        show(today(saturday)) { _, d -> saved = d }
+        compose.onNodeWithText("Log this class").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: felt easy").assertDoesNotExist()
+        compose.onNodeWithContentDescription("8 x deadlift: done as listed").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: felt easy").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: done as listed").assertIsSelected()
+        compose.onNodeWithContentDescription("8 x deadlift: changed").assertIsNotSelected()
+        compose.onNodeWithText("Logged: 2×40 · 8 reps · felt easy").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(spotter.coach.RowLog(40, 2, 8, easy = true), saved!!.rows.values.single())
+    }
+
     // Reopened, the screen shows what is logged, and the button says so.
     @Test
     fun aLoggedClassReopensWithItsLog() {
