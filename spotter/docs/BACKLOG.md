@@ -95,15 +95,20 @@ Step 3, logging:
 
 From the review of today's logging decisions (also on the morning page). Until answered, the
 app keeps what it does now, except where noted.
-A research pass on these is running (madCode: "shouldn't the science have an opinion?"); its
-notes go in `docs/TRAINING.md`, and the tick, range and ladder rules wait for it.
+The research is in [TRAINING.md](TRAINING.md) (madCode: "shouldn't the science have an
+opinion?"). What it says is beside each question; the choice is still madCode's.
 
 - **A tick on a fixed count** ("12 x squat", ✓ as listed): up a step every time, as now; up
-  after two ticks in a row; or up only with "felt easy"?
+  after two ticks in a row; or up only with "felt easy"? Research: no trial compares them; the
+  consensus (ACSM) is two sessions in a row, and "felt easy" is a fair reason to go up sooner.
 - **A tick on a range** ("8-10 x"): counts as the low end, so the weight holds until "changed"
-  says the top was reached. Or offer the top as a second one-tap choice?
+  says the top was reached. Or offer the top as a second one-tap choice? Research: working up
+  to the top before adding weight is the best-supported rule, so the top needs to be easy to
+  log.
 - **A ladder's weight** ("8 / 6 / 4"): remember the round-one weight, or the heaviest round's?
-  Until answered, a ladder logged with one number holds.
+  Until answered, a ladder logged with one number holds. Research: nothing direct; the shape
+  doesn't change results, so either works if kept consistent, and the heaviest round must be
+  judged against its own reps, never converted to round one's.
 - **Borrowed board, then your own with a different count** (ticked "12 x" on the 3G board, your
   2G board says "8 x"): trust your board's count, or ask?
 

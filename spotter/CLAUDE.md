@@ -2,7 +2,8 @@
 
 An Android app for one person who takes Orange Theory classes: one glance before class says
 which dumbbell to grab for each exercise on today's board, and logging in the car afterwards
-takes under a minute. Read `docs/DESIGN.md` before changing behaviour; `docs/DEVLOG.md` is the
+takes under a minute. Read `docs/DESIGN.md` before changing behaviour, and `docs/TRAINING.md`
+(what the research says, with sources) before changing a progression rule; `docs/DEVLOG.md` is the
 log of what changed and why. It lives in `spotter/` of the claude-playground repository; run
 commands from this folder. The rules every project shares are in the root CLAUDE.md.
 
