@@ -11,6 +11,8 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.AutoMigrationSpec
+import androidx.sqlite.db.SupportSQLiteDatabase
 import spotter.coach.Journal
 import spotter.coach.JournalEntry
 import spotter.coach.LogDraft
@@ -90,10 +92,17 @@ interface EventDao {
     entities = [EventRow::class],
     version = 2,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2, spec = LogDatabase.OneWeightLadders::class)],
 )
 abstract class LogDatabase : RoomDatabase() {
     abstract fun events(): EventDao
+
+    /** Every ladder version 1 stored came from the Log screen's one weight, its heaviest round's. */
+    class OneWeightLadders : AutoMigrationSpec {
+        override fun onPostMigrate(db: SupportSQLiteDatabase) {
+            db.execSQL("UPDATE events SET heaviestOnly = 1 WHERE ladder IS NOT NULL")
+        }
+    }
 
     companion object {
         @Volatile private var instance: LogDatabase? = null

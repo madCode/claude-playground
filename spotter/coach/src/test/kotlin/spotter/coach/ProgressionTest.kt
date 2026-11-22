@@ -106,6 +106,49 @@ class ProgressionTest {
         assertEquals(Load(35, 2), weight(listOf(ladder.copy(heaviestOnly = false)), target = 8..8).load)
     }
 
+    // A board that alternates 8s and 10s, every session clean: each rep count goes up on its own
+    // history, and the number never walks down.
+    @Test
+    fun alternatingRepCountsEachProgress() {
+        val log = mutableListOf(logged(1, 30, listOf(8)))
+        // Nothing at 10 yet: converted from the 8s, rounded down.
+        assertEquals(Load(25, 2), weight(log, target = 10..10).load)
+        log += logged(2, 25, listOf(10), target = 10..10)
+        // Back to 8: from the clean 30 at 8, up a step.
+        assertEquals(Load(35, 2), weight(log).load)
+        log += logged(3, 35, listOf(8))
+        assertEquals(Load(30, 2), weight(log, target = 10..10).load)
+        // A near miss since, at the other reps, stops the step up but not the number.
+        log += logged(4, 30, listOf(8), target = 10..10)
+        assertEquals(Load(35, 2), weight(log).load)
+        // A miss since puts the latest session back in charge (trap 4): under the 30 missed.
+        log += logged(5, 30, listOf(5), target = 10..10)
+        assertTrue(weight(log).load.lb < 30)
+    }
+
+    // A ladder's one weight was its heaviest round's: other reps convert from that round's.
+    @Test
+    fun aLaddersOneWeightConvertsFromItsHeaviestRound() {
+        val ladder = Logged(day(1), press, Load(30, 2), null, listOf(12, 10, 8), ladder = listOf(12, 10, 8), heaviestOnly = true)
+        // From the 8 it was held for, not the 12 of round one: 30, not 35.
+        assertEquals(Load(30, 2), weight(listOf(ladder), target = 6..6).load)
+    }
+
+    // More reps than asked convert from what was asked, rather than leaving no number.
+    @Test
+    fun extraRepsConvertFromTheTarget() {
+        val extra = logged(1, 20, listOf(15), target = 12..12)
+        assertTrue(suggest(listOf(extra), target = 8..8) is Suggestion.Weight)
+    }
+
+    // A two-legged lift that twinged lends nothing to a first go on one leg.
+    @Test
+    fun aTwingeIsNotBorrowedFrom() {
+        val squat = exercise("8 x squat")
+        val log = listOf(Logged(day(1), squat, Load(35, 2), 8..8, listOf(8), hurt = true))
+        assertEquals(Suggestion.NoNumber.NEW, suggest(log, exercise("8 x single leg squat")))
+    }
+
     // A conversion starts from the reps done, and never rides on a step up.
     @Test
     fun aConversionStartsFromWhatWasDone() {

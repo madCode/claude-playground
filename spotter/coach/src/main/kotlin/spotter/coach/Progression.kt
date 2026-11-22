@@ -35,7 +35,13 @@ data class Logged(
      * The reps the weight is known to have been done for, for converting between rep counts: the
      * fewest of the sets logged, or what a ladder's first round asked. Null when timed.
      */
-    val repsDone: Int? get() = if (ladder != null) ladder.first() else reps.minOrNull()?.takeIf { target != null }
+    val repsDone: Int?
+        get() = when {
+            // The heaviest round is the one with the fewest reps: that is what the weight was held for.
+            ladder != null -> if (heaviestOnly) ladder.min() else ladder.first()
+            // More reps than asked are no sounder a basis than what was asked.
+            else -> reps.minOrNull()?.takeIf { target != null }?.let { minOf(it, target!!.last) }
+        }
 
     /** Whether there is anything to judge: a rep target with no reps logged says nothing. */
     val judged: Boolean get() = reps.isNotEmpty() || (target == null && ladder == null)
@@ -126,12 +132,26 @@ object Progression {
         val last = own.last()
         // madCode: a twinge holds the weight and notes it. With nothing but twinges logged, the
         // latest one is the basis, and the cap below holds it there or a step under.
-        val basis = own.lastOrNull { it.outcome != Outcome.HURT } ?: last
+        val sound = own.filter { it.outcome != Outcome.HURT }
+        // Each rep count keeps its own history (TRAINING.md, 5): the last time these reps were
+        // asked is a better basis than a conversion from other reps, which is rounded down each
+        // time and would walk the number down on a board that alternates 8s and 10s. Unless a
+        // set was missed since, at any reps: then the latest session decides (trap 4). A near
+        // miss since, at other reps, only stops a step up.
+        val sameReps = sound.lastOrNull { it.firstTarget == target?.last }
+        val since = sound.dropWhile { it !== sameReps }.drop(1)
+        val basis = when {
+            sound.isEmpty() -> last
+            sameReps != null && since.none { it.outcome == Outcome.MISS } -> sameReps
+            else -> sound.last()
+        }
         val reasons = mutableListOf<String>()
         var test: Load? = null
         val held = basis.load.lb
         var lb = when {
             basis.outcome == Outcome.HURT -> held
+            basis.outcome == Outcome.CLEAN && basis === sameReps && since.any { it.outcome == Outcome.NEAR_MISS } ->
+                held.also { reasons += "clean at ${basis.load.label}, with a near miss since: same again" }
             basis.outcome == Outcome.CLEAN && basis.heaviestOnly ->
                 held.also { reasons += "a ladder logged at ${basis.load.label}, its heaviest round: same again" }
             // Weak evidence against a step, so it delays one rather than cancels it (TRAINING.md, 3).
@@ -228,6 +248,8 @@ object Progression {
         val source = twoLegged.filter { it.judged }.sortedWith(compareBy({ it.exercise.parts.single().variations["legs"] == null }, { it.date })).lastOrNull()
             ?: return Suggestion.NoNumber.NEW
         val from = suggest(source.exercise, target, log) as? Suggestion.Weight ?: return Suggestion.NoNumber.NEW
+        // A two-legged lift that twinged is no basis for a first go on one leg.
+        if (from.caution != null) return Suggestion.NoNumber.NEW
         val lb = Rack.atMost(from.load.lb * ONE_LEG) ?: return Suggestion.NoNumber.NEW
         return Suggestion.Weight(
             from.load.copy(lb = lb),

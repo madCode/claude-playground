@@ -36,11 +36,21 @@ class LogMigrationTest {
                 """INSERT INTO events (at, kind, date, className, row, line, key, parts, lb, count, targetLow, targetHigh, reps, hurt, formBroke, stopped, easy, hard, easier)
                    VALUES (1, 'LOGGED', '2026-03-01', '2G', 'r', '8 x chest press', 'chest press', '[{"movement":"chest press","variations":{}}]', 25, 2, 8, 8, '[8]', 0, 0, 0, 0, 1, 0)""",
             )
+            // A ladder, which version 1 could only have logged with one weight.
+            db.execSQL(
+                """INSERT INTO events (at, kind, date, className, row, line, key, parts, lb, count, ladder, reps, hurt, formBroke, stopped, easy, hard, easier)
+                   VALUES (2, 'LOGGED', '2026-03-01', '2G', 's', '10 / 8 / 6 x squat', 'squat', '[{"movement":"squat","variations":{}}]', 30, 2, '[10,8,6]', '[10,8,6]', 0, 0, 0, 0, 0, 0)""",
+            )
             db.version = 1
         }
         val db = Room.databaseBuilder(context, LogDatabase::class.java, "old-log.db").allowMainThreadQueries().build()
         try {
-            val entry = EventLog(db).entries().single()
+            val log = EventLog(db)
+            val (entry, ladder) = log.entries()
+            assertEquals(true, ladder.heaviestOnly)
+            // And the migrated log still takes new entries.
+            log.write(entry.copy(id = 0, shownLb = 25, shownCount = 2))
+            assertEquals(25, log.entries().last().shownLb)
             assertEquals(listOf(25, 2), listOf(entry.lb, entry.count))
             assertEquals(true, entry.hard)
             // The new columns read as "not said".

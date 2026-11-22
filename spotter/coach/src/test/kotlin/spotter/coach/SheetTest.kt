@@ -68,7 +68,7 @@ class SheetTest {
     // A part that twinged holds the combo at what twinged, with the warning on the row (trap 3:
     // it never raises a number), and a bodyweight part neither blocks nor gets a warning.
     @Test
-    fun aComboWithAHurtPartHasNoNumber() {
+    fun aComboWithAPartThatTwingedIsHeldThere() {
         val log = listOf(
             logged("8 x deadlift", 30, listOf(8, 8, 8)),
             Logged(LocalDate.of(2026, 3, 2), exercise("8 x high pull"), Load(15, 2), 8..8, listOf(8, 8, 8), hurt = true),

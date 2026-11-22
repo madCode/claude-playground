@@ -155,8 +155,9 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
         /**
          * A combo's number: its own history first. Without it, the lightest of its weighted parts,
          * since one dumbbell goes through every part, but only when every weighted part has a
-         * number of its own and all are held the same way (trap 2). A part with no number, or one
-         * that hurt, leaves the combo without one: a gap beats the heavier part's guess.
+         * number of its own and all are held the same way (trap 2). A part with no number leaves
+         * the combo without one: a gap beats the heavier part's guess. A part that twinged holds
+         * the combo at what twinged, with the warning.
          */
         private fun combo(reading: Reading.Known, target: IntRange?, log: List<Logged>, warnings: MutableList<String>): Suggestion {
             val own = Progression.suggest(reading, target, log)

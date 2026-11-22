@@ -11,6 +11,22 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 13: the logging rules, after their review
+- **Why:** the review of the day's logging decisions found numbers going wrong; these are the
+  ones in the coach that needed no answer from you.
+- **Shipped:** a ladder logged with one weight holds instead of raising round one. A twinge
+  holds the weight and always says so on the row, even as your first log of an exercise; the
+  latest twinge counts, not the lowest. "Felt hard" waits a class before going up. Each rep
+  count keeps its own history, so a board that swaps 8s and 10s moves each up by itself. Each
+  logged row keeps the number the sheet showed, for the scorecard. Your phone's log is carried
+  over to the new format.
+- **Review caught:** my first version walked the number down on alternating rep counts and
+  never back up; raised a ladder's weight when converting to other reps; lent a twinged lift's
+  weight to its one-leg version; and left ladders already on the phone able to step up. All
+  fixed and tested.
+- **Left:** a class logged before this update and reopened after it won't show its rows as
+  logged (their ids changed format). Nothing is logged on your phone yet, so it wasn't bridged.
+
 ### Research: what the rules rest on
 - **Asked:** "shouldn't the science have an opinion?" on when a tick raises the number, and to
   check gym-coach's research list rather than trust it.
