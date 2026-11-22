@@ -80,6 +80,10 @@ class ProgressionTest {
         // The latest twinge caps, not the lowest: 30 twinged, then 35 done in full with a twinge.
         val latest = weight(listOf(logged(1, 35, listOf(8)), logged(2, 30, listOf(8), hurt = true), logged(3, 35, listOf(8), hurt = true)))
         assertEquals(Load(35, 2), latest.load)
+        // Clean at 30, then a twinge at 35 done in full: 35 again, and not as a step up.
+        val held = weight(listOf(logged(1, 30, listOf(8)), logged(2, 35, listOf(8), hurt = true)))
+        assertEquals(Load(35, 2), held.load)
+        assertEquals(Change.SAME, held.change)
         // Said even when the cap doesn't bite: clean at 30, then a twinge at 40.
         val above = weight(listOf(logged(1, 30, listOf(8)), logged(2, 40, listOf(8), hurt = true)))
         assertEquals(Load(35, 2), above.load)

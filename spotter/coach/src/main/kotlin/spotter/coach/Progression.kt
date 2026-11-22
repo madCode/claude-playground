@@ -225,6 +225,7 @@ object Progression {
         // past it. The latest, not the lowest: a twinge at 20 followed by a twinge at 25 done in
         // full holds 25. A sound session after a twinge clears it.
         var caution: String? = null
+        var against = held
         own.lastOrNull { it.outcome == Outcome.HURT && (latest == null || !it.date.isBefore(latest.date)) }?.let { hurt ->
             var cap = if (hurt.hurtAndMissed) {
                 Rack.down(hurt.load.lb) ?: return Suggestion.NoNumber("it hurt at the lightest dumbbell: no number")
@@ -241,15 +242,17 @@ object Progression {
             // Said whether or not the cap bit: the person should know before picking it up.
             reasons += "it twinged at ${hurt.load.label}, so ${if (hurt.hurtAndMissed) "under that" else "no higher"}"
             caution = "it twinged last time at ${hurt.load.label}"
+            against = hurt.load.lb
             // Never offer to try what hurt, or more.
             if ((test?.lb ?: 0) >= cap) test = null
         }
 
         val load = basis.load.copy(lb = lb)
-        // Against the session the number rests on, so the arrow agrees with the reason.
+        // Against the session the number rests on, so the arrow agrees with the reason; after a
+        // twinge, against what twinged, so holding there never reads as "up".
         val change = when {
-            decided > held -> Change.UP
-            decided < held -> Change.DOWN
+            decided > against -> Change.UP
+            decided < against -> Change.DOWN
             else -> Change.SAME
         }
         return Suggestion.Weight(load, change, reasons, test, caution)
