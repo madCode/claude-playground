@@ -45,9 +45,6 @@ Step 2, the phone shows today's sheet: done (see Done).
 
 Step 3, logging:
 
-- [ ] The sheet's calendar note says it reads "today's and tomorrow's" entries; it also reads
-  the two days before, for a class not yet logged. Fix the words on screen (`SheetView`) and
-  in `Calendar`'s doc. *(cycle 23 docs pass)*
 - [ ] A ladder done clean with each round's weight known ("8 / 6 / 4") counts as clean at 8 for
   a straight "8 x" row, which is more sets at 8 than were done. *(cycle 13 review)*
 

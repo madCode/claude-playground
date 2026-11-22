@@ -22,8 +22,8 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   aren't built (the review list, a second borrowing factor, the corpus grade, a miss warning);
   BACKLOG still listed two done items as open and step 3 as unticked. All corrected; "Your
   call" now holds the four questions that are open and what was settled.
-- **Found and not fixed here** (in BACKLOG): the calendar note on screen understates what is
-  read by two days.
+- **One line on screen changed:** the calendar note said Spotter reads today's and tomorrow's
+  entries; it also reads the two days before, for a class not yet logged, and now says so.
 
 ### Cycle 22: two clean sessions to go up
 - **Why:** your answer on the morning page and in chat: up after two ticks, or one that felt

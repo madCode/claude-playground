@@ -306,9 +306,8 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   hears the number in words ("two 30 pound dumbbells, up from last time"). Warnings
   are a twinge last time, a line Spotter couldn't read, and a combo part with no number.
 - **The calendar** is asked for once, on first open. Refused, the sheet explains what is read
-  (titles and times of entries from two days back to tomorrow: the two days back are for a
-  class not yet logged) and offers the ask again, or Android's
-  settings once Android stops asking.
+  (titles and times of entries from two days ago to tomorrow; the earlier days are for a class
+  not yet logged) and offers the ask again, or Android's settings once Android stops asking.
 - **Log** ("Log this class" on the sheet). The same rows. Each weighted row is "✓ as listed"
   (the sheet's number, and the board's reps: a range's low end) or "changed": the heaviest
   dumbbell picked from the whole rack in one tap, one or two, and reps on a stepper. Opening
