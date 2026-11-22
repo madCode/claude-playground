@@ -27,6 +27,8 @@ class ExportWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         val store = ExportStore(applicationContext)
         val folder = store.folder ?: return@withContext Result.success()
         val (entries, unreadable) = EventLog(LogDatabase.get(applicationContext)).read()
+        // Asked here, off the main thread: the folder's app may be slow to answer, or offline.
+        if (store.folderName == null) store.named(folder, FolderTarget.name(applicationContext, Uri.parse(folder)))
         // A folder since deleted, or a grant taken back, fails here; the screen then says so.
         val ok = runCatching { ExportRun(store.written(folder), FolderTarget(applicationContext, Uri.parse(folder))).run(entries, unreadable) }.getOrDefault(false)
         store.finished(folder, System.currentTimeMillis(), ok)

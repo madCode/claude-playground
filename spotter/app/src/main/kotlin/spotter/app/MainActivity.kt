@@ -22,7 +22,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import spotter.app.export.ExportStore
 import spotter.app.export.ExportWorker
-import spotter.app.export.FolderTarget
 import spotter.app.log.EventLog
 import spotter.app.log.LogDatabase
 import spotter.coach.LogDraft
@@ -62,7 +61,6 @@ class MainActivity : ComponentActivity() {
         // Grants are limited in number: the folder being replaced gives its back.
         if (old != null && old != tree.toString()) runCatching { contentResolver.releasePersistableUriPermission(Uri.parse(old), both) }
         export.folder = tree.toString()
-        export.folderName = FolderTarget.name(this, tree)
         ExportWorker.runNow(this)
     }
 
@@ -73,7 +71,7 @@ class MainActivity : ComponentActivity() {
                 this, it, android.text.format.DateUtils.FORMAT_SHOW_DATE or android.text.format.DateUtils.FORMAT_SHOW_TIME or android.text.format.DateUtils.FORMAT_ABBREV_MONTH,
             )
         }
-        backup.value = BackupState(export.folderName.takeIf { export.folder != null }, at, export.lastOk)
+        backup.value = BackupState(export.folder?.let { export.folderName ?: "the folder you chose" }, at, export.lastOk)
     }
     private var stopListening: () -> Unit = {}
     private val calendar by lazy { Calendar(this) }

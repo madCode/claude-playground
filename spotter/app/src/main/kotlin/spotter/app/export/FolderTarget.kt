@@ -27,6 +27,8 @@ class FolderTarget(private val context: Context, private val tree: Uri) : Export
         val cursor = resolver.query(children, arrayOf(Document.COLUMN_DOCUMENT_ID, Document.COLUMN_DISPLAY_NAME), null, null, null)
             ?: throw IOException("couldn't read the folder")
         cursor.use { c ->
+            // A synced folder still loading answers with part of its list, or none of it.
+            if (c.extras?.getBoolean(DocumentsContract.EXTRA_LOADING) == true) throw IOException("the folder is still loading")
             while (c.moveToNext()) {
                 val name = c.getString(1) ?: continue
                 found.getOrPut(name) { DocumentsContract.buildDocumentUriUsingTree(tree, c.getString(0)) }
@@ -54,12 +56,14 @@ class FolderTarget(private val context: Context, private val tree: Uri) : Export
         val made = DocumentsContract.createDocument(resolver, folder, mime(name), name) ?: throw IOException("couldn't create $name")
         // A provider may add an extension of its own for the type; the file is found by its name
         // next time, so it has to keep it.
-        if (displayName(resolver, made) == name) return made
-        return runCatching { DocumentsContract.renameDocument(resolver, made, name) }.getOrNull()
-            ?: run {
-                runCatching { DocumentsContract.deleteDocument(resolver, made) }
-                throw IOException("couldn't name $name")
-            }
+        // A name that can't be read back is taken as given: renaming a file to the name it has
+        // makes some providers number it.
+        val given = displayName(resolver, made) ?: return made
+        if (given == name) return made
+        val renamed = runCatching { DocumentsContract.renameDocument(resolver, made, name) }.getOrNull()
+        if (renamed != null && displayName(resolver, renamed) == name) return renamed
+        runCatching { DocumentsContract.deleteDocument(resolver, renamed ?: made) }
+        throw IOException("couldn't name $name")
     }
 
     companion object {
@@ -77,8 +81,8 @@ class FolderTarget(private val context: Context, private val tree: Uri) : Export
          * The folder's name for the screen, as its own app shows it ("Spotter"). The address isn't
          * used: outside the phone's own storage it is an id nobody could read.
          */
-        fun name(context: Context, tree: Uri): String =
+        fun name(context: Context, tree: Uri): String? =
             displayName(context.contentResolver, DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree)))
-                ?.takeIf { it.isNotBlank() } ?: "the folder you chose"
+                ?.takeIf { it.isNotBlank() }
     }
 }

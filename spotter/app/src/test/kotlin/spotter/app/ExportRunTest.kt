@@ -134,6 +134,10 @@ class ExportRunTest {
         folder.writes.clear()
         assertTrue(run(listOf(squat)))
         assertEquals(2, folder.writes.size)
+        // A run for the old folder starting now knows nothing of the new one's files.
+        assertTrue(store.written(address).written.isEmpty())
+        store.named(address, "Old")
+        assertEquals(null, store.folderName)
     }
 
     // A file deleted from the folder by hand comes back, though the log hasn't changed.

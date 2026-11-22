@@ -13,13 +13,18 @@ class ExportStore(private val prefs: SharedPreferences) {
         get() = prefs.getString(FOLDER, null)
         // A new folder has none of the files yet.
         set(value) {
-            synchronized(lock) { prefs.edit().putString(FOLDER, value).remove(WRITTEN).remove(LAST_AT).remove(LAST_OK).commit() }
+            synchronized(lock) { prefs.edit().putString(FOLDER, value).remove(FOLDER_NAME).remove(WRITTEN).remove(LAST_AT).remove(LAST_OK).commit() }
         }
 
     /** The folder's name as the person knows it ("Download/Spotter"), for the screen. */
-    var folderName: String?
-        get() = prefs.getString(FOLDER_NAME, null)
-        set(value) = prefs.edit().putString(FOLDER_NAME, value).apply()
+    val folderName: String? get() = prefs.getString(FOLDER_NAME, null)
+
+    /** Records the name of [folder], unless another has been picked since. */
+    fun named(folder: String, name: String?) {
+        synchronized(lock) {
+            if (this.folder == folder && name != null) prefs.edit().putString(FOLDER_NAME, name).commit()
+        }
+    }
 
     /**
      * What has been written to [folder], for one run. A run that began before another folder was
