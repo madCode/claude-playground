@@ -102,7 +102,9 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
   calendar on the phone, so the choice lives in Spotter: list the calendars by name, let the
   person pick one or more, and query only those (`Calendar`, `CalendarContract.Instances` by
   calendar id). Until they pick, it reads all visible calendars as now. Say plainly on the
-  screen that Android's permission still covers all of them. *(madCode, 2026-11-22)*
+  screen that Android's permission still covers all of them. *(madCode, 2026-11-22)* Low
+  priority: it limits only what Spotter reads, not what Android allows, and Spotter already reads
+  just today's and tomorrow's titles and times and keeps nothing.
 
 ## Not doing
 
