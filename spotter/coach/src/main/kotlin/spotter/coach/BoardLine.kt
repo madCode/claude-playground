@@ -18,6 +18,9 @@ sealed interface Scheme {
     /** "10 / 8 / 6 x": a weight is picked up for the first round (trap 8). */
     data class Ladder(val rounds: List<Int>, val count: Count) : Scheme {
         val firstRound: Int get() = rounds.first()
+
+        /** Each round's reps a side: "6 / 8 / 10 total" is 3, 4, 5 a side, as "12 total" is 6 (trap 7). */
+        fun perSide(): List<Int> = if (count == Count.TOTAL) rounds.map { it / 2 } else rounds
     }
 
     /** "30 sec of", "1 min of": a time, not a rep count. */

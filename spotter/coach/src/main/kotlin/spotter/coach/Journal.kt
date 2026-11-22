@@ -1,0 +1,120 @@
+package spotter.coach
+
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import java.time.LocalDate
+
+/**
+ * One event in the append-only log (DESIGN.md, Rules): a row logged, or a correction or removal
+ * of one logged before. Nothing is edited in place, so what was logged never changes meaning,
+ * and a correction is its own event, kept beside what it corrects.
+ *
+ * An exercise's identity is fixed when it is logged: [parts] holds the movements and variations
+ * as they were read then, so a later change to the word lists never relabels a logged row.
+ */
+data class JournalEntry(
+    /** Order of writing; assigned by the store. 0 for one not yet written. */
+    val id: Long = 0,
+    /** When it was written, in epoch milliseconds. */
+    val at: Long,
+    val kind: Kind,
+    /** For a correction, the entry it replaces; for a removal, the entry it removes. */
+    val target: Long? = null,
+    val date: LocalDate,
+    val className: String,
+    /** The row's place on that day's sheet. */
+    val ref: Int,
+    /** The board's own words. */
+    val line: String,
+    val key: String,
+    val parts: List<LoggedPart>,
+    val lb: Int,
+    val count: Int?,
+    val targetLow: Int?,
+    val targetHigh: Int?,
+    /** A ladder's rounds in reps a side ([Scheme.Ladder.perSide]), as [reps] are. */
+    val ladder: List<Int>?,
+    val reps: List<Int>,
+    val hurt: Boolean = false,
+    val formBroke: Boolean = false,
+    val stopped: Boolean = false,
+) {
+    enum class Kind { LOGGED, CORRECTED, REMOVED }
+}
+
+/** A part as logged: the movement's name and its variations. */
+@Serializable
+data class LoggedPart(val movement: String, val variations: Map<String, String>)
+
+object Journal {
+    private val json = Json
+
+    fun partsJson(parts: List<LoggedPart>): String = json.encodeToString(parts)
+    fun partsFrom(text: String): List<LoggedPart> = json.decodeFromString(text)
+    fun intsJson(ints: List<Int>): String = json.encodeToString(ints)
+    fun intsFrom(text: String): List<Int> = json.decodeFromString(text)
+
+    /** An entry for a row logged now. [ladder] is in reps a side ([Scheme.Ladder.perSide]). */
+    fun logged(
+        at: Long, date: LocalDate, className: String, ref: Int, line: String, exercise: Reading.Known,
+        load: Load, target: IntRange?, ladder: List<Int>?, reps: List<Int>,
+        hurt: Boolean = false, formBroke: Boolean = false, stopped: Boolean = false,
+    ) = JournalEntry(
+        at = at, kind = JournalEntry.Kind.LOGGED, date = date, className = className, ref = ref, line = line,
+        key = exercise.key, parts = exercise.parts.map { LoggedPart(it.movement.name, it.variations) },
+        lb = load.lb, count = load.count, targetLow = target?.first, targetHigh = target?.last, ladder = ladder,
+        reps = reps, hurt = hurt, formBroke = formBroke, stopped = stopped,
+    )
+
+    /**
+     * The history the coach reads, from every entry ever written, in the order written: each row
+     * as last corrected, removed rows left out. A correction or removal of an entry that isn't
+     * there is ignored, so a damaged log loses that one change, not the rest.
+     */
+    fun history(entries: List<JournalEntry>, vocabulary: Vocabulary): List<Logged> {
+        // Each live row, by the id of the entry that first logged it.
+        val rows = linkedMapOf<Long, JournalEntry>()
+        // Any entry's id, to the row it belongs to: corrections can target a correction.
+        val rowOf = mutableMapOf<Long, Long>()
+        // Only written entries: an id is what corrections point at, so unwritten ones (id 0)
+        // would collapse into one row.
+        for (e in entries.filter { it.id > 0 }.sortedBy { it.id }) {
+            when (e.kind) {
+                JournalEntry.Kind.LOGGED -> {
+                    rows[e.id] = e
+                    rowOf[e.id] = e.id
+                }
+                JournalEntry.Kind.CORRECTED -> {
+                    val row = e.target?.let { rowOf[it] } ?: continue
+                    if (row !in rows) continue
+                    rows[row] = e
+                    rowOf[e.id] = row
+                }
+                JournalEntry.Kind.REMOVED -> {
+                    val row = e.target?.let { rowOf[it] } ?: continue
+                    rows.remove(row)
+                }
+            }
+        }
+        return rows.values.mapNotNull { toLogged(it, vocabulary) }
+    }
+
+    private fun toLogged(e: JournalEntry, vocabulary: Vocabulary): Logged? {
+        if (e.parts.isEmpty()) return null
+        // The movement as the lists know it now, for what isn't in the key (one-leggedness); a
+        // movement since renamed keeps its logged name, so the key is unchanged either way.
+        val parts = e.parts.map { p ->
+            Part(vocabulary.movements.firstOrNull { it.name == p.movement } ?: Movement(p.movement), p.variations)
+        }
+        // The parts are the identity. Should the key's format ever change, keys rebuilt from them
+        // change with the sheet's, so history still matches rather than vanishing.
+        val exercise = Reading.Known(parts, emptySet())
+        // A damaged row loses itself: a weight or count no load can have, an empty ladder.
+        val load = runCatching { Load(e.lb, e.count) }.getOrNull() ?: return null
+        val target = if (e.targetLow != null && e.targetHigh != null) e.targetLow..e.targetHigh else null
+        return Logged(
+            e.date, exercise, load, target, e.reps,
+            hurt = e.hurt, formBroke = e.formBroke, stopped = e.stopped, ladder = e.ladder?.takeIf { it.isNotEmpty() },
+        )
+    }
+}

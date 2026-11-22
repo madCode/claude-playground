@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kover)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
 
 val ciRun = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
@@ -126,8 +128,16 @@ abstract class SelfUpdateManifestCheck : DefaultTask() {
     }
 }
 
+// Each version of the log's schema is kept in the repository, so a change to it is reviewed and
+// a migration can be tested against the exact schema a phone has.
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
 dependencies {
     implementation(project(":coach"))
+    implementation(libs.room.runtime)
+    ksp(libs.room.compiler)
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)

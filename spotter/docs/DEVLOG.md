@@ -12,6 +12,20 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 10: the log, and a review of the whole
+- **Why:** step 3 starts: classes have to be kept before they can be logged on screen.
+- **Shipped:** the event log on the phone. It only ever grows: a correction or a removal is a new
+  entry beside what it changes, and each logged row keeps the exercise it was read as, so a
+  later change to the word lists never relabels your history.
+- **Review caught:** one damaged stored row would have stopped the whole log from reading, and
+  a weight no dumbbell has stopped the coach; a ladder had no stated unit, so a total stored
+  where reps a side were meant would have counted every set as a miss; unwritten entries could
+  collapse into one; and a change to the key's format would have made all history vanish. All
+  fixed and tested.
+- **The architecture and test review** (due around now) found a real bug, fixed here: a ladder
+  written in totals ("6 / 8 / 10 total") was read as 6 a side, not 3. Its other findings are in
+  BACKLOG.md: three to do before the Log screen, the rest for a tidy-up.
+
 ### Cycle 9: the sheet on the phone
 - **Why:** the end of step 2: the glance before class.
 - **Shipped:** the home screen now shows the next class's sheet: its date and start, notes when

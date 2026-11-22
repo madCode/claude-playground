@@ -2,6 +2,11 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 10 — build and audit: the event log; architecture and test health
+
+- A read-only audit can run in a worktree of origin/main while the cycle builds in the main
+  checkout: it cost no extra time, and found a bug the cycle then fixed.
+
 ### Cycle 9 — build: the sheet on the phone
 
 - Render the screen from a real feed board and look at the PNG before review: it shows layout
