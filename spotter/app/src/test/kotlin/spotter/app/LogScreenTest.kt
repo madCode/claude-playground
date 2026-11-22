@@ -170,6 +170,8 @@ class LogScreenTest {
         compose.onNodeWithContentDescription("8 x deadlift: felt easy").assertDoesNotExist()
         compose.onNodeWithContentDescription("8 x deadlift: done as listed").performClick()
         compose.onNodeWithContentDescription("8 x deadlift: felt easy").performClick()
+        // Tapping the tick again keeps it.
+        compose.onNodeWithContentDescription("8 x deadlift: done as listed").performClick()
         compose.onNodeWithContentDescription("8 x deadlift: done as listed").assertIsSelected()
         compose.onNodeWithContentDescription("8 x deadlift: changed").assertIsNotSelected()
         compose.onNodeWithText("Logged: 2×40 · 8 reps · felt easy").performScrollTo().assertIsDisplayed()

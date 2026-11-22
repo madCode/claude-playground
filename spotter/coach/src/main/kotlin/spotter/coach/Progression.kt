@@ -201,9 +201,10 @@ object Progression {
             // weight is settled by two clean sessions in a row at these reps, or by one that
             // felt easy. A weight lifted above the sheet's number is new, so it waits its two too.
             basis.outcome == Outcome.CLEAN && !basis.easy && !settled(basis, own) -> held.also {
-                // Only promised where it is true: at these reps, with a step to take that isn't a big jump.
+                // Only promised where it is true: at these reps, with a step to take that isn't a
+                // big jump, and nothing logged since (a twinge after it breaks the run).
                 val up = Rack.up(held)
-                reasons += if (basis.anchor == to && up != null && up <= held * BIG_JUMP) {
+                reasons += if (basis.anchor == to && up != null && up <= held * BIG_JUMP && basis === own.last()) {
                     "clean at ${basis.load.label} once: up after one more clean session, or one that felt easy"
                 } else {
                     "clean at ${basis.load.label} once: same again"

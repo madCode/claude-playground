@@ -62,6 +62,8 @@ class ProgressionTest {
         assertEquals("clean at 2×50 once: same again", why(listOf(logged(1, 50, clean))))
         assertEquals("clean at 2×12 once: same again", why(listOf(logged(1, 12, clean))))
         assertEquals("clean at 2×25 once: same again", why(listOf(logged(1, 25, clean)), target = 12..12))
+        // Nor after a twinge since: the next clean session won't be the second in a row.
+        assertEquals("clean at 2×25 once: same again", why(listOf(logged(1, 25, clean), logged(3, 25, clean, hurt = true))))
     }
 
     // One clean session that felt easy is enough.

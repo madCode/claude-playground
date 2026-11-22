@@ -126,7 +126,8 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (R
                 if (asListed != null) {
                     Choice("✓ as listed", listed, "${row.shown}: done as listed") {
                         open = false
-                        onChange(asListed.copy(count = asListed.count ?: log?.count))
+                        // Ticked again, it keeps what was said beside it.
+                        onChange(asListed.copy(count = asListed.count ?: log?.count, easy = listed && log?.easy == true))
                     }
                 }
                 // Opens the rack, and closes it again. Nothing is logged until a weight is picked.
