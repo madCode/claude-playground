@@ -17,6 +17,10 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   logged, with the number the sheet showed you beside what you lifted, and one file holding
   every event. Nothing writes them to a folder yet; that, the schedule and Android backup are
   next.
+- **Review caught:** two classes on a day whose names cut down alike would have overwritten
+  each other's file; correcting a row replaced the number the sheet had shown with a later one;
+  a ladder counted in totals went out with halved rounds; a damaged row could be graded.
+  All fixed and tested, and the tests now check the cases the first ones let through.
 
 ### Cycle 15: which class, once you've logged
 - **Why:** your answer ("tomorrow's sheet as soon as today's is logged"), and the review's

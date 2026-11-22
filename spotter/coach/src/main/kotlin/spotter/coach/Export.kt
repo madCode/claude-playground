@@ -24,17 +24,38 @@ object Export {
      * Every file to write, by name: one scorecard session per class that has rows logged, and
      * the whole log, an event a line, corrections and removals included, in the order written.
      */
-    fun files(entries: List<JournalEntry>): Map<String, String> {
+    fun files(entries: List<JournalEntry>, unreadable: Int = 0): Map<String, String> {
         val written = entries.filter { it.id > 0 }.sortedBy { it.id }
-        val sessions = Journal.live(written).groupBy { it.date to it.className }.map { (cls, rows) ->
-            sessionFile(cls.first, cls.second) to session(cls.first, cls.second, rows).toJson()
+        // Rows the coach itself would refuse (a weight or count no load can have, no exercise)
+        // aren't graded either.
+        val classes = Journal.live(written).filter(::sound).groupBy { it.date to it.className }
+        val sessions = classes.map { (cls, rows) ->
+            // Against the day's other classes only, so a file's name never changes later.
+            val sameDay = classes.keys.filter { it.first == cls.first }.map { it.second }.toSet()
+            sessionFile(cls.first, cls.second, sameDay) to session(cls.first, cls.second, rows).toJson()
         }
-        return sessions.toMap() + (LOG_FILE to written.joinToString("") { line(it) + "\n" })
+        // Said in the file when the store couldn't read some events: a missing correction or
+        // removal changes what the sessions say, and the reader should know they may.
+        val header = if (unreadable > 0) """{"schema":"$LOG_SCHEMA","unreadable":$unreadable}""" + "\n" else ""
+        return sessions.toMap() + (LOG_FILE to header + written.joinToString("") { line(it) + "\n" })
     }
 
-    /** "session-2026-11-21-2G.json": a class name is a calendar title when it names no format. */
-    fun sessionFile(date: LocalDate, className: String): String =
-        "session-$date-${className.replace(Regex("""[^A-Za-z0-9._-]+"""), "_").trim('_').take(40).ifEmpty { "class" }}.json"
+    private fun sound(e: JournalEntry) = e.parts.isNotEmpty() && runCatching { Load(e.lb, e.count) }.isSuccess
+
+    private fun plain(className: String) = className.replace(Regex("""[^A-Za-z0-9._-]+"""), "_").trim('_', '.').take(40).ifEmpty { "class" }
+
+    /**
+     * "session-2026-11-21-2G.json". A class name is a calendar title when it names no format, so
+     * it is cut down to plain characters; when that makes two of [all] the names alike (also by
+     * case, for folders that ignore it), or changes the name at all, a mark from the full name
+     * keeps one class's file from overwriting another's.
+     */
+    fun sessionFile(date: LocalDate, className: String, all: Set<String> = setOf(className)): String {
+        val name = plain(className)
+        val alike = all.count { plain(it).equals(name, ignoreCase = true) } > 1
+        val mark = if (alike || name != className) "-" + "%08x".format(className.hashCode()) else ""
+        return "session-$date-$name$mark.json"
+    }
 
     /**
      * A class's session in the scorecard's shape from its live [rows], in the order logged. Only
@@ -58,7 +79,9 @@ object Export {
                 variant = JsonObject(mapOf("implement" to JsonPrimitive(e.parts.firstNotNullOfOrNull { it.variations["implement"] }))),
                 prescribedReps = e.ladder?.firstOrNull() ?: e.targetHigh,
                 prescribedDurationSec = (scheme as? Scheme.Timed)?.seconds,
-                rounds = e.ladder,
+                // The board's rounds, as the sheet's session writes them ("6 / 8 / 10 total"); the
+                // log keeps them a side each.
+                rounds = (scheme as? Scheme.Ladder)?.rounds ?: e.ladder,
                 suggested = shown?.label ?: "no number",
                 suggestedWeight = shown?.perHand?.toDouble(),
                 weight = e.lb.toDouble(),
@@ -76,7 +99,11 @@ object Export {
     )
 
     /** One event as a line of the full log: every field, under plain names. */
-    fun line(e: JournalEntry): String = Json.encodeToString(
+    fun line(e: JournalEntry): String = raw(e)
+        // Valid in JSON, but line breaks to some readers: a line stays a line.
+        .replace("\u0085", "\\u0085").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
+
+    private fun raw(e: JournalEntry): String = Json.encodeToString(
         JsonObject.serializer(),
         buildJsonObject {
             put("schema", LOG_SCHEMA)

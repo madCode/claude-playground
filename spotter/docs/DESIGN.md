@@ -312,9 +312,12 @@ What is written (`Export` in the coach) comes from the event log alone, since ea
 the board's words and what the sheet showed:
 
 - `session-<date>-<class>.json` for each class with rows logged: a `gym-session/1` file of its
-  rows as last corrected, in the order logged. Rows left alone aren't in it.
-- `spotter-log.jsonl`: every event, a line each, corrections and removals included, so the
-  history can be rebuilt from the file.
+  rows as last corrected, in the order logged. Rows left alone aren't in it, nor a row with a
+  weight no load can have. `suggested_weight` is what the sheet showed when the row was first
+  logged; a correction keeps it. A class name that isn't plain, or that would match another's
+  that day, carries a mark so no file overwrites another.
+- `spotter-log.jsonl`: every event, a line each, corrections and removals included. When the
+  store couldn't read some events, the first line says how many.
 
 ## The watch (later)
 
