@@ -107,10 +107,8 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (R
                         onChange(asListed)
                     }
                 }
-                Choice("Changed", open, "${row.shown}: changed") {
-                    open = true
-                    if (log == null || log == asListed) onChange(LogDraft.startChanged(row))
-                }
+                // Opens the rack. Nothing is logged until a weight is picked there.
+                Choice("Changed", open, "${row.shown}: changed") { open = true }
                 if (log != null) {
                     OutlinedButton(
                         onClick = { open = false; onChange(null) },
@@ -118,7 +116,7 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (R
                     ) { Text("Clear") }
                 }
             }
-            if (open && log != null) Editor(row, log, onChange)
+            if (open) Editor(row, log, onChange)
         }
     }
 }
@@ -135,15 +133,19 @@ private fun Choice(label: String, selected: Boolean, spoken: String, onClick: ()
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Editor(row: SheetRow, log: RowLog, onChange: (RowLog) -> Unit) {
+private fun Editor(row: SheetRow, log: RowLog?, onChange: (RowLog) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Stepper(
-            "Heaviest",
-            "${log.count?.let { "$it×" } ?: ""}${log.lb} lb",
-            "${row.shown}: heaviest ${spokenLoad(log)}",
-            onDown = Rack.down(log.lb)?.let { { onChange(log.copy(lb = it)) } },
-            onUp = Rack.up(log.lb)?.let { { onChange(log.copy(lb = it)) } },
-        )
+        val last = row.lastHeld?.let { " Last time: ${it.label}." }.orEmpty()
+        Text("Heaviest dumbbell, lb.$last", fontSize = 15.sp, color = muted)
+        // The whole rack, one tap each: thirteen weights are quicker to hit than to step to.
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Rack.dumbbells.forEach { lb ->
+                Choice("$lb", log?.lb == lb, "${row.shown}: $lb pounds") {
+                    onChange(log?.copy(lb = lb) ?: LogDraft.picked(row, lb))
+                }
+            }
+        }
+        if (log == null) return@Column
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Choice("One dumbbell", log.count == 1, "${row.shown}: one dumbbell") { onChange(log.copy(count = 1)) }
             Choice("Two", log.count == 2, "${row.shown}: two dumbbells") { onChange(log.copy(count = 2)) }
@@ -207,9 +209,3 @@ internal fun summary(log: RowLog): String = listOfNotNull(
     "had to stop".takeIf { log.stopped },
     "easier version".takeIf { log.easier },
 ).joinToString(" · ")
-
-private fun spokenLoad(log: RowLog) = when (log.count) {
-    2 -> "two ${log.lb} pound dumbbells"
-    1 -> "one ${log.lb} pound dumbbell"
-    else -> "${log.lb} pounds each"
-}

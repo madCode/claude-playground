@@ -11,6 +11,13 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 14: pick the weight from the rack
+- **Why:** the logging review found "changed" on a new row saved a made-up 2×10 before you'd
+  picked anything, assumed two dumbbells, and took eight taps to reach 40.
+- **Shipped:** "changed" opens the whole rack, thirteen weights, one tap each, with last time's
+  weight shown above it. Nothing is logged until you pick. "One dumbbell / Two" starts from what
+  is known (the board's words, the sheet's number, your last log) and otherwise from neither.
+
 ### Cycle 13: the logging rules, after their review
 - **Why:** the review of the day's logging decisions found numbers going wrong; these are the
   ones in the coach that needed no answer from you.

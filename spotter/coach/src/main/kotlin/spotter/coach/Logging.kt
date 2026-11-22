@@ -51,18 +51,18 @@ data class LogDraft(
         }
 
         /**
-         * Where "changed" starts: as listed when there is a number, else the lightest pair a
-         * new exercise would start from, for the person to step up from.
+         * "Changed", once a weight is picked from the rack: that weight at the board's reps.
+         * Nothing is logged before the pick, so no made-up set enters history. The count is only
+         * what is known: the row's words, the sheet's number, or the last time it was logged;
+         * otherwise unknown until the person says.
          */
-        fun startChanged(row: SheetRow): RowLog {
-            val count = (row.reading as? Reading.Known)?.let(Sheet::rowCount) ?: 2
-            // An imported number with no count: logging is the chance to say how many.
-            return asListed(row)?.let { if (it.count == null) it.copy(count = count) else it } ?: RowLog(START_LB, count, reps(row))
-        }
+        fun picked(row: SheetRow, lb: Int): RowLog = RowLog(lb, count(row), reps(row))
+
+        private fun count(row: SheetRow): Int? = (row.reading as? Reading.Known)?.let(Sheet::rowCount)
+            ?: (row.suggestion as? Suggestion.Weight)?.load?.count
+            ?: row.lastHeld?.count
 
         private fun reps(row: SheetRow): Int? = if (row.line.scheme is Scheme.Ladder) null else row.target?.first
-
-        private const val START_LB = 10
 
         /** The draft for a class already logged, or partly: what is in the log for its rows. */
         fun from(sheet: Sheet, logged: Map<String, JournalEntry>): LogDraft {

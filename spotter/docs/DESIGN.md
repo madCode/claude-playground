@@ -239,8 +239,10 @@ next one in that list. A Y-bell is another implement and never steps onto that l
   order: name, the number, ▲ ▼ = against last time. Warnings at the top and on their rows
   (a miss, pain, a run of unfinished sets). A tap on a row opens why.
 - **Log** ("Log this class" on the sheet). The same rows. Each weighted row is "✓ as listed"
-  (the sheet's number, and the board's reps: a range's low end) or "changed" (the heaviest
-  dumbbell, one or two, and reps, on steppers), with "felt easy / hard", "twinge", "had to stop"
+  (the sheet's number, and the board's reps: a range's low end) or "changed": the heaviest
+  dumbbell picked from the whole rack in one tap, one or two, and reps on a stepper. Opening
+  "changed" logs nothing until a weight is picked, and the count is never guessed: it comes
+  from the row's words, the sheet's number or the last log, or stays unknown until said. With "felt easy / hard", "twinge", "had to stop"
   and "easier version" one tap away. A row with no number yet has only "changed". Untouched rows
   stay unlogged, never "skipped". Save writes events (`Logging` in the coach, one transaction):
   a new row is logged, a changed one corrected, one cleared removed, an unchanged one left

@@ -51,10 +51,6 @@ Step 3, logging:
 
 - [ ] Fixes from the review of today's logging decisions (cycle 13), before more is built on
   them. Each is a wrong number or a guess entering history:
-  - "Changed" on a row with no number puts 2×10 in the log before anything is picked, and
-    guesses two dumbbells. Pick the weight from the rack in one tap (nothing preselected,
-    nothing logged until picked), the count only when the words or the last log fix it, and
-    start from the last weight held when there is one.
   - "+ Each round" will need a weight per round, not one per row.
   - A ladder done clean with each round's weight known ("8 / 6 / 4") counts as clean at 8 for
     a straight "8 x" row, which is more sets at 8 than were done. *(cycle 13 review)*
@@ -157,6 +153,8 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] "Changed" picks from the rack (cycle 14): one tap on any of the thirteen weights, nothing
+  logged before the pick, the count never guessed, last time's weight shown.
 - [x] The coach's half of the logging review (cycle 13): a one-weight ladder holds; twinges cap
   from the latest, always say so, and a twinge-only history shows that weight; "felt hard"
   delays a step; each rep count keeps its own history, and conversions start from the reps
