@@ -50,61 +50,91 @@ data class BoardLine(
     val rest: Boolean,
 ) {
     companion object {
-        private val labels = listOf("finisher", "bonus", "buy-in", "buy in", "coach cue")
-        private const val NUM = """(\d+)"""
-        private val ladder = Regex("""^$NUM(?:\s*/\s*$NUM)+\s*(each|total)?\s*(?:x|×)?\s+""")
+        /** Longer than any workout line: commentary, or input built to be slow to read. */
+        const val MAX_LENGTH = 300
+
+        private val labels = Regex("""^(?:repeat until (?:time (?:is called )?)?(?:for )?)?(finisher|bonus|buy-in|buy in|coach cue)\s*:?\s*""")
+        // Four digits at most: no board asks for more, and a longer number can't overflow Int.
+        private const val NUM = """(\d{1,4})(?!\d)"""
+        // A ladder has three rounds or more, or an "x": "1/2 kneeling" is a half-kneeling stance.
+        private val ladder = Regex("""^$NUM\s*/\s*$NUM(?:\s*/\s*$NUM){1,8}\s*(each|total)?\s*(?:x|×)?\s+|^$NUM\s*/\s*$NUM\s*(each|total)?\s*(?:x|×)\s+""")
         // "N x", "N - N x", "N each x", "4 each side:", and "5 each arm", which has no "x".
         private val reps = Regex("""^~?$NUM(?:\s*-\s*$NUM)?\s*(?:(each|total)(?:\s+(?:side|arm|leg))?\s*(?:x|×|:)?|(?:x|×|:))\s*""")
         private val timed = Regex("""^~?$NUM\s*(sec|secs|second|seconds|s|min|mins|minute|minutes)\b\s*(?:of\s+)?""")
+        private val clockTime = Regex("""^(\d{1,2}):(\d{2})\s+(?:of\s+)?""")
+        // "45 sec to do 8 x split squat": the reps are the scheme; the time is how long to do them.
+        private val timeToDo = Regex("""^~?\d{1,4}\s*(?:sec|secs|seconds|min|mins|minutes)\s+to\s+(?:do|complete)\s+""")
         private val amrap = Regex("""\bamrepsap\b|\bamrap\b""")
-        private val sideMark = Regex("""\s*\((l|r)\)\s*$|\s+(l|r)$|\s+on (?:the )?(l)eft$|\s+on (?:the )?(r)ight$""")
-        private val bareCount = Regex("""^$NUM\s+(?!(?:dumbbells?|db|degree|kg|lbs?|x)\b)(?=[a-z])""")
-        private val trailingRest = Regex("""[,\s]*(?:-\s*work & )?\brest\b\s*$""")
+        private val trailingCount = Regex("""\s*\((total|each|ea)\)""")
+        private val side = Regex("""\s*\((l|r|left|right)\)|\s+-\s*(l|r|left|right)\s*$|\s+(l|r)\s*$|\s+on (?:the )?(left|right)\s*$""")
+        // A bare count before the exercise ("8 lateral lunge"), unless the number is part of the
+        // exercise ("2 dumbbell bench bridge", "90 degree pop squat", "4 point row") or the line
+        // is a block count ("2 blocks on the floor").
+        private val bareCount = Regex("""^$NUM\s+(?!(?:dumbbells?|db|degree|kg|lbs?|x|point|way|arm|count|blocks?|rounds?|minutes?|min|sec|m)\b)(?=[a-z])""")
+        private val trailingRest = Regex("""(?:[,\s]|\bor\b)*(?:-\s*work & )?\brest\b(?:[,\s]|\bor\b)*$""")
+        private val trailingJunk = Regex("""(?:[,\s-]|\bor\b)+$""")
 
-        // A line that tells the class what to do rather than naming an exercise. Boards hold
-        // these between exercises; reading one as an exercise is how "Good morning, all!" once
-        // became the good-morning lift (trap 5).
-        private val instructionStarts = listOf("repeat", "goal", "until", "match", "increase", "then", "rest ", "complete")
+        // Lines that tell the class what to do, rather than naming an exercise. Reading one as an
+        // exercise is how "Good morning, all!" once became the good-morning lift (trap 5).
+        private val instructionStart = Regex("""^(repeat|goal|until|match|increase|then|complete|rest)\b""")
+        // A second sentence of five words or more; "alt." and a short cue ("count & check reps")
+        // after a full stop are still part of a workout line.
+        private val moreSentences = Regex("""\.\s+\S+(?:\s+\S+){4,}""")
+        private val talk = Regex("""\b(you|your|we|our|i|my)\b""")
+        // Tread and rower lines name no dumbbell lift, though "row" is a movement's name.
+        private val cardio = Regex("""\b\d+\s?m\b|%|\ball[- ]?outs?\b|\bao\b|\bpush pace\b|\bmph\b|\brower\b|\btread\b|\bjog\b|\brun\b""")
 
         fun read(raw: String): BoardLine {
+            if (raw.length > MAX_LENGTH) return other(raw, LineKind.INSTRUCTION, raw.take(80))
             var text = Vocabulary.normaliseText(raw)
                 .replace("**", "")
                 .replace("\\", "")
+                .replace(Regex("""^[*•\-\s]+"""), "")
                 .replace(Regex("""\s+"""), " ")
                 .trim()
             var label: String? = null
-            for (l in labels) {
-                val m = Regex("""^(?:repeat until (?:time (?:is called )?)?(?:for )?)?$l\b\s*:?\s*""").find(text)
-                if (m != null) {
-                    label = l.replace("buy in", "buy-in")
-                    text = text.substring(m.range.last + 1)
-                    break
-                }
+            labels.find(text)?.let { m ->
+                label = m.groups[1]!!.value.replace("buy in", "buy-in")
+                text = text.substring(m.range.last + 1)
             }
-            if (label == null && instructionStarts.any { text.startsWith(it) } ) return other(raw, LineKind.INSTRUCTION, text)
+            if (instructionStart.containsMatchIn(text)) return other(raw, LineKind.INSTRUCTION, text)
             if (text.endsWith(":") || Regex("""^floor block|^block \d|^tread block|\bchallenge:?$""").containsMatchIn(text)) {
                 return other(raw, LineKind.HEADING, text)
             }
-            // Commentary: a sentence aimed at the reader, not a workout line.
-            if (text.contains('!') || text.contains('?') || Regex("""\b(you|your|we|all)\b""").containsMatchIn(text) && scheme(text) == null) {
+            // Commentary: a cheer, a question, a sentence to the reader, or more than one sentence.
+            if (text.contains('!') || text.contains('?') || talk.containsMatchIn(text) || moreSentences.containsMatchIn(text)) {
                 return other(raw, LineKind.INSTRUCTION, text)
             }
+            if (cardio.containsMatchIn(text)) return other(raw, LineKind.INSTRUCTION, text)
 
+            var count: Count? = null
+            trailingCount.find(text)?.let { m ->
+                count = if (m.groups[1]!!.value == "total") Count.TOTAL else Count.EACH
+                text = text.removeRange(m.range)
+            }
+            var foundSide: String? = null
+            side.find(text)?.let { m ->
+                foundSide = (1..4).firstNotNullOf { m.groups[it] }.value.take(1).uppercase()
+                text = text.removeRange(m.range)
+            }
             var rest = false
-            trailingRest.find(text)?.let { rest = true; text = text.substring(0, it.range.first) }
-            if (Regex("""\(rest as needed\)""").containsMatchIn(text)) {
+            if (text.contains("(rest as needed)")) {
                 rest = true
-                text = text.replace(Regex("""\s*\(rest as needed\)"""), "")
+                text = text.replace("(rest as needed)", " ")
             }
-            var side: String? = null
-            sideMark.find(text)?.let { m ->
-                side = (1..4).firstNotNullOf { m.groups[it] }.value.uppercase()
-                text = text.substring(0, m.range.first)
-            }
+            text = text.replace(Regex(""",?\s*~?\d{1,4}\s*(?:sec|secs|seconds)\s+rest\b"""), ", rest")
+            trailingRest.find(text)?.let { rest = true; text = text.substring(0, it.range.first) }
+            text = text.replace(trailingJunk, "")
+            timeToDo.find(text)?.let { text = text.substring(it.range.last + 1) }
 
             val (scheme, after) = scheme(text) ?: (null to text)
-            var words = after
             var finalScheme = scheme
+            if (count != null) finalScheme = when (scheme) {
+                is Scheme.Reps -> scheme.copy(count = count!!)
+                is Scheme.Ladder -> scheme.copy(count = count!!)
+                else -> scheme
+            }
+            var words = after
             if (amrap.containsMatchIn(words)) {
                 words = words.replace(amrap, " ")
                 if (finalScheme == null) finalScheme = Scheme.AsManyAsPossible
@@ -113,7 +143,7 @@ data class BoardLine(
                 .replace(Regex("""[(),]"""), " ")
                 .replace(Regex("""\s+"""), " ")
                 .trim()
-            return BoardLine(raw, LineKind.EXERCISE, label, finalScheme, words, side, rest)
+            return BoardLine(raw, LineKind.EXERCISE, label, finalScheme, words, foundSide, rest)
         }
 
         private fun other(raw: String, kind: LineKind, text: String) =
@@ -122,9 +152,13 @@ data class BoardLine(
         /** The scheme at the start of [text] and the text after it, or null when there is none. */
         private fun scheme(text: String): Pair<Scheme, String>? {
             ladder.find(text)?.let { m ->
-                val rounds = Regex("""\d+""").findAll(m.value.substringBefore("each").substringBefore("total"))
-                    .map { it.value.toInt() }.toList()
-                return Scheme.Ladder(rounds, count(m.groups[m.groups.size - 1]?.value)) to text.substring(m.range.last + 1)
+                val numbers = m.value.substringBefore("each").substringBefore("total")
+                val rounds = Regex("""\d+""").findAll(numbers).map { it.value.toInt() }.toList()
+                val word = m.groupValues.drop(1).firstOrNull { it == "each" || it == "total" }
+                return Scheme.Ladder(rounds, count(word)) to text.substring(m.range.last + 1)
+            }
+            clockTime.find(text)?.let { m ->
+                return Scheme.Timed(m.groups[1]!!.value.toInt() * 60 + m.groups[2]!!.value.toInt()) to text.substring(m.range.last + 1)
             }
             timed.find(text)?.let { m ->
                 val n = m.groups[1]!!.value.toInt()
@@ -136,8 +170,6 @@ data class BoardLine(
                 val high = m.groups[2]?.value?.toInt() ?: low
                 return Scheme.Reps(minOf(low, high), maxOf(low, high), count(m.groups[3]?.value)) to text.substring(m.range.last + 1)
             }
-            // A bare count before the exercise ("8 lateral lunge"), unless the number is part of
-            // the exercise ("2 dumbbell bench bridge", "90 degree pop squat").
             bareCount.find(text)?.let { m ->
                 val n = m.groups[1]!!.value.toInt()
                 return Scheme.Reps(n, n, Count.PLAIN) to text.substring(m.range.last + 1)

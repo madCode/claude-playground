@@ -104,4 +104,81 @@ class BoardLineTest {
         assertEquals("alt lateral shift to windmill", line.words)
         assertEquals(Reps(6, 10, Count.PLAIN), read("6 – 10 x high row").scheme)
     }
+
+    // From the review, on corpus lines unless marked otherwise.
+
+    @Test
+    fun aTrailingTotalCountsLikeALeadingOne() {
+        val line = read("8 x alternating halos and reverse lunges with y-bell (total)")
+        assertEquals(Reps(8, 8, Count.TOTAL), line.scheme)
+        assertEquals(4..4, (line.scheme as Reps).perSide())
+        assertEquals("alternating halos and reverse lunges with y-bell", line.words)
+    }
+
+    // A sentence to the reader is commentary even when it starts with a number (trap 5).
+    @Test
+    fun aRecapThatStartsWithANumberIsNotAnExercise() {
+        assertEquals(LineKind.INSTRUCTION, read("2 blocks on the floor of work and rest style sets. They call it rotate and resist so you are twisting a lot").kind)
+        assertEquals(LineKind.INSTRUCTION, read("4 x 3 minute pushes on the treadmill and 3 x 2 minute pushes on the rower. Our coach was telling us to push").kind)
+        assertEquals(LineKind.INSTRUCTION, read("Your choice of squat or lunge").kind)
+        // A full stop inside a workout line doesn't make it commentary.
+        assertEquals(Timed(30), read("30 sec of clean to front squat. count &amp; check reps").scheme)
+        assertEquals(LineKind.EXERCISE, read("12x Y-bell knee lift with alt. torso rotation").kind)
+    }
+
+    @Test
+    fun aTimeToDoRepsKeepsTheReps() {
+        val line = read("45 sec to do 8 x split squat (L) (explosive)")
+        assertEquals(Reps(8, 8, Count.PLAIN), line.scheme)
+        assertEquals("L", line.side)
+        assertEquals("split squat explosive", line.words)
+    }
+
+    // "row" is a movement's name; a rower or tread line must not become a dumbbell row.
+    @Test
+    fun treadAndRowerLinesAreNotLifts() {
+        assertEquals(LineKind.INSTRUCTION, read("600 m row").kind)
+        assertEquals(LineKind.INSTRUCTION, read("1 min All Out row").kind)
+        assertEquals(LineKind.INSTRUCTION, read("1 min base @ 6% (PW 7.0)").kind)
+        assertEquals(LineKind.EXERCISE, read("12 x TRX row").kind)
+    }
+
+    @Test
+    fun bulletsAndIndentsComeOff() {
+        assertEquals(Reps(10, 10, Count.PLAIN), read("    * 10 x single arm chest press (L)").scheme)
+        assertEquals(LineKind.INSTRUCTION, read("* Goal: accumulate distance in the buy-in").kind)
+        assertEquals(LineKind.INSTRUCTION, read("Bonus: complete exercises at 6 reps until").kind)
+    }
+
+    @Test
+    fun everySpellingOfASideIsTakenOff() {
+        val restTimed = read("8 x RFE split squat (R), ~10 sec rest")
+        assertEquals("R", restTimed.side)
+        assertTrue(restTimed.rest)
+        assertEquals("rfe split squat", restTimed.words)
+        assertEquals("L", read("6 x single arm split squat (slow) - left").side)
+        assertEquals("R", read("1 min dumbbell overhead single arm march in place (right)").side)
+        assertEquals("full lateral step-up heavy", read("4 x full lateral step-up (heavy) - L").words)
+        assertEquals("high plank alt low row", read("8 total x high plank alt low row, rest,").words)
+        assertEquals("high plank pull through", read("12 total x high plank pull through, rest **OR**").words)
+    }
+
+    // Not seen on a board yet: numbers that belong to the exercise, and clock times.
+    @Test
+    fun numbersThatAreNotACount() {
+        assertNull(read("1/2 kneeling shoulder press").scheme)
+        assertNull(read("4 point single arm low row").scheme)
+        assertEquals(Timed(60), read("1:00 plank").scheme)
+    }
+
+    // Board text is from the internet: a hostile or broken line must not crash or stall.
+    @Test
+    fun hostileLinesAreRefusedQuickly() {
+        val started = System.nanoTime()
+        assertEquals(LineKind.INSTRUCTION, read("1/".repeat(1000) + " x squat").kind)
+        assertEquals(LineKind.INSTRUCTION, read("a" + " ,".repeat(50_000) + "x").kind)
+        assertTrue((System.nanoTime() - started) < 2_000_000_000L)
+        assertNull(read("2147483648 x squat").scheme)
+        assertNull(read(" ,".repeat(140) + " rest").scheme)
+    }
 }
