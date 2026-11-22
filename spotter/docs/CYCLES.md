@@ -2,6 +2,15 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 3 — build: naming the exercise
+
+- Read refusals as hard as successes: four wrong refusals ("pulsing half squat", "mini band
+  bridge") pointed to list axes, not to the reader; fixing the lists was the right size.
+- When a check runs before another (unknown words before "or"), a test with both shows the
+  order matters; the corpus line "V hold or 30 sec high plank" did.
+- Ask the reviewer for wrong *known* readings, not only refusals: the combo implement bug read
+  in full and looked right, which is the kind a gap-beats-a-guess app can't afford.
+
 ### Cycle 2 — build: reading what a line asks for
 
 - Peek at the corpus through the real Kotlin code, not a Python copy: a throwaway JUnit test

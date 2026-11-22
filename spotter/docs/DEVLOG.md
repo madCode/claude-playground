@@ -10,6 +10,23 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 3: naming the exercise
+- **Why:** the number for a row is only as good as knowing which exercise it is; this is where
+  Carry turned "floor close grip chest press" into a bench press.
+- **Shipped:** identity. Of Carry's 1,546 exercise rows, 1,191 (77%) are named in full; the
+  other 355 are "not sure", with the reason: 311 have a word no list holds yet (madCode's
+  review list), 34 put two movements side by side ("bench bird dog low row"), and the rest are
+  choices, clashes or no movement. A floor close-grip chest press is now its own exercise.
+- **Fixed on the way:** four kinds of row were refused wrongly and now read: "pulsing half
+  squat" (half is a range, not a tempo), "dumbbell mini band bridge" (a band is worn, not held),
+  "tricep extension lying on bench", and "bridge hold with chest press".
+- **Review caught**, on the corpus: a combo's implement went to one part only, so the curl in
+  "TRX high row to bicep curl" read as a dumbbell curl; "single leg hold with shoulder press"
+  read as an isometric press; bare "close" and "narrow" read as a grip on a squat; "dbs" and
+  "dumbbells" meant different counts. All fixed and tested. Left for the corpus grade: pairs
+  of keys for one exercise ("dumbbell lunge" and "lunge"), and refusals that a richer
+  `position` would read; both in the backlog.
+
 ### Cycle 2: reading what a line asks for
 - **Why:** every number needs the line's reps first, and three traps live here: "12 total" vs
   "6 each" (7), ladders (8), and prose read as an exercise (5).

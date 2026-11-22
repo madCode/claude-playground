@@ -100,8 +100,8 @@ class VocabularyTest {
         assertNull(words.lookup("bulgarian split squat"))
         assertNull(words.lookup("fly"))
         assertNull(words.lookup("full v-up"))
-        assertEquals(Variation("position", "prone"), words.lookup("prone"))
-        assertEquals(Variation("position", "supine"), words.lookup("supine"))
+        assertEquals(Variation("lying", "prone"), words.lookup("prone"))
+        assertEquals(Variation("lying", "supine"), words.lookup("supine"))
     }
 
     // Board text carries word joiners and HTML entities.

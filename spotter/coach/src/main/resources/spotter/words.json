@@ -11,6 +11,7 @@
    ],
    "two dumbbells": [
     "dumbbells",
+    "dbs",
     "double dumbbell",
     "double dumbbells",
     "two dumbbells",
@@ -20,8 +21,7 @@
    ],
    "dumbbell": [
     "dumbbell",
-    "db",
-    "dbs"
+    "db"
    ],
    "y-bell": [
     "y-bell",
@@ -35,13 +35,6 @@
    ],
    "trx": [
     "trx"
-   ],
-   "band": [
-    "band",
-    "banded",
-    "mini band",
-    "mini-band",
-    "bands"
    ],
    "bodyweight": [
     "bodyweight",
@@ -132,9 +125,6 @@
    "bear plank": [
     "bear plank"
    ],
-   "lying": [
-    "lying"
-   ],
    "front loaded": [
     "front loaded",
     "front-loaded"
@@ -144,14 +134,6 @@
    ],
    "low bench": [
     "low bench"
-   ],
-   "prone": [
-    "prone",
-    "face down"
-   ],
-   "supine": [
-    "supine",
-    "face up"
    ]
   },
   "stability": {
@@ -166,9 +148,7 @@
    "close": [
     "close grip",
     "close-grip",
-    "close",
-    "narrow grip",
-    "narrow"
+    "narrow grip"
    ],
    "neutral": [
     "neutral grip",
@@ -194,9 +174,6 @@
     "pulses",
     "pulsing"
    ],
-   "half": [
-    "half"
-   ],
    "slow": [
     "slow"
    ],
@@ -210,10 +187,6 @@
    ],
    "eccentric": [
     "eccentric"
-   ],
-   "full range": [
-    "full",
-    "full range"
    ],
    "stick": [
     "stick it"
@@ -266,12 +239,41 @@
    ],
    "high": [
     "high band"
+   ],
+   "on": [
+    "band",
+    "banded",
+    "mini band",
+    "mini-band",
+    "bands"
    ]
   },
   "alternating": {
    "yes": [
     "alt",
     "alternating"
+   ]
+  },
+  "range": {
+   "half": [
+    "half"
+   ],
+   "full": [
+    "full",
+    "full range"
+   ]
+  },
+  "lying": {
+   "yes": [
+    "lying"
+   ],
+   "prone": [
+    "prone",
+    "face down"
+   ],
+   "supine": [
+    "supine",
+    "face up"
    ]
   }
  },
