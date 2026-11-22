@@ -43,6 +43,30 @@ Step 2, the phone shows today's sheet: done (see Done).
 
 Step 3, logging:
 
+- [ ] Fixes from the review of today's logging decisions (cycle 13), before more is built on
+  them. Each is a wrong number or a guess entering history:
+  - A ladder logged as "changed" stores the heaviest weight against every round, so round one
+    goes up from the last round's weight. Hold a ladder logged with one number; never raise
+    round one from it.
+  - Store what the sheet showed (weight and count, or none) on each logged event: the
+    scorecard now rebuilds it at export time, from a board that may have changed.
+  - "Changed" on a row with no number puts 2×10 in the log before anything is picked, and
+    guesses two dumbbells. Pick the weight from the rack in one tap (nothing preselected,
+    nothing logged until picked), the count only when the words or the last log fix it, and
+    start from the last weight held when there is one.
+  - Twinges: cap from the latest twinge, not the lowest since the last good set; always say
+    so in the row's why, with a warning on the row; a first-ever log with a twinge shows that
+    weight, marked, rather than no number. (madCode: "a twinge holds the weight and notes it".)
+  - Epley converts from the target's top, not the reps done, and stacks on a step up: convert
+    from what was done, and not in the same move as a step.
+  - "Felt hard" is stored but not read: it holds the weight.
+  - The row id writes the count as a Kotlin data-class dump; give it a fixed format, pinned in
+    a test, so a code change can't change every id.
+  - "+ Each round" will need a weight per round, not one per row.
+- [ ] Logging a class after its window: the sheet moves on three hours after the start, and
+  then the class can't be logged at all. Keep a "Log <day>'s class" way in while it has
+  unlogged rows, apart from which sheet shows. (Waits on madCode's question below.)
+
 - [ ] The Log screen, second half: "+ Each round", each round a copy of the one before; "Add an
   exercise"; and the person's calls below. *(madCode)* From cycles 11 and 12's reviews:
   - Logged rows no longer on the sheet (a borrowed board replaced by the class's own, a line
@@ -61,8 +85,22 @@ Step 3, logging:
 
 ## Your call
 
-Nothing waiting. New board words that stay "not sure" are worth a look on the corpus now and
-then; 141 rows still are.
+From the review of today's logging decisions (also on the morning page). Until answered, the
+app keeps what it does now, except where noted.
+
+- **A tick on a fixed count** ("12 x squat", ✓ as listed): up a step every time, as now; up
+  after two ticks in a row; or up only with "felt easy"?
+- **A tick on a range** ("8-10 x"): counts as the low end, so the weight holds until "changed"
+  says the top was reached. Or offer the top as a second one-tap choice?
+- **The evening before a class**: show tomorrow's sheet as soon as today's class is logged, or
+  keep today's until three hours after it started, as now?
+- **A ladder's weight** ("8 / 6 / 4"): remember the round-one weight, or the heaviest round's?
+  Until answered, a ladder logged with one number holds.
+- **Borrowed board, then your own with a different count** (ticked "12 x" on the 3G board, your
+  2G board says "8 x"): trust your board's count, or ask?
+
+New board words that stay "not sure" are worth a look on the corpus now and then; 142 rows
+still are.
 
 ## Recurring reviews
 
