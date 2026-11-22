@@ -140,6 +140,38 @@ next one in that list. A Y-bell is another implement and never steps onto that l
 
 Later: progress, review of new exercise names, sharing a board for others, the watch.
 
+## Updating itself
+
+madCode asked for an app that updates itself without them doing anything. A CI debug build of
+Spotter does:
+
+- **Where builds come from.** Each merge to main publishes its debug build to the
+  `spotter-debug` release, beside `spotter-debug.json`: the build number, commit, the numbered
+  APK's address, and its exact size and SHA-256 (`tools/debug-feed.sh` writes it).
+- **When it checks.** On opening the app and every three hours in the background, on any
+  network. A local build (no CI number) never checks: replacing it would throw away what is
+  being tried.
+- **What it installs.** Only a newer build, only from this repository's release, and only when
+  the download matches the feed's size and hash. A build whose bytes are wrong, or that the
+  installer refuses, three times is left alone until a newer one comes; a dropped connection
+  doesn't count against it.
+- **One run at a time.** The periodic check, the check on opening and a tap all queue on one
+  WorkManager chain, so two never download into the same file or race to the installer.
+- **When it installs.** Installing replaces the running app, so the background check installs
+  only while Spotter isn't on screen, checked again after the download. Otherwise, or when
+  Android wants a tap, a blue box offers the build (as soon as it's found, even with Spotter
+  open) and its Install button does it. A build Android asked to confirm isn't downloaded again
+  in the background: on Android 8 to 11 that would be every three hours, on mobile data too. On Android 12 and later, once Spotter has installed
+  itself once, Android installs without asking (`UPDATE_PACKAGES_WITHOUT_USER_ACTION`).
+- **Debug only.** The permissions to reach the network and install apps are in the debug
+  manifest; a check in the build fails if a release ever has them, or a debug build lacks them.
+  How to check it on a phone: `docs/DEVICE.md`.
+
+## Screens so far
+
+- **Home**, until today's sheet takes its place: the name, the update box when a build is
+  waiting, and the version at the bottom, copied in one tap.
+
 ## Backup
 
 Android backup of the log, plus a scheduled export (the scorecard shape and the full log) to

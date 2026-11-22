@@ -37,9 +37,6 @@ Step 1, the coach core:
   *(handoff; the shape from the session that wrote `scorecard.py`)*
 
 Step 2, the phone shows today's sheet:
-
-- [ ] `app/` with everything in `practices/android.md`: its own icon, `.debug` beside release,
-  the version on screen, the debug channel and update check. *(practices)*
 - [ ] Fetch the board feed, keep the last good board, and pick the class from the calendar.
 - [ ] Sheet and "Why this number" screens, with screenshot tests. *(mockups)*
 
@@ -74,5 +71,8 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] `app/` with its own icon, `.debug` beside release, the version on screen, and the debug
+  channel, which installs newer builds by itself. madCode asked for self-update first,
+  2026-11-22.
 - [x] Starting lists: movements, variations, connectors, rep-scheme words and filler, as JSON in
   the coach, loaded by `Vocabulary`. Cycle 1, 2026-11-21.

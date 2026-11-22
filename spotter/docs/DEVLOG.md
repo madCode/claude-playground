@@ -4,6 +4,28 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Status
 
+- **Built so far:** the design, and the coach's first piece: loads per hand with a count, and
+  the rack's uneven steps.
+- **Waiting on you:** installing the first debug build on your phone, once it's published.
+
+## Sunday 22 November 2026
+
+### The app, and it updates itself
+- **Why:** madCode asked for automatic updating to be built into the app now.
+- **Shipped:** the first Android app (`com.app.spotter`, beside Carry): an icon, a home screen
+  with the version to copy, and self-update. Each merge to main publishes a debug build; the
+  installed one checks on opening and every three hours, downloads a newer build, checks its
+  size and SHA-256 against the feed, and installs it while Spotter isn't on screen, without a
+  tap on Android 12 and later. Otherwise a blue box offers it.
+- **Review caught:** CI would have failed every run (WorkManager not set up in the test, with
+  the run number CI always has); two runs could share one download file, so the checked bytes
+  weren't the installed ones; the app could be replaced mid-use when opened during a download;
+  three dropped connections blocked a build; on Android 8 to 11 the whole build was downloaded
+  every three hours while waiting for a tap; the box didn't appear on the open that found the
+  build; and CI could publish an older build over a newer one. All fixed and tested. Left: the
+  installer test checks a session is made, not its settings, which only a phone shows.
+- **For madCode:** install it once from the link in the README, then allow Spotter to install
+  apps when its first update asks. `docs/DEVICE.md` says how to see it working.
 - **Built so far:** the design; loads per hand with a count on the rack's uneven steps; the
   starting lists of movements and the words around them.
 - **Waiting on you:** nothing.
