@@ -9,7 +9,8 @@ usable on its own.
 The first run of cycles stops when build steps 1 to 3 are done: the first version the scorecard
 can grade against Carry.
 
-- [ ] The coach reads boards, names exercises, and suggests weights, with every trap tested.
+- [x] The coach reads boards, names exercises, and suggests weights, with every trap tested
+  (traps 12 and 13 are checked on the scorecard and after a release, not by rule tests).
 - [ ] The phone shows today's sheet from the board feed and the calendar.
 - [ ] Classes can be logged, kept in the event log, exported in the scorecard's shape and backed
   up.
@@ -33,8 +34,6 @@ Step 1, the coach core:
 - [ ] More stated factors for borrowing, madCode asked for them (2026-11-22): single arm from two,
   Bosu, a b-stance or balance version from the plain one, each conservative and in the reason.
   One leg from two (0.6) is in. *(madCode)*
-- [ ] The scorecard shape, as DESIGN.md's scorecard section says: one session file per class.
-  *(handoff; the shape from the session that wrote `scorecard.py`)*
 - [ ] The corpus grade: every line of `boards.jsonl` read fully, unsure or wrong, against
   hand-checked answers for a sample. Moved after the sheet: it checks readings, but puts no
   number on the screen. *(design)*
@@ -51,6 +50,10 @@ Step 3, logging:
   picks; Android backup. *(madCode)*
 
 ## Your call
+
+- **Check the export against `scorecard.py`** (cycles can't read gym-coach): run it on
+  [scorecard-example.json](scorecard-example.json), an invented class, and say whether it
+  grades. It is in Carry's `gym-session/1` format, so it should. *(cycle 7)*
 
 - **Board words still unsorted**, after madCode's answers of 2026-11-22. Each stays "not sure"
   until answered. *(cycle 4)*
@@ -82,6 +85,10 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
   to a folder madCode controls.
 
 ## Done
+
+- [x] The scorecard shape: one session file per class in Carry's `gym-session/1` format, weights per dumbbell with the
+  count apart, a null suggestion where the sheet showed no number, and blank rows not skipped.
+  Cycle 7, 2026-11-22.
 
 - [x] The sheet: rows in board order under their blocks, warnings first, ▲ ▼ =, a test weight
   on a big jump; combos from their parts held the same way, the lightest (trap 2); bodyweight,

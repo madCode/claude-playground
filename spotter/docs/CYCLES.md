@@ -2,6 +2,11 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 7 — build: the scorecard export
+
+- When the consumer is out of reach (a private repository), match a file it already reads
+  (Carry's sessions), ship an example, and put the one check on madCode's list.
+
 ### Cycle 6 — build: the sheet
 
 - Run a real day's board (the `carry-boards` branch) through the new piece before review: a
