@@ -11,11 +11,18 @@ class BadDownload(message: String) : IOException(message)
 
 /** Fetching the feed and the build it names, with nothing half-written left behind. */
 object Download {
+    /** A server's answer: its status, and the body when it was 200. */
+    data class Answer(val code: Int, val text: String?)
+
     /** The feed's text, or null when the server answered anything but 200. Throws offline. */
-    fun text(url: String, maxBytes: Int = 64 * 1024): String? {
+    fun text(url: String, maxBytes: Int = 64 * 1024): String? = answer(url, maxBytes).text
+
+    /** The status and, on a 200, the text, at most [maxBytes]. Throws offline. */
+    fun answer(url: String, maxBytes: Int = 64 * 1024): Answer {
         val connection = open(url)
         try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
+            val code = connection.responseCode
+            if (code != HttpURLConnection.HTTP_OK) return Answer(code, null)
             val out = java.io.ByteArrayOutputStream()
             connection.inputStream.use { input ->
                 val chunk = ByteArray(8 * 1024)
@@ -26,7 +33,7 @@ object Download {
                     if (out.size() > maxBytes) throw IOException("the feed is larger than any feed")
                 }
             }
-            return out.toString("UTF-8")
+            return Answer(code, out.toString("UTF-8"))
         } finally {
             connection.disconnect()
         }
