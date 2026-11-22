@@ -30,7 +30,7 @@ jobs:
           distribution: temurin
           cache: gradle
       - name: Validate the Gradle wrapper
-        uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
       # Without them the published build has no Sign in with GitHub, and nothing else would say so.
       - name: Check the GitHub App is configured
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
