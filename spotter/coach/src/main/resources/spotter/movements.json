@@ -1,0 +1,1202 @@
+{
+ "schema": "spotter-movements/1",
+ "movements": [
+  {
+   "name": "squat",
+   "aliases": [
+    "squats"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "legs",
+    "glutes"
+   ]
+  },
+  {
+   "name": "front squat",
+   "aliases": [
+    "front squats"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "legs",
+    "glutes"
+   ]
+  },
+  {
+   "name": "back squat",
+   "aliases": [
+    "back squats"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "legs",
+    "glutes"
+   ]
+  },
+  {
+   "name": "split squat",
+   "aliases": [
+    "split squats"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "legs",
+    "glutes"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "squat jump",
+   "aliases": [
+    "squat jumps",
+    "jump squat",
+    "jump squats"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs",
+    "glutes",
+    "cardio"
+   ]
+  },
+  {
+   "name": "pop squat",
+   "aliases": [
+    "pop squats",
+    "90 degree pop squat",
+    "90 degree pop squats"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs",
+    "glutes",
+    "cardio"
+   ]
+  },
+  {
+   "name": "cossack squat",
+   "aliases": [
+    "cossack squats"
+   ],
+   "pattern": "lunge",
+   "muscles": [
+    "legs",
+    "glutes",
+    "inner thigh"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "lateral shift",
+   "aliases": [
+    "lateral shifts"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "legs",
+    "glutes",
+    "inner thigh"
+   ]
+  },
+  {
+   "name": "deadlift",
+   "aliases": [
+    "deadlifts",
+    "conventional deadlift"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "posterior chain",
+    "back",
+    "glutes",
+    "hamstrings"
+   ]
+  },
+  {
+   "name": "romanian deadlift",
+   "aliases": [
+    "romanian deadlifts",
+    "rdl",
+    "rdls"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "hamstrings",
+    "glutes",
+    "posterior chain"
+   ]
+  },
+  {
+   "name": "good morning",
+   "aliases": [
+    "good mornings"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "hamstrings",
+    "posterior chain"
+   ]
+  },
+  {
+   "name": "hip thrust",
+   "aliases": [
+    "hip thrusts"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "glutes",
+    "posterior chain"
+   ]
+  },
+  {
+   "name": "glute bridge",
+   "aliases": [
+    "glute bridges",
+    "bridge",
+    "bridges"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "glutes",
+    "hamstrings"
+   ]
+  },
+  {
+   "name": "kettlebell swing",
+   "aliases": [
+    "kettlebell swings",
+    "kb swing",
+    "kb swings"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "posterior chain",
+    "glutes",
+    "cardio"
+   ]
+  },
+  {
+   "name": "hip hinge swing",
+   "aliases": [
+    "hip hinge swings"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "posterior chain",
+    "glutes"
+   ]
+  },
+  {
+   "name": "skier swing",
+   "aliases": [
+    "skier swings",
+    "ski swing",
+    "ski swings"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "hamstrings",
+    "glutes",
+    "posterior chain",
+    "core"
+   ]
+  },
+  {
+   "name": "airplane",
+   "aliases": [
+    "airplanes"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "hamstrings",
+    "glutes",
+    "balance"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "walking lunge",
+   "aliases": [
+    "walking lunges"
+   ],
+   "pattern": "lunge",
+   "muscles": [
+    "legs",
+    "glutes",
+    "balance"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "reverse lunge",
+   "aliases": [
+    "reverse lunges",
+    "revese lunge"
+   ],
+   "pattern": "lunge",
+   "muscles": [
+    "legs",
+    "glutes",
+    "balance"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "forward lunge",
+   "aliases": [
+    "forward lunges",
+    "front lunge",
+    "front lunges"
+   ],
+   "pattern": "lunge",
+   "muscles": [
+    "legs",
+    "glutes"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "lunge",
+   "aliases": [
+    "lunges"
+   ],
+   "pattern": "lunge",
+   "muscles": [
+    "legs",
+    "glutes",
+    "balance"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "lateral lunge",
+   "aliases": [
+    "lateral lunges",
+    "side lunge",
+    "side lunges"
+   ],
+   "pattern": "lunge",
+   "muscles": [
+    "legs",
+    "glutes",
+    "inner thigh"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "curtsy lunge",
+   "aliases": [
+    "curtsy lunges"
+   ],
+   "pattern": "lunge",
+   "muscles": [
+    "legs",
+    "glutes"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "cross-back lunge",
+   "aliases": [
+    "cross-back lunges",
+    "cross back lunge",
+    "cross back lunges"
+   ],
+   "pattern": "lunge",
+   "muscles": [
+    "legs",
+    "glutes"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "step-up",
+   "aliases": [
+    "step-ups",
+    "box step-up",
+    "box step-ups"
+   ],
+   "pattern": "lunge",
+   "muscles": [
+    "legs",
+    "glutes"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "step-down",
+   "aliases": [
+    "step-downs"
+   ],
+   "pattern": "lunge",
+   "muscles": [
+    "legs",
+    "glutes",
+    "balance"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "step-down toe tap",
+   "aliases": [
+    "step-down toe taps"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs",
+    "glutes"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "shoulder press",
+   "aliases": [
+    "shoulder presses",
+    "overhead press",
+    "overhead presses",
+    "ohp",
+    "strict press",
+    "military press"
+   ],
+   "pattern": "vertical_push",
+   "muscles": [
+    "shoulders",
+    "triceps"
+   ]
+  },
+  {
+   "name": "push press",
+   "aliases": [
+    "push presses"
+   ],
+   "pattern": "vertical_push",
+   "muscles": [
+    "shoulders",
+    "triceps",
+    "core"
+   ]
+  },
+  {
+   "name": "arnold press",
+   "aliases": [
+    "arnold presses"
+   ],
+   "pattern": "vertical_push",
+   "muscles": [
+    "shoulders"
+   ]
+  },
+  {
+   "name": "thruster",
+   "aliases": [
+    "thrusters"
+   ],
+   "pattern": "vertical_push",
+   "muscles": [
+    "legs",
+    "shoulders",
+    "full body"
+   ]
+  },
+  {
+   "name": "clean and press",
+   "aliases": [
+    "clean & press",
+    "clean and presses"
+   ],
+   "pattern": "vertical_push",
+   "muscles": [
+    "full body",
+    "shoulders",
+    "posterior chain"
+   ]
+  },
+  {
+   "name": "clean",
+   "aliases": [
+    "cleans"
+   ],
+   "pattern": null,
+   "muscles": [
+    "full body",
+    "legs",
+    "back"
+   ]
+  },
+  {
+   "name": "snatch",
+   "aliases": [
+    "snatches"
+   ],
+   "pattern": null,
+   "muscles": [
+    "full body",
+    "shoulders",
+    "legs"
+   ]
+  },
+  {
+   "name": "chest press",
+   "aliases": [
+    "chest presses",
+    "bench press",
+    "bench presses"
+   ],
+   "pattern": "horizontal_push",
+   "muscles": [
+    "chest",
+    "triceps",
+    "shoulders"
+   ]
+  },
+  {
+   "name": "chest fly",
+   "aliases": [
+    "chest flys",
+    "chest flies"
+   ],
+   "pattern": "fly",
+   "muscles": [
+    "chest"
+   ]
+  },
+  {
+   "name": "push-up",
+   "aliases": [
+    "push-ups",
+    "pushup",
+    "pushups"
+   ],
+   "pattern": "horizontal_push",
+   "muscles": [
+    "chest",
+    "triceps",
+    "core"
+   ]
+  },
+  {
+   "name": "row",
+   "aliases": [
+    "rows"
+   ],
+   "pattern": "horizontal_pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ]
+  },
+  {
+   "name": "bent-over row",
+   "aliases": [
+    "bent-over rows",
+    "bentover row",
+    "bentover rows"
+   ],
+   "pattern": "horizontal_pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ]
+  },
+  {
+   "name": "low row",
+   "aliases": [
+    "low rows"
+   ],
+   "pattern": "horizontal_pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ]
+  },
+  {
+   "name": "high row",
+   "aliases": [
+    "high rows"
+   ],
+   "pattern": "horizontal_pull",
+   "muscles": [
+    "back",
+    "shoulders"
+   ]
+  },
+  {
+   "name": "renegade row",
+   "aliases": [
+    "renegade rows"
+   ],
+   "pattern": "horizontal_pull",
+   "muscles": [
+    "back",
+    "core",
+    "biceps"
+   ]
+  },
+  {
+   "name": "trx row",
+   "aliases": [
+    "trx rows",
+    "inverted row",
+    "inverted rows",
+    "suspension row"
+   ],
+   "pattern": "horizontal_pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ]
+  },
+  {
+   "name": "upright row",
+   "aliases": [
+    "upright rows"
+   ],
+   "pattern": "vertical_pull",
+   "muscles": [
+    "shoulders",
+    "back"
+   ]
+  },
+  {
+   "name": "high pull",
+   "aliases": [
+    "high pulls"
+   ],
+   "pattern": "vertical_pull",
+   "muscles": [
+    "back",
+    "shoulders"
+   ]
+  },
+  {
+   "name": "lat pulldown",
+   "aliases": [
+    "lat pulldowns"
+   ],
+   "pattern": "vertical_pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ]
+  },
+  {
+   "name": "pull-up",
+   "aliases": [
+    "pull-ups",
+    "pullup",
+    "pullups"
+   ],
+   "pattern": "vertical_pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ]
+  },
+  {
+   "name": "chin-up",
+   "aliases": [
+    "chin-ups",
+    "chinup",
+    "chinups"
+   ],
+   "pattern": "vertical_pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ]
+  },
+  {
+   "name": "reverse fly",
+   "aliases": [
+    "reverse flys",
+    "reverse flies",
+    "rear delt fly",
+    "rear delt flys"
+   ],
+   "pattern": "fly",
+   "muscles": [
+    "back",
+    "shoulders"
+   ]
+  },
+  {
+   "name": "pullover",
+   "aliases": [
+    "pullovers"
+   ],
+   "pattern": "pullover",
+   "muscles": [
+    "chest",
+    "back",
+    "core"
+   ]
+  },
+  {
+   "name": "bicep curl",
+   "aliases": [
+    "bicep curls",
+    "biceps curl",
+    "biceps curls",
+    "curl",
+    "curls"
+   ],
+   "pattern": "curl",
+   "muscles": [
+    "biceps"
+   ]
+  },
+  {
+   "name": "clutch curl",
+   "aliases": [
+    "clutch curls"
+   ],
+   "pattern": null,
+   "muscles": [
+    "biceps",
+    "core"
+   ]
+  },
+  {
+   "name": "tricep extension",
+   "aliases": [
+    "tricep extensions",
+    "triceps extension",
+    "triceps extensions"
+   ],
+   "pattern": "triceps",
+   "muscles": [
+    "triceps"
+   ]
+  },
+  {
+   "name": "skull crusher",
+   "aliases": [
+    "skull crushers"
+   ],
+   "pattern": "triceps",
+   "muscles": [
+    "triceps"
+   ]
+  },
+  {
+   "name": "tricep kickback",
+   "aliases": [
+    "tricep kickbacks",
+    "triceps kickback",
+    "triceps kickbacks"
+   ],
+   "pattern": "triceps",
+   "muscles": [
+    "triceps"
+   ]
+  },
+  {
+   "name": "lateral raise",
+   "aliases": [
+    "lateral raises",
+    "side raise",
+    "side raises"
+   ],
+   "pattern": "raise",
+   "muscles": [
+    "shoulders"
+   ]
+  },
+  {
+   "name": "front raise",
+   "aliases": [
+    "front raises"
+   ],
+   "pattern": "raise",
+   "muscles": [
+    "shoulders"
+   ]
+  },
+  {
+   "name": "y-raise",
+   "aliases": [
+    "y-raises"
+   ],
+   "pattern": "lunge",
+   "muscles": [
+    "legs",
+    "glutes",
+    "shoulders"
+   ]
+  },
+  {
+   "name": "scaption",
+   "aliases": [
+    "scaptions"
+   ],
+   "pattern": "raise",
+   "muscles": [
+    "shoulders"
+   ]
+  },
+  {
+   "name": "calf raise",
+   "aliases": [
+    "calf raises"
+   ],
+   "pattern": "calf",
+   "muscles": [
+    "calves"
+   ]
+  },
+  {
+   "name": "farmer's carry",
+   "aliases": [
+    "farmers carry",
+    "farmer carry"
+   ],
+   "pattern": "carry",
+   "muscles": [
+    "grip",
+    "core",
+    "full body"
+   ]
+  },
+  {
+   "name": "suitcase carry",
+   "aliases": [
+    "suitcase carries"
+   ],
+   "pattern": "carry",
+   "muscles": [
+    "grip",
+    "core",
+    "full body"
+   ]
+  },
+  {
+   "name": "halo",
+   "aliases": [
+    "halos"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "shoulders"
+   ]
+  },
+  {
+   "name": "woodchopper",
+   "aliases": [
+    "woodchoppers",
+    "wood chopper",
+    "wood choppers"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "obliques"
+   ]
+  },
+  {
+   "name": "high to low chop",
+   "aliases": [
+    "high to low chops"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "obliques",
+    "shoulders"
+   ]
+  },
+  {
+   "name": "low to high chop",
+   "aliases": [
+    "low to high chops"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "obliques",
+    "shoulders"
+   ]
+  },
+  {
+   "name": "torso rotation",
+   "aliases": [
+    "torso rotations",
+    "trunk rotation",
+    "trunk rotations"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "obliques"
+   ]
+  },
+  {
+   "name": "russian twist",
+   "aliases": [
+    "russian twists"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "obliques"
+   ]
+  },
+  {
+   "name": "kneeling to stand",
+   "aliases": [
+    "kneeling to standing"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "shoulders"
+   ]
+  },
+  {
+   "name": "march",
+   "aliases": [
+    "march in place",
+    "marches"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "legs"
+   ]
+  },
+  {
+   "name": "plank",
+   "aliases": [
+    "planks"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "plank pull through",
+   "aliases": [
+    "plank pull throughs",
+    "pull through",
+    "pull throughs"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "side plank",
+   "aliases": [
+    "side planks"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "obliques"
+   ]
+  },
+  {
+   "name": "mountain climber",
+   "aliases": [
+    "mountain climbers"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "cardio"
+   ]
+  },
+  {
+   "name": "back extension",
+   "aliases": [
+    "back extensions",
+    "hyperextension",
+    "hyperextensions"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "back",
+    "lower back",
+    "shoulders",
+    "glutes"
+   ]
+  },
+  {
+   "name": "superhero",
+   "aliases": [
+    "superheroes",
+    "superman",
+    "supermans"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "back",
+    "lower back",
+    "shoulders"
+   ]
+  },
+  {
+   "name": "bird dog",
+   "aliases": [
+    "bird dogs"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "back"
+   ]
+  },
+  {
+   "name": "deadbug",
+   "aliases": [
+    "deadbugs",
+    "dead bug",
+    "dead bugs"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "sit-up",
+   "aliases": [
+    "sit-ups",
+    "situp",
+    "situps"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "crunch",
+   "aliases": [
+    "crunches"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "double crunch",
+   "aliases": [
+    "double crunches"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "bicycle crunch",
+   "aliases": [
+    "bicycle crunches",
+    "bicycles"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "obliques"
+   ]
+  },
+  {
+   "name": "v-up",
+   "aliases": [
+    "v-ups"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "roll up",
+   "aliases": [
+    "roll ups",
+    "straight leg roll up",
+    "straight leg roll ups"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "rollout",
+   "aliases": [
+    "rollouts",
+    "roll out",
+    "roll outs"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "toe reach",
+   "aliases": [
+    "toe reaches",
+    "toe touch",
+    "toe touches"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "knee tuck",
+   "aliases": [
+    "knee tucks"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "knee raise",
+   "aliases": [
+    "knee raises",
+    "knee lift",
+    "knee lifts",
+    "knee tuck raise"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "knee drive",
+   "aliases": [
+    "knee drives"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "cardio"
+   ]
+  },
+  {
+   "name": "leg lift",
+   "aliases": [
+    "leg lifts"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs",
+    "inner thigh"
+   ]
+  },
+  {
+   "name": "box jump",
+   "aliases": [
+    "box jumps"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs",
+    "glutes",
+    "cardio"
+   ]
+  },
+  {
+   "name": "burpee",
+   "aliases": [
+    "burpees"
+   ],
+   "pattern": null,
+   "muscles": [
+    "full body",
+    "cardio"
+   ]
+  },
+  {
+   "name": "speed skater",
+   "aliases": [
+    "speed skaters"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs",
+    "glutes",
+    "cardio"
+   ]
+  },
+  {
+   "name": "lateral hop",
+   "aliases": [
+    "lateral hops",
+    "lateral hop over",
+    "lateral hop overs",
+    "hop over",
+    "hop overs"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs",
+    "cardio"
+   ]
+  },
+  {
+   "name": "sled push",
+   "aliases": [
+    "sled pushes"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs",
+    "cardio"
+   ]
+  },
+  {
+   "name": "plank pop",
+   "aliases": [
+    "plank pops"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "plank jack",
+   "aliases": [
+    "plank jacks"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "jumping jack",
+   "aliases": [
+    "jumping jacks"
+   ],
+   "pattern": null,
+   "muscles": [
+    "full body",
+    "cardio"
+   ]
+  },
+  {
+   "name": "toe tap",
+   "aliases": [
+    "toe taps"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  }
+ ]
+}

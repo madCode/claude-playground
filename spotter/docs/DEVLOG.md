@@ -17,10 +17,39 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   installed one checks on opening and every three hours, downloads a newer build, checks its
   size and SHA-256 against the feed, and installs it while Spotter isn't on screen, without a
   tap on Android 12 and later. Otherwise a blue box offers it.
+- **Review caught:** CI would have failed every run (WorkManager not set up in the test, with
+  the run number CI always has); two runs could share one download file, so the checked bytes
+  weren't the installed ones; the app could be replaced mid-use when opened during a download;
+  three dropped connections blocked a build; on Android 8 to 11 the whole build was downloaded
+  every three hours while waiting for a tap; the box didn't appear on the open that found the
+  build; and CI could publish an older build over a newer one. All fixed and tested. Left: the
+  installer test checks a session is made, not its settings, which only a phone shows.
 - **For madCode:** install it once from the link in the README, then allow Spotter to install
   apps when its first update asks. `docs/DEVICE.md` says how to see it working.
+- **Built so far:** the design; loads per hand with a count on the rack's uneven steps; the
+  starting lists of movements and the words around them.
+- **Waiting on you:** nothing.
 
 ## Saturday 21 November 2026
+
+### Cycle 1: the starting lists
+- **Why:** reading a board line needs to know every word it may hold, and Carry's list had
+  variations baked into names and different exercises filed as aliases, which is where the
+  mystery numbers came from.
+- **Shipped:** 99 movements (true synonyms only, one-legged ones marked) and the closed lists of
+  variation words by axis (implement, arms, legs, position, grip, tempo, band, stability,
+  direction, hold), connectors, rep-scheme words and filler. A phrase can mean only one thing.
+- **Measured:** a longest-phrase-first read of Carry's 1,560 board rows with these lists leaves
+  no word over on 79% of rows (96% of words, counting numbers as words). That says the lists
+  are wide enough, not that every row is read right; the corpus grade will say that.
+- **Review caught:** some lines read fully and wrongly. In the lists: bare "wide" (a stance on
+  squats, a grip on curls), "alt" filed as an arm count though it mostly alternates legs,
+  "2 dumbbell" missing, aliases that hid a variation (Bulgarian split squat, bare fly, full
+  v-up), prone and supine merged, and board text's word joiners and `&amp;`; all fixed. For the
+  reader, still to build: two movements side by side with no connector, and "with" before an
+  implement; DESIGN.md now lists them.
+- **Before this, three scheduled runs built nothing:** they started without push access to the
+  repository. The schedule now runs in the setup session, which has it.
 
 ### The scorecard's shape
 - **Why:** the export has to be what gym-coach's `scorecard.py` grades.
