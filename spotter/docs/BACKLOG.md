@@ -52,11 +52,14 @@ Step 3, logging:
   "10 / 8 / 6" says nothing yet to a later "6 x" row, which converts from round one's. And a
   twinge or a stop is put on the heaviest round, since the screen doesn't ask which.
   *(cycle 24)*
+- [ ] Log screen, from the cycle 25 review: a logged row whose line no longer reads in full
+  (the word lists changed) shows "Not read" with no "Logged:" line and no Clear, on a board row
+  or an added one; an added row not yet logged can't be removed, only left unlogged; "12 total
+  x chest press" typed for a two-handed lift is read as 6 a side, as a board line is.
 - [ ] Log screen, from the cycle 24 review: "Last time" under "Heaviest dumbbell" shows the
   weight the coach read a ladder at, which can be round one's; a carried ladder's rounds are
   labelled with this row's reps when the two have as many rounds.
-- [ ] The Log screen, second half: "Add an exercise"; and the person's calls below.
-  *(madCode)* From reviews:
+- [ ] The Log screen, second half: the person's calls below. *(madCode)* From reviews:
   - With two logged rows of one exercise and one row for it on the new board, clearing the
     carried one brings the other onto that row at the next read. *(cycle 18 review)*
   - The Log screen reopened from a sheet shown before the last save finished loading can save

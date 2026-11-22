@@ -14,7 +14,10 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -303,6 +306,78 @@ class LogScreenTest {
         assertEquals(listOf(20, listOf(20, 25, 30), false), listOf(entry.lb, entry.roundLb, entry.heaviestOnly))
     }
 
+    // The coach swapped one in that the board never had: typed as the board would say it, it is
+    // a row like any other, kept across a rebuilt screen, saved, there again when the class is
+    // reopened, and the next sheet's number for that exercise.
+    @Test
+    fun anExerciseTheBoardMissedIsAddedAndLogged() {
+        var saved: Pair<Today.Showing, LogDraft>? = null
+        val restoration = StateRestorationTester(compose)
+        var shown by androidx.compose.runtime.mutableStateOf(today(saturday))
+        restoration.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = shown, onSaveLog = { t, d -> saved = t to d }) }
+        compose.onNodeWithText("Log this class").performClick()
+        val field = "Exercise, as the board says it"
+        // What Spotter can't name, what has no weight, and what has no count aren't added, and say why.
+        compose.onNodeWithText(field).performScrollTo().performTextInput("8 x zorbing")
+        compose.onNodeWithText("Add an exercise").performScrollTo().performClick()
+        compose.onNodeWithText("Spotter isn't sure what that is", substring = true).assertIsDisplayed()
+        compose.onNodeWithText(field).performTextReplacement("8 x tricep push-up")
+        compose.onNodeWithText("Add an exercise").performClick()
+        compose.onNodeWithText("That one is done without a weight, so there is nothing to log.").assertIsDisplayed()
+        compose.onNodeWithText(field).performTextReplacement("hammer curl")
+        compose.onNodeWithText("Add an exercise").performClick()
+        compose.onNodeWithText("That doesn't read as an exercise", substring = true).assertIsDisplayed()
+        compose.onNodeWithText(field).performTextReplacement("10 / 8 / 600 x hammer curl")
+        compose.onNodeWithText("Add an exercise").performClick()
+        compose.onNodeWithText("That many reps doesn't look right. Check the number and add it again.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(field).performTextReplacement("800 x hammer curl")
+        compose.onNodeWithText("Add an exercise").performClick()
+        compose.onNodeWithText("That many reps doesn't look right. Check the number and add it again.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Added by you").assertDoesNotExist()
+        shoot("log-add-refused")
+        // What was typed and why it was refused are still there on a rebuilt screen.
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithText("That many reps doesn't look right. Check the number and add it again.").assertIsDisplayed()
+
+        // The keyboard's Done adds it, as the button does.
+        compose.onNodeWithText(field).performTextReplacement("10 x hammer curl")
+        compose.onNodeWithText(field).performImeAction()
+        compose.onNodeWithText("Added by you").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("That doesn't read as an exercise", substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("10 x hammer curl: changed").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("10 x hammer curl: 15 pounds").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("10 x hammer curl: two dumbbells").performScrollTo().performClick()
+        compose.onNodeWithText("Logged: 2×15 · 10 reps").performScrollTo().assertIsDisplayed()
+        shoot("log-add-exercise")
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithText("Logged: 2×15 · 10 reps").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+
+        save(saved!!.first, saved!!.second)
+        val entry = log.entries().single()
+        assertEquals(listOf("10 x hammer curl", 15, true), listOf(entry.line, entry.lb, spotter.coach.Sheet.isAdded(entry.row)))
+        // Reopened, the class has the row with its log, to correct or clear.
+        shown = today(saturday)
+        assertEquals(listOf(entry.row), shown.logged.keys.toList())
+        assertTrue(shown.strays.isEmpty())
+        compose.onNodeWithText("Change the log (1 logged)").performClick()
+        compose.onNodeWithText("Logged: 2×15 · 10 reps").performScrollTo().assertIsDisplayed()
+        // A second one takes the next id, not the logged one's.
+        compose.onNodeWithText(field).performScrollTo().performTextInput("8 x goblet squat")
+        compose.onNodeWithText("Add an exercise").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("8 x goblet squat: changed").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("8 x goblet squat: 30 pounds").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        save(saved!!.first, saved!!.second)
+        assertEquals(2, log.entries().map { it.row }.toSet().size)
+        // And the next class that has the curl on its board starts from what was done.
+        val next = Today.of(
+            TodaysBoard.Lines(BookedClass("2G", saturday.plusDays(2), saturday.plusDays(2).atTime(9, 50), "Orange 60 Min 2G"), listOf("* 10 x hammer curl")),
+            log.entries(), identity, vocabulary,
+        ) as Today.Showing
+        assertEquals("2×15 =", next.sheet.glance(next.sheet.rows.single()))
+    }
+
     // The sheet has moved on to the next class: the one just done is first on the screen, and
     // logging it saves under its own day.
     @Test
@@ -377,6 +452,11 @@ class LogLargeTextTest {
         compose.onNodeWithText("Log this class").performClick()
         compose.onNodeWithContentDescription("8 x close grip chest press (explosive): changed").performClick()
         compose.onNodeWithContentDescription("8 x close grip chest press (explosive): 10 pounds").performClick()
+        // The field for an exercise the board missed, and its button, are whole too.
+        for (text in listOf("Exercise, as the board says it", "Add an exercise")) {
+            val b = compose.onNodeWithText(text).performScrollTo().fetchSemanticsNode().boundsInRoot
+            assertTrue("$text is ${b.height} high", b.right <= compose.onRoot().fetchSemanticsNode().boundsInRoot.right && b.height >= 48f * 3)
+        }
         val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
         for (label in listOf("8 x close grip chest press (explosive): 50 pounds", "more, 8 x close grip chest press (explosive): 8 reps")) {
             val plus = compose.onNodeWithContentDescription(label).performScrollTo().fetchSemanticsNode().boundsInRoot

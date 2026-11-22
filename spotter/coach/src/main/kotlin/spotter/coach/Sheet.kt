@@ -115,6 +115,33 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
             return Sheet(rows, borrowedFrom)
         }
 
+        /** The block of the rows the person added on the Log screen, for exercises the board missed. */
+        const val ADDED = "Added by you"
+
+        private const val ADDED_ID = "added by you / "
+
+        /** Whether a row id is one the person added, not one from the board. */
+        fun isAdded(id: String): Boolean = id.startsWith(ADDED_ID)
+
+        /**
+         * The id for the [n]th line the person added to a class. Not counted per line as a
+         * board row's is: the board's rows are all there at once, while added ones come and go
+         * one at a time, and an id is what the log files an entry under.
+         */
+        fun addedId(n: Long): String = "$ADDED_ID$n"
+
+        /** Which added line an id is, or null for a board row. */
+        fun addedNumber(id: String): Long? = id.takeIf(::isAdded)?.removePrefix(ADDED_ID)?.toLongOrNull()
+
+        /**
+         * A row for a line the person typed, read exactly as a board line is; null when it isn't
+         * an exercise line at all. Its number comes from the [log] like any row's.
+         */
+        fun added(id: String, typed: String, log: List<Logged>, identity: Identity): SheetRow? {
+            val line = BoardLine.read(typed)
+            return if (line.kind == LineKind.EXERCISE) row(id, ADDED, line, log, identity) else null
+        }
+
         // A row id's count, in a format of its own: ids are stored in the log, so a renamed field
         // in Scheme must not change them.
         internal fun schemeId(s: Scheme): String = when (s) {

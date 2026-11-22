@@ -336,7 +336,13 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   each round its own, on a stepper along the rack. Each round starts as a copy of the one
   before, and stepping a round takes the later ones that matched it along, so a ladder that
   climbs is one tap a round. "One weight" goes back to the rack, at the heaviest.
-- Still to come on the Log screen: "Add an exercise" for one the board missed.
+- An exercise the board missed: typed under the rows as the board would say it ("8 x chest
+  press") and read by the same reader, it becomes a row under "Added by you" and is logged
+  like any other. A line Spotter can't name in full, one with no weight, one with no reps
+  or time, or one asking more than 99 reps isn't added, and says why. A log from a row since
+  gone is never carried onto an added row: that one is a set of its own. Only a logged one is kept: reopened, the class has the
+  row again, built from its own entry. The scorecard is told the sheet showed no number for
+  it, since it was never on the sheet before class.
 
 Later: progress, review of new exercise names, sharing a board for others, the watch.
 

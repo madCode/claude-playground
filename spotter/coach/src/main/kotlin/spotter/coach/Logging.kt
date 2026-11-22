@@ -62,8 +62,21 @@ data class LogDraft(
     val seen: Set<String> = emptySet(),
     /** Logged rows no longer on the board ([ClassLog.strays]) the person has cleared, by entry id. */
     val cleared: Set<Long> = emptySet(),
+    /** Lines typed in on this screen for exercises the board missed, by [Sheet.addedId]. */
+    val added: Map<String, String> = emptyMap(),
 ) {
     fun with(id: String, log: RowLog?) = copy(rows = if (log == null) rows - id else rows + (id to log))
+
+    /**
+     * With [typed] added as a row of its own, under an id past every one on [sheet] and in the
+     * draft. [now], the clock, keeps it apart from ids the sheet doesn't show as well: a row
+     * logged a moment ago that the screen hasn't loaded yet would otherwise share its id, and
+     * the save would take the new line for a correction of the old one.
+     */
+    fun adding(typed: String, sheet: Sheet, now: Long = 0): LogDraft {
+        val used = (sheet.rows.map { it.id } + added.keys).mapNotNull(Sheet::addedNumber)
+        return copy(added = added + (Sheet.addedId(maxOf(now, (used.maxOrNull() ?: 0) + 1)) to typed))
+    }
 
     companion object {
         /** Whether a row can be logged here: a weighted row Spotter read. */
@@ -133,7 +146,8 @@ object Logging {
         live.filter { it.row in ids }.forEach { byRow[it.row] = it }
         val strays = mutableListOf<JournalEntry>()
         for (e in live.filter { it.row !in ids }) {
-            val row = sheet.rows.firstOrNull { it.id !in byRow && LogDraft.loggable(it) && (it.reading as Reading.Known).key == e.key && shape(it) == shape(e) }
+            // Never onto a row the person added: that is a set of its own, said to be one more.
+            val row = sheet.rows.firstOrNull { it.id !in byRow && !Sheet.isAdded(it.id) && LogDraft.loggable(it) && (it.reading as Reading.Known).key == e.key && shape(it) == shape(e) }
             if (row == null) strays += e else byRow[row.id] = e
         }
         return ClassLog(byRow, strays)
@@ -175,6 +189,9 @@ object Logging {
         val now = draft.rows[row.id]
         val before = logged[row.id]
         when {
+            // The draft's line under an id the log has since given to another line (a draft from
+            // a sheet that didn't have it yet): not that entry's to correct.
+            before != null && draft.added[row.id].let { it != null && it != before.line } -> null
             now == null && before == null -> null
             now == null -> if (row.id !in draft.seen) null else before!!.copy(id = 0, at = at, kind = JournalEntry.Kind.REMOVED, target = before.id)
             // Unchanged. A carried entry settles on its row all the same, so that removing
@@ -218,7 +235,8 @@ object Logging {
             // dumbbells, or how it felt, doesn't make a listed ladder a changed one.
             // Rounds said that don't fit the row leave only their heaviest, never "as listed".
             heaviestOnly = ladder != null && rounds(log, ladder) == null && (log.rounds != null || log.lb != LogDraft.asListed(row)?.lb),
-            shown = (row.suggestion as? Suggestion.Weight)?.load, roundLb = rounds(log, ladder),
+            // An added row was never on the sheet before class: it showed the person no number.
+            shown = (row.suggestion as? Suggestion.Weight)?.load?.takeIf { !Sheet.isAdded(row.id) }, roundLb = rounds(log, ladder),
         )
     }
 

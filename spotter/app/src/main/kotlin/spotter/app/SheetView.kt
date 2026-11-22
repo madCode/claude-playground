@@ -72,13 +72,15 @@ fun TodayView(
     // the one that carries the fresh log.
     val logging = listOfNotNull(earlier, today as? Today.Showing).firstOrNull { name(it) == loggingClass }
     if (logging != null) {
+        // The lines added on the screen are rows of the sheet it shows, and of the one it saves against.
+        val shown = logging.with(draft.added)
         LogView(
-            logging,
+            shown,
             draft,
             onChange = { draft = it },
             onSave = {
                 loggingClass = null
-                onSaveLog(logging, draft)
+                onSaveLog(shown, draft)
             },
             onCancel = { loggingClass = null },
         )

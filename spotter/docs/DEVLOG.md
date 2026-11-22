@@ -15,6 +15,14 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 25: add an exercise the board missed
+- **Why:** next on the Log screen: the coach swaps one in, or the board leaves one out.
+- **Shipped:** under the rows, "Did one the board missed?": type it as the board would say it
+  ("8 x chest press"), tap "Add an exercise", and it is a row under "Added by you" with the
+  same rack, reps and chips as the rest. It feeds the next sheet like any logged row.
+- **A gap beats a guess here too:** a line Spotter can't name in full isn't added, and the
+  screen says which words it didn't know. Nor is one with no weight, or with no reps or time.
+
 ### Cycle 24: a weight for each round of a ladder
 - **Why:** next on the Log screen, and you asked what would make a ladder's number better.
 - **Shipped:** on a ladder row, pick a weight under "Changed", then "+ Each round": each

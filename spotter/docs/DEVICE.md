@@ -66,3 +66,15 @@ Android's file picker and your real file are only visible on a phone.
 5. **Remove the history** asks first. Removed, the sheet goes back to what your own log says.
 6. With the phone's font size at its largest, both buttons are whole and can be tapped.
 7. With TalkBack on, a refused file and "Reading the file…" are spoken without touching them.
+
+## Adding an exercise
+
+The tests prove what a typed line becomes and that it is saved. The keyboard, and what
+TalkBack says, are only on a phone.
+
+1. Log a class, scroll to "Did one the board missed?", and tap the field: the keyboard comes
+   up and the field, with the button under it, is still in view above it.
+2. Type `8 x chest press` and press the keyboard's Done: a row appears under "Added by you".
+3. Type `8 x zorbing` and tap **Add an exercise**: it says Spotter isn't sure what that is.
+   With TalkBack on, that sentence is spoken without touching it.
+4. Turn the phone with a line half typed: the line is still there.
