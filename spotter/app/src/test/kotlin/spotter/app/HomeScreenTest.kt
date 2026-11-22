@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -81,10 +82,32 @@ class HomeScreenTest {
         compose.onNodeWithText("Remove the history").performClick()
         compose.onNodeWithText("Remove the imported history? Your own log stays.").assertIsDisplayed()
         assertEquals(0, removals)
-        compose.onNodeWithText("Keep").performClick()
+        compose.onNodeWithContentDescription("Keep the imported history").performClick()
         compose.onNodeWithText("Remove the history").performClick()
-        compose.onNodeWithText("Remove").performClick()
+        compose.onNodeWithContentDescription("Remove the imported history").performClick()
         assertEquals(1, removals)
+        // While a file is being read there is nothing to tap, and it says so.
+        history = history.copy(reading = true)
+        compose.onNodeWithText("Reading the file…").assertIsDisplayed()
+        compose.onNodeWithText("Replace the history").assertDoesNotExist()
+    }
+
+    // At the largest text both history buttons are whole: the second wraps under the first, it
+    // isn't squeezed to nothing beside it.
+    @Test
+    fun theHistoryButtonsStayWholeAtLargeText() {
+        compose.setContent {
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, fontScale = 2f),
+            ) {
+                HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, history = spotter.app.history.HistoryState(698))
+            }
+        }
+        val replace = compose.onNodeWithText("Replace the history").fetchSemanticsNode().boundsInRoot
+        val remove = compose.onNodeWithText("Remove the history").fetchSemanticsNode().boundsInRoot
+        assertTrue("$remove under $replace", remove.top >= replace.bottom && remove.width >= replace.width * 0.8f)
+        shoot("home-history-large-text")
     }
 
     @Test

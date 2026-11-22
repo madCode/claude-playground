@@ -61,4 +61,7 @@ Android's file picker and your real file are only visible on a phone.
    exercises you've lifted before now show a number on the sheet, not "new: go light".
 3. Pick a file that isn't a history (a photo): it says nothing could be read, and the history
    you had is unchanged.
-4. **Remove the history** asks first. Removed, the sheet goes back to what your own log says.
+4. **Replace the history** with the same file: the counts are the same. Turn the phone while
+   it says "Reading the file…": the result still shows.
+5. **Remove the history** asks first. Removed, the sheet goes back to what your own log says.
+6. With the phone's font size at its largest, both buttons are whole and can be tapped.

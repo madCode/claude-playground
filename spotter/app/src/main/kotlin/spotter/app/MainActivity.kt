@@ -49,29 +49,35 @@ class MainActivity : ComponentActivity() {
     private val earlier = mutableStateOf<Today.Showing?>(null)
     private val backup = mutableStateOf(BackupState())
     private val history = mutableStateOf(HistoryState())
-    private val imported by lazy { HistoryStore(filesDir) }
+    private val imported by lazy { HistoryStore.shared(filesDir) }
+    private var watchingHistory: Job? = null
 
     // Android's own file picker: Spotter reads the one file picked, once, and keeps its own copy.
+    // Read in the store's own scope, not this screen's: a rotation mid-read must not lose the
+    // pick, and the screen that is showing when it ends hears of it from the store.
     private val pickHistory = registerForActivityResult(ActivityResultContracts.OpenDocument()) { file ->
-        if (file == null) return@registerForActivityResult
-        lifecycleScope.launch {
-            // Not cancelled by a rotation mid-read: the pick is taken once, whole.
-            val state = withContext(NonCancellable + Dispatchers.IO) {
-                val bytes = runCatching { contentResolver.openInputStream(file)?.use(HistoryPick::read) }.getOrNull()
-                HistoryPick.take(bytes?.takeIf { it.size <= HistoryPick.MAX_BYTES }, tooBig = bytes != null && bytes.size > HistoryPick.MAX_BYTES, imported, identity, LocalDate.now())
+        if (file == null || !imported.begin()) return@registerForActivityResult
+        val resolver = applicationContext.contentResolver
+        val store = imported
+        HistoryStore.scope.launch {
+            try {
+                val bytes = runCatching { resolver.openInputStream(file)?.use(HistoryPick::read) }.getOrNull()
+                HistoryPick.take(bytes?.takeIf { it.size <= HistoryPick.MAX_BYTES }, tooBig = bytes != null && bytes.size > HistoryPick.MAX_BYTES, store, identity, LocalDate.now())
+            } finally {
+                store.end()
             }
-            history.value = state
-            load()
         }
     }
 
     private fun removeHistory() {
-        lifecycleScope.launch {
-            withContext(NonCancellable + Dispatchers.IO) { imported.clear() }
-            history.value = HistoryState()
-            load()
+        val store = imported
+        HistoryStore.scope.launch {
+            store.clear()
+            store.refused = null
+            store.end()
         }
     }
+
     private val export by lazy { ExportStore(this) }
     private var stopListeningToExport: () -> Unit = {}
 
@@ -141,16 +147,22 @@ class MainActivity : ComponentActivity() {
         showBackup()
         stopListeningToExport = export.listen { showBackup() }
         // Here and not with the sheet: the history is said also while the calendar isn't allowed.
-        lifecycleScope.launch {
-            val read = withContext(Dispatchers.IO) { imported.result(identity, LocalDate.now()) }
-            // What a refused pick said stays until the next pick.
-            history.value = HistoryPick.state(read).copy(refused = history.value.refused)
+        // Each change in the store (a pick taken or refused, the history removed) is shown, and
+        // the sheet made again from it.
+        watchingHistory = lifecycleScope.launch {
+            var first = true
+            imported.changed.collect {
+                history.value = withContext(Dispatchers.IO) { HistoryPick.state(imported, identity, LocalDate.now()) }
+                if (!first && !imported.reading) load()
+                first = false
+            }
         }
     }
 
     override fun onStop() {
         stopListening()
         stopListeningToExport()
+        watchingHistory?.cancel()
         super.onStop()
     }
 

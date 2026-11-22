@@ -38,7 +38,10 @@ class HistoryPickTest {
         row("2026-11-12", "8 x zorbing", 20),
     ).joinToString("\n").toByteArray()
 
-    private fun take(bytes: ByteArray?, tooBig: Boolean = false) = HistoryPick.take(bytes, tooBig, store, identity, today)
+    private fun take(bytes: ByteArray?, tooBig: Boolean = false): HistoryState {
+        HistoryPick.take(bytes, tooBig, store, identity, today)
+        return HistoryPick.state(store, identity, today)
+    }
 
     private fun sheet(vararg logged: spotter.coach.JournalEntry): Today.Showing {
         val entries = logged.toList()
@@ -70,6 +73,7 @@ class HistoryPickTest {
         val press = identity.read(BoardLine.read("8 x chest press").words) as Reading.Known
         val logged = Journal.logged(1, LocalDate.of(2026, 11, 10), "2G", "row", "8 x chest press", press, Load(35, 2), 8..8, null, listOf(8)).copy(id = 1)
         assertEquals("2×40 ▲", sheet(logged).sheet.let { it.glance(it.rows.single()) })
+        assertTrue(HistoryPick.beside(store.result(identity, today)!!.logged, listOf(logged)).isEmpty())
         // Another day's log leaves the file's day in: the later log is the latest word.
         val later = logged.copy(date = LocalDate.of(2026, 11, 14), lb = 20)
         assertEquals(1, HistoryPick.beside(store.result(identity, today)!!.logged, listOf(later)).size)
@@ -79,13 +83,41 @@ class HistoryPickTest {
     @Test
     fun aFileThatIsntAHistoryIsRefused() {
         assertEquals("Nothing in that file could be read as a history.", take("holiday photos".toByteArray()).refused)
-        assertEquals(false, store.present)
+        assertEquals(null, store.result(identity, today))
         take(file)
         val wrong = take(byteArrayOf(0xFF.toByte(), 0xFE.toByte(), 0x00))
         assertEquals(HistoryState(1, listOf("2 not named", "1 skipped", "1 no weight"), "Nothing in that file could be read as a history. The one you have is unchanged."), wrong)
         assertEquals("That file is too big to be a training history.", take(null, tooBig = true).refused)
         assertEquals("Couldn't open that file.", take(null).refused)
         assertEquals(1, store.result(identity, today)!!.rows.size)
+        // A pick that is taken clears what the last one said.
+        assertEquals(null, take(file).refused)
+    }
+
+    // One pick at a time, said while it lasts; and every change is announced to the screen.
+    @Test
+    fun aPickUnderWayIsSaidAndASecondIsTurnedAway() {
+        val before = store.changed.value
+        assertTrue(store.begin())
+        assertEquals(false, store.begin())
+        assertEquals(true, HistoryPick.state(store, identity, today).reading)
+        store.end()
+        assertEquals(false, HistoryPick.state(store, identity, today).reading)
+        assertEquals(before + 2, store.changed.value)
+        assertTrue(store.begin())
+    }
+
+    // No stray copy is left by a process killed mid-save, and Remove takes one too.
+    @Test
+    fun noPartialCopyOutlivesAKillOrARemoval() {
+        val stray = java.io.File(tmp.root, "history.jsonl.tmp").apply { writeText("left by a killed process") }
+        assertEquals(null, store.result(identity, today))
+        assertEquals(false, stray.exists())
+        take(file)
+        assertEquals(listOf("history.jsonl"), tmp.root.list()!!.toList())
+        stray.writeText("again")
+        store.clear()
+        assertTrue(tmp.root.list()!!.isEmpty())
     }
 
     // The read stops a byte past the limit, whatever the stream goes on to hold.

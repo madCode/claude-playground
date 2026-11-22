@@ -15,6 +15,8 @@ data class HistoryState(
     val left: List<String> = emptyList(),
     /** Why the last pick wasn't taken, in a sentence. */
     val refused: String? = null,
+    /** A picked file is being read. */
+    val reading: Boolean = false,
 )
 
 /** Taking a picked file as the history, and joining it to the log. Plain, so it runs in JVM tests. */
@@ -23,26 +25,35 @@ object HistoryPick {
     const val MAX_BYTES = 5_000_000
 
     /**
-     * Keeps [bytes] as the history when something in it reads as one, and says what happened.
-     * [bytes] is null when the file couldn't be opened; [tooBig] when it ran past [MAX_BYTES].
-     * A file that isn't taken leaves the history already kept as it was.
+     * Keeps [bytes] as the history when something in it reads as one; otherwise leaves the
+     * history already kept as it was and says why in [HistoryStore.refused]. [bytes] is null when
+     * the file couldn't be opened; [tooBig] when it ran past [MAX_BYTES].
      */
-    fun take(bytes: ByteArray?, tooBig: Boolean, store: HistoryStore, identity: Identity, today: LocalDate): HistoryState {
-        val before = state(store.result(identity, today))
-        if (tooBig) return before.copy(refused = "That file is too big to be a training history.")
-        if (bytes == null) return before.copy(refused = "Couldn't open that file.")
-        // Malformed bytes become marks, which no row survives: the row is left out, not misread.
-        val text = bytes.toString(Charsets.UTF_8)
-        if (HistoryImport.read(text, identity, today).rows.isEmpty()) {
-            return before.copy(refused = "Nothing in that file could be read as a history." + if (before.read != null) " The one you have is unchanged." else "")
-        }
-        return try {
-            store.save(text)
-            state(store.result(identity, today))
-        } catch (e: java.io.IOException) {
-            before.copy(refused = "Couldn't keep that file on this phone.")
+    fun take(bytes: ByteArray?, tooBig: Boolean, store: HistoryStore, identity: Identity, today: LocalDate) {
+        store.refused = when {
+            tooBig -> "That file is too big to be a training history."
+            bytes == null -> "Couldn't open that file."
+            else -> {
+                // Malformed bytes become marks, which no row survives: left out, not misread.
+                val text = bytes.toString(Charsets.UTF_8)
+                val result = HistoryImport.read(text, identity, today, everyRow = false)
+                if (result.rows.isEmpty()) {
+                    "Nothing in that file could be read as a history." + if (store.result(identity, today) != null) " The one you have is unchanged." else ""
+                } else {
+                    try {
+                        store.save(text, result, today)
+                        null
+                    } catch (e: java.io.IOException) {
+                        "Couldn't keep that file on this phone."
+                    }
+                }
+            }
         }
     }
+
+    /** What the screen says: the history as kept, the last refusal, and a pick under way. */
+    fun state(store: HistoryStore, identity: Identity, today: LocalDate): HistoryState =
+        state(store.result(identity, today)).copy(refused = store.refused, reading = store.reading)
 
     /** Up to one byte past [MAX_BYTES]: enough to know a file is too big without holding all of it. */
     fun read(stream: java.io.InputStream): ByteArray {
