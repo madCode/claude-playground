@@ -308,6 +308,14 @@ Spotter does:
 Android backup of the log, plus a scheduled export (the scorecard shape and the full log) to
 a folder madCode picks, such as Downloads or a synced folder.
 
+What is written (`Export` in the coach) comes from the event log alone, since each event keeps
+the board's words and what the sheet showed:
+
+- `session-<date>-<class>.json` for each class with rows logged: a `gym-session/1` file of its
+  rows as last corrected, in the order logged. Rows left alone aren't in it.
+- `spotter-log.jsonl`: every event, a line each, corrections and removals included, so the
+  history can be rebuilt from the file.
+
 ## The watch (later)
 
 madCode wears a Garmin. The watch view is a Connect IQ app (Monkey C) that shows the sheet's

@@ -11,6 +11,13 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 16: the export, from the log
+- **Why:** step 3's export: the file the scorecard grades, and a copy of everything you log.
+- **Shipped:** the coach can turn the log into files: one scorecard session per class you've
+  logged, with the number the sheet showed you beside what you lifted, and one file holding
+  every event. Nothing writes them to a folder yet; that, the schedule and Android backup are
+  next.
+
 ### Cycle 15: which class, once you've logged
 - **Why:** your answer ("tomorrow's sheet as soon as today's is logged"), and the review's
   finding that a class not logged within three hours could never be logged.
