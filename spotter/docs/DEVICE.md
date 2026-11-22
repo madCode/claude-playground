@@ -12,7 +12,7 @@ installer. Whether Android installs it without a tap is only visible on a phone.
    https://github.com/madCode/claude-playground/releases/download/spotter-debug/spotter-debug.apk
    and install it. Android asks to allow your browser to install apps.
 2. Open Spotter. The version at the bottom names the build. If a newer one is out, the blue
-   "A newer build is ready" box appears; tap **Install**. The first time, Android sends you to
+   "A newer build, N, is ready." box appears; tap **Install**. The first time, Android sends you to
    allow Spotter to install apps; allow it, go back, tap Install again, and confirm "Update".
 3. From then on, after a merge to main: close Spotter and wait. Within about three hours (on
    any network) the version at the bottom is the newer build, with no tap. On Android 11 and

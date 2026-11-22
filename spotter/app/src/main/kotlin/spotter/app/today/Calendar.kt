@@ -12,7 +12,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 
-/** Today's and tomorrow's calendar entries: titles and starts, nothing else. */
+/** Calendar entries for the days asked (two days back to tomorrow, in all): titles and starts, nothing else. */
 class Calendar(private val context: Context, private val zone: ZoneId = ZoneId.systemDefault()) {
     fun allowed(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED

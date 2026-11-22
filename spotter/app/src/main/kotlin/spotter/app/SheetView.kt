@@ -120,7 +120,7 @@ private fun TodayBody(today: Today, onAllowCalendar: () -> Unit, onLog: (Today.S
         Today.Loading -> Text("Reading today's board…", fontSize = 17.sp, color = muted)
         Today.NeedsCalendar -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
-                "Spotter reads your calendar to know which class is next. It reads only the titles and times of today's and tomorrow's entries, and keeps nothing.",
+                "Spotter reads your calendar to know which class is next. It reads only the titles and times of entries from two days ago to tomorrow, and keeps nothing.",
                 fontSize = 17.sp,
                 color = ink,
             )

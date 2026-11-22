@@ -2,6 +2,12 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 23 — audit: the docs against the code
+
+- Have the audit done by a reader given only the docs and the code, with the day's PR list:
+  it found claims of things working that were never built, which the author's eye skips.
+- When a PR ships a piece, delete the sentence that said it was coming, in the same PR.
+
 ### Cycle 22 — build: two clean sessions to go up
 
 - A rule change that most tests lean on: add the one input the old behaviour now needs

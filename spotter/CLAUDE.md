@@ -19,10 +19,14 @@ board corpus), not of structure: don't copy its code or layout.
 ## Layout
 
 - `coach/`: plain Kotlin, no Android. Board reading, identity, loads, progression, the sheet
-  and its reasons. Everything the coach decides is tested here on the JVM.
-- `app/`: the Android app, which feeds the coach and shows its sheet. `update/` is how a CI
-  debug build installs newer ones (DESIGN.md, "Updating itself"); `UpdateRun` holds its
-  decisions so they run in JVM tests.
+  and its reasons; the log's events and what a save writes, the export's files, reading an
+  imported history and replaying one. Everything the coach decides is tested here on the JVM.
+- `app/`: the Android app, which feeds the coach and shows its sheet. `today/` finds the class
+  and its board; `log/` is the event store; `export/` copies the log to the backup folder;
+  `history/` keeps an imported history; `update/` is how a CI debug build installs newer ones
+  (DESIGN.md, "Updating itself"). Where a package talks to Android, its decisions sit in a
+  plain class (`UpdateRun`, `ExportRun`, `HistoryPick`) so they run in JVM tests.
+- `docs/DEVICE.md`: what only a phone can show, and how to check it by hand.
 - `tools/debug-feed.sh`: writes the feed CI publishes beside each debug build.
 
 ## Commands
