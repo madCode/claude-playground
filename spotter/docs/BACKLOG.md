@@ -133,7 +133,7 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 ## Later
 
 - History import from gym-coach's `history.jsonl`: unknown counts stay unknown, decimals round
-  down. (Step 4.)
+  down. Its format, with invented rows, is in [HISTORY-FORMAT.md](HISTORY-FORMAT.md). (Step 4.)
 - Strength per movement, behind a switch, judged on the scorecard. (Step 5.)
 - Progress, the new-word review screen, sharing a board. (Step 6.)
 - The Garmin watch view, a Connect IQ app the phone sends the sheet to. (Step 7.)
