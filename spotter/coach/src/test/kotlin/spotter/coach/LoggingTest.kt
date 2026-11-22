@@ -195,13 +195,20 @@ class LoggingTest {
         val draft = LogDraft.from(sheet, log.byRow)
         assertEquals(RowLog(25, 2, 10), draft.rows[sheet.rows[0].id])
 
-        // Saved untouched, nothing is written: the stray stays in history until it is cleared.
-        assertTrue(Logging.events(draft, sheet, log, monday, "2G", 2L).isEmpty())
-        // Corrected, it moves to the row it was carried to.
-        val moved = Logging.events(draft.with(sheet.rows[0].id, RowLog(30, 2, 10)), sheet, log, monday, "2G", 2L).single()
-        assertEquals(listOf(JournalEntry.Kind.CORRECTED, sheet.rows[0].id, 1L, 30), listOf(moved.kind, moved.row, moved.target, moved.lb))
-        // Cleared, the stray is removed and nothing else.
-        val removed = Logging.events(draft.copy(cleared = setOf(log.strays.single().id, 99L)), sheet, log, monday, "2G", 2L).single()
+        // Saved untouched, the press settles on its row, as it was logged; the stray stays in
+        // history until it is cleared.
+        val settled = Logging.events(draft, sheet, log, monday, "2G", 2L).single()
+        assertEquals(written[0].copy(id = 0, at = 2L, kind = JournalEntry.Kind.CORRECTED, target = 1L, row = sheet.rows[0].id), settled)
+        // Corrected, it keeps its own words and target: 10 asked and 10 done, not 10 done of the
+        // 8 this row asks, and a twinge said now is kept.
+        val moved = Logging.events(draft.with(sheet.rows[0].id, RowLog(30, 2, 9, hurt = true)), sheet, log, monday, "2G", 2L).single()
+        assertEquals(
+            written[0].copy(id = 0, at = 2L, kind = JournalEntry.Kind.CORRECTED, target = 1L, row = sheet.rows[0].id, lb = 30, reps = listOf(9), hurt = true),
+            moved,
+        )
+        assertEquals(listOf("10 x chest press", 10, 10), listOf(moved.line, moved.targetLow, moved.targetHigh))
+        // Cleared, the stray is removed, and nothing but it.
+        val removed = Logging.events(draft.copy(cleared = setOf(log.strays.single().id, 99L)), sheet, log, monday, "2G", 2L).single { it.kind == JournalEntry.Kind.REMOVED }
         assertEquals(listOf(JournalEntry.Kind.REMOVED, 2L), listOf(removed.kind, removed.target))
         write(listOf(removed))
         assertTrue(Logging.logged(sheet, written, monday, "2G").strays.isEmpty())
@@ -219,6 +226,40 @@ class LoggingTest {
         assertEquals(listOf(25, 30), log.strays.map { it.lb })
     }
 
+    // Settled by a save, two carried entries keep their rows when the first is cleared: the
+    // second doesn't slide up into the row just cleared.
+    @Test
+    fun aSettledEntryKeepsItsRowWhenAnotherIsCleared() {
+        logOn(listOf("* 10 x chest press", "* 12 x chest press"), 0 to RowLog(20, 2, 10), 1 to RowLog(25, 2, 12))
+        val sheet = Sheet.make(own, emptyList(), identity)
+        val (a, b) = sheet.rows[0].id to sheet.rows[1].id
+        val log = Logging.logged(sheet, written, monday, "2G")
+        val draft = LogDraft.from(sheet, log.byRow)
+        write(Logging.events(draft.with(a, null), sheet, log, monday, "2G", 2L))
+        val after = Logging.logged(sheet, written, monday, "2G")
+        assertEquals(mapOf(b to 25), after.byRow.mapValues { it.value.lb })
+        assertTrue(after.strays.isEmpty())
+        // And a second save has nothing left to settle.
+        assertTrue(Logging.events(LogDraft.from(sheet, after.byRow), sheet, after, monday, "2G", 3L).isEmpty())
+    }
+
+    // A carried ladder corrected keeps the rounds that were done, and stays a listed one unless
+    // the weight changes.
+    @Test
+    fun aCarriedLadderKeepsItsRounds() {
+        val borrowed = Sheet.make(listOf("* 12 / 10 / 8 x squat"), listOf(Logged(monday.minusDays(7), identity.read(BoardLine.read("8 x squat").words) as Reading.Known, Load(30, 2), 8..8, listOf(8))), identity)
+        val listed = LogDraft.asListed(borrowed.rows[0])!!
+        write(Logging.events(LogDraft().with(borrowed.rows[0].id, listed), borrowed, ClassLog(), monday, "2G", 1L))
+        assertEquals(false, written[0].heaviestOnly)
+        val sheet = Sheet.make(own, emptyList(), identity)
+        val log = Logging.logged(sheet, written, monday, "2G")
+        val row = sheet.rows[2]
+        val felt = Logging.events(LogDraft.from(sheet, log.byRow).with(row.id, listed.copy(hard = true)), sheet, log, monday, "2G", 2L).single()
+        assertEquals(listOf(listOf(12, 10, 8), listOf(12, 10, 8), false, true), listOf(felt.ladder, felt.reps, felt.heaviestOnly, felt.hard))
+        val heavier = Logging.events(LogDraft.from(sheet, log.byRow).with(row.id, listed.copy(lb = listed.lb + 5)), sheet, log, monday, "2G", 2L).single()
+        assertEquals(listOf(listOf(12, 10, 8), true), listOf(heavier.ladder, heavier.heaviestOnly))
+    }
+
     // A straight set done isn't a ladder done: it doesn't carry to a row counted another way.
     @Test
     fun anEntryCarriesOnlyToARowOfItsKind() {
@@ -227,6 +268,9 @@ class LoggingTest {
         val log = Logging.logged(sheet, written, monday, "2G")
         assertTrue(log.byRow.isEmpty())
         assertEquals(listOf("8 x squat"), log.strays.map { it.line })
+        // Nor does an entry of several sets, which no row is logged as.
+        written[0] = written[0].copy(row = "gone", key = "chest press", reps = listOf(8, 8))
+        assertTrue(Logging.logged(sheet, written, monday, "2G").byRow.isEmpty())
     }
 
     // The draft survives the app being killed as text.

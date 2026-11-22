@@ -82,9 +82,12 @@ fun LogView(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit,
                 modifier = Modifier.padding(top = 8.dp).semantics { heading() },
             )
             Text("The board changed after you logged these. They still count unless you clear them.", fontSize = 15.sp, color = muted)
-            today.strays.forEach { stray ->
+            today.strays.forEachIndexed { i, stray ->
                 val cleared = stray.id in draft.cleared
-                StrayView(stray, cleared) { onChange(draft.copy(cleared = if (cleared) draft.cleared - stray.id else draft.cleared + stray.id)) }
+                // Said apart from a board row with the same words, and from a twin beside it.
+                val twins = today.strays.count { it.line == stray.line }
+                val nth = if (twins > 1) " ${today.strays.take(i + 1).count { it.line == stray.line }} of $twins" else ""
+                StrayView(stray, cleared, "${stray.line}, not on this board$nth: clear") { onChange(draft.copy(cleared = if (cleared) draft.cleared - stray.id else draft.cleared + stray.id)) }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 8.dp)) {
@@ -150,7 +153,7 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (R
 }
 
 @Composable
-private fun StrayView(stray: JournalEntry, cleared: Boolean, onToggle: () -> Unit) {
+private fun StrayView(stray: JournalEntry, cleared: Boolean, spoken: String, onToggle: () -> Unit) {
     Surface(color = Color.White, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stray.line, fontSize = 17.sp, color = ink)
@@ -160,7 +163,7 @@ private fun StrayView(stray: JournalEntry, cleared: Boolean, onToggle: () -> Uni
                 color = ink,
                 fontWeight = FontWeight.SemiBold,
             )
-            Choice("Clear", cleared, "${stray.line}: clear", onToggle)
+            Choice("Clear", cleared, spoken, onToggle)
         }
     }
 }

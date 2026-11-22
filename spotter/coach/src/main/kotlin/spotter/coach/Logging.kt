@@ -126,7 +126,9 @@ object Logging {
     private fun shape(e: JournalEntry) = when {
         e.ladder != null -> "ladder"
         e.reps.size == 1 -> "counted"
-        else -> "other"
+        e.reps.isEmpty() -> "other"
+        // Several sets in one entry: nothing this screen writes, and no row is logged that way.
+        else -> "sets"
     }
 
     /**
@@ -137,8 +139,8 @@ object Logging {
      * Only a row the screen opened with ([LogDraft.seen]) and then cleared is removed: a row logged
      * since the screen opened, which it never showed, isn't the person's to have cleared.
      *
-     * An entry carried over from a row now gone is left as it is unless changed: a correction
-     * moves it to the row it was carried to. A stray is removed only when cleared.
+     * An entry carried over from a row now gone is moved to the row it was carried to, keeping
+     * its own words, target and reps. A stray is removed only when cleared.
      */
     fun events(
         draft: LogDraft, sheet: Sheet, log: ClassLog, date: LocalDate, className: String, at: Long,
@@ -153,16 +155,27 @@ object Logging {
         when {
             now == null && before == null -> null
             now == null -> if (row.id !in draft.seen) null else before!!.copy(id = 0, at = at, kind = JournalEntry.Kind.REMOVED, target = before.id)
-            before != null && LogDraft.from(sheet, logged).rows[row.id] == now -> null
-            else -> {
-                val e = entry(row, now, date, className, at)
-                // A correction keeps what the sheet showed when the row was first logged: the
-                // sheet as rebuilt now may show another number, and the scorecard grades the
-                // one the person lifted from.
-                if (before == null) e else e.copy(
-                    kind = JournalEntry.Kind.CORRECTED, target = before.id, shownLb = before.shownLb, shownCount = before.shownCount,
-                )
-            }
+            // Unchanged. A carried entry settles on its row all the same, so that removing
+            // another one later can't shuffle which entry sits on which row.
+            before != null && RowLog.of(before) == now ->
+                if (before.row == row.id) null else before.copy(id = 0, at = at, kind = JournalEntry.Kind.CORRECTED, target = before.id, row = row.id)
+            before == null -> entry(row, now, date, className, at)
+            // Logged from other words (a borrowed board, a line since revised): the correction
+            // keeps the entry's own line, target and rounds. Set against this row's target, 8
+            // reps done of 8 asked would read as 8 of 12, a miss that never happened.
+            before.line != row.shown -> before.copy(
+                id = 0, at = at, kind = JournalEntry.Kind.CORRECTED, target = before.id, row = row.id,
+                lb = now.lb, count = now.count, reps = before.ladder ?: listOfNotNull(now.reps),
+                hurt = now.hurt, stopped = now.stopped, easy = now.easy, hard = now.hard, easier = now.easier,
+                // Another weight than was logged is the heaviest round's, as on a row of its own.
+                heaviestOnly = before.ladder != null && (before.heaviestOnly || now.lb != before.lb),
+            )
+            // A correction keeps what the sheet showed when the row was first logged: the
+            // sheet as rebuilt now may show another number, and the scorecard grades the
+            // one the person lifted from.
+            else -> entry(row, now, date, className, at).copy(
+                kind = JournalEntry.Kind.CORRECTED, target = before.id, shownLb = before.shownLb, shownCount = before.shownCount,
+            )
         }
     }
 

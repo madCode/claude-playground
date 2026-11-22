@@ -86,7 +86,7 @@ fun TodayView(
     }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Only a class with something to log is worth the top of the screen.
-        earlier?.takeIf { it.sheet.rows.any(LogDraft::loggable) }?.let { EarlierClass(it) { start(it) } }
+        earlier?.takeIf { it.sheet.rows.any(LogDraft::loggable) || it.strays.isNotEmpty() }?.let { EarlierClass(it) { start(it) } }
         TodayBody(today, onAllowCalendar) { start(it) }
     }
 }
@@ -94,7 +94,7 @@ fun TodayView(
 // First on the screen: the class just done matters more than the next one's sheet until it is logged.
 @Composable
 private fun EarlierClass(earlier: Today.Showing, onLog: () -> Unit) {
-    val logged = earlier.sheet.rows.count { it.id in earlier.logged }
+    val logged = earlier.sheet.rows.count { it.id in earlier.logged } + earlier.strays.size
     if (logged == 0) {
         Column(
             Modifier.fillMaxWidth().background(warnBg, RoundedCornerShape(8.dp)).padding(10.dp),
@@ -148,8 +148,9 @@ private fun SheetView(today: Today.Showing, onLog: () -> Unit) {
             modifier = Modifier.semantics { heading() },
         )
         (today.notes + today.sheet.warnings).forEach { Note(it) }
-        if (today.sheet.rows.any(LogDraft::loggable)) {
-            val logged = today.sheet.rows.count { it.id in today.logged }
+        // Also with nothing to log on this board, when there is something logged to see or clear.
+        if (today.sheet.rows.any(LogDraft::loggable) || today.strays.isNotEmpty()) {
+            val logged = today.sheet.rows.count { it.id in today.logged } + today.strays.size
             val label = if (logged == 0) "Log this class" else "Change the log ($logged logged)"
             Button(
                 onClick = onLog,

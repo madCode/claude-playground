@@ -125,21 +125,37 @@ class LogScreenTest {
 
         var saved: Pair<Today.Showing, LogDraft>? = null
         show(today(saturday)) { t, d -> saved = t to d }
-        compose.onNodeWithText("Change the log (1 logged)").performClick()
+        // Both count as logged: the one carried over and the one with no row here.
+        compose.onNodeWithText("Change the log (2 logged)").performClick()
         compose.onNodeWithText("Logged: 2×25 · 10 reps").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Logged, but not on this board").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Logged: 1×35 · 12 reps").performScrollTo().assertIsDisplayed()
         shoot("log-strays")
-        compose.onNodeWithContentDescription("12 x goblet squat: clear").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("12 x goblet squat, not on this board: clear").performScrollTo().performClick()
         compose.onNodeWithText("Removed when you save.").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Save").performScrollTo().performClick()
 
         val (shown, draft) = saved!!
-        // The press wasn't touched, so only the removal is written.
-        assertEquals(listOf(spotter.coach.JournalEntry.Kind.REMOVED), save(shown, draft).map { it.kind })
+        // The press wasn't touched: it settles on its row, and the squat is removed.
+        assertEquals(listOf(spotter.coach.JournalEntry.Kind.CORRECTED, spotter.coach.JournalEntry.Kind.REMOVED), save(shown, draft).map { it.kind })
         val again = today(saturday)
         assertEquals(listOf(25), again.logged.values.map { it.lb })
         assertTrue(again.strays.isEmpty())
+    }
+
+    // A board with nothing to log (all bodyweight) still opens the Log screen when rows logged
+    // from an earlier board are waiting there.
+    @Test
+    fun straysAreReachableOnABoardWithNothingToLog() {
+        val borrowed = TodaysBoard.Lines(BookedClass("2G", saturday, saturday.atTime(9, 50), "Orange 60 Min 2G"), listOf("* 12 x goblet squat"), borrowedFrom = "3G")
+        val before = Today.of(borrowed, log.entries(), identity, vocabulary) as Today.Showing
+        save(before, LogDraft().with(before.sheet.rows[0].id, spotter.coach.RowLog(35, 1, 12)))
+        val own = Today.of(
+            TodaysBoard.Lines(BookedClass("2G", saturday, saturday.atTime(9, 50), "Orange 60 Min 2G"), listOf("* 8 x tricep push-up")), log.entries(), identity, vocabulary,
+        ) as Today.Showing
+        show(own) { _, _ -> }
+        compose.onNodeWithText("Change the log (1 logged)").performClick()
+        compose.onNodeWithText("Logged: 1×35 · 12 reps").performScrollTo().assertIsDisplayed()
     }
 
     // Reopened, the screen shows what is logged, and the button says so.

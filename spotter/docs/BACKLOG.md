@@ -57,8 +57,10 @@ Step 3, logging:
 
 - [ ] The Log screen, second half: "+ Each round", each round a copy of the one before; "Add an
   exercise"; and the person's calls below. *(madCode)* From cycles 11 and 12's reviews:
-  - A class logged only from rows no longer on the board (none carried over) still reads
-    "isn't logged yet" and "Log this class", though the Log screen lists its rows. *(cycle 18)*
+  - With two logged rows of one exercise and one row for it on the new board, clearing the
+    carried one brings the other onto that row at the next read. *(cycle 18 review)*
+  - The Log screen reopened from a sheet shown before the last save finished loading can save
+    against a stale match. *(cycle 18 review)*
   - A repeat of a line added above the one done shifts the repeat number, so the log moves to
     the other copy (same words, so the same weight).
   - Two classes of the same format on one day share one log (keyed by date and "2G"), so
