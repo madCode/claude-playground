@@ -61,6 +61,8 @@ Step 3, logging:
     carried one brings the other onto that row at the next read. *(cycle 18 review)*
   - The Log screen reopened from a sheet shown before the last save finished loading can save
     against a stale match. *(cycle 18 review)*
+  - Stepping the reps of a carried entry counts as entering them anew, so the set is read
+    against the new row's target, not the one it was logged under. *(cycle 18 review)*
   - A repeat of a line added above the one done shifts the repeat number, so the log moves to
     the other copy (same words, so the same weight).
   - Two classes of the same format on one day share one log (keyed by date and "2G"), so
