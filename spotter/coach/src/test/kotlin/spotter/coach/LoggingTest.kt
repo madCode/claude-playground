@@ -284,9 +284,6 @@ class LoggingTest {
         val log = Logging.logged(sheet, written, monday, "2G")
         assertTrue(log.byRow.isEmpty())
         assertEquals(listOf("8 x squat"), log.strays.map { it.line })
-        // Nor does an entry of several sets, which no row is logged as.
-        written[0] = written[0].copy(row = "gone", key = "chest press", reps = listOf(8, 8))
-        assertTrue(Logging.logged(sheet, written, monday, "2G").byRow.isEmpty())
     }
 
     // The draft survives the app being killed as text.

@@ -126,9 +126,7 @@ object Logging {
     private fun shape(e: JournalEntry) = when {
         e.ladder != null -> "ladder"
         e.reps.size == 1 -> "counted"
-        e.reps.isEmpty() -> "other"
-        // Several sets in one entry: nothing this screen writes, and no row is logged that way.
-        else -> "sets"
+        else -> "other"
     }
 
     /**
