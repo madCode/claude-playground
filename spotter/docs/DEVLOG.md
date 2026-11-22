@@ -4,11 +4,30 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Status
 
-- **Built so far:** the design, and the coach's first piece: loads per hand with a count, and
-  the rack's uneven steps.
+- **Built so far:** the design; loads per hand with a count on the rack's uneven steps; the
+  starting lists of movements and the words around them.
 - **Waiting on you:** nothing.
 
 ## Saturday 21 November 2026
+
+### Cycle 1: the starting lists
+- **Why:** reading a board line needs to know every word it may hold, and Carry's list had
+  variations baked into names and different exercises filed as aliases, which is where the
+  mystery numbers came from.
+- **Shipped:** 99 movements (true synonyms only, one-legged ones marked) and the closed lists of
+  variation words by axis (implement, arms, legs, position, grip, tempo, band, stability,
+  direction, hold), connectors, rep-scheme words and filler. A phrase can mean only one thing.
+- **Measured:** a longest-phrase-first read of Carry's 1,560 board rows with these lists leaves
+  no word over on 79% of rows (96% of words, counting numbers as words). That says the lists
+  are wide enough, not that every row is read right; the corpus grade will say that.
+- **Review caught:** some lines read fully and wrongly. In the lists: bare "wide" (a stance on
+  squats, a grip on curls), "alt" filed as an arm count though it mostly alternates legs,
+  "2 dumbbell" missing, aliases that hid a variation (Bulgarian split squat, bare fly, full
+  v-up), prone and supine merged, and board text's word joiners and `&amp;`; all fixed. For the
+  reader, still to build: two movements side by side with no connector, and "with" before an
+  implement; DESIGN.md now lists them.
+- **Before this, three scheduled runs built nothing:** they started without push access to the
+  repository. The schedule now runs in the setup session, which has it.
 
 ### The scorecard's shape
 - **Why:** the export has to be what gym-coach's `scorecard.py` grades.

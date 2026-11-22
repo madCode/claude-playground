@@ -58,15 +58,25 @@ grip chest press" became *bench press*). The sheet then shows a number for somet
 what is on the board, and nothing says so.
 
 - **An exercise is a movement plus its variations.** Movement: chest press, squat, row.
-  Variations, each from a closed list the coach knows: implement and count (one or two
-  dumbbells, Y-bell, bench, bosu, TRX), arms and legs (single arm, alternating, single leg,
-  split stance), position (floor, incline, bridge hold, bear plank), grip (close, neutral),
-  tempo and range (pulsing, half, 3-1-1), combos ("A to B"), and the rep scheme (reps, "6
-  each", "12 total", ladder, timed). Two rows are the same exercise only when movement and every
-  variation match. That identity is fixed when a row is logged.
-- **A line is fully read, or it is "not sure".** Filler is a closed list too ("rest", "heavy",
-  "lighter", "count & remember reps"). A word that is none of these leaves the row unsure: it is
-  shown, it can be logged, but it borrows no number.
+  Variations, each from a closed list the coach knows, by axis: implement and count (one or two
+  dumbbells, Y-bell, TRX, band), arms (single, reciprocating), alternating, legs (single leg,
+  split stance), position (floor, incline, bench, bridge hold, high plank), stability (bosu),
+  grip (close, neutral, hammer), tempo and range (pulsing, half, full, explosive), band
+  placement, direction, and hold; then combos ("A to B") and the rep scheme (reps, "6 each",
+  "12 total", ladder, timed). Two rows are the same exercise only when movement and every
+  variation match, one value per axis. That identity is fixed when a row is logged.
+- **Intensity words are hints, not identity.** "Heavy" and "lighter" can shape the number on
+  the sheet, but a heavy sumo deadlift is the same exercise as a sumo deadlift.
+- **A line is fully read, or it is "not sure".** Filler is a closed list too ("rest",
+  "finisher", "count & remember reps"). A word that is none of these leaves the row unsure: it
+  is shown, it can be logged, but it borrows no number.
+- **A full read can still be wrong**, so the reader also refuses these, found on the corpus:
+  - two movements side by side with no connector ("bench bird dog low row", "TRX bridge row");
+  - a word that means one thing on one movement and another elsewhere ("wide" is a stance on
+    a squat and a grip on a curl), so such words are only listed with the word that settles
+    them ("wide stance", "wide grip");
+  - "with" before only an implement or a modifier ("press with y-bell", "with power"): that is
+    a variation of the movement before it, not a combo.
 - **Related exercises are linked by stated factors**, shown in "Why this number" ("close grip,
   floor: about 0.85 of chest press"). Where no sound factor exists, the row says "new: go
   light". Until strength per movement is switched on (see the scorecard), only identical
@@ -75,9 +85,19 @@ what is on the board, and nothing says so.
   which variation, harder or easier, or filler. The answer is an event in the phone's log, so it
   never relabels history already logged and is backed up with it. A useful answer can be
   proposed back to the starting list in a PR.
-- **Where the lists live.** The starting exercise and vocabulary lists are public knowledge, so
-  they are JSON files in this repository, shipped inside the app and changed by PR, with the
-  corpus tests run on them in CI. madCode's own answers live only on the phone.
+- **Where the lists live.** The starting lists are public knowledge, so they are JSON files in
+  `coach/src/main/resources/spotter/`, shipped inside the app and changed by PR:
+  `movements.json` (each movement, its true synonyms, pattern, muscles, and whether it is
+  one-legged) and `words.json` (variations by axis, connectors, rep-scheme words, filler).
+  madCode's own answers live only on the phone.
+- **A movement is what is lifted; everything around it is a variation.** Carry's list baked
+  variations into names ("goblet squat", "reverse grip low row") and filed different exercises
+  as aliases ("hammer curl" under bicep curl, a bare "rotation" under torso rotation). Here an
+  alias is only another spelling, a named variation is a word on its axis, and a combo ("lunge
+  with torso rotation") is two movements and a connector, never a list entry.
+- **Every phrase means one thing.** Loading the lists fails if a phrase is in two places, so
+  which one a line meant never depends on file order. The longest phrase wins when reading:
+  "high plank" is a position before "high pull" could be a movement.
 
 ## Loads
 
