@@ -17,6 +17,7 @@ import spotter.app.update.UpdateWorker
 
 class MainActivity : ComponentActivity() {
     private val waiting = mutableIntStateOf(0)
+    private var stopListening: () -> Unit = {}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,9 +33,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        waiting.intValue = UpdateStore(this).waiting
+    // Watched while on screen: the check started on opening finds a build a moment later, and
+    // the box should appear then, not on the next visit.
+    override fun onStart() {
+        super.onStart()
+        val store = UpdateStore(this)
+        waiting.intValue = store.waiting
+        stopListening = store.listen { waiting.intValue = store.waiting }
+    }
+
+    override fun onStop() {
+        stopListening()
+        super.onStop()
     }
 
     private fun install() {

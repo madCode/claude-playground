@@ -35,6 +35,7 @@ class InstallResultTest {
     fun aBackgroundInstallThatNeedsAYesWaitsForATap() {
         answer(PackageInstaller.STATUS_PENDING_USER_ACTION, background = true, confirm = Intent("confirm"))
         assertEquals(42, store.waiting)
+        assertEquals(42, store.needsTap)
         assertNull(shadowOf(context as android.app.Application).nextStartedActivity)
     }
 

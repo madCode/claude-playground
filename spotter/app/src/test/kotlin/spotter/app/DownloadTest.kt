@@ -11,6 +11,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import spotter.app.update.BadDownload
 import spotter.app.update.Download
 import spotter.app.update.UpdateFeed
 import java.io.File
@@ -52,7 +53,7 @@ class DownloadTest {
     @Test
     fun aSwappedBuildIsNeverKept() {
         serve(bytes.copyOf().also { it[0] = 99 })
-        assertFails { Download.apk(feed, dest, url()) }
+        assertTrue(runCatching { Download.apk(feed, dest, url()) }.exceptionOrNull() is BadDownload)
         assertFalse(dest.exists())
     }
 

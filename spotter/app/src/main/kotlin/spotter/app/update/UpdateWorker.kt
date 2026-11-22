@@ -50,30 +50,43 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
     companion object {
         private const val TAPPED = "tapped"
 
+        private const val RUN = "update-run"
+
         /** Every three hours on any network, and once now. Does nothing on a build CI didn't make. */
         fun schedule(context: Context) {
             if (BuildConfig.CI_BUILD == 0) return
-            val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
-            val work = WorkManager.getInstance(context)
-            work.enqueueUniquePeriodicWork(
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 "update-check",
                 ExistingPeriodicWorkPolicy.KEEP,
-                PeriodicWorkRequestBuilder<UpdateWorker>(3, TimeUnit.HOURS).setConstraints(network).build(),
+                PeriodicWorkRequestBuilder<Tick>(3, TimeUnit.HOURS).setConstraints(network).build(),
             )
-            work.enqueueUniqueWork(
-                "update-now",
-                ExistingWorkPolicy.KEEP,
-                OneTimeWorkRequestBuilder<UpdateWorker>().setConstraints(network).build(),
-            )
+            runOnce(context, tapped = false)
         }
 
-        /** The person tapped "Install": download and install now, confirmation and all. */
-        fun installNow(context: Context) {
+        /** The person tapped "Install": download and install, confirmation and all. */
+        fun installNow(context: Context) = runOnce(context, tapped = true)
+
+        private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+
+        // Every run goes through one unique chain, so two never download into the same file or
+        // race to the installer. A tap waits for a run under way rather than cancelling it: a
+        // blocking download can't be interrupted, so a cancelled one would keep writing.
+        private fun runOnce(context: Context, tapped: Boolean) {
+            val request = OneTimeWorkRequestBuilder<UpdateWorker>().setInputData(workDataOf(TAPPED to tapped))
+            if (!tapped) request.setConstraints(network)
             WorkManager.getInstance(context).enqueueUniqueWork(
-                "update-tapped",
-                ExistingWorkPolicy.REPLACE,
-                OneTimeWorkRequestBuilder<UpdateWorker>().setInputData(workDataOf(TAPPED to true)).build(),
+                RUN,
+                if (tapped) ExistingWorkPolicy.APPEND_OR_REPLACE else ExistingWorkPolicy.KEEP,
+                request.build(),
             )
+        }
+    }
+
+    /** The periodic check only queues a run on the one chain, so it never overlaps another. */
+    class Tick(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+        override suspend fun doWork(): Result {
+            runOnce(applicationContext, tapped = false)
+            return Result.success()
         }
     }
 }

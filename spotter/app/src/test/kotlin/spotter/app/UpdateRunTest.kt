@@ -4,7 +4,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import spotter.app.update.BadDownload
 import spotter.app.update.UpdateFeed
+import spotter.app.update.UpdatePolicy
 import spotter.app.update.UpdateRun
 import spotter.app.update.UpdateRun.Outcome
 import java.io.File
@@ -17,6 +19,7 @@ class UpdateRunTest {
 
     private class Store : UpdateRun.Store {
         override var waiting = 0
+        override var needsTap = 0
         val failed = mutableMapOf<Int, Int>()
         override fun failures(build: Int) = failed[build] ?: 0
         override fun failed(build: Int) { failed[build] = failures(build) + 1 }
@@ -30,7 +33,10 @@ class UpdateRunTest {
         installed: Int = 41,
         feed: () -> String? = { feedText(42) },
         download: (UpdateFeed, File) -> Unit = { _, apk -> apk.writeText("apk") },
-        install: (File, Int, Boolean) -> Unit = { _, build, background -> installs += build to background },
+        install: (File, Int, Boolean) -> Unit = { apk, build, background ->
+            assertTrue("the checked file is what's installed", apk.exists())
+            installs += build to background
+        },
         onScreen: Boolean = false,
         canInstall: Boolean = true,
         tapped: Boolean = false,
@@ -82,12 +88,58 @@ class UpdateRunTest {
         assertTrue(installs.isEmpty())
     }
 
+    // Flaky Wi-Fi isn't the build's fault: three drops mustn't block it until the next merge.
     @Test
-    fun aBadDownloadCountsAgainstTheBuildAndLeavesNoFile() {
+    fun aDroppedDownloadIsRetriedNotCounted() {
         val outcome = run(download = { _, apk -> apk.writeText("half"); throw IOException("cut off") })
         assertEquals(Outcome.OFFLINE, outcome)
+        assertEquals(0, store.failures(42))
+        assertFalse(File(dir, "spotter-42.apk").exists())
+    }
+
+    @Test
+    fun bytesThatArentTheBuildCountAgainstItAndLeaveNoFile() {
+        val outcome = run(download = { _, apk -> apk.writeText("other"); throw BadDownload("hash") })
+        assertEquals(Outcome.FAILED, outcome)
         assertEquals(1, store.failures(42))
         assertFalse(File(dir, "spotter-42.apk").exists())
+    }
+
+    @Test
+    fun theDownloadIsDeletedOnceTheInstallerHasIt() {
+        run()
+        assertFalse(File(dir, "spotter-42.apk").exists())
+    }
+
+    // Android 8 to 11 always ask: downloading the whole build every three hours, on mobile data
+    // too, until someone taps would be a waste. It waits for the tap instead.
+    @Test
+    fun aBuildAndroidAskedToConfirmIsNotDownloadedAgainInTheBackground() {
+        store.needsTap = 42
+        var downloads = 0
+        assertEquals(Outcome.LEFT_WAITING, run(download = { _, apk -> downloads++; apk.writeText("apk") }))
+        assertEquals(0, downloads)
+        assertEquals(Outcome.HANDED_TO_INSTALLER, run(download = { _, apk -> downloads++; apk.writeText("apk") }, tapped = true))
+        assertEquals(1, downloads)
+    }
+
+    // Opened during a long download: installing now would close the sheet being read.
+    @Test
+    fun spotterOpenedDuringTheDownloadIsNotReplaced() {
+        var open = false
+        val outcome = UpdateRun(41, store, { feedText(42) }, { _, apk -> apk.writeText("apk"); open = true },
+            { _, b, bg -> installs += b to bg }, { File(dir, "spotter-$it.apk") }, { open }, { true }).run(tapped = false)
+        assertEquals(Outcome.LEFT_WAITING, outcome)
+        assertTrue(installs.isEmpty())
+        assertEquals(42, store.waiting)
+    }
+
+    @Test
+    fun aBuildGivenUpOnIsNoLongerOffered() {
+        store.waiting = 42
+        repeat(UpdatePolicy.MAX_ATTEMPTS) { store.failed(42) }
+        assertEquals(Outcome.UP_TO_DATE, run())
+        assertEquals(0, store.waiting)
     }
 
     @Test

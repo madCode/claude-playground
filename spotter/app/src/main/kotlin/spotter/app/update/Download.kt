@@ -6,6 +6,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 
+/** The bytes aren't the build the feed names: counted against the build, unlike a dropped line. */
+class BadDownload(message: String) : IOException(message)
+
 /** Fetching the feed and the build it names, with nothing half-written left behind. */
 object Download {
     /** The feed's text, or null when the server answered anything but 200. Throws offline. */
@@ -49,7 +52,7 @@ object Download {
                         val n = input.read(chunk)
                         if (n < 0) break
                         total += n
-                        if (total > feed.size) throw IOException("the download is larger than the feed says")
+                        if (total > feed.size) throw BadDownload("the download is larger than the feed says")
                         digest.update(chunk, 0, n)
                         out.write(chunk, 0, n)
                     }
@@ -57,7 +60,7 @@ object Download {
             }
             if (total != feed.size) throw IOException("the download stopped at $total of ${feed.size} bytes")
             val sha = digest.digest().joinToString("") { "%02x".format(it) }
-            if (sha != feed.sha256) throw IOException("the download isn't the build the feed names")
+            if (sha != feed.sha256) throw BadDownload("the download isn't the build the feed names")
             if (!partial.renameTo(dest)) throw IOException("could not keep the download")
         } finally {
             connection.disconnect()

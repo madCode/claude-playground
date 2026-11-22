@@ -22,8 +22,8 @@ object Installer {
      */
     fun install(context: Context, apk: File, build: Int, background: Boolean) {
         val installer = context.packageManager.packageInstaller
-        // A session left by a process that died before committing keeps its copy of the APK.
-        installer.mySessions.forEach { runCatching { installer.abandonSession(it.sessionId) } }
+        // Other sessions are left alone: one may be waiting on Android's "Update?" dialog, and
+        // abandoning it would make that tap fail. Android expires a session nobody committed.
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(context.packageName)
             // Android 12 and later skip "Update this app?" once Spotter installed itself before.
@@ -69,13 +69,14 @@ class InstallResult : BroadcastReceiver() {
                     intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1).takeIf { it >= 0 }
                         ?.let { runCatching { context.packageManager.packageInstaller.abandonSession(it) } }
                     store.waiting = build
+                    store.needsTap = build
                 } else {
                     @Suppress("DEPRECATION")
                     intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
                         ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         ?.let { runCatching { context.startActivity(it) } }
                 }
-            PackageInstaller.STATUS_SUCCESS -> store.waiting = 0
+            PackageInstaller.STATUS_SUCCESS -> { store.waiting = 0; store.needsTap = 0 }
             // Backing out of the confirmation isn't a failure of the build.
             PackageInstaller.STATUS_FAILURE_ABORTED -> Unit
             else -> store.failed(build)
