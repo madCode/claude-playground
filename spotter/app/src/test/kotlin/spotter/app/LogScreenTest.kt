@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
@@ -315,7 +316,7 @@ class LogScreenTest {
         var shown by androidx.compose.runtime.mutableStateOf(today(saturday))
         restoration.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = shown, onSaveLog = { t, d -> saved = t to d }) }
         compose.onNodeWithText("Log this class").performClick()
-        val field = "As the board would say it: 8 x chest press"
+        val field = "Exercise, as the board says it"
         // What Spotter can't name, what has no weight, and what has no count aren't added, and say why.
         compose.onNodeWithText(field).performScrollTo().performTextInput("8 x zorbing")
         compose.onNodeWithText("Add an exercise").performScrollTo().performClick()
@@ -326,10 +327,18 @@ class LogScreenTest {
         compose.onNodeWithText(field).performTextReplacement("hammer curl")
         compose.onNodeWithText("Add an exercise").performClick()
         compose.onNodeWithText("That doesn't read as an exercise", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Added by you").assertDoesNotExist()
-
-        compose.onNodeWithText(field).performTextReplacement("10 x hammer curl")
+        compose.onNodeWithText(field).performTextReplacement("800 x hammer curl")
         compose.onNodeWithText("Add an exercise").performClick()
+        compose.onNodeWithText("That many reps doesn't look right. Check the number and add it again.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Added by you").assertDoesNotExist()
+        shoot("log-add-refused")
+        // What was typed and why it was refused are still there on a rebuilt screen.
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithText("That many reps doesn't look right. Check the number and add it again.").assertIsDisplayed()
+
+        // The keyboard's Done adds it, as the button does.
+        compose.onNodeWithText(field).performTextReplacement("10 x hammer curl")
+        compose.onNodeWithText(field).performImeAction()
         compose.onNodeWithText("Added by you").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("That doesn't read as an exercise", substring = true).assertDoesNotExist()
         compose.onNodeWithContentDescription("10 x hammer curl: changed").performScrollTo().performClick()
@@ -440,6 +449,11 @@ class LogLargeTextTest {
         compose.onNodeWithText("Log this class").performClick()
         compose.onNodeWithContentDescription("8 x close grip chest press (explosive): changed").performClick()
         compose.onNodeWithContentDescription("8 x close grip chest press (explosive): 10 pounds").performClick()
+        // The field for an exercise the board missed, and its button, are whole too.
+        for (text in listOf("Exercise, as the board says it", "Add an exercise")) {
+            val b = compose.onNodeWithText(text).performScrollTo().fetchSemanticsNode().boundsInRoot
+            assertTrue("$text is ${b.height} high", b.right <= compose.onRoot().fetchSemanticsNode().boundsInRoot.right && b.height >= 48f * 3)
+        }
         val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
         for (label in listOf("8 x close grip chest press (explosive): 50 pounds", "more, 8 x close grip chest press (explosive): 8 reps")) {
             val plus = compose.onNodeWithContentDescription(label).performScrollTo().fetchSemanticsNode().boundsInRoot

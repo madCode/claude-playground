@@ -338,8 +338,9 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   climbs is one tap a round. "One weight" goes back to the rack, at the heaviest.
 - An exercise the board missed: typed under the rows as the board would say it ("8 x chest
   press") and read by the same reader, it becomes a row under "Added by you" and is logged
-  like any other. A line Spotter can't name in full, one with no weight, or one with no reps
-  or time isn't added, and says why. Only a logged one is kept: reopened, the class has the
+  like any other. A line Spotter can't name in full, one with no weight, one with no reps
+  or time, or one asking more than 99 reps isn't added, and says why. A log from a row since
+  gone is never carried onto an added row: that one is a set of its own. Only a logged one is kept: reopened, the class has the
   row again, built from its own entry. The scorecard is told the sheet showed no number for
   it, since it was never on the sheet before class.
 

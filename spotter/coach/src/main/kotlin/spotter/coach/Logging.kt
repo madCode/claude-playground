@@ -144,7 +144,8 @@ object Logging {
         live.filter { it.row in ids }.forEach { byRow[it.row] = it }
         val strays = mutableListOf<JournalEntry>()
         for (e in live.filter { it.row !in ids }) {
-            val row = sheet.rows.firstOrNull { it.id !in byRow && LogDraft.loggable(it) && (it.reading as Reading.Known).key == e.key && shape(it) == shape(e) }
+            // Never onto a row the person added: that is a set of its own, said to be one more.
+            val row = sheet.rows.firstOrNull { it.id !in byRow && !Sheet.isAdded(it.id) && LogDraft.loggable(it) && (it.reading as Reading.Known).key == e.key && shape(it) == shape(e) }
             if (row == null) strays += e else byRow[row.id] = e
         }
         return ClassLog(byRow, strays)
@@ -186,6 +187,9 @@ object Logging {
         val now = draft.rows[row.id]
         val before = logged[row.id]
         when {
+            // The draft's line under an id the log has since given to another line (a draft from
+            // a sheet that didn't have it yet): not that entry's to correct.
+            before != null && draft.added[row.id].let { it != null && it != before.line } -> null
             now == null && before == null -> null
             now == null -> if (row.id !in draft.seen) null else before!!.copy(id = 0, at = at, kind = JournalEntry.Kind.REMOVED, target = before.id)
             // Unchanged. A carried entry settles on its row all the same, so that removing

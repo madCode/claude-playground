@@ -275,6 +275,36 @@ class LoggingTest {
         assertEquals(listOf(true, false), listOf(Sheet.addedId(3), board.rows[0].id).map(Sheet::isAdded))
     }
 
+    // Logged from a board row since gone (a stray), and the same exercise added as one more set:
+    // the stray isn't carried onto the added row, so both stand, and a Clear on the stray holds.
+    @Test
+    fun aStrayIsNotCarriedOntoAnAddedRow() {
+        logOn(listOf("* 10 x hammer curl"), 0 to RowLog(15, 2, 10))
+        val board = Sheet.make(listOf("* 8 x chest press"), emptyList(), identity)
+        val draft = LogDraft().adding("10 x hammer curl", board)
+        val added = Sheet.added(draft.added.keys.single(), "10 x hammer curl", emptyList(), identity)!!
+        val sheet = board.copy(rows = board.rows + added)
+        val log = Logging.logged(sheet, written, monday, "2G")
+        assertEquals(listOf(emptySet<String>(), listOf(15)), listOf(log.byRow.keys, log.strays.map { it.lb }))
+        val second = Logging.events(draft.with(added.id, RowLog(20, 2, 10)), sheet, log, monday, "2G", 2L).single()
+        assertEquals(listOf(JournalEntry.Kind.LOGGED, 20), listOf(second.kind, second.lb))
+        val cleared = Logging.events(draft.copy(cleared = setOf(log.strays.single().id)), sheet, log, monday, "2G", 2L).single()
+        assertEquals(JournalEntry.Kind.REMOVED, cleared.kind)
+    }
+
+    // A draft whose added line took an id the log has since filed another line under leaves
+    // that entry alone, rather than correcting one exercise with another's weight.
+    @Test
+    fun anAddedLineNeverCorrectsAnotherLinesEntry() {
+        val board = Sheet.make(listOf("* 8 x chest press"), emptyList(), identity)
+        val curl = Sheet.added(Sheet.addedId(1), "10 x hammer curl", emptyList(), identity)!!
+        write(Logging.events(LogDraft().with(curl.id, RowLog(15, 2, 10)), board.copy(rows = board.rows + curl), ClassLog(), monday, "2G", 1L))
+        // Made from the board before the curl was on it, so it gave out the same id.
+        val stale = LogDraft().adding("8 x goblet squat", board).with(Sheet.addedId(1), RowLog(35, 1, 8))
+        val now = board.copy(rows = board.rows + curl)
+        assertTrue(Logging.events(stale, now, Logging.logged(now, written, monday, "2G"), monday, "2G", 2L).isEmpty())
+    }
+
     // "Last time" is the last logged, also when two fall on one day (one exercise in two blocks).
     @Test
     fun lastHeldIsTheLastLogged() {

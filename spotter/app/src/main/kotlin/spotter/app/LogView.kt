@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -32,6 +34,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -118,36 +121,40 @@ private fun AddExercise(today: Today.Showing, draft: LogDraft, onChange: (LogDra
     var refused by rememberSaveable { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
         Text("Did one the board missed?", fontSize = 15.sp, color = muted)
+        fun add() {
+            if (typed.isBlank()) return
+            val next = draft.adding(typed.trim(), today.sheet)
+            val row = next.added.entries.last().let { (id, line) -> today.read(id, line) }
+            refused = when {
+                // A line with no reps or time is refused too: logged, it would read as a timed
+                // set and say nothing to a counted row.
+                row == null || row.line.scheme == null -> "That doesn't read as an exercise. Start with the reps, as the board does: 8 x chest press."
+                row.reading is Reading.NotSure -> "Spotter isn't sure what that is (${row.understood.removePrefix("not sure: ")}), so it can't be logged yet."
+                row.suggestion == null -> "That one is done without a weight, so there is nothing to log."
+                // A slip of the thumb ("800 x"): logged, it would leave the next sheet with no number.
+                row.target?.let { it.first < 1 || it.last > MAX_REPS } == true -> "That many reps doesn't look right. Check the number and add it again."
+                else -> null
+            }
+            if (refused == null) {
+                typed = ""
+                onChange(next)
+            }
+        }
         OutlinedTextField(
             value = typed,
-            // A board line is never longer; nothing is read until "Add". A line with no reps or time
-            // is refused too: logged, it would read as a timed set and say nothing to a counted row.
+            // A board line is never longer; nothing is read until "Add".
             onValueChange = { typed = it.take(BoardLine.MAX_LENGTH).replace("\n", " "); refused = null },
-            label = { Text("As the board would say it: 8 x chest press") },
+            label = { Text("Exercise, as the board says it") },
+            placeholder = { Text("8 x chest press") },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { add() }),
             modifier = Modifier.fillMaxWidth(),
         )
         refused?.let {
             Text(it, fontSize = 15.sp, color = ink, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
-        OutlinedButton(
-            onClick = {
-                val next = draft.adding(typed.trim(), today.sheet)
-                val row = next.added.entries.last().let { (id, line) -> today.read(id, line) }
-                refused = when {
-                    row == null || row.line.scheme == null -> "That doesn't read as an exercise. Start with the reps, as the board does: 8 x chest press."
-                    row.reading is Reading.NotSure -> "Spotter isn't sure what that is (${row.understood.removePrefix("not sure: ")}), so it can't be logged yet."
-                    row.suggestion == null -> "That one is done without a weight, so there is nothing to log."
-                    else -> null
-                }
-                if (refused == null) {
-                    typed = ""
-                    onChange(next)
-                }
-            },
-            enabled = typed.isNotBlank(),
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) { Text("Add an exercise") }
+        OutlinedButton(onClick = ::add, enabled = typed.isNotBlank(), modifier = Modifier.heightIn(min = 48.dp)) { Text("Add an exercise") }
     }
 }
 

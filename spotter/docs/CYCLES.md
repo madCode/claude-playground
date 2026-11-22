@@ -2,6 +2,13 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 25 — build: add an exercise
+
+- A new kind of row meets every rule that matches rows to entries: ask of each one (carry-over,
+  strays, clearing) what it does with the new kind, before the review runs it.
+- The first text field needs what no other control did: the keyboard's Done, a short label
+  that fits a phone, a large-text check, and a DEVICE.md section for the keyboard itself.
+
 ### Cycle 24 — build: a weight for each round
 
 - When the screen lets the person say more, check that saying more never gives a worse number
