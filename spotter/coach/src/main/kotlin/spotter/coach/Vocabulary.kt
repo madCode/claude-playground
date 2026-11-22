@@ -85,11 +85,20 @@ class Vocabulary private constructor(val movements: List<Movement>, private val 
          * "farmers carry" match the lists' spellings. Boards carry word joiners and HTML entities.
          */
         fun normalise(text: String): String =
+            normaliseText(text).replace("'", "").replace('-', ' ').replace(Regex("\\s+"), " ").trim()
+
+        /**
+         * Board text as the line reader takes it: lower case, "&amp;" as "&", no invisible
+         * characters, every dash as "-" and every kind of space as one space. Hyphens stay, since
+         * "6 - 10" is a range; [normalise] then folds them for looking words up.
+         */
+        fun normaliseText(text: String): String =
             text.lowercase()
                 .replace("&amp;", "&")
-                .replace(Regex("['’\u200b\u200c\u200d\u2060\ufeff]"), "")
-                .replace(Regex("[-\u2010\u2011\u2012\u2013\u2014]"), " ")
-                .replace(Regex("[\\s\u00a0]+"), " ")
+                .replace("’", "'")
+                .replace(Regex("[\\u200b\\u200c\\u200d\\u2060\\ufeff]"), "")
+                .replace(Regex("[\\u2010\\u2011\\u2012\\u2013\\u2014]"), "-")
+                .replace(Regex("[\\s\\u00a0]+"), " ")
                 .trim()
 
         private fun requireSchema(text: String, expected: String) {
