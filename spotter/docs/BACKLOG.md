@@ -48,8 +48,11 @@ Step 3, logging:
 - [ ] A ladder done clean with each round's weight known ("8 / 6 / 4") counts as clean at 8 for
   a straight "8 x" row, which is more sets at 8 than were done. *(cycle 13 review)*
 
-- [ ] The Log screen, second half: "+ Each round" (a weight per round, each round a copy of the
-  one before); "Add an exercise"; and the person's calls below. *(madCode)* From reviews:
+- [ ] A ladder's later rounds, now that their weights can be logged: 30 held for the 6 of
+  "10 / 8 / 6" says nothing yet to a later "6 x" row, which converts from round one's.
+  *(cycle 24)*
+- [ ] The Log screen, second half: "Add an exercise"; and the person's calls below.
+  *(madCode)* From reviews:
   - With two logged rows of one exercise and one row for it on the new board, clearing the
     carried one brings the other onto that row at the next read. *(cycle 18 review)*
   - The Log screen reopened from a sheet shown before the last save finished loading can save
@@ -97,7 +100,8 @@ Asked in chat on 2026-11-22; until answered, the app keeps what it does now. The
   session, however long ago the 30 was. Keep, or add a time limit?
 
 Settled on 2026-11-22: up after two clean sessions or one that felt easy (built, cycle 22); a
-ladder's one number is its heaviest round's (as built; "+ Each round" for the rest); a log from
+ladder's one number is its heaviest round's (as built; "+ Each round" for the rest, built in
+cycle 24); a log from
 a borrowed board is trusted as logged, with no prompt (built, cycle 18).
 
 New board words that stay "not sure" are worth a look on the corpus now and then; 142 rows
