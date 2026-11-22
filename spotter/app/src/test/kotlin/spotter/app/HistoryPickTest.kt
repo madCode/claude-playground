@@ -120,6 +120,10 @@ class HistoryPickTest {
         HistoryPick.take(null, false, store, identity, today, wanted = { store.current(stalled) })
         store.end(stalled)
         assertEquals(HistoryState(reading = true), HistoryPick.state(store, identity, today))
+        // Stopped while the file was being read through: still not kept.
+        var asked = 0
+        HistoryPick.take(file, false, store, identity, today, wanted = { asked++ == 0 })
+        assertEquals(listOf(2, null), listOf(asked, HistoryPick.state(store, identity, today).read))
         HistoryPick.take(file, false, store, identity, today, wanted = { store.current(next) })
         store.end(next)
         assertEquals(1, HistoryPick.state(store, identity, today).read)
