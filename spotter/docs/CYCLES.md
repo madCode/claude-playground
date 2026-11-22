@@ -4,6 +4,9 @@ For the next cycle: what to do differently. What was built is in DEVLOG.md. Newe
 
 ### Cycle 12 — build: the Log screen, first half
 
+- Relearned from cycle 5: a test weight of 20 → 25 is a big jump (over 1.2), which holds the
+  number by itself. Pick 30 → 35 or heavier when another rule is under test.
+
 - A screen that writes to the log needs its review pointed at *when* it is used (the car after
   class), not only at what it writes: the class had already moved on by then.
 - A test helper that copies the activity's save tests the copy: move the save into the store
