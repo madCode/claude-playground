@@ -61,8 +61,9 @@ object Replay {
         generateSequence(folder) { it.parentFile }.firstOrNull { File(it, ".git").exists() }?.let {
             throw IllegalArgumentException("$out is inside a git checkout ($it). Choose a folder outside it: the sessions are private.")
         }
-        // A session left from another run would be graded as this one's.
-        require(!folder.exists() || (folder.isDirectory && folder.list().isNullOrEmpty())) { "$out isn't an empty folder. Choose a new or empty one." }
+        // A session left from another run would be graded as this one's; a folder that can't be
+        // listed may hold one.
+        require(!folder.exists() || (folder.isDirectory && folder.list()?.isEmpty() == true)) { "$out isn't an empty folder. Choose a new or empty one." }
         val identity = Identity(Vocabulary.starting())
         val history = HistoryImport.read(historyFile.readText(), identity, today)
         val replayed = run(history, identity)
