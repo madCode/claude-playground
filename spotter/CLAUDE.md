@@ -19,14 +19,18 @@ board corpus), not of structure: don't copy its code or layout.
 
 - `coach/`: plain Kotlin, no Android. Board reading, identity, loads, progression, the sheet
   and its reasons. Everything the coach decides is tested here on the JVM.
-- `app/` (from build step 2): the Android app, which feeds the coach and shows its sheet.
+- `app/`: the Android app, which feeds the coach and shows its sheet. `update/` is how a CI
+  debug build installs newer ones (DESIGN.md, "Updating itself"); `UpdateRun` holds its
+  decisions so they run in JVM tests.
+- `tools/debug-feed.sh`: writes the feed CI publishes beside each debug build.
 
 ## Commands
 
     ./gradlew build koverXmlReport koverHtmlReport koverVerify   # everything CI runs
     ./gradlew :coach:test                # the coach's tests alone
+    ./gradlew :app:testDebugUnitTest     # the app's, with screenshots in app/build/screenshots
 
-JDK 21 is required; the Android SDK too once `app/` exists.
+JDK 21 and the Android SDK are required.
 `../jekyll-poster/tools/install-android-sdk.sh` installs it for a cloud session, with the Maven
 mirror Gradle needs there.
 

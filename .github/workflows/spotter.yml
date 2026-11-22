@@ -30,14 +30,76 @@ jobs:
           cache: gradle
       - name: Validate the Gradle wrapper
         uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-      - name: Build, tests and coverage
+      - name: Build, lint, tests and coverage
         run: ./gradlew build koverXmlReport koverHtmlReport koverVerify
-      - name: Upload test reports and coverage
+      - name: Upload debug APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: spotter-debug-apk
+          path: |
+            spotter/app/build/outputs/apk/debug/*.apk
+            spotter/tools/debug-feed.sh
+          retention-days: 14
+      - name: Upload test reports, coverage and screenshots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: spotter-reports
           path: |
             spotter/coach/build/reports/tests/
+            spotter/app/build/reports/tests/
             spotter/build/reports/kover/
+            spotter/app/build/screenshots/
           retention-days: 14
+
+  # Publishes main's debug build where the app's updater looks for it
+  # (app/src/main/kotlin/spotter/app/update/UpdateFeed.kt). A fixed link for a first install:
+  # https://github.com/madCode/claude-playground/releases/download/spotter-debug/spotter-debug.apk
+  publish-debug:
+    needs: build
+    # Not on a re-run: an older run's number is a lower version code, which a phone with a newer
+    # build can't install.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # One at a time and never cancelled, so two runs never collide on the release's files.
+    concurrency:
+      group: spotter-debug
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: spotter-debug-apk
+      - name: Update the spotter-debug release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BUILD: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          apk=$(find . -name 'app-debug.apk' | head -1)
+          numbered="spotter-debug-$BUILD.apk"
+          cp "$apk" "$numbered"
+          cp "$apk" spotter-debug.apk
+          bash "$(find . -name debug-feed.sh | head -1)" "$numbered" "$BUILD" "$GITHUB_SHA" > spotter-debug.json
+          title="Spotter debug build $BUILD · ${GITHUB_SHA::7}"
+          notes="Build $BUILD from main (${GITHUB_SHA::7}). Installs as com.app.spotter.debug and updates itself."
+          if gh release view spotter-debug > /dev/null 2>&1; then
+            # The build the feed will name goes up before the feed, so a phone never reads a
+            # feed whose build isn't there yet.
+            gh release upload spotter-debug "$numbered" --clobber
+            gh release upload spotter-debug spotter-debug.json spotter-debug.apk --clobber
+            gh api -X PATCH "repos/$GH_REPO/git/refs/tags/spotter-debug" -f sha="$GITHUB_SHA" -F force=true > /dev/null
+            gh release edit spotter-debug --title "$title" --notes "$notes"
+            # Only the newest numbered copy stays.
+            gh release view spotter-debug --json assets --jq '.assets[].name' \
+              | { grep -E '^spotter-debug-[0-9]+\.apk$' || true; } | { grep -vx "$numbered" || true; } \
+              | while read -r old; do gh release delete-asset spotter-debug "$old" -y; done
+          else
+            gh release create spotter-debug "$numbered" spotter-debug.json spotter-debug.apk \
+              --prerelease --target "$GITHUB_SHA" --title "$title" --notes "$notes"
+          fi

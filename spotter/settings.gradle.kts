@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "spotter"
 include(":coach")
+include(":app")

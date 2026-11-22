@@ -120,6 +120,33 @@ next one in that list. A Y-bell is another implement and never steps onto that l
 
 Later: progress, review of new exercise names, sharing a board for others, the watch.
 
+## Updating itself
+
+madCode asked for an app that updates itself without them doing anything. A CI debug build of
+Spotter does:
+
+- **Where builds come from.** Each merge to main publishes its debug build to the
+  `spotter-debug` release, beside `spotter-debug.json`: the build number, commit, the numbered
+  APK's address, and its exact size and SHA-256 (`tools/debug-feed.sh` writes it).
+- **When it checks.** On opening the app and every three hours in the background, on any
+  network. A local build (no CI number) never checks: replacing it would throw away what is
+  being tried.
+- **What it installs.** Only a newer build, only from this repository's release, and only when
+  the download matches the feed's size and hash. A build that fails three times is left alone
+  until a newer one comes.
+- **When it installs.** Installing replaces the running app, so the background check installs
+  only while Spotter isn't on screen; otherwise, or when Android wants a tap, a blue box offers
+  the build and its Install button does it. On Android 12 and later, once Spotter has installed
+  itself once, Android installs without asking (`UPDATE_PACKAGES_WITHOUT_USER_ACTION`).
+- **Debug only.** The permissions to reach the network and install apps are in the debug
+  manifest; a check in the build fails if a release ever has them, or a debug build lacks them.
+  How to check it on a phone: `docs/DEVICE.md`.
+
+## Screens so far
+
+- **Home**, until today's sheet takes its place: the name, the update box when a build is
+  waiting, and the version at the bottom, copied in one tap.
+
 ## Backup
 
 Android backup of the log, plus a scheduled export (the scorecard shape and the full log) to
