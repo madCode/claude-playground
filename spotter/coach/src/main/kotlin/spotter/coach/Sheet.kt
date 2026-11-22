@@ -17,6 +17,8 @@ data class SheetRow(
     val suggestion: Suggestion?,
     /** Said before the number: "not sure what this is", a part with no number. */
     val warnings: List<String>,
+    /** What was held the last time this exercise was logged, whatever the sheet says now. */
+    val lastHeld: Load? = null,
 ) {
     /** The board's own words, as posted, without the bullet. */
     val shown: String get() = line.raw.trim().trimStart('*', '•', '-', ' ').replace("**", "")
@@ -137,7 +139,8 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
             val warnings = mutableListOf<String>()
             val suggestion = withRowCount(combo(reading, target, log, warnings), reading)
             (suggestion as? Suggestion.Weight)?.caution?.let { warnings += it }
-            return SheetRow(id, block, line, reading, target, suggestion, warnings)
+            val lastHeld = log.filter { it.key == reading.key && it.judged }.sortedBy { it.date }.lastOrNull()?.load
+            return SheetRow(id, block, line, reading, target, suggestion, warnings, lastHeld)
         }
 
         // Trap 6: a bare squat wants a weight. Bodyweight and TRX don't, nor a band, hold or pulse

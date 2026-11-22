@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -87,8 +88,11 @@ fun LogView(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit,
 @Composable
 private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (RowLog?) -> Unit) {
     val asListed = LogDraft.asListed(row)
+    // As listed still, when all that was added is how many dumbbells the sheet didn't know.
+    val listed = log != null && asListed != null &&
+        (log == asListed || (asListed.count == null && log.copy(count = null) == asListed))
     // Open while being changed; a row ticked as listed needs nothing more.
-    var open by rememberSaveable(row.id) { mutableStateOf(log != null && log != asListed) }
+    var open by rememberSaveable(row.id) { mutableStateOf(log != null && !listed) }
     Surface(color = Color.White, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -99,18 +103,15 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (R
                 Text(if (row.reading is Reading.NotSure) "Not read, so not logged here" else "No weight to log", fontSize = 14.sp, color = muted)
                 return@Column
             }
-            log?.let { Text("Logged: " + summary(it), fontSize = 15.sp, color = ink, fontWeight = FontWeight.SemiBold) }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (asListed != null) {
-                    Choice("✓ as listed", log == asListed, "${row.shown}: done as listed") {
+                    Choice("✓ as listed", listed, "${row.shown}: done as listed") {
                         open = false
-                        onChange(asListed)
+                        onChange(asListed.copy(count = asListed.count ?: log?.count))
                     }
                 }
-                Choice("Changed", open, "${row.shown}: changed") {
-                    open = true
-                    if (log == null || log == asListed) onChange(LogDraft.startChanged(row))
-                }
+                // Opens the rack, and closes it again. Nothing is logged until a weight is picked.
+                Choice("Changed", open && !listed, "${row.shown}: changed") { open = !open }
                 if (log != null) {
                     OutlinedButton(
                         onClick = { open = false; onChange(null) },
@@ -118,36 +119,57 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (R
                     ) { Text("Clear") }
                 }
             }
-            if (open && log != null) Editor(row, log, onChange)
+            if (open) Editor(row, log, onChange)
+            // Asked whenever it isn't known, ticked or changed: the count is never guessed.
+            if (log != null && (open || log.count == null)) {
+                if (log.count == null) Text("One dumbbell or two?", fontSize = 15.sp, color = ink)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Choice("One dumbbell", log.count == 1, "${row.shown}: one dumbbell") { onChange(log.copy(count = 1)) }
+                    Choice("Two", log.count == 2, "${row.shown}: two dumbbells") { onChange(log.copy(count = 2)) }
+                }
+            }
+            if (open && log != null) Details(row, log, onChange)
+            // Last, so the first pick doesn't move the rack under the thumb.
+            log?.let { Text("Logged: " + summary(it), fontSize = 15.sp, color = ink, fontWeight = FontWeight.SemiBold) }
         }
     }
 }
 
 @Composable
 private fun Choice(label: String, selected: Boolean, spoken: String, onClick: () -> Unit) {
-    val colors = if (selected) ButtonDefaults.buttonColors(containerColor = blue) else ButtonDefaults.outlinedButtonColors()
-    if (selected) {
-        Button(onClick = onClick, colors = colors, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "$spoken, selected" }) { Text(label) }
-    } else {
-        OutlinedButton(onClick = onClick, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = spoken }) { Text(label) }
+    // One button whose look changes, not two swapped: TalkBack keeps its place on a tap, and
+    // hears "selected" as a state.
+    OutlinedButton(
+        onClick = onClick,
+        colors = if (selected) ButtonDefaults.buttonColors(containerColor = blue) else ButtonDefaults.outlinedButtonColors(),
+        modifier = Modifier.heightIn(min = 48.dp).semantics {
+            contentDescription = spoken
+            this.selected = selected
+        },
+    ) { Text(label) }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Editor(row: SheetRow, log: RowLog?, onChange: (RowLog) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val last = row.lastHeld?.let { " Last time: ${it.count?.let { c -> "$c×" }.orEmpty()}${it.lb}." }.orEmpty()
+        Text("Heaviest dumbbell, lb.$last", fontSize = 15.sp, color = muted)
+        // The whole rack, one tap each: thirteen weights are quicker to hit than to step to.
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Rack.dumbbells.forEach { lb ->
+                Choice("$lb", log?.lb == lb, "${row.shown}: $lb pounds") {
+                    onChange(log?.copy(lb = lb) ?: LogDraft.picked(row, lb))
+                }
+            }
+        }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Editor(row: SheetRow, log: RowLog, onChange: (RowLog) -> Unit) {
+private fun Details(row: SheetRow, log: RowLog, onChange: (RowLog) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Stepper(
-            "Heaviest",
-            "${log.count?.let { "$it×" } ?: ""}${log.lb} lb",
-            "${row.shown}: heaviest ${spokenLoad(log)}",
-            onDown = Rack.down(log.lb)?.let { { onChange(log.copy(lb = it)) } },
-            onUp = Rack.up(log.lb)?.let { { onChange(log.copy(lb = it)) } },
-        )
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Choice("One dumbbell", log.count == 1, "${row.shown}: one dumbbell") { onChange(log.copy(count = 1)) }
-            Choice("Two", log.count == 2, "${row.shown}: two dumbbells") { onChange(log.copy(count = 2)) }
-        }
         log.reps?.let { reps ->
             Stepper(
                 "Reps",
@@ -207,9 +229,3 @@ internal fun summary(log: RowLog): String = listOfNotNull(
     "had to stop".takeIf { log.stopped },
     "easier version".takeIf { log.easier },
 ).joinToString(" · ")
-
-private fun spokenLoad(log: RowLog) = when (log.count) {
-    2 -> "two ${log.lb} pound dumbbells"
-    1 -> "one ${log.lb} pound dumbbell"
-    else -> "${log.lb} pounds each"
-}

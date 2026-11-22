@@ -47,7 +47,7 @@ class LoggingTest {
         assertEquals(Suggestion.NoNumber.NEW, press.suggestion)
         // Nothing to have done "as listed" on a new row: it says what was held.
         assertNull(LogDraft.asListed(press))
-        save(monday, LogDraft().with(press.id, LogDraft.startChanged(press).copy(lb = 25)))
+        save(monday, LogDraft().with(press.id, LogDraft.picked(press, 25).copy(count = 2)))
 
         // 8 reps at 25 was clean: up a dumbbell.
         val next = row(sheet(thursday), "8 x chest press")
@@ -100,15 +100,16 @@ class LoggingTest {
         val deadlift = row(sheet, "8-10 x deadlift")
         val squat = row(sheet, "10 / 8 / 6 x squat")
         val hold = row(sheet, "30 sec of goblet squat hold")
-        assertEquals(RowLog(10, 2, 8), LogDraft.startChanged(deadlift))
+        // A bare line on a new row: the count isn't known until the person says.
+        assertEquals(RowLog(40, null, 8), LogDraft.picked(deadlift, 40))
         // A goblet hold is one dumbbell in both hands: the row's own count.
-        assertEquals(RowLog(10, 1, null), LogDraft.startChanged(hold))
+        assertEquals(RowLog(35, 1, null), LogDraft.picked(hold, 35))
         val events = save(
             monday,
             LogDraft()
-                .with(deadlift.id, LogDraft.startChanged(deadlift).copy(lb = 40))
-                .with(squat.id, LogDraft.startChanged(squat).copy(lb = 30))
-                .with(hold.id, LogDraft.startChanged(hold).copy(lb = 35)),
+                .with(deadlift.id, LogDraft.picked(deadlift, 40).copy(count = 2))
+                .with(squat.id, LogDraft.picked(squat, 30).copy(count = 2))
+                .with(hold.id, LogDraft.picked(hold, 35)),
         )
         val bySquat = events.associateBy { it.row }
         assertEquals(listOf(8), bySquat.getValue(deadlift.id).reps)
@@ -130,13 +131,40 @@ class LoggingTest {
         assertNull(bySquat.getValue(squat.id).shownLb)
     }
 
-    // An imported number with no count: "changed" asks how many, as listed keeps what the sheet said.
+    // "Last time" is the last logged, also when two fall on one day (one exercise in two blocks).
     @Test
-    fun anUnknownCountIsAskedForWhenChanged() {
+    fun lastHeldIsTheLastLogged() {
+        val deadlift = identity.read(BoardLine.read("8 x deadlift").words) as Reading.Known
+        val log = listOf(Logged(monday, deadlift, Load(40, 2), 8..8, listOf(8)), Logged(monday, deadlift, Load(45, 1), 8..8, listOf(8)))
+        assertEquals(Load(45, 1), Sheet.make(listOf("8 x deadlift"), log, identity).rows.single().lastHeld)
+    }
+
+    // A ladder done at the sheet's number is a listed one, whatever else is said about it; only
+    // another weight makes it the heaviest round's.
+    @Test
+    fun onlyAnotherWeightMakesALadderHeaviestOnly() {
+        val squat = identity.read(BoardLine.read("8 x squat").words) as Reading.Known
+        val history = listOf(Logged(monday, squat, Load(30, 2), 8..8, listOf(8, 6, 4), ladder = listOf(8, 6, 4)))
+        val sheet = Sheet.make(listOf("8 / 6 / 4 x squat"), history, identity)
+        val row = sheet.rows.single()
+        val listed = LogDraft.asListed(row)!!
+        fun saved(log: RowLog) = Logging.events(LogDraft().with(row.id, log), sheet, emptyMap(), thursday, "2G", 1L).single()
+        assertEquals(false, saved(listed.copy(count = 1, hard = true, hurt = true)).heaviestOnly)
+        assertEquals(true, saved(listed.copy(lb = 50)).heaviestOnly)
+    }
+
+    // A count nobody has said stays unknown, for the screen to ask; it is never guessed.
+    @Test
+    fun anUnknownCountStaysUnknown() {
         val imported = Logged(monday, identity.read(BoardLine.read("8 x deadlift").words) as Reading.Known, Load(40, null), 8..8, listOf(8))
         val deadlift = Sheet.make(listOf("8 x deadlift"), listOf(imported), identity).rows.single()
         assertEquals(null, LogDraft.asListed(deadlift)!!.count)
-        assertEquals(RowLog(45, 2, 8), LogDraft.startChanged(deadlift))
+        assertEquals(RowLog(45, null, 8), LogDraft.picked(deadlift, 45))
+        // A row with no number takes its count from the last time it was logged.
+        val counted = Logged(monday, identity.read(BoardLine.read("8 x deadlift").words) as Reading.Known, Load(40, 2), 8..8, listOf(8))
+        val far = Sheet.make(listOf("20 x deadlift"), listOf(counted), identity).rows.single()
+        assertTrue(far.suggestion is Suggestion.NoNumber)
+        assertEquals(RowLog(30, 2, 20), LogDraft.picked(far, 30))
     }
 
     // Another day's or class's log never shows on this one's screen.
