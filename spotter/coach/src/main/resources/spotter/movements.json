@@ -1197,6 +1197,253 @@
    "muscles": [
     "core"
    ]
+  },
+  {
+   "name": "tap squat",
+   "aliases": [
+    "tap squats"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "legs",
+    "glutes"
+   ]
+  },
+  {
+   "name": "step-out squat",
+   "aliases": [
+    "step out squat",
+    "step-out squats",
+    "step out squats"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "legs",
+    "glutes"
+   ]
+  },
+  {
+   "name": "squat jack",
+   "aliases": [
+    "squat jacks"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs",
+    "cardio"
+   ]
+  },
+  {
+   "name": "split squat jump",
+   "aliases": [
+    "split squat jumps",
+    "split jump",
+    "split jumps"
+   ],
+   "pattern": null,
+   "muscles": [
+    "legs",
+    "glutes",
+    "cardio"
+   ]
+  },
+  {
+   "name": "speed squat",
+   "aliases": [
+    "speed squats"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "legs",
+    "glutes"
+   ]
+  },
+  {
+   "name": "uppercut",
+   "aliases": [
+    "uppercuts"
+   ],
+   "pattern": null,
+   "muscles": [
+    "shoulders",
+    "core"
+   ]
+  },
+  {
+   "name": "windmill",
+   "aliases": [
+    "windmills"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "shoulders"
+   ]
+  },
+  {
+   "name": "farmer's march",
+   "aliases": [
+    "farmers march",
+    "farmer march"
+   ],
+   "pattern": "carry",
+   "muscles": [
+    "core",
+    "legs"
+   ]
+  },
+  {
+   "name": "sprinter sit-up",
+   "aliases": [
+    "sprinter situp",
+    "sprinter sit-ups",
+    "sprinter situps"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "shoulder tap",
+   "aliases": [
+    "shoulder taps"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "shoulders"
+   ]
+  },
+  {
+   "name": "knee tap",
+   "aliases": [
+    "knee taps"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "hip extension",
+   "aliases": [
+    "hip extensions"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "glutes"
+   ]
+  },
+  {
+   "name": "leg extension",
+   "aliases": [
+    "leg extensions"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "walkout",
+   "aliases": [
+    "walkouts",
+    "walk out",
+    "walk outs"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "glutes"
+   ]
+  },
+  {
+   "name": "lateral walk",
+   "aliases": [
+    "lateral walks"
+   ],
+   "pattern": null,
+   "muscles": [
+    "glutes"
+   ]
+  },
+  {
+   "name": "t-spine rotation",
+   "aliases": [
+    "t-spine rotations",
+    "t spine rotation"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "upward rotation",
+   "aliases": [
+    "upward rotations"
+   ],
+   "pattern": null,
+   "muscles": [
+    "shoulders",
+    "core"
+   ]
+  },
+  {
+   "name": "tricep push-up",
+   "aliases": [
+    "tricep push-ups",
+    "tricep pushup",
+    "tricep pushups"
+   ],
+   "pattern": "triceps",
+   "muscles": [
+    "triceps",
+    "chest"
+   ]
+  },
+  {
+   "name": "bicycle press",
+   "aliases": [
+    "bicycle presses"
+   ],
+   "pattern": "horizontal_push",
+   "muscles": [
+    "chest",
+    "core"
+   ]
+  },
+  {
+   "name": "side to side push-up",
+   "aliases": [
+    "side to side push-ups",
+    "side-to-side push-up"
+   ],
+   "pattern": "horizontal_push",
+   "muscles": [
+    "chest"
+   ]
+  },
+  {
+   "name": "high side plank",
+   "aliases": [
+    "high side planks"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
+  },
+  {
+   "name": "low side plank",
+   "aliases": [
+    "low side planks"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ]
   }
  ]
 }

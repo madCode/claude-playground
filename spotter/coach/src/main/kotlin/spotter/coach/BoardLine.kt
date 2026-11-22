@@ -40,7 +40,7 @@ enum class LineKind { EXERCISE, INSTRUCTION, HEADING }
 data class BoardLine(
     val raw: String,
     val kind: LineKind,
-    /** "finisher", "bonus", "buy-in" when the line is one; null for a plain block line. */
+    /** "finisher", "bonus", "buy-in", "buy-out" when the line is one; null for a plain block line. */
     val label: String?,
     val scheme: Scheme?,
     /** The exercise's words, lower case, with the scheme, label, side and trailing rest taken off. */
@@ -53,7 +53,7 @@ data class BoardLine(
         /** Longer than any workout line: commentary, or input built to be slow to read. */
         const val MAX_LENGTH = 300
 
-        private val labels = Regex("""^(?:repeat until (?:time (?:is called )?)?(?:for )?)?(finisher|bonus|buy-in|buy in|coach cue)\s*:?\s*""")
+        private val labels = Regex("""^(?:repeat until (?:time (?:is called )?)?(?:for )?)?(finisher|bonus|buy-in|buy in|buy-out|buy out|coach cue)\b\s*:?\s*""")
         // Four digits at most: no board asks for more, and a longer number can't overflow Int.
         private const val NUM = """(\d{1,4})(?!\d)"""
         // A ladder has three rounds or more, or an "x": "1/2 kneeling" is a half-kneeling stance.
@@ -94,7 +94,7 @@ data class BoardLine(
                 .trim()
             var label: String? = null
             labels.find(text)?.let { m ->
-                label = m.groups[1]!!.value.replace("buy in", "buy-in")
+                label = m.groups[1]!!.value.replace("buy in", "buy-in").replace("buy out", "buy-out")
                 text = text.substring(m.range.last + 1)
             }
             if (instructionStart.containsMatchIn(text)) return other(raw, LineKind.INSTRUCTION, text)
@@ -140,6 +140,7 @@ data class BoardLine(
                 if (finalScheme == null) finalScheme = Scheme.AsManyAsPossible
             }
             words = words.replace(Regex("""\s*until time is called\s*"""), " ")
+                .replace(Regex(""",?\s*recover when done(?: until next round begins)?\b"""), " ")
                 .replace(Regex("""[(),]"""), " ")
                 .replace(Regex("""\s+"""), " ")
                 .trim()
