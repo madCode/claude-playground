@@ -254,6 +254,14 @@ weight of one dumbbell, never a sum (2×25 is 25, a goblet 1×40 is 40), with th
 of its own. `suggested_weight` is null when the sheet showed no number. Rows with no weight, or
 `skipped`, aren't graded.
 
+The file (`ScorecardSession`) is a session file in Carry's format, `gym-session/1`, which the
+same scorecard already grades: every field Carry writes, with Carry's types (weights as decimals,
+`reps` as one number: the reps every set reached), and a `sheet_id` of date and class. Spotter's
+own extras (`count`, `suggested_count`, `set_reps`) are fields Carry's reader ignores. A row left
+blank has a null weight and is not skipped, and a set can only be logged against its own row.
+[scorecard-example.json](scorecard-example.json) is an invented class, and a test keeps it equal
+to what the code writes.
+
 Over every logged weighted set: did the sheet give a number (*numbered*), was it within one
 dumbbell of what was lifted (*close*), and how many were more than a step *high* or *low*.
 Beside it, the board corpus is graded line by line: how many rows are read fully, unsure, or

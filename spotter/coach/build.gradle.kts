@@ -13,3 +13,8 @@ dependencies {
     implementation(libs.serialization.json)
     testImplementation(libs.junit)
 }
+
+// ScorecardTest compares the export with this file, so a change to it reruns the tests.
+tasks.test {
+    inputs.file("../docs/scorecard-example.json")
+}

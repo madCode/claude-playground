@@ -7,9 +7,23 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 - **Built so far:** the design; loads per hand on the rack's steps; reading a board line's
   count; naming its exercise, in full on 89% of Carry's board rows; the suggested weight from a
   log; the app, which updates itself.
-- **Waiting on you:** a few board words still unsorted (BACKLOG.md, "Your call").
+- **Waiting on you:** running `scorecard.py` on the example export; a few board words still
+  unsorted (BACKLOG.md, "Your call").
 
 ## Sunday 22 November 2026
+
+### Cycle 7: the scorecard export
+- **Why:** the switch from Carry is decided on the scorecard, so Spotter has to write what it
+  grades. The last item of step 1.
+- **Shipped:** a session file per class: each row's suggested and lifted weight per dumbbell,
+  the count apart, null where the sheet had no number, and blank rows not counted as skipped.
+- **Review caught:** the first version only borrowed some of Carry's field names, with its own
+  schema, `reps` as a list and no `sheet_id`, so a grader written for Carry's files could skip
+  or crash on it. It is now Carry's format field for field. Also: a set could be logged
+  against another row, and the example file could drift from the code. Both fixed and tested.
+- **Step 1, the coach core, is done.** Next: the phone shows today's sheet (step 2).
+- **For you:** one check only you can do. Run `scorecard.py` on `docs/scorecard-example.json`, an
+  invented class, and say whether it grades.
 
 ### Cycle 6: the sheet
 - **Why:** the last piece of the coach before the phone can show today's numbers.
