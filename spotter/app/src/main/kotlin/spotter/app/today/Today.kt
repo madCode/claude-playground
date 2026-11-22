@@ -10,6 +10,7 @@ import spotter.coach.SheetRow
 import spotter.coach.TodaysBoard
 import spotter.coach.Vocabulary
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -65,11 +66,18 @@ sealed interface Today {
             chosen: TodaysBoard, entries: List<JournalEntry>, identity: Identity, vocabulary: Vocabulary,
             /** History from elsewhere ([spotter.app.history.HistoryPick.beside]), read with the log's. */
             imported: List<Logged> = emptyList(),
+            zone: ZoneId = ZoneId.systemDefault(),
         ): Today {
             val lines = chosen as? TodaysBoard.Lines ?: return from(chosen, emptyList(), identity)
             val date = lines.booked.date
             val name = className(lines)
-            val before = entries.filter { it.date < date || (it.date == date && it.className != name) }
+            // Another class of the same day counts only when its log was begun before this one
+            // started: a morning class's sheet mustn't read the evening's log as its history.
+            // The log doesn't keep a class's start, but nothing is logged before its class.
+            val start = lines.booked.start?.atZone(zone)?.toInstant()?.toEpochMilli()
+            val sameDay = entries.filter { it.date == date && it.className != name }.groupBy { it.className }
+                .filterValues { logged -> start == null || logged.minOf { it.at } < start }.keys
+            val before = entries.filter { it.date < date || (it.date == date && it.className in sameDay) }
             // By date, the imported rows first within a day: what was logged here is the later word.
             val history = (imported.filter { it.date < date } + Journal.history(before, vocabulary)).sortedBy { it.date }
             return from(chosen, history, identity, entries)

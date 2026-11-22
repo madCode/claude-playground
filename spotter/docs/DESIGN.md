@@ -325,7 +325,9 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   tap, since it is what lets a weight go up after one session. Save writes events (`Logging` in the coach, one transaction):
   a new row is logged, a changed one corrected, one cleared removed, an unchanged one left
   alone. Reopened, the screen shows what is logged. A class's own sheet keeps the numbers from
-  before it; the next class reads what was done.
+  before it; the next class reads what was done. With two classes in a day, a class reads the
+  other's log only when that log was begun before it started, so the morning's sheet never
+  rests on the evening's lifting.
 - When the board changes under a log (the class's own board replaces a borrowed one, or its
   poster revises a line), what was logged follows the exercise: an entry whose row is gone
   carries over to the first free row with the same exercise and the same kind of count, keeping
@@ -340,7 +342,10 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   press") and read by the same reader, it becomes a row under "Added by you" and is logged
   like any other. A line Spotter can't name in full, one with no weight, one with no reps
   or time, or one asking more than 99 reps isn't added, and says why. A log from a row since
-  gone is never carried onto an added row: that one is a set of its own. Only a logged one is kept: reopened, the class has the
+  gone is never carried onto an added row: that one is a set of its own. An added row not yet
+  saved has "Remove".
+- A logged row whose line no longer reads in full (the word lists changed) still shows what is
+  logged, with Clear; nothing new can be said of it until it reads again. Only a logged one is kept: reopened, the class has the
   row again, built from its own entry. The scorecard is told the sheet showed no number for
   it, since it was never on the sheet before class.
 

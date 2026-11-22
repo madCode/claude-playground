@@ -67,6 +67,9 @@ data class LogDraft(
 ) {
     fun with(id: String, log: RowLog?) = copy(rows = if (log == null) rows - id else rows + (id to log))
 
+    /** Without the added line [id], and whatever was entered for it: it was never saved. */
+    fun removing(id: String) = copy(added = added - id, rows = rows - id)
+
     /**
      * With [typed] added as a row of its own, under an id past every one on [sheet] and in the
      * draft. [now], the clock, keeps it apart from ids the sheet doesn't show as well: a row
@@ -185,10 +188,13 @@ object Logging {
 
     private fun rowEvents(
         draft: LogDraft, sheet: Sheet, logged: Map<String, JournalEntry>, date: LocalDate, className: String, at: Long,
-    ): List<JournalEntry> = sheet.rows.filter(LogDraft::loggable).mapNotNull { row ->
+    ): List<JournalEntry> = sheet.rows.mapNotNull { row ->
         val now = draft.rows[row.id]
         val before = logged[row.id]
         when {
+            // A row that can't be logged (its line no longer reads in full, after a change to the
+            // word lists) can still have been: what is logged stays, and can only be cleared.
+            !LogDraft.loggable(row) -> before?.takeIf { now == null && row.id in draft.seen }?.let { it.copy(id = 0, at = at, kind = JournalEntry.Kind.REMOVED, target = it.id) }
             // The draft's line under an id the log has since given to another line (a draft from
             // a sheet that didn't have it yet): not that entry's to correct.
             before != null && draft.added[row.id].let { it != null && it != before.line } -> null

@@ -82,7 +82,11 @@ fun LogView(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit,
                     )
                 }
             }
-            LogRowView(row, today.sheet.glance(row), draft.rows[row.id]) { onChange(draft.with(row.id, it)) }
+            LogRowView(
+                row, today.sheet.glance(row), draft.rows[row.id],
+                // Only a line added on this screen and not yet saved: a saved one is cleared.
+                onRemove = if (row.id in draft.added) ({ onChange(draft.removing(row.id)) }) else null,
+            ) { onChange(draft.with(row.id, it)) }
         }
         AddExercise(today, draft, onChange)
         if (today.strays.isNotEmpty()) {
@@ -164,7 +168,7 @@ private fun AddExercise(today: Today.Showing, draft: LogDraft, onChange: (LogDra
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (RowLog?) -> Unit) {
+private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: (() -> Unit)?, onChange: (RowLog?) -> Unit) {
     val asListed = LogDraft.asListed(row)
     // As listed still, when all that was added is how many dumbbells the sheet didn't know, or
     // that it felt easy: the weight and the reps are the sheet's.
@@ -181,6 +185,14 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (R
             }
             if (!LogDraft.loggable(row)) {
                 Text(if (row.reading is Reading.NotSure) "Not read, so not logged here" else "No weight to log", fontSize = 14.sp, color = muted)
+                // Logged when the line still read: it counts until cleared, so it is shown.
+                if (log != null) {
+                    Text("Logged: " + summary(log), fontSize = 15.sp, color = ink, fontWeight = FontWeight.SemiBold)
+                    OutlinedButton(
+                        onClick = { onChange(null) },
+                        modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: clear" },
+                    ) { Text("Clear") }
+                }
                 return@Column
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -202,6 +214,12 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (R
                         onClick = { open = false; onChange(null) },
                         modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: clear" },
                     ) { Text("Clear") }
+                }
+                if (onRemove != null) {
+                    OutlinedButton(
+                        onClick = onRemove,
+                        modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: remove" },
+                    ) { Text("Remove") }
                 }
             }
             if (open) Editor(row, log, onChange)

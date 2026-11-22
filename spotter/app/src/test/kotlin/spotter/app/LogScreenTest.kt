@@ -367,6 +367,12 @@ class LogScreenTest {
         compose.onNodeWithText("Add an exercise").performScrollTo().performClick()
         compose.onNodeWithContentDescription("8 x goblet squat: changed").performScrollTo().performClick()
         compose.onNodeWithContentDescription("8 x goblet squat: 30 pounds").performScrollTo().performClick()
+        // One added by mistake is taken back, with what was entered; a saved one has no "Remove".
+        compose.onNodeWithText(field).performScrollTo().performTextInput("8 x front squat")
+        compose.onNodeWithText("Add an exercise").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("8 x front squat: remove").performScrollTo().performClick()
+        compose.onNodeWithText("8 x front squat").assertDoesNotExist()
+        compose.onNodeWithContentDescription("10 x hammer curl: remove").assertDoesNotExist()
         compose.onNodeWithText("Save").performScrollTo().performClick()
         save(saved!!.first, saved!!.second)
         assertEquals(2, log.entries().map { it.row }.toSet().size)
@@ -376,6 +382,24 @@ class LogScreenTest {
             log.entries(), identity, vocabulary,
         ) as Today.Showing
         assertEquals("2×15 =", next.sheet.glance(next.sheet.rows.single()))
+    }
+
+    // Logged, and then the row stops being one Spotter can log (the word lists changed): the
+    // screen still shows what is logged, and it can be cleared.
+    @Test
+    fun aLoggedRowThatNoLongerReadsShowsItsLogAndClears() {
+        save(today(saturday), LogDraft().with(today(saturday).sheet.rows[0].id, spotter.coach.RowLog(25, 2, 8)))
+        val logged = today(saturday)
+        val unread = logged.copy(sheet = logged.sheet.copy(rows = logged.sheet.rows.mapIndexed { i, r -> if (i == 0) r.copy(suggestion = null) else r }))
+        var saved: LogDraft? = null
+        show(unread) { _, d -> saved = d }
+        compose.onNodeWithText("Change the log (1 logged)").performClick()
+        compose.onNodeWithText("Logged: 2×25 · 8 reps").assertIsDisplayed()
+        compose.onNodeWithContentDescription("8 x close grip chest press (explosive): clear").performClick()
+        compose.onNodeWithText("Logged: 2×25 · 8 reps").assertDoesNotExist()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(spotter.coach.JournalEntry.Kind.REMOVED, save(unread, saved!!).single().kind)
+        assertTrue(today(saturday).logged.isEmpty())
     }
 
     // The sheet has moved on to the next class: the one just done is first on the screen, and
