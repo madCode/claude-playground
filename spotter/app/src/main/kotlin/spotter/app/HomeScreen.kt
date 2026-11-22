@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -25,17 +27,25 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import spotter.app.today.Today
 
 /**
- * The app's first screen, until today's sheet replaces its middle: what Spotter is, a newer build
- * waiting when there is one, and the version, copyable in one tap.
+ * The app's screen: today's sheet in the middle, a newer build waiting when there is one, and the
+ * version, copyable in one tap.
  */
 @Composable
-fun HomeScreen(version: String, waitingBuild: Int?, onInstall: () -> Unit, onCopyVersion: () -> Unit) {
+fun HomeScreen(
+    version: String,
+    waitingBuild: Int?,
+    onInstall: () -> Unit,
+    onCopyVersion: () -> Unit,
+    today: Today = Today.Loading,
+    onAllowCalendar: () -> Unit = {},
+) {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
             Column(
-                Modifier.safeDrawingPadding().padding(20.dp),
+                Modifier.safeDrawingPadding().verticalScroll(rememberScrollState()).padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
@@ -66,12 +76,8 @@ fun HomeScreen(version: String, waitingBuild: Int?, onInstall: () -> Unit, onCop
                         }
                     }
                 }
-                Text(
-                    "Today's sheet comes in the next update. This build updates itself from now on.",
-                    fontSize = 17.sp,
-                    color = Color(0xFF16181D),
-                )
-                Spacer(Modifier.weight(1f))
+                TodayView(today, onAllowCalendar)
+                Spacer(Modifier.heightIn(min = 8.dp))
                 Text(
                     "Version $version · tap to copy",
                     fontSize = 14.sp,

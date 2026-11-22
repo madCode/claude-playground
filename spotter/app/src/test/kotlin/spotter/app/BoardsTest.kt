@@ -100,16 +100,19 @@ class BoardsTest {
         }
         val loader = TodayLoader(boards) { events }
         val now = day.atTime(8, 0)
-        assertEquals(listOf("* 8 x deadlift"), (loader.load(now) as TodaysBoard.Lines).lines)
+        assertEquals(listOf("* 8 x deadlift"), (loader.load(now)!! as TodaysBoard.Lines).lines)
         online = false
         // Today's board was kept when it was fetched, so it isn't stale.
-        assertNull((loader.load(now) as TodaysBoard.Lines).staleFrom)
+        assertNull((loader.load(now)!! as TodaysBoard.Lines).staleFrom)
         // The evening before tomorrow's class: today's board is kept, tomorrow's isn't posted.
         notPosted = true
         val evening = TodayLoader(boards) { listOf(CalendarEvent("Orange 60 Min 2G", day.plusDays(1), day.plusDays(1).atTime(9, 0))) }
         assertTrue(evening.load(day.atTime(20, 0)) is TodaysBoard.Nothing)
+        // Without fetching, the board kept for the class shows at once; nothing kept, nothing yet.
+        assertEquals(listOf("* 8 x deadlift"), (loader.load(now, fetch = false) as TodaysBoard.Lines).lines)
+        assertEquals(null, evening.load(day.atTime(20, 0), fetch = false))
         // No calendar access: say so, rather than "no class booked".
-        val noCalendar = TodayLoader(boards) { null }.load(now) as TodaysBoard.Nothing
+        val noCalendar = TodayLoader(boards) { null }.load(now)!! as TodaysBoard.Nothing
         assertTrue(noCalendar.reason.contains("calendar"))
     }
 }

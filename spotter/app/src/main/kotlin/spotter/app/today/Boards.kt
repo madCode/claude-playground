@@ -33,7 +33,8 @@ class Boards(private val dir: File, private val get: (String) -> Download.Answer
         val board = DayBoard.parse(text)?.takeIf { it.date == date } ?: return Fetched.Unreachable
         dir.mkdirs()
         val file = File(dir, "$date.json")
-        val partial = File(dir, "$date.json.part")
+        // Its own name, so two fetches at once never write one file.
+        val partial = File.createTempFile("$date.", ".part", dir)
         partial.writeText(text)
         if (!partial.renameTo(file)) partial.delete()
         prune()

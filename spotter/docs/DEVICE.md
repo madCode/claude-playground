@@ -20,3 +20,17 @@ installer. Whether Android installs it without a tap is only visible on a phone.
 
 If it doesn't update: open Spotter. A box means Android wanted a tap; no box and an old version
 means the check hasn't run yet or the phone was offline.
+
+## Today's sheet
+
+The tests prove the sheet from a board and a calendar. Reading the phone's own calendar, and the
+permission prompt, are only visible on a phone.
+
+1. Open Spotter after the update. The first time, Android asks to let Spotter read the calendar;
+   allow it.
+2. With a class booked today or tomorrow ("Orange 60 Min 2G"), the sheet shows that class, its
+   date and start, and the board's rows. Without one, it says "No class booked today or
+   tomorrow."
+3. Turn on flight mode and reopen: the same board shows, from the copy kept on the phone. The
+   evening before a class, before the next board is posted, it says "No board posted … yet".
+

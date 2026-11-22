@@ -14,6 +14,24 @@ data class SheetRow(
 ) {
     /** The board's own words, as posted, without the bullet. */
     val shown: String get() = line.raw.trim().trimStart('*', '•', '-', ' ').replace("**", "")
+
+    /** What Spotter read the line as, shown beneath the board's words so a misreading is visible. */
+    val understood: String
+        get() = when (reading) {
+            is Reading.Known -> reading.key
+            is Reading.NotSure -> "not sure: " + reading.why.name.lowercase().replace('_', ' ') +
+                reading.words.takeIf { it.isNotEmpty() }?.let { " (" + it.joinToString(" ") + ")" }.orEmpty()
+        }
+
+    /** Why the number is what it is, for the row's detail. */
+    val why: List<String>
+        get() = when (val s = suggestion) {
+            is Suggestion.Weight -> s.reasons
+            is Suggestion.NoNumber -> listOf(
+                if (s.reason == "new: go light") "Nothing logged for this exercise yet, and no sound link to one that has: start light." else s.reason,
+            )
+            null -> listOf(if (reading is Reading.NotSure) "Not sure what this is, so no number." else "Done without a weight.")
+        }
 }
 
 /** Today's sheet for one class, rows in board order. */
@@ -38,7 +56,8 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
         }
     }.trimEnd()
 
-    private fun glance(row: SheetRow): String = when (val s = row.suggestion) {
+    /** A row's number as the glance shows it: "2×30 ▲", "no weight", "new: go light", "?". */
+    fun glance(row: SheetRow): String = when (val s = row.suggestion) {
         null -> if (row.reading is Reading.NotSure) "?" else "no weight"
         is Suggestion.NoNumber -> s.reason
         is Suggestion.Weight -> buildString {

@@ -6,18 +6,37 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import spotter.app.today.Boards
+import spotter.app.today.Calendar
+import spotter.app.today.Today
+import spotter.app.today.TodayLoader
+import spotter.coach.Identity
+import spotter.coach.Vocabulary
+import java.io.File
+import java.time.LocalDateTime
 import spotter.app.update.Installer
 import spotter.app.update.UpdateStore
 import spotter.app.update.UpdateWorker
 
 class MainActivity : ComponentActivity() {
     private val waiting = mutableIntStateOf(0)
+    private val today = mutableStateOf<Today>(Today.Loading)
     private var stopListening: () -> Unit = {}
+    private val calendar by lazy { Calendar(this) }
+    private val askCalendar = registerForActivityResult(ActivityResultContracts.RequestPermission()) { calendarAnswered(it) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +48,8 @@ class MainActivity : ComponentActivity() {
                 waitingBuild = waiting.intValue.takeIf { it > BuildConfig.CI_BUILD && BuildConfig.CI_BUILD > 0 },
                 onInstall = ::install,
                 onCopyVersion = { copy(version) },
+                today = today.value,
+                onAllowCalendar = ::allowCalendar,
             )
         }
     }
@@ -37,6 +58,7 @@ class MainActivity : ComponentActivity() {
     // the box should appear then, not on the next visit.
     override fun onStart() {
         super.onStart()
+        load()
         val store = UpdateStore(this)
         waiting.intValue = store.waiting
         stopListening = store.listen { waiting.intValue = store.waiting }
@@ -45,6 +67,46 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         stopListening()
         super.onStop()
+    }
+
+    // Asked once, the first time Spotter opens (madCode's choice for Carry: "once at setup").
+    // Afterwards the button asks again. When Android answers at once without showing its dialog,
+    // it has stopped asking ("don't ask again"), so the button opens Spotter's settings instead.
+    // Timing the answer is the one sign that holds across versions: the rationale flag is also
+    // false after a dismissed dialog or an auto-reset permission, when Android would still ask.
+    private var askedAt = 0L
+
+    private fun allowCalendar() {
+        getSharedPreferences("spotter", MODE_PRIVATE).edit().putBoolean(ASKED_CALENDAR, true).apply()
+        askedAt = SystemClock.elapsedRealtime()
+        askCalendar.launch(android.Manifest.permission.READ_CALENDAR)
+    }
+
+    private fun calendarAnswered(granted: Boolean) {
+        if (!granted && SystemClock.elapsedRealtime() - askedAt < NO_DIALOG_MS) {
+            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+        }
+        load()
+    }
+
+    private var loading: Job? = null
+
+    private fun load() {
+        if (!calendar.allowed()) {
+            today.value = Today.NeedsCalendar
+            if (!getSharedPreferences("spotter", MODE_PRIVATE).getBoolean(ASKED_CALENDAR, false)) allowCalendar()
+            return
+        }
+        if (today.value == Today.NeedsCalendar) today.value = Today.Loading
+        // One load at a time: a rotation or a return from settings starts afresh.
+        loading?.cancel()
+        loading = lifecycleScope.launch {
+            val loader = TodayLoader(Boards(File(filesDir, "boards")), calendar::events)
+            // The kept board first, then the fetched one. Nothing is logged yet: logging is step 3.
+            withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), fetch = false) }?.let { today.value = Today.from(it, emptyList(), identity) }
+            val fetched = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now()) }
+            if (fetched != null) today.value = Today.from(fetched, emptyList(), identity)
+        }
     }
 
     private fun install() {
@@ -61,5 +123,13 @@ class MainActivity : ComponentActivity() {
         getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Spotter version", version))
         // Android 13 and later show their own notice of a copy.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) Toast.makeText(this, "Copied $version", Toast.LENGTH_SHORT).show()
+    }
+
+    private companion object {
+        const val ASKED_CALENDAR = "asked_calendar"
+
+        // Faster than any person can read a dialog and tap.
+        const val NO_DIALOG_MS = 300L
+        val identity by lazy { Identity(Vocabulary.starting()) }
     }
 }

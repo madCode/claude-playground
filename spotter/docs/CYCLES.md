@@ -2,6 +2,13 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 9 — build: the sheet on the phone
+
+- Render the screen from a real feed board and look at the PNG before review: it shows layout
+  problems no assertion names.
+- A clickable row merges its texts into one semantics node: measure a child's bounds with
+  `useUnmergedTree = true`, or the test measures the whole row and can't fail.
+
 ### Cycle 8 — build: today's board on the phone
 
 - An app falsification run takes minutes: run it in the background and leave the tree alone,
