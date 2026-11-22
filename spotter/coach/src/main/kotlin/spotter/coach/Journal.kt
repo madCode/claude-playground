@@ -135,7 +135,7 @@ object Journal {
         return Logged(
             e.date, exercise, load, target, e.reps,
             hurt = e.hurt, formBroke = e.formBroke, stopped = e.stopped, ladder = e.ladder?.takeIf { it.isNotEmpty() },
-            hard = e.hard, heaviestOnly = e.heaviestOnly,
+            hard = e.hard, easy = e.easy, heaviestOnly = e.heaviestOnly,
         )
     }
 }

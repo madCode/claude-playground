@@ -38,8 +38,9 @@ both are installed side by side.
   - *Board parsing:* the day's board lines into exercise rows (movement, variation, reps,
     implement), leaving prose and greetings out.
   - *Identity:* see **Reading a board line**, below.
-  - *Progression:* straight sets with 1–2 reps in reserve. Up a dumbbell after clean sessions;
-    hold after a near miss or a twinge; down a step after a miss of 3+ reps, a miss on the
+  - *Progression:* straight sets with 1–2 reps in reserve. Up a dumbbell after two clean
+    sessions in a row at a weight, or one that felt easy; hold after one clean session, a near
+    miss or a twinge; down a step after a miss of 3+ reps, a miss on the
     first set, broken form or having to stop. A later miss caps an older success. Epley only
     within 3–12 reps. A test number ("12 · try 15 if set 1 felt easy") when the next dumbbell
     is a big jump.
@@ -55,6 +56,10 @@ both are installed side by side.
     warning and the reason, whether or not the cap changed the number. What twinged at fewer
     reps caps lower for more reps. A sound session after a twinge clears it. With nothing but
     twinges logged, the latest one is the number. Nothing is borrowed from a lift that twinged.
+    One clean session holds: a weight goes up after two clean sessions in a row at the same
+    reps and weight, or after one that "felt easy" (madCode, 2026-11-22; TRAINING.md, 1). A
+    weight lifted above the sheet's number becomes the number and waits its own two; one that
+    twinged isn't taken up. A big jump's test weight is offered once the weight has settled.
     A clean set that "felt hard" waits a session before stepping up (TRAINING.md, 3).
     Each rep count keeps its own history: the last time these reps were asked is the basis,
     while the latest session bears it out. A set missed since, at any reps, puts the latest

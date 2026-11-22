@@ -20,6 +20,8 @@ data class Logged(
     /** A ladder's rounds ("8 / 6 / 4"), each set judged against its own; [target] is ignored. */
     val ladder: List<Int>? = null,
     val hard: Boolean = false,
+    /** Said to have felt easy: reason enough to go up after one clean session. */
+    val easy: Boolean = false,
     /**
      * A ladder logged with one weight, the heaviest of its rounds, with nobody having said what
      * each round held: it can hold the number but never raise it, since the number is round one's.
@@ -117,6 +119,12 @@ sealed interface Suggestion {
  * See DESIGN.md, "Progression".
  */
 object Progression {
+    // Whether the session before [basis] at the same reps was clean at the same weight.
+    private fun settled(basis: Logged, sound: List<Logged>): Boolean {
+        val before = sound.takeWhile { it !== basis }.lastOrNull { it.anchor == basis.anchor } ?: return false
+        return before.outcome == Outcome.CLEAN && before.load.lb == basis.load.lb
+    }
+
     /** A step more than this much heavier is a big jump: the sheet holds and offers a test. */
     private const val BIG_JUMP = 1.2
 
@@ -178,6 +186,11 @@ object Progression {
                 held.also { reasons += "done at ${basis.load.label} but it felt hard: same again" }
             // A timed set says nothing about reps in reserve.
             basis.outcome == Outcome.CLEAN && basis.firstTarget == null -> held.also { reasons += "a timed set at ${basis.load.label}: same again" }
+            // One clean session isn't enough to go up on (madCode, 2026-11-22; TRAINING.md, 1): a
+            // weight is settled by two clean sessions in a row at these reps, or by one that
+            // felt easy. A weight lifted above the sheet's number is new, so it waits its two too.
+            basis.outcome == Outcome.CLEAN && !basis.easy && !settled(basis, sound) ->
+                held.also { reasons += "clean at ${basis.load.label} once: up after one more clean session, or one that felt easy" }
             basis.outcome == Outcome.CLEAN -> {
                 val up = Rack.up(held)
                 when {

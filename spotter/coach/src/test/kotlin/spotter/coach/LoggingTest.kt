@@ -39,7 +39,8 @@ class LoggingTest {
 
     private fun row(sheet: Sheet, words: String) = sheet.rows.first { it.shown == words }
 
-    // The whole loop: logged as listed on Monday, the sheet goes up a dumbbell on Thursday.
+    // The whole loop: what is logged on Monday is Thursday's number, and two ticks as listed in
+    // a row take the sheet up a dumbbell.
     @Test
     fun aClassLoggedAsListedRaisesTheNextSheet() {
         val first = sheet(monday)
@@ -49,13 +50,19 @@ class LoggingTest {
         assertNull(LogDraft.asListed(press))
         save(monday, LogDraft().with(press.id, LogDraft.picked(press, 25).copy(count = 2)))
 
-        // 8 reps at 25 was clean: up a dumbbell.
+        // 8 reps at 25 was clean, once: the same again.
         val next = row(sheet(thursday), "8 x chest press")
-        assertEquals("2×30 ▲", sheet(thursday).glance(next))
+        assertEquals("2×25 =", sheet(thursday).glance(next))
         val saved = save(thursday, LogDraft().with(next.id, LogDraft.asListed(next))).single()
-        assertEquals(listOf(30, 2), listOf(saved.shownLb, saved.shownCount))
+        assertEquals(listOf(25, 2), listOf(saved.shownLb, saved.shownCount))
+        // Ticked as listed a second time running: up a dumbbell.
         val friday = thursday.plusDays(1)
-        assertEquals("2×35 ▲", sheet(friday).glance(row(sheet(friday), "8 x chest press")))
+        assertEquals("2×30 ▲", sheet(friday).glance(row(sheet(friday), "8 x chest press")))
+        // And "felt easy" on the new weight takes it up after one.
+        val third = row(sheet(friday), "8 x chest press")
+        save(friday, LogDraft().with(third.id, LogDraft.asListed(third)!!.copy(easy = true)))
+        val saturday = friday.plusDays(1)
+        assertEquals("2×35 ▲", sheet(saturday).glance(row(sheet(saturday), "8 x chest press")))
     }
 
     // Saving again writes nothing; a change is a correction; clearing a row removes it.

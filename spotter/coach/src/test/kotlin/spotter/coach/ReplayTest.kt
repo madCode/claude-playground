@@ -51,8 +51,8 @@ class ReplayTest {
         assertEquals(listOf(null, 25.0), listOf(press(0).suggestedWeight, press(0).weight))
         assertEquals(listOf(null, 30.0), listOf(press(1).suggestedWeight, press(1).weight))
         // Thursday: Monday's two classes are history. The later row in the file is the latest, so
-        // the clean 30 steps up; the lift was 30, felt hard.
-        assertEquals(listOf(35.0, 30.0, true), listOf(press(2).suggestedWeight, press(2).weight, press(2).hard))
+        // the 30 is the number, clean once; the lift was 30, felt hard.
+        assertEquals(listOf(30.0, 30.0, true), listOf(press(2).suggestedWeight, press(2).weight, press(2).hard))
         // The Monday after: felt hard at 30 holds it there.
         assertEquals(listOf(30.0, 30.0), listOf(press(3).suggestedWeight, press(3).weight))
     }
@@ -86,7 +86,7 @@ class ReplayTest {
         assertEquals(5, out.list()!!.size)
         val session = Json.parseToJsonElement(File(out, "session-2026-03-05-2G.json").readText()).jsonObject
         assertEquals(listOf("gym-session/1", "2026-03-05", "2G"), listOf("schema", "date", "class").map { session.getValue(it).jsonPrimitive.content })
-        assertEquals(35.0, session.getValue("sets").jsonArray[0].jsonObject.getValue("suggested_weight").jsonPrimitive.content.toDouble(), 0.0)
+        assertEquals(30.0, session.getValue("sets").jsonArray[0].jsonObject.getValue("suggested_weight").jsonPrimitive.content.toDouble(), 0.0)
         assertEquals(
             listOf(
                 "5 classes, 8 rows, written to $out",

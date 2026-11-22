@@ -55,7 +55,7 @@ class SheetScreenTest {
     )
     private fun exercise(line: String) = identity.read(BoardLine.read(line).words) as Reading.Known
     private val log = listOf(
-        Logged(day.minusDays(3), exercise("8 x close grip chest press (explosive)"), Load(25, 2), 8..8, listOf(8, 8, 8)),
+        Logged(day.minusDays(3), exercise("8 x close grip chest press (explosive)"), Load(25, 2), 8..8, listOf(8, 8, 8), easy = true),
         Logged(day.minusDays(3), exercise("8 x deadlift"), Load(40, 2), 8..8, listOf(8, 7, 8)),
     )
 
@@ -151,7 +151,7 @@ class SheetLargeTextTest {
         val booked = BookedClass("2G", day, day.atTime(9, 50), "Orange 60 Min 2G")
         val press = identity.read(BoardLine.read("20 x chest press").words) as Reading.Known
         // 8 reps last time and 20 now: too far apart to convert, so a long reason.
-        val log = listOf(Logged(day.minusDays(2), press, Load(25, 2), 8..8, listOf(8, 8, 8)))
+        val log = listOf(Logged(day.minusDays(2), press, Load(25, 2), 8..8, listOf(8, 8, 8), easy = true))
         compose.setContent {
             HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = Today.from(TodaysBoard.Lines(booked, listOf("* 20 x chest press")), log, identity))
         }

@@ -2,6 +2,12 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 22 — build: two clean sessions to go up
+
+- A rule change that most tests lean on: add the one input the old behaviour now needs
+  ("felt easy") to fixtures whose point lies elsewhere, and rewrite only the tests about the
+  rule itself. Check each expectation that moved the other way by hand.
+
 ### Cycle 21 — build: the history on the phone
 
 - Check each Java call against the project's lowest Android version before the review does:

@@ -196,9 +196,14 @@ class HistoryImportTest {
     // The whole path: an imported history puts a number on the next sheet.
     @Test
     fun anImportedHistoryFeedsTheSheet() {
-        val history = read(row("8 x chest press", "25", 8, 8, "double_dumbbell")).logged
+        val once = read(row("8 x chest press", "25", 8, 8, "double_dumbbell")).logged
+        assertEquals("2×25 =", Sheet.make(listOf("* 8 x chest press"), once, identity).let { it.glance(it.rows.single()) })
+        // "Felt easy" comes through, and one such session is enough to go up.
+        val history = read(row("8 x chest press", "25", 8, 8, "double_dumbbell", extra = """, "easy": true""")).logged
         val sheet = Sheet.make(listOf("* 8 x chest press"), history, identity)
         assertEquals("2×30 ▲", sheet.glance(sheet.rows.single()))
+        // Hard or unfinished outweighs easy.
+        assertEquals(false, read(row("8 x chest press", "25", 8, 8, extra = """, "easy": true, "incomplete": true""")).logged.single().easy)
     }
 
     // Carry's fixtures hold an invented lifter's history in the real format, 1,300 rows of public
