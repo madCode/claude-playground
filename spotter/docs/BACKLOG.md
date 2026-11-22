@@ -51,24 +51,13 @@ Step 3, logging:
 
 - [ ] Fixes from the review of today's logging decisions (cycle 13), before more is built on
   them. Each is a wrong number or a guess entering history:
-  - A ladder logged as "changed" stores the heaviest weight against every round, so round one
-    goes up from the last round's weight. Hold a ladder logged with one number; never raise
-    round one from it.
-  - Store what the sheet showed (weight and count, or none) on each logged event: the
-    scorecard now rebuilds it at export time, from a board that may have changed.
   - "Changed" on a row with no number puts 2×10 in the log before anything is picked, and
     guesses two dumbbells. Pick the weight from the rack in one tap (nothing preselected,
     nothing logged until picked), the count only when the words or the last log fix it, and
     start from the last weight held when there is one.
-  - Twinges: cap from the latest twinge, not the lowest since the last good set; always say
-    so in the row's why, with a warning on the row; a first-ever log with a twinge shows that
-    weight, marked, rather than no number. (madCode: "a twinge holds the weight and notes it".)
-  - Epley converts from the target's top, not the reps done, and stacks on a step up: convert
-    from what was done, and not in the same move as a step.
-  - "Felt hard" is stored but not read: it holds the weight.
-  - The row id writes the count as a Kotlin data-class dump; give it a fixed format, pinned in
-    a test, so a code change can't change every id.
   - "+ Each round" will need a weight per round, not one per row.
+  - A ladder done clean with each round's weight known ("8 / 6 / 4") counts as clean at 8 for
+    a straight "8 x" row, which is more sets at 8 than were done. *(cycle 13 review)*
 - [ ] The evening before: once today's class is logged, the sheet shows the next class
   (madCode, 2026-11-22).
 - [ ] Logging a class after its window: the sheet moves on three hours after the start, and
@@ -168,6 +157,11 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] The coach's half of the logging review (cycle 13): a one-weight ladder holds; twinges cap
+  from the latest, always say so, and a twinge-only history shows that weight; "felt hard"
+  delays a step; each rep count keeps its own history, and conversions start from the reps
+  done; events store what the sheet showed; row ids have a fixed format; the log migrates
+  from version 1.
 - [x] The export grades: `scorecard.py` (gym-coach main) read `scorecard-example.json` with exit
   0, numbered 67%, close 67%, as expected (run by another session at madCode's ask,
   2026-11-22).

@@ -65,15 +65,17 @@ class SheetTest {
         assertTrue(Sheet.make(listOf("8 x goblet squat to dumbbells shoulder press"), mixed, identity).rows.single().suggestion is Suggestion.NoNumber)
     }
 
-    // Review: a part that hurt leaves the combo without a number (trap 3), and a bodyweight part
-    // neither blocks nor gets a warning.
+    // A part that twinged holds the combo at what twinged, with the warning on the row (trap 3:
+    // it never raises a number), and a bodyweight part neither blocks nor gets a warning.
     @Test
-    fun aComboWithAHurtPartHasNoNumber() {
+    fun aComboWithAPartThatTwingedIsHeldThere() {
         val log = listOf(
             logged("8 x deadlift", 30, listOf(8, 8, 8)),
             Logged(LocalDate.of(2026, 3, 2), exercise("8 x high pull"), Load(15, 2), 8..8, listOf(8, 8, 8), hurt = true),
         )
-        assertTrue(Sheet.make(listOf("8 x deadlift to high pull"), log, identity).rows.single().suggestion is Suggestion.NoNumber)
+        val twinged = Sheet.make(listOf("8 x deadlift to high pull"), log, identity).rows.single()
+        assertEquals(Load(15, 2), (twinged.suggestion as Suggestion.Weight).load)
+        assertEquals(listOf("it twinged last time at 2×15"), twinged.warnings)
         val pushUp = Sheet.make(listOf("8 x deadlift to push-up"), log, identity).rows.single()
         assertEquals(Load(35, 2), (pushUp.suggestion as Suggestion.Weight).load)
         assertTrue(pushUp.warnings.isEmpty())
@@ -161,6 +163,10 @@ class SheetTest {
         assertTrue(Sheet.make(listOf("**Floor Block 1 - 12.5 minutes circuit**", "* 10 x deadlift"), emptyList(), identity).rows.single().id != deadlift.id)
         val twice = Sheet.make(listOf("**Floor Block 1**", "* 8 x squat", "* 8 x deadlift", "* 8 x squat", "**Floor Block 2**", "* 8 x squat"), emptyList(), identity).rows
         assertEquals(4, twice.map { it.id }.toSet().size)
+        // Ids are stored in the log: their format is fixed here, apart from the code's names.
+        assertEquals("floor block 1 / reps 8-8 plain deadlift / 1", deadlift.id)
+        assertEquals(" / ladder 10/8/6 plain squat / 1", Sheet.make(listOf("10 / 8 / 6 x squat"), emptyList(), identity).rows.single().id)
+        assertEquals(" / timed 30 goblet squat hold / 1", Sheet.make(listOf("30 sec of goblet squat hold"), emptyList(), identity).rows.single().id)
     }
 
     // What logging shows back: what Spotter read, and why the number, for each kind of row.

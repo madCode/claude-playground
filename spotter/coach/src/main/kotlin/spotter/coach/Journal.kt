@@ -43,6 +43,14 @@ data class JournalEntry(
     val hard: Boolean = false,
     /** An easier version was done than the one listed. */
     val easier: Boolean = false,
+    /** A ladder logged with one weight, its heaviest round's ([Logged.heaviestOnly]). */
+    val heaviestOnly: Boolean = false,
+    /**
+     * What the sheet showed for the row when it was logged, for the scorecard: the board may have
+     * changed by the time of an export. Both null when the sheet gave no number.
+     */
+    val shownLb: Int? = null,
+    val shownCount: Int? = null,
 ) {
     enum class Kind { LOGGED, CORRECTED, REMOVED }
 }
@@ -65,11 +73,13 @@ object Journal {
         load: Load, target: IntRange?, ladder: List<Int>?, reps: List<Int>,
         hurt: Boolean = false, formBroke: Boolean = false, stopped: Boolean = false,
         easy: Boolean = false, hard: Boolean = false, easier: Boolean = false,
+        heaviestOnly: Boolean = false, shown: Load? = null,
     ) = JournalEntry(
         at = at, kind = JournalEntry.Kind.LOGGED, date = date, className = className, row = row, line = line,
         key = exercise.key, parts = exercise.parts.map { LoggedPart(it.movement.name, it.variations) },
         lb = load.lb, count = load.count, targetLow = target?.first, targetHigh = target?.last, ladder = ladder,
         reps = reps, hurt = hurt, formBroke = formBroke, stopped = stopped, easy = easy, hard = hard, easier = easier,
+        heaviestOnly = heaviestOnly, shownLb = shown?.lb, shownCount = shown?.count,
     )
 
     /**
@@ -125,6 +135,7 @@ object Journal {
         return Logged(
             e.date, exercise, load, target, e.reps,
             hurt = e.hurt, formBroke = e.formBroke, stopped = e.stopped, ladder = e.ladder?.takeIf { it.isNotEmpty() },
+            hard = e.hard, heaviestOnly = e.heaviestOnly,
         )
     }
 }

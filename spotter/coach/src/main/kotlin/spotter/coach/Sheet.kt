@@ -104,13 +104,22 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
                         // From what the reader made of the line and the block's name, not their
                         // raw text: a later fix to a capital, a quote or a block's minutes keeps it.
                         val name = block?.split(" · ")?.joinToString(" · ") { it.substringBefore(" - ").trim() }.orEmpty()
-                        val read = listOfNotNull(line.label, line.scheme?.toString(), line.words, line.side).joinToString(" ")
+                        val read = listOfNotNull(line.label, line.scheme?.let(::schemeId), line.words, line.side).joinToString(" ")
                         val n = seen.merge(name to read, 1, Int::plus)!!
                         rows += row("$name / $read / $n", block, line, log, identity)
                     }
                 }
             }
             return Sheet(rows, borrowedFrom)
+        }
+
+        // A row id's count, in a format of its own: ids are stored in the log, so a renamed field
+        // in Scheme must not change them.
+        internal fun schemeId(s: Scheme): String = when (s) {
+            is Scheme.Reps -> "reps ${s.low}-${s.high} ${s.count.name.lowercase()}"
+            is Scheme.Ladder -> "ladder ${s.rounds.joinToString("/")} ${s.count.name.lowercase()}"
+            is Scheme.Timed -> "timed ${s.seconds}"
+            Scheme.AsManyAsPossible -> "amrap"
         }
 
         private fun row(id: String, block: String?, line: BoardLine, log: List<Logged>, identity: Identity): SheetRow {
@@ -127,6 +136,7 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
             if (!wantsWeight(reading)) return SheetRow(id, block, line, reading, target, null, emptyList())
             val warnings = mutableListOf<String>()
             val suggestion = withRowCount(combo(reading, target, log, warnings), reading)
+            (suggestion as? Suggestion.Weight)?.caution?.let { warnings += it }
             return SheetRow(id, block, line, reading, target, suggestion, warnings)
         }
 
@@ -145,8 +155,9 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
         /**
          * A combo's number: its own history first. Without it, the lightest of its weighted parts,
          * since one dumbbell goes through every part, but only when every weighted part has a
-         * number of its own and all are held the same way (trap 2). A part with no number, or one
-         * that hurt, leaves the combo without one: a gap beats the heavier part's guess.
+         * number of its own and all are held the same way (trap 2). A part with no number leaves
+         * the combo without one: a gap beats the heavier part's guess. A part that twinged holds
+         * the combo at what twinged, with the warning.
          */
         private fun combo(reading: Reading.Known, target: IntRange?, log: List<Logged>, warnings: MutableList<String>): Suggestion {
             val own = Progression.suggest(reading, target, log)
@@ -165,6 +176,8 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
                 lightest.load,
                 Change.NEW,
                 listOf("new combo: the lightest of its parts, the ${part.movement.name} (${lightest.load.label})"),
+                // A part that twinged says so on the combo too.
+                caution = parts.firstNotNullOfOrNull { (it.second as Suggestion.Weight).caution },
             )
         }
 

@@ -2,6 +2,14 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 13 — build: the coach's logging rules
+
+- Trace a new progression rule over three or four sessions in a row, not one: the conversion
+  fix passed its one-hop test and ratcheted down over four.
+- The database is on a phone now: a schema change is a new version, an auto-migration, and a
+  row in `LogMigrationTest`; a default that's wrong for old rows needs a spec with an UPDATE.
+- A falsification script edits the tree: brief a reviewer to read `git show HEAD:` only.
+
 ### Cycle 12 — build: the Log screen, first half
 
 - Relearned from cycle 5: a test weight of 20 → 25 is a big jump (over 1.2), which holds the
