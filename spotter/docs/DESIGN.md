@@ -82,13 +82,25 @@ what is on the board, and nothing says so.
     even when they hold an exercise's name.
   - A line over 300 characters is commentary, unread: that also keeps a hostile line from
     stalling the reader.
+- **Then the words are named** (`Identity`), longest phrase first, into one or more parts,
+  each a movement with one value per axis, or "not sure" with the reason:
+  - a word in no list (kept for the review list), a choice ("or"), two movements side by side,
+    two values on one axis, or no movement at all;
+  - combo connectors ("to", "into", "and") start a new part; "with" does only when a movement
+    follows and one came before ("bridge hold with chest press" is a press in a bridge hold),
+    and a "hold" before it is a stance, not an isometric ("single leg hold with … press");
+  - what a combo holds, stands on or wears (implement, Bosu, band) is named once for every
+    part: "TRX high row to bicep curl" is a TRX curl too, unless a part says otherwise;
+  - a plank or bridge hold on its own is the exercise ("1 min of low plank");
+  - the identity key is each movement with its variations in a fixed order, parts joined by
+    " + ", without intensity hints.
 - **A line is fully read, or it is "not sure".** Filler is a closed list too ("rest",
   "finisher", "count & remember reps"). A word that is none of these leaves the row unsure: it
   is shown, it can be logged, but it borrows no number.
 - **A full read can still be wrong**, so the reader also refuses these, found on the corpus:
   - two movements side by side with no connector ("bench bird dog low row", "TRX bridge row");
   - a word that means one thing on one movement and another elsewhere ("wide" is a stance on
-    a squat and a grip on a curl), so such words are only listed with the word that settles
+    a squat and a grip on a curl; so are "close" and "narrow"), so such words are only listed with the word that settles
     them ("wide stance", "wide grip");
   - "with" before only an implement or a modifier ("press with y-bell", "with power"): that is
     a variation of the movement before it, not a combo.
