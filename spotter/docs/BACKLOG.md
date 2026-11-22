@@ -62,10 +62,6 @@ Step 3, logging:
 ## Your call
 
 
-- **Check the export against `scorecard.py`** (cycles can't read gym-coach): run it on
-  [scorecard-example.json](scorecard-example.json), an invented class, and say whether it
-  grades. It is in Carry's `gym-session/1` format, so it should. *(cycle 7)*
-
 - **Board words still unsorted**, after madCode's answers of 2026-11-22. Each stays "not sure"
   until answered. *(cycle 4)*
   - Setup: "hand on bench" on a row, "foot on bench" on a single-leg bridge, "feet in straps".
@@ -111,6 +107,9 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] The export grades: `scorecard.py` (gym-coach main) read `scorecard-example.json` with exit
+  0, numbered 67%, close 67%, as expected (run by another session at madCode's ask,
+  2026-11-22).
 - [x] The Log screen, first half (cycle 12): ✓ as listed or changed (weight, one or two, reps),
   how it felt, saved as events in one transaction; the sheet reads the log; the class stays
   three hours after it starts so it can be logged in the car.
