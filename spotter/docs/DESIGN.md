@@ -38,8 +38,9 @@ both are installed side by side.
   - *Board parsing:* the day's board lines into exercise rows (movement, variation, reps,
     implement), leaving prose and greetings out.
   - *Identity:* see **Reading a board line**, below.
-  - *Progression:* straight sets with 1–2 reps in reserve. Up a dumbbell after clean sessions;
-    hold after a near miss or a twinge; down a step after a miss of 3+ reps, a miss on the
+  - *Progression:* straight sets with 1–2 reps in reserve. Up a dumbbell after two clean
+    sessions in a row at a weight, or one that felt easy; hold after one clean session, a near
+    miss or a twinge; down a step after a miss of 3+ reps, a miss on the
     first set, broken form or having to stop. A later miss caps an older success. Epley only
     within 3–12 reps. A test number ("12 · try 15 if set 1 felt easy") when the next dumbbell
     is a big jump.
@@ -55,6 +56,13 @@ both are installed side by side.
     warning and the reason, whether or not the cap changed the number. What twinged at fewer
     reps caps lower for more reps. A sound session after a twinge clears it. With nothing but
     twinges logged, the latest one is the number. Nothing is borrowed from a lift that twinged.
+    One clean session holds: a weight goes up after two clean sessions in a row at the same
+    reps and weight, or after one that "felt easy" (madCode, 2026-11-22; TRAINING.md, 1). Two
+    sessions are two days: the same exercise twice in a class is one. Anything between them
+    that wasn't clean (a twinge, a miss, a near miss, at any reps) breaks the run, and one
+    dumbbell and two aren't the same weight. Coming back to a weight done clean before isn't
+    new. A weight lifted above the sheet's number becomes the number and waits its own two;
+    one that twinged isn't taken up. A big jump's test weight is offered once the weight has settled.
     A clean set that "felt hard" waits a session before stepping up (TRAINING.md, 3).
     Each rep count keeps its own history: the last time these reps were asked is the basis,
     while the latest session bears it out. A set missed since, at any reps, puts the latest
@@ -292,7 +300,8 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   from the row's words, the sheet's number or the last log, or the row asks "One dumbbell or
   two?". Tapping "changed" again closes the rack. With "felt easy / hard", "twinge", "had to stop"
   and "easier version" one tap away. A row with no number yet has only "changed". Untouched rows
-  stay unlogged, never "skipped". Save writes events (`Logging` in the coach, one transaction):
+  stay unlogged, never "skipped". A row ticked as listed shows "Felt easy" beside the tick, one
+  tap, since it is what lets a weight go up after one session. Save writes events (`Logging` in the coach, one transaction):
   a new row is logged, a changed one corrected, one cleared removed, an unchanged one left
   alone. Reopened, the screen shows what is logged. A class's own sheet keeps the numbers from
   before it; the next class reads what was done.

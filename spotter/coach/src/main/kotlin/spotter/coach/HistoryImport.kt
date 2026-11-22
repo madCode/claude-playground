@@ -146,13 +146,14 @@ object HistoryImport {
         val reps = o.int("reps")
         val asked = o.int("prescribed_reps")
         // Not finished, though the reps may not show it: read as "felt hard", which delays a step.
-        val flags = Flags(o.flag("hurt"), o.flag("hard") || o.flag("incomplete"))
+        val hard = o.flag("hard") || o.flag("incomplete")
+        val flags = Flags(o.flag("hurt"), hard, o.flag("easy") && !hard)
         val load = Load(lb, count)
         val logged = when (val scheme = line?.scheme) {
             is Scheme.Reps -> {
                 val target = scheme.perSide()
                 val done = if (reps == null) emptyList() else listOf(perSide(reps, asked, scheme, target) ?: return Left.REPS_UNCLEAR)
-                Logged(date, exercise, load, target, done, hurt = flags.hurt, hard = flags.hard)
+                Logged(date, exercise, load, target, done, hurt = flags.hurt, hard = flags.hard, easy = flags.easy)
             }
             is Scheme.Ladder -> {
                 val rounds = scheme.perSide()
@@ -166,13 +167,13 @@ object HistoryImport {
                 // are for isn't said, so a shortfall is put on the last; a ladder read this way
                 // never raises a number, so the choice only tells a near miss from a miss.
                 val done = if (reps == null) emptyList() else rounds.dropLast(1) + maxOf(0, rounds.last() + minOf(0, off))
-                Logged(date, exercise, load, rounds.first().let { it..it }, done, hurt = flags.hurt, hard = flags.hard, ladder = rounds, heaviestOnly = true)
+                Logged(date, exercise, load, rounds.first().let { it..it }, done, hurt = flags.hurt, hard = flags.hard, easy = flags.easy, ladder = rounds, heaviestOnly = true)
             }
-            is Scheme.Timed, Scheme.AsManyAsPossible -> Logged(date, exercise, load, null, emptyList(), hurt = flags.hurt, hard = flags.hard)
+            is Scheme.Timed, Scheme.AsManyAsPossible -> Logged(date, exercise, load, null, emptyList(), hurt = flags.hurt, hard = flags.hard, easy = flags.easy)
             null -> {
                 // No line to read the reps from: only what the row itself says was asked.
                 if (reps == null || asked == null || asked < 1) return Left.REPS_UNCLEAR
-                Logged(date, exercise, load, asked..asked, listOf(reps), hurt = flags.hurt, hard = flags.hard)
+                Logged(date, exercise, load, asked..asked, listOf(reps), hurt = flags.hurt, hard = flags.hard, easy = flags.easy)
             }
         }
         return Imported(logged, o.string("class"), written)
@@ -208,7 +209,7 @@ object HistoryImport {
         }
     }
 
-    private class Flags(val hurt: Boolean, val hard: Boolean)
+    private class Flags(val hurt: Boolean, val hard: Boolean, val easy: Boolean)
 
     private const val MAX_ROW = 20_000
 

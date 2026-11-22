@@ -10,8 +10,8 @@ import java.time.LocalDate
 class SheetTest {
     private val identity = Identity(Vocabulary.starting())
     private fun exercise(line: String) = identity.read(BoardLine.read(line).words) as Reading.Known
-    private fun logged(line: String, lb: Int, reps: List<Int>, count: Int? = 2, target: IntRange? = 8..8) =
-        Logged(LocalDate.of(2026, 3, 1), exercise(line), Load(lb, count), target, reps)
+    private fun logged(line: String, lb: Int, reps: List<Int>, count: Int? = 2, target: IntRange? = 8..8, easy: Boolean = false) =
+        Logged(LocalDate.of(2026, 3, 1), exercise(line), Load(lb, count), target, reps, easy = easy)
 
     private val board = listOf(
         "**Tread / Row Block 1 - 12.5 minutes**",
@@ -30,8 +30,8 @@ class SheetTest {
     @Test
     fun theSheetReadsInBoardOrderWithWarningsFirst() {
         val log = listOf(
-            logged("8 x close grip chest press (explosive)", 25, listOf(8, 8, 8)),
-            logged("8 x deadlift", 40, listOf(8, 8, 8)),
+            logged("8 x close grip chest press (explosive)", 25, listOf(8, 8, 8), easy = true),
+            logged("8 x deadlift", 40, listOf(8, 8, 8), easy = true),
             logged("8 x bicep curl", 20, listOf(8, 8, 7)),
         )
         val text = Sheet.make(board, log, identity).text()
@@ -70,7 +70,7 @@ class SheetTest {
     @Test
     fun aComboWithAPartThatTwingedIsHeldThere() {
         val log = listOf(
-            logged("8 x deadlift", 30, listOf(8, 8, 8)),
+            logged("8 x deadlift", 30, listOf(8, 8, 8), easy = true),
             Logged(LocalDate.of(2026, 3, 2), exercise("8 x high pull"), Load(15, 2), 8..8, listOf(8, 8, 8), hurt = true),
         )
         val twinged = Sheet.make(listOf("8 x deadlift to high pull"), log, identity).rows.single()
@@ -103,10 +103,10 @@ class SheetTest {
     // An imported load with no count takes the row's count when the row's words fix it.
     @Test
     fun anUnknownCountTakesTheRowsWhenItsWordsFixIt() {
-        val log = listOf(logged("8 x goblet squat", 40, listOf(8, 8, 8), count = null))
+        val log = listOf(logged("8 x goblet squat", 40, listOf(8, 8, 8), count = null, easy = true))
         val row = Sheet.make(listOf("8 x goblet squat"), log, identity).rows.single()
         assertEquals(Load(45, 1), (row.suggestion as Suggestion.Weight).load)
-        val bare = Sheet.make(listOf("8 x squat"), listOf(logged("8 x squat", 40, listOf(8, 8, 8), count = null)), identity)
+        val bare = Sheet.make(listOf("8 x squat"), listOf(logged("8 x squat", 40, listOf(8, 8, 8), count = null, easy = true)), identity)
         assertEquals("45 lb each (count?)", (bare.rows.single().suggestion as Suggestion.Weight).load.label)
     }
 
@@ -119,7 +119,7 @@ class SheetTest {
 
     @Test
     fun aBigJumpShowsItsTest() {
-        val log = listOf(logged("8 x bicep curl", 12, listOf(8, 8, 8)))
+        val log = listOf(logged("8 x bicep curl", 12, listOf(8, 8, 8), easy = true))
         assertTrue(Sheet.make(listOf("8 x bicep curl"), log, identity).text().endsWith("2×12 = · try 15 if set 1 felt easy"))
     }
 
@@ -172,7 +172,7 @@ class SheetTest {
     // What logging shows back: what Spotter read, and why the number, for each kind of row.
     @Test
     fun eachRowSaysWhatWasReadAndWhy() {
-        val log = listOf(logged("8 x deadlift", 40, listOf(8, 8, 8)))
+        val log = listOf(logged("8 x deadlift", 40, listOf(8, 8, 8), easy = true))
         val rows = Sheet.make(listOf("8 x deadlift", "8 x close grip chest press", "20 x deadlift", "8 x push-up", "8 x zorbing"), log, identity).rows
         val (deadlift, press, far, pushUp, unknown) = rows
         assertEquals("deadlift", deadlift.understood)

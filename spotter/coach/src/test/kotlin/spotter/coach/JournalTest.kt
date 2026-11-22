@@ -76,7 +76,8 @@ class JournalTest {
     fun theHistoryFeedsTheSuggestion() {
         val history = Journal.history(listOf(logged(1, "8 x chest press", 25)), vocabulary)
         val s = Progression.suggest(exercise("8 x chest press"), 8..8, history)
-        assertTrue(s is Suggestion.Weight && s.load == Load(30, 2))
+        // One clean session: the weight held is the number.
+        assertTrue(s is Suggestion.Weight && s.load == Load(25, 2))
     }
 
     @Test

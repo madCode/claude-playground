@@ -31,7 +31,7 @@ class HistoryPickTest {
         """{"date": "$date", "class": "2G", "line": "$line", "variant": {"implement": "double_dumbbell"}, "weight": $weight, "reps": 8, "prescribed_reps": 8$extra}"""
 
     private val file = listOf(
-        row("2026-11-10", "8 x chest press", 25),
+        row("2026-11-10", "8 x chest press", 25, """, "easy": true"""),
         row("2026-11-10", "8 x zorbing", 20),
         row("2026-11-10", "8 x deadlift", 40, """, "skipped": true"""),
         row("2026-11-10", "8 x push-up", 0),
@@ -71,7 +71,7 @@ class HistoryPickTest {
     fun aDayInTheLogIsntReadFromTheFileToo() {
         take(file)
         val press = identity.read(BoardLine.read("8 x chest press").words) as Reading.Known
-        val logged = Journal.logged(1, LocalDate.of(2026, 11, 10), "2G", "row", "8 x chest press", press, Load(35, 2), 8..8, null, listOf(8)).copy(id = 1)
+        val logged = Journal.logged(1, LocalDate.of(2026, 11, 10), "2G", "row", "8 x chest press", press, Load(35, 2), 8..8, null, listOf(8), easy = true).copy(id = 1)
         assertEquals("2×40 ▲", sheet(logged).sheet.let { it.glance(it.rows.single()) })
         assertTrue(HistoryPick.beside(store.result(identity, today)!!.logged, listOf(logged)).isEmpty())
         // Another day's log leaves the file's day in: the later log is the latest word.

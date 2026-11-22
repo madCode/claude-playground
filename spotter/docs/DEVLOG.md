@@ -13,6 +13,17 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 22: two clean sessions to go up
+- **Why:** your answer on the morning page and in chat: up after two ticks, or one that felt
+  easy, and any settled weight needs two ticks before the next step.
+- **Shipped:** one clean session now holds the weight ("up after one more clean session, or
+  one that felt easy"). Two clean sessions in a row at the same reps and weight go up a
+  dumbbell; one that felt easy goes up at once. If you lift above the sheet's number and it
+  is clean, that becomes the number and waits its own two. "Felt easy" in an imported
+  history counts too.
+- **This slows every number down**, by design. Grades from the replay tool before and after
+  this change aren't comparable.
+
 ### Cycle 21: your history on the phone
 - **Why:** step 4's last part: the sheet says "new: go light" on every row until it has
   history.

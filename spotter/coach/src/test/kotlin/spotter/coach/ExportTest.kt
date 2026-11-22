@@ -45,7 +45,8 @@ class ExportTest {
         }
         save(thursday, "Orange 60 / Tornado!") { s ->
             LogDraft()
-                .with(s.rows[0].id, LogDraft.asListed(s.rows[0]))
+                // Heavier than the sheet's 40, so the two weights in the file can't be confused.
+                .with(s.rows[0].id, LogDraft.picked(s.rows[0], 45))
                 .with(s.rows[3].id, LogDraft.picked(s.rows[3], 45).copy(count = 2))
                 .with(s.rows[4].id, LogDraft.picked(s.rows[4], 20).copy(count = 2))
                 // Lighter than the sheet said, two dumbbells against its one: the two never mix.
@@ -80,7 +81,7 @@ class ExportTest {
         // Thursday's sheet had a number for the squat, and it is the one the person saw.
         val thursday = sets(files.getValue(tornado)).associateBy { it["line"]!!.jsonPrimitive.content }
         val squat = thursday.getValue("8 x goblet squat")
-        assertEquals(45.0, squat["suggested_weight"]!!.jsonPrimitive.double, 0.0)
+        assertEquals(40.0, squat["suggested_weight"]!!.jsonPrimitive.double, 0.0)
         assertEquals(1, squat["suggested_count"]!!.jsonPrimitive.int)
         assertEquals(45.0, squat["weight"]!!.jsonPrimitive.double, 0.0)
         // What the sheet showed and what was lifted, each per dumbbell and neither a sum: the
@@ -116,7 +117,7 @@ class ExportTest {
     fun aCorrectionKeepsWhatTheSheetShowed() {
         logTwoClasses()
         val first = written.last { it.line == "8 x goblet squat" }
-        assertEquals(45, first.shownLb)
+        assertEquals(40, first.shownLb)
         // More history arrives for the same exercise (another day's class logged late), so the
         // sheet rebuilt for Thursday would now show another number; then Thursday's row is corrected.
         save(thursday.minusDays(1), "3G") { s -> LogDraft().with(s.rows[0].id, LogDraft.picked(s.rows[0], 30)) }
@@ -125,7 +126,7 @@ class ExportTest {
         }
         val corrected = written.last()
         assertEquals(JournalEntry.Kind.CORRECTED, corrected.kind)
-        assertEquals(listOf(45, 1), listOf(corrected.shownLb, corrected.shownCount))
+        assertEquals(listOf(40, 1), listOf(corrected.shownLb, corrected.shownCount))
     }
 
     // Two classes on a day whose names cut down alike keep a file each, and so do names in

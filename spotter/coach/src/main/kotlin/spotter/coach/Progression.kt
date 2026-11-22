@@ -20,6 +20,8 @@ data class Logged(
     /** A ladder's rounds ("8 / 6 / 4"), each set judged against its own; [target] is ignored. */
     val ladder: List<Int>? = null,
     val hard: Boolean = false,
+    /** Said to have felt easy: reason enough to go up after one clean session. */
+    val easy: Boolean = false,
     /**
      * A ladder logged with one weight, the heaviest of its rounds, with nobody having said what
      * each round held: it can hold the number but never raise it, since the number is round one's.
@@ -117,6 +119,23 @@ sealed interface Suggestion {
  * See DESIGN.md, "Progression".
  */
 object Progression {
+    /**
+     * Whether [basis] is the second clean session running at its weight: an earlier day's session
+     * at the same reps and count was clean at this weight or more, with nothing but clean
+     * sessions since, at any reps.
+     *
+     * An earlier day, because the same exercise twice in one class is one session's evidence.
+     * This weight or more, because a weight done clean before isn't new when it is come back to;
+     * one lifted above the sheet's number is.
+     */
+    private fun settled(basis: Logged, own: List<Logged>): Boolean {
+        val earlier = own.takeWhile { it !== basis }
+        val before = earlier.lastOrNull { it.anchor == basis.anchor && it.date < basis.date } ?: return false
+        val between = earlier.dropWhile { it !== before }.drop(1)
+        return before.outcome == Outcome.CLEAN && before.load.count == basis.load.count && before.load.lb >= basis.load.lb &&
+            between.all { it.outcome == Outcome.CLEAN || it.outcome == Outcome.IN_RANGE }
+    }
+
     /** A step more than this much heavier is a big jump: the sheet holds and offers a test. */
     private const val BIG_JUMP = 1.2
 
@@ -178,6 +197,19 @@ object Progression {
                 held.also { reasons += "done at ${basis.load.label} but it felt hard: same again" }
             // A timed set says nothing about reps in reserve.
             basis.outcome == Outcome.CLEAN && basis.firstTarget == null -> held.also { reasons += "a timed set at ${basis.load.label}: same again" }
+            // One clean session isn't enough to go up on (madCode, 2026-11-22; TRAINING.md, 1): a
+            // weight is settled by two clean sessions in a row at these reps, or by one that
+            // felt easy. A weight lifted above the sheet's number is new, so it waits its two too.
+            basis.outcome == Outcome.CLEAN && !basis.easy && !settled(basis, own) -> held.also {
+                // Only promised where it is true: at these reps, with a step to take that isn't a
+                // big jump, and nothing logged since (a twinge after it breaks the run).
+                val up = Rack.up(held)
+                reasons += if (basis.anchor == to && up != null && up <= held * BIG_JUMP && basis === own.last()) {
+                    "clean at ${basis.load.label} once: up after one more clean session, or one that felt easy"
+                } else {
+                    "clean at ${basis.load.label} once: same again"
+                }
+            }
             basis.outcome == Outcome.CLEAN -> {
                 val up = Rack.up(held)
                 when {

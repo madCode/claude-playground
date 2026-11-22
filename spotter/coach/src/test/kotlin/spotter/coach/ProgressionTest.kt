@@ -15,8 +15,8 @@ class ProgressionTest {
     private fun day(n: Int) = LocalDate.of(2026, 3, n)
     private fun logged(
         day: Int, lb: Int, reps: List<Int>, target: IntRange? = 8..8, ex: Reading.Known = press,
-        count: Int? = 2, hurt: Boolean = false, stopped: Boolean = false, ladder: List<Int>? = null,
-    ) = Logged(day(day), ex, Load(lb, count), target, reps, hurt = hurt, stopped = stopped, ladder = ladder)
+        count: Int? = 2, hurt: Boolean = false, stopped: Boolean = false, ladder: List<Int>? = null, easy: Boolean = false,
+    ) = Logged(day(day), ex, Load(lb, count), target, reps, hurt = hurt, stopped = stopped, ladder = ladder, easy = easy)
 
     private fun suggest(log: List<Logged>, ex: Reading.Known = press, target: IntRange? = 8..8) =
         Progression.suggest(ex, target, log)
@@ -24,12 +24,69 @@ class ProgressionTest {
     private fun weight(log: List<Logged>, ex: Reading.Known = press, target: IntRange? = 8..8) =
         suggest(log, ex, target) as Suggestion.Weight
 
+    // madCode, 2026-11-22: one clean session holds; a second in a row at the weight goes up.
     @Test
-    fun aCleanSessionGoesUpADumbbell() {
-        val s = weight(listOf(logged(1, 25, listOf(8, 8, 8))))
-        assertEquals(Load(30, 2), s.load)
-        assertEquals(Change.UP, s.change)
-        assertTrue(s.reasons.single().contains("up a dumbbell"))
+    fun twoCleanSessionsInARowGoUpADumbbell() {
+        val clean = listOf(8, 8, 8)
+        val once = weight(listOf(logged(1, 25, clean)))
+        assertEquals(listOf(Load(25, 2), Change.SAME), listOf(once.load, once.change))
+        assertTrue(once.reasons.single().contains("up after one more clean session"))
+        val twice = weight(listOf(logged(1, 25, clean), logged(3, 25, clean)))
+        assertEquals(listOf(Load(30, 2), Change.UP), listOf(twice.load, twice.change))
+        assertTrue(twice.reasons.single().contains("up a dumbbell"))
+        // A near miss between two clean sessions breaks the run.
+        assertEquals(Load(25, 2), weight(listOf(logged(1, 25, clean), logged(3, 25, listOf(8, 7, 6)), logged(5, 25, clean))).load)
+        // Another rep count in between neither breaks the run nor counts towards it.
+        val tens = logged(3, 20, listOf(10), target = 10..10)
+        assertEquals(Load(30, 2), weight(listOf(logged(1, 25, clean), tens, logged(5, 25, clean))).load)
+        assertEquals(Load(25, 2), weight(listOf(tens, logged(5, 25, clean))).load)
+    }
+
+    // What counts as two sessions in a row, from the cases a review ran through the rule.
+    @Test
+    fun whatSettlesAWeightAndWhatDoesnt() {
+        val clean = listOf(8, 8, 8)
+        // The same exercise twice in one class is one session.
+        assertEquals(Load(25, 2), weight(listOf(logged(1, 25, clean), logged(1, 25, clean))).load)
+        // A twinge between two clean sessions breaks the run, and so does a miss at other reps.
+        assertEquals(Load(25, 2), weight(listOf(logged(1, 25, clean), logged(3, 25, clean, hurt = true), logged(5, 25, clean))).load)
+        assertEquals(Load(25, 2), weight(listOf(logged(1, 25, clean), logged(3, 20, listOf(5), target = 12..12), logged(5, 25, clean))).load)
+        // One dumbbell and two aren't the same weight twice.
+        assertEquals(25, weight(listOf(logged(1, 25, clean, count = 1), logged(3, 25, clean))).load.lb)
+        // Back at a weight done clean before, after a lighter day: the lighter day isn't new.
+        assertEquals(Load(30, 2), weight(listOf(logged(1, 30, clean), logged(3, 25, clean))).load)
+        // The promise of a step is made only where one would follow: not at the top of the rack,
+        // not before a big jump, not when the reps differ.
+        fun why(log: List<Logged>, target: IntRange = 8..8) = weight(log, target = target).reasons.first()
+        assertEquals("clean at 2×25 once: up after one more clean session, or one that felt easy", why(listOf(logged(1, 25, clean))))
+        assertEquals("clean at 2×50 once: same again", why(listOf(logged(1, 50, clean))))
+        assertEquals("clean at 2×12 once: same again", why(listOf(logged(1, 12, clean))))
+        assertEquals("clean at 2×25 once: same again", why(listOf(logged(1, 25, clean)), target = 12..12))
+        // Nor after a twinge since: the next clean session won't be the second in a row.
+        assertEquals("clean at 2×25 once: same again", why(listOf(logged(1, 25, clean), logged(3, 25, clean, hurt = true))))
+    }
+
+    // One clean session that felt easy is enough.
+    @Test
+    fun feltEasyGoesUpAfterOne() {
+        val s = weight(listOf(logged(1, 25, listOf(8, 8, 8), easy = true)))
+        assertEquals(listOf(Load(30, 2), Change.UP), listOf(s.load, s.change))
+        // Easy, but short: the reps decide.
+        assertEquals(Load(25, 2), weight(listOf(logged(1, 25, listOf(8, 7, 7), easy = true))).load)
+    }
+
+    // A weight lifted above the sheet's number becomes the number, and waits its own two clean
+    // sessions before the next step: any settled weight does.
+    @Test
+    fun aWeightLiftedAboveTheSheetIsTheNewNumber() {
+        val clean = listOf(8, 8, 8)
+        val log = mutableListOf(logged(1, 25, clean), logged(3, 25, clean), logged(5, 35, clean))
+        assertEquals(listOf(Load(35, 2), Change.SAME), weight(log).let { listOf(it.load, it.change) })
+        log += logged(7, 35, clean)
+        assertEquals(Load(40, 2), weight(log).load)
+        // After the step the count starts again: one clean 40 holds.
+        log += logged(9, 40, clean)
+        assertEquals(Load(40, 2), weight(log).load)
     }
 
     @Test
@@ -49,8 +106,8 @@ class ProgressionTest {
         assertEquals(Load(25, 2), weight(listOf(logged(1, 25, listOf(7)))).load)
         assertEquals(Load(25, 2), weight(listOf(logged(1, 25, listOf(6)))).load)
         assertEquals(Load(20, 2), weight(listOf(logged(1, 25, listOf(5)))).load)
-        // After a clean 30, a 35 one short with a twinge caps at 35 rather than a step under it.
-        assertEquals(Load(35, 2), weight(listOf(logged(1, 30, listOf(8)), logged(2, 35, listOf(7), hurt = true))).load)
+        // After an easy 30, a 35 one short with a twinge caps at 35 rather than a step under it.
+        assertEquals(Load(35, 2), weight(listOf(logged(1, 30, listOf(8), easy = true), logged(2, 35, listOf(7), hurt = true))).load)
     }
 
     // A range goes up only once every set reaches its top.
@@ -58,7 +115,7 @@ class ProgressionTest {
     fun aRangeHoldsUntilTheTop() {
         val inRange = listOf(logged(1, 25, listOf(9, 8, 8), target = 6..10))
         assertEquals(Load(25, 2), weight(inRange, target = 6..10).load)
-        val atTop = listOf(logged(1, 25, listOf(10, 10, 10), target = 6..10))
+        val atTop = listOf(logged(1, 25, listOf(10, 10, 10), target = 6..10, easy = true))
         assertEquals(Load(30, 2), weight(atTop, target = 6..10).load)
     }
 
@@ -80,12 +137,15 @@ class ProgressionTest {
         // The latest twinge caps, not the lowest: 30 twinged, then 35 done in full with a twinge.
         val latest = weight(listOf(logged(1, 35, listOf(8)), logged(2, 30, listOf(8), hurt = true), logged(3, 35, listOf(8), hurt = true)))
         assertEquals(Load(35, 2), latest.load)
-        // Clean at 30, then a twinge at 35 done in full: 35 again, and not as a step up.
-        val held = weight(listOf(logged(1, 30, listOf(8)), logged(2, 35, listOf(8), hurt = true)))
+        // An easy 30, then a twinge at 35 done in full: 35 again, and not as a step up.
+        val held = weight(listOf(logged(1, 30, listOf(8), easy = true), logged(2, 35, listOf(8), hurt = true)))
         assertEquals(Load(35, 2), held.load)
         assertEquals(Change.SAME, held.change)
-        // Said even when the cap doesn't bite: clean at 30, then a twinge at 40.
-        val above = weight(listOf(logged(1, 30, listOf(8)), logged(2, 40, listOf(8), hurt = true)))
+        // A weight above the sheet's that twinged isn't taken up: one clean 30 holds at 30.
+        val notTaken = weight(listOf(logged(1, 30, listOf(8)), logged(2, 35, listOf(8), hurt = true)))
+        assertEquals(listOf(Load(30, 2), Change.DOWN, "it twinged last time at 2×35"), listOf(notTaken.load, notTaken.change, notTaken.caution))
+        // Said even when the cap doesn't bite: an easy 30, then a twinge at 40.
+        val above = weight(listOf(logged(1, 30, listOf(8), easy = true), logged(2, 40, listOf(8), hurt = true)))
         assertEquals(Load(35, 2), above.load)
         assertTrue(above.reasons.any { it.contains("twinged at 2×40") })
         assertEquals("it twinged last time at 2×40", above.caution)
@@ -109,17 +169,17 @@ class ProgressionTest {
         assertEquals(Load(25, 2), s.load)
         assertEquals(Change.SAME, s.change)
         // With each round's weight known, a clean ladder goes up as before.
-        assertEquals(Load(35, 2), weight(listOf(ladder.copy(heaviestOnly = false)), target = 8..8).load)
+        assertEquals(Load(35, 2), weight(listOf(ladder.copy(heaviestOnly = false, easy = true)), target = 8..8).load)
     }
 
     // A board that alternates 8s and 10s, every session clean: each rep count goes up on its own
     // history, and the number never walks down.
     @Test
     fun alternatingRepCountsEachProgress() {
-        val log = mutableListOf(logged(1, 30, listOf(8)))
+        val log = mutableListOf(logged(1, 30, listOf(8), easy = true))
         // Nothing at 10 yet: converted from the 8s, rounded down.
         assertEquals(Load(25, 2), weight(log, target = 10..10).load)
-        log += logged(2, 25, listOf(10), target = 10..10)
+        log += logged(2, 25, listOf(10), target = 10..10, easy = true)
         // Back to 8: from the clean 30 at 8, up a step.
         assertEquals(Load(35, 2), weight(log).load)
         log += logged(3, 35, listOf(8))
@@ -152,7 +212,7 @@ class ProgressionTest {
     @Test
     fun aSoundSessionClearsATwinge() {
         val log = listOf(
-            logged(1, 35, listOf(8)),
+            logged(1, 35, listOf(8), easy = true),
             logged(2, 20, listOf(10), target = 10..10, hurt = true),
             logged(3, 30, listOf(10), target = 10..10),
         )
@@ -216,9 +276,11 @@ class ProgressionTest {
 
     @Test
     fun aBigJumpHoldsAndOffersATest() {
-        val s = weight(listOf(logged(1, 12, listOf(8, 8, 8))))
+        val s = weight(listOf(logged(1, 12, listOf(8, 8, 8)), logged(3, 12, listOf(8, 8, 8))))
         assertEquals(Load(12, 2), s.load)
         assertEquals(Load(15, 2), s.test)
+        // Not offered on one clean session: the test is for a weight that has settled.
+        assertNull(weight(listOf(logged(1, 12, listOf(8, 8, 8)))).test)
         assertEquals(Change.SAME, s.change)
     }
 
@@ -241,7 +303,7 @@ class ProgressionTest {
     @Test
     fun theCountIsKept() {
         val goblet = exercise("8 x goblet squat")
-        val s = weight(listOf(logged(1, 40, listOf(8, 8), ex = goblet, count = 1)), ex = goblet)
+        val s = weight(listOf(logged(1, 40, listOf(8, 8), ex = goblet, count = 1, easy = true)), ex = goblet)
         assertEquals(Load(45, 1), s.load)
     }
 
@@ -250,8 +312,8 @@ class ProgressionTest {
     fun oneLegBorrowsFromTwoAtAFactor() {
         val deadlift = exercise("8 x deadlift")
         val single = exercise("8 x single leg deadlift")
-        val s = weight(listOf(logged(1, 40, listOf(8, 8, 8), ex = deadlift)), ex = single)
-        // Clean at 40 suggests 45 two-legged; 0.6 of 45 is 27, so 25 on the rack.
+        val s = weight(listOf(logged(1, 40, listOf(8, 8, 8), ex = deadlift, easy = true)), ex = single)
+        // An easy 40 suggests 45 two-legged; 0.6 of 45 is 27, so 25 on the rack.
         assertEquals(Load(25, 2), s.load)
         assertEquals(Change.NEW, s.change)
         assertTrue(s.reasons.single().contains("0.6"))
@@ -302,7 +364,7 @@ class ProgressionTest {
     // Trap 8: each round of a ladder is judged against its own count; the number is for round 1.
     @Test
     fun aLadderIsJudgedRoundByRound() {
-        val asListed = listOf(logged(1, 25, listOf(8, 6, 4), target = null, ladder = listOf(8, 6, 4)))
+        val asListed = listOf(logged(1, 25, listOf(8, 6, 4), target = null, ladder = listOf(8, 6, 4), easy = true))
         assertEquals(Load(30, 2), weight(asListed, target = 8..8).load)
         val short = listOf(logged(1, 25, listOf(8, 5, 4), target = null, ladder = listOf(8, 6, 4)))
         assertEquals(Load(25, 2), weight(short, target = 8..8).load)

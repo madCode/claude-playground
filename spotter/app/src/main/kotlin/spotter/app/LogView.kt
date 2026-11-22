@@ -105,9 +105,11 @@ fun LogView(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit,
 @Composable
 private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (RowLog?) -> Unit) {
     val asListed = LogDraft.asListed(row)
-    // As listed still, when all that was added is how many dumbbells the sheet didn't know.
-    val listed = log != null && asListed != null &&
-        (log == asListed || (asListed.count == null && log.copy(count = null) == asListed))
+    // As listed still, when all that was added is how many dumbbells the sheet didn't know, or
+    // that it felt easy: the weight and the reps are the sheet's.
+    val plain = log?.copy(easy = false)
+    val listed = plain != null && asListed != null &&
+        (plain == asListed || (asListed.count == null && plain.copy(count = null) == asListed))
     // Open while being changed; a row ticked as listed needs nothing more.
     var open by rememberSaveable(row.id) { mutableStateOf(log != null && !listed) }
     Surface(color = Color.White, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
@@ -124,11 +126,16 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onChange: (R
                 if (asListed != null) {
                     Choice("✓ as listed", listed, "${row.shown}: done as listed") {
                         open = false
-                        onChange(asListed.copy(count = asListed.count ?: log?.count))
+                        // Ticked again, it keeps what was said beside it.
+                        onChange(asListed.copy(count = asListed.count ?: log?.count, easy = listed && log?.easy == true))
                     }
                 }
                 // Opens the rack, and closes it again. Nothing is logged until a weight is picked.
                 Choice("Changed", open && !listed, "${row.shown}: changed") { open = !open }
+                // One tap beside the tick: it is what lets a weight go up after one session.
+                if (listed && !open) {
+                    Flag(row, "Felt easy", log!!.easy) { onChange(log.copy(easy = it)) }
+                }
                 if (log != null) {
                     OutlinedButton(
                         onClick = { open = false; onChange(null) },

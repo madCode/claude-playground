@@ -30,7 +30,7 @@ class ScorecardTest {
         "* 8 x swing lunge with rotation",
     )
     private val log = listOf(
-        Logged(earlier, exercise("8 x goblet squat"), Load(35, 1), 8..8, listOf(8, 8, 8)),
+        Logged(earlier, exercise("8 x goblet squat"), Load(35, 1), 8..8, listOf(8, 8, 8), easy = true),
         Logged(earlier, exercise("8 x chest press"), Load(25, 2), 8..8, listOf(8, 8, 7)),
     )
 

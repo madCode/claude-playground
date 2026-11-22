@@ -77,7 +77,8 @@ class LogScreenTest {
     // The car after class: one row changed, one ticked, saved, and the next class's sheet moves.
     @Test
     fun aClassIsLoggedAndTheNextSheetUsesIt() {
-        save(today(monday), LogDraft().with(today(monday).sheet.rows[0].id, spotter.coach.RowLog(25, 2, 8)).with(today(monday).sheet.rows[1].id, spotter.coach.RowLog(40, 2, 8)))
+        // Monday felt easy, so one session is enough for Saturday's sheet to go up.
+        save(today(monday), LogDraft().with(today(monday).sheet.rows[0].id, spotter.coach.RowLog(25, 2, 8, easy = true)).with(today(monday).sheet.rows[1].id, spotter.coach.RowLog(40, 2, 8, easy = true)))
         var saved: Pair<Today.Showing, LogDraft>? = null
         show(today(saturday)) { t, d -> saved = t to d }
         compose.onNodeWithText("Log this class").performClick()
@@ -105,8 +106,9 @@ class LogScreenTest {
         val again = today(saturday)
         assertEquals("2×30 ▲", again.sheet.glance(again.sheet.rows[0]))
         assertEquals(2, again.logged.size)
+        // Ticked as listed once at the new weight: it holds until a second clean session.
         val next = today(saturday.plusDays(3))
-        assertEquals("2×35 ▲", next.sheet.glance(next.sheet.rows[0]))
+        assertEquals("2×30 =", next.sheet.glance(next.sheet.rows[0]))
         // One short on the one set logged, with a twinge: the weight holds.
         assertEquals("2×45 =", next.sheet.glance(next.sheet.rows[1]))
     }
@@ -156,6 +158,25 @@ class LogScreenTest {
         show(own) { _, _ -> }
         compose.onNodeWithText("Change the log (1 logged)").performClick()
         compose.onNodeWithText("Logged: 1×35 · 12 reps").performScrollTo().assertIsDisplayed()
+    }
+
+    // "Felt easy" is one tap beside the tick, and the row is still as listed with it.
+    @Test
+    fun feltEasyIsOneTapOnATickedRow() {
+        save(today(monday), LogDraft().with(today(monday).sheet.rows[1].id, spotter.coach.RowLog(40, 2, 8)))
+        var saved: LogDraft? = null
+        show(today(saturday)) { _, d -> saved = d }
+        compose.onNodeWithText("Log this class").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: felt easy").assertDoesNotExist()
+        compose.onNodeWithContentDescription("8 x deadlift: done as listed").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: felt easy").performClick()
+        // Tapping the tick again keeps it.
+        compose.onNodeWithContentDescription("8 x deadlift: done as listed").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: done as listed").assertIsSelected()
+        compose.onNodeWithContentDescription("8 x deadlift: changed").assertIsNotSelected()
+        compose.onNodeWithText("Logged: 2×40 · 8 reps · felt easy").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(spotter.coach.RowLog(40, 2, 8, easy = true), saved!!.rows.values.single())
     }
 
     // Reopened, the screen shows what is logged, and the button says so.
@@ -227,7 +248,7 @@ class LogScreenTest {
     // Ticked as listed, then the rack opened to look: still as listed, and only that says so.
     @Test
     fun asListedStaysSelectedWithTheRackOpen() {
-        save(today(monday), LogDraft().with(today(monday).sheet.rows[1].id, spotter.coach.RowLog(40, 2, 8)))
+        save(today(monday), LogDraft().with(today(monday).sheet.rows[1].id, spotter.coach.RowLog(40, 2, 8, easy = true)))
         show(today(saturday)) { _, _ -> }
         compose.onNodeWithText("Log this class").performClick()
         compose.onNodeWithContentDescription("8 x deadlift: done as listed").performClick()

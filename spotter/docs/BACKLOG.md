@@ -70,6 +70,12 @@ Step 3, logging:
     one's sheet reads the later one's log. Key a class by its start as well. *(cycles 12, 15)*
   - "… isn't logged yet" counts rows by id, so a class logged from a board since changed reads
     as not logged; it also can't be dismissed for a class left unlogged on purpose. *(cycle 15)*
+- [ ] A board that alternates 8s and 12s, following the sheet: the 12s stall behind the big
+  jump from 20 to 25, and then the 8s read the latest 20 as overruling their clean 30 and drop
+  to 20. The reason also mentions a test weight that isn't shown. *(cycle 22 review; older)*
+- [ ] A range ticked at its low end holds whether or not it "felt easy", and reaching the top
+  takes "Changed": waits on the range ticks ("✓ 8" / "✓ 10") in Your call. *(cycle 22 review)*
+- [ ] "Felt easy" before a big jump (12 to 15) still holds and offers the test. *(cycle 22 review)*
 - [ ] "Felt hard" (and an imported unfinished set) delays a step only at the same reps: a
   clean set at other reps from before it can still raise the number. *(cycle 19 review)*
 - [ ] Export notes for whoever reads the files (cycle 16 review): a session's `ref` is the row's
@@ -83,19 +89,18 @@ app keeps what it does now, except where noted.
 The research is in [TRAINING.md](TRAINING.md) (madCode: "shouldn't the science have an
 opinion?"). What it says is beside each question; the choice is still madCode's.
 
-- **A tick on a fixed count** ("12 x squat", ✓ as listed): up a step every time, as now; up
-  after two ticks in a row; or up only with "felt easy"? Research: no trial compares them; the
-  consensus (ACSM) is two sessions in a row, and "felt easy" is a fair reason to go up sooner.
 - **A tick on a range** ("8-10 x"): counts as the low end, so the weight holds until "changed"
   says the top was reached. Or offer the top as a second one-tap choice? Research: working up
   to the top before adding weight is the best-supported rule, so the top needs to be easy to
-  log.
+  log. Proposed in chat (2026-11-22), waiting for a yes: add a one-tap tick for the top.
 - **A ladder's weight** ("8 / 6 / 4"): remember the round-one weight, or the heaviest round's?
   Until answered, a ladder logged with one number holds. Research: nothing direct; the shape
   doesn't change results, so either works if kept consistent, and the heaviest round must be
-  judged against its own reps, never converted to round one's.
+  judged against its own reps, never converted to round one's. Proposed in chat, waiting for a
+  yes: keep the heaviest round's as the one number; "+ Each round" for the rest.
 - **Borrowed board, then your own with a different count** (ticked "12 x" on the 3G board, your
-  2G board says "8 x"): trust your board's count, or ask?
+  2G board says "8 x"): trust your board's count, or ask? Proposed in chat, waiting for a yes: no
+  prompt; cycle 18 keeps what was ticked ("12 of 12") and a fresh tick on the new row replaces it.
 
 New board words that stay "not sure" are worth a look on the corpus now and then; 142 rows
 still are.
@@ -145,6 +150,9 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Done
 
+- [x] Two clean sessions to go up (cycle 22; madCode, 2026-11-22): a tick holds; two clean
+  sessions in a row at a weight go up a step; one that felt easy goes up at once; a weight
+  lifted above the sheet's becomes the number and waits its own two.
 - [x] History import on the phone (cycle 21): pick a `history.jsonl`, kept beside the log; the
   sheet reads it; the home screen says what was read and left out; replace or remove it; a day
   in both counts once.

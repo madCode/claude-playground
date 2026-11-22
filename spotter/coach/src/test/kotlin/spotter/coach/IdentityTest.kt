@@ -238,7 +238,7 @@ class IdentityTest {
         assertNull(sheet[1].suggestion)
         assertNull(sheet[2].suggestion)
         // With a chest press logged, the reach doesn't stand in the way of its number.
-        val press = Logged(java.time.LocalDate.of(2026, 3, 1), known("10 x chest press"), Load(25, 2), 10..10, listOf(10))
+        val press = Logged(java.time.LocalDate.of(2026, 3, 1), known("10 x chest press"), Load(25, 2), 10..10, listOf(10), easy = true)
         val withLog = Sheet.make(listOf("10 x chest press to reach"), listOf(press), identity).rows.single()
         assertEquals(Load(30, 2), (withLog.suggestion as Suggestion.Weight).load)
     }
