@@ -348,6 +348,9 @@ class ProgressionTest {
         // Never more than the earned dumbbell converts to: 35 for 5 is no more than 25 for 12.
         val far = weight(listOf(logged(1, 30, listOf(5, 5), 5..5), logged(2, 30, listOf(5, 5), 5..5)), target = 12..12)
         assertEquals(listOf(Load(25, 2), null), listOf(far.load, far.test))
+        // To far fewer reps the earned 20 converts to 25: one dumbbell above the number is offered.
+        val few = weight(listOf(logged(1, 15, listOf(12, 12), 12..12), logged(2, 15, listOf(12, 12), 12..12)), target = 3..3)
+        assertEquals(listOf(Load(15, 2), Load(20, 2)), listOf(few.load, few.test))
         // Taken and done clean, it is these reps' own history from then on.
         assertEquals(Load(30, 2), weight(earned + logged(3, 30, listOf(6, 6), 6..6), target = 6..6).load)
     }

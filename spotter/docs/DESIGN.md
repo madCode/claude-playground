@@ -71,7 +71,7 @@ both are installed side by side.
     the reps done, rounded down, starting from the weight held and never from a step up
     (TRAINING.md, 5). A step up that was earned at the other reps isn't lost: what that
     dumbbell converts to, when it is more than the number, is offered as "try 30 if set 1 felt
-    easy", unless it twinged since. ▲ ▼ = compare with the session the number rests on.
+    easy": one dumbbell above the number at most, and not if it twinged since. ▲ ▼ = compare with the session the number rests on.
     A ladder's sets are each judged against their own round. A ladder logged as "changed" has
     one weight, its heaviest round's: it never raises a number, and stands for that round's
     reps, so round one gets what it converts to. A ladder ticked as listed was done at the

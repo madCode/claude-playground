@@ -276,8 +276,11 @@ object Progression {
             if (converted != lb) reasons += "$from reps last time, $to now: $converted"
             lb = converted
             // Only when the earned dumbbell converts to more than the number: rounded down
-            // like the number, it never offers more than was earned.
-            test = earned?.let { convert(it, from, to) }?.takeIf { it > converted }?.let { up ->
+            // like the number, it never offers more than was earned. And one dumbbell above
+            // the number at most: to far fewer reps the estimate climbs faster than a first
+            // set should.
+            val next = Rack.up(converted)
+            test = earned?.let { convert(it, from, to) }?.takeIf { it > converted && next != null }?.let { minOf(it, next!!) }?.let { up ->
                 offer = "a step up was earned at $from reps: try $up if set 1 feels easy"
                 basis.load.copy(lb = up)
             }
