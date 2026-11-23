@@ -84,7 +84,12 @@ data class Progress(val wentUp: List<WentUp> = emptyList(), val next: List<Next>
             for ((e, logged) in Journal.read(entries, vocabulary)) {
                 if (e.date.isBefore(today.minusWeeks(WEEKS)) || e.date > today || Sheet.isAdded(e.row) || e.easier || !Sheet.wantsWeight(logged.exercise)) continue
                 val shown = e.shownLb ?: continue
-                val asFirst = first(e).let { it.line == e.line && it.targetLow == e.targetLow && it.targetHigh == e.targetHigh }
+                // Still the exercise and reps its number was shown for (a poster's change of a
+                // capital isn't another row); and a log carried to another board's row and
+                // given another weight there answers that row's number, which isn't kept.
+                val asFirst = first(e).let {
+                    it.key == e.key && it.targetLow == e.targetLow && it.targetHigh == e.targetHigh && (it.row == e.row || it.lb == e.lb)
+                }
                 when {
                     !asFirst || logged.heaviestOnly || (e.shownCount != null && logged.load.count != null && e.shownCount != logged.load.count) -> Unit
                     logged.load.lb > shown -> heavier++

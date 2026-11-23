@@ -369,8 +369,8 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   what was asked), lifted heavier, or lighter or short. Counts, not a grade: the scorecard
   grades, on the export. Left out, since the two can't fairly be compared: a row the person
   added, an easier version, a ladder logged by its heaviest round, a lift with another number
-  of dumbbells than the sheet said, and a row since corrected onto other words or reps than
-  its number was shown for. Rows the sheet had no number for aren't counted either: an entry
+  of dumbbells than the sheet said, and a row since corrected onto another exercise or other reps
+  than its number was shown for, or carried to another board's row and given another weight there. Rows the sheet had no number for aren't counted either: an entry
   from before the log kept the sheet's number looks the same as one.
 
 Later: review of new exercise names, sharing a board for others, the watch.

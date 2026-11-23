@@ -186,6 +186,24 @@ class ProgressTest {
             val draft = LogDraft.from(sheet, log.byRow).let { if (tick) it.with(sheet.rows[0].id, LogDraft.asListed(sheet.rows[0])!!) else it }
             Logging.events(draft, sheet, log, day(20), "2G", 1L).forEach { written += it.copy(id = written.size + 1L) }
         }
+        // A ladder first: carried to another board's ladder and ticked there, it keeps its own
+        // words and rounds with the new sheet's weight, and isn't held to the first number.
+        save(listOf("* 8 / 6 / 4 x chest press"), tick = true)
+        assertEquals(Progress.Advice(asSuggested = 1), Progress.advice(written, vocabulary, today))
+        save(listOf("* 12 / 10 / 8 x chest press"), tick = true)
+        assertTrue(written.last().let { it.kind == JournalEntry.Kind.CORRECTED && it.ladder == listOf(8, 6, 4) && it.lb < it.shownLb!! })
+        assertEquals(Progress.Advice(), Progress.advice(written, vocabulary, today))
+        written.clear()
+        // A poster's change of a capital isn't another row: corrected to fewer reps there, the
+        // set still counts, as short.
+        save(listOf("* 8 x chest press"), tick = true)
+        val revised = Sheet.make(listOf("* 8 x Chest Press"), history, identity)
+        val log = Logging.logged(revised, written, day(20), "2G")
+        val row = revised.rows[0]
+        Logging.events(LogDraft.from(revised, log.byRow).with(row.id, LogDraft.asListed(row)!!.copy(reps = 6)), revised, log, day(20), "2G", 1L)
+            .forEach { written += it.copy(id = written.size + 1L) }
+        assertEquals(Progress.Advice(lighterOrShort = 1), Progress.advice(written, vocabulary, today))
+        written.clear()
         save(listOf("* 8 x chest press"), tick = true)
         assertEquals(Progress.Advice(asSuggested = 1), Progress.advice(written, vocabulary, today))
         // The class's own board: carried over untouched, it still stands as it was logged.
