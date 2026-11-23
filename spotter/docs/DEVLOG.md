@@ -4,23 +4,30 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Status
 
-- **The run that began on 21 November has stopped** (23 November, after cycle 32): everything
-  left in the build order waits on an answer from you. Nothing is scheduled.
-- **Built:** steps 1 to 4 in full (the coach, today's sheet, logging with export and backup,
-  history import). Step 5, strength per movement, has its first link behind a switch that is
-  off. Step 6 has the Progress card, the advice counts and the read-only list of words Spotter
-  doesn't know.
-- **Waiting on your answers** (BACKLOG, "Your call"): range ticks, an Epley "try" offer,
-  variations that share a weight (this one holds up the rest of step 5), coming back to a
-  lighter weight, how sorting a word should work and what sharing a board should send (these
-  two are what is left of step 6), and four places where the instructions disagree.
-- **Waiting on you with the phone** (DEVICE.md): choose a backup folder, import your history
-  file, and the hand checks, of which "Adding an exercise" is the newest.
-- **For the gym-coach session to run:** the replay with and without `-PperMovement`, into two
-  empty folders, and compare (REPLAY.md). The switch stays off until that says it helps.
+- **Work started again on 23 November**, in chat with madCode, after the run closed that
+  morning. Nothing is scheduled.
+- **The finding that matters most:** on realistic boards Spotter is mostly silent. An invented
+  lifter working through the board corpus got a number on 110 of 361 weighted rows, because a
+  reworded repeat ("floor pullover" after "pullover") is treated as new. Fixing that comes
+  first (BACKLOG, "Your call", variations that share a weight).
+- **Built:** steps 1 to 4 in full. Step 5 has its first link behind a switch that is off. Step
+  6 has the Progress card, the advice counts and the read-only list of unknown words.
+- **Answered and waiting to be built** (BACKLOG, "Your call"): the Epley "try" offer, shared
+  weights, a time limit on coming back to a lighter weight, sharing a board, four fixes to the
+  instructions.
+- **Waiting on you:** how sorting a word should work; and with the phone (DEVICE.md), choose a
+  backup folder, import your history file, and the hand checks.
 - **Not started:** step 7, the Garmin watch.
 
 ## Monday 23 November 2026
+
+### A range asks which count was done
+- **Why:** "✓ as listed" on "8 - 10 x" saved 8 reps without saying so, and the coach only goes
+  up from the top of a range.
+- **Shipped:** a line with a range has no tick. It shows a button for each count (8, 9, 10),
+  in the board's own numbers, and the one tapped is saved at the sheet's weight. A line with one
+  count keeps its tick. madCode chose this from four mocked options.
+- **Also:** madCode's answers to nine of the ten open questions are in BACKLOG.
 
 ### The run closes
 - **Why:** you said to end cycles when they ran out of things to do. After cycle 32 every item

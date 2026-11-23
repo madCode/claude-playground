@@ -331,7 +331,11 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   (titles and times of entries from two days ago to tomorrow; the earlier days are for a class
   not yet logged) and offers the ask again, or Android's settings once Android stops asking.
 - **Log** ("Log this class" on the sheet). The same rows. Each weighted row is "✓ as listed"
-  (the sheet's number, and the board's reps: a range's low end) or "changed": the heaviest
+  (the sheet's number and the board's reps) or "changed". A line with a range ("8 - 10 x") has
+  no tick: it shows a button for each count, in the board's own numbers, and the one tapped is
+  saved at the sheet's number, so no reps are logged that weren't seen (a range wider than seven
+  counts shows its two ends; an odd total keeps the tick). On a row being changed, a count sets
+  that set's reps and leaves its weight alone. "Changed": the heaviest
   dumbbell picked from the whole rack in one tap, one or two, and reps on a stepper. Opening
   "changed" logs nothing until a weight is picked, and the count is never guessed: it comes
   from the row's words, the sheet's number or the last log, or the row asks "One dumbbell or

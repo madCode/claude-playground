@@ -173,7 +173,9 @@ private fun AddExercise(today: Today.Showing, draft: LogDraft, onChange: (LogDra
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: (() -> Unit)?, onChange: (RowLog?) -> Unit) {
-    val asListed = LogDraft.asListed(row)
+    val counts = LogDraft.counts(row)
+    // On a range, as listed at whichever of its counts was tapped.
+    val asListed = LogDraft.asListed(row)?.let { listed -> log?.reps?.takeIf { counts?.contains(it) == true }?.let { listed.copy(reps = it) } ?: listed }
     // As listed still, when all that was added is how many dumbbells the sheet didn't know, or
     // that it felt easy: the weight and the reps are the sheet's.
     val plain = log?.copy(easy = false)
@@ -200,7 +202,17 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
                 return@Column
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (asListed != null) {
+                // A range has no tick: a button for each count, so the reps saved are ones that were seen.
+                counts?.forEach { reps ->
+                    val label = LogDraft.countLabel(row, reps)
+                    Choice(label, log?.reps == reps, "${row.shown}: did $label") {
+                        // On a row being changed it is that set's reps: the weight picked and
+                        // what was said about it stay. Otherwise it was done at the sheet's weight.
+                        if (log != null && !listed) onChange(log.copy(reps = reps))
+                        else onChange(asListed!!.copy(reps = reps, count = asListed.count ?: log?.count, easy = listed && log?.easy == true))
+                    }
+                }
+                if (asListed != null && counts == null) {
                     Choice("✓ as listed", listed, "${row.shown}: done as listed") {
                         open = false
                         // Ticked again, it keeps what was said beside it.
