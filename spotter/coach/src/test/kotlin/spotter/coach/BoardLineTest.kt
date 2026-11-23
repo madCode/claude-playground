@@ -215,4 +215,32 @@ class BoardLineTest {
         assertEquals(LineKind.EXERCISE, read("30 sec of active recovery: bird dog").kind)
         assertEquals(LineKind.EXERCISE, read("8 x reverse lunge (transition)").kind)
     }
+
+    // From a real week of boards and the corpus: what a tread or rower block says to do isn't
+    // an exercise row. Before, each was a "not sure" row on the sheet, and a bare "row" after
+    // a time was read as the dumbbell row.
+    @Test
+    fun treadAndRowerInstructionsAreNotRows() {
+        val instructions = listOf(
+            "* Clear screen", "* Set monitor to 14 minute count down", "* Collapse (member's choice)", "* Remember incline",
+            "* Begin at last exercise completed", "* Count &amp; remember rounds", "* When done - WR until next round begins",
+            "* Red goal: complete 2 rounds", "* Green goal - complete 30 reps", "Reposting content courtesy of /u/someone.",
+            "* 1 min push row", "* 30 sec recovery row", "* 45 sec base row", "* 1 min row (1:3 tempo)", "1 min row", "* 2.5 min base",
+            "* 30 sec speed surge", "* 90 sec incline surge", "* 2 min push", "* 2 min push (PW @ 5+)", "* 30 sec transition",
+            "1 min walking recovery", "* Bonus: row until time is called", "* Row for time until finisher",
+        )
+        instructions.forEach { assertEquals(it, LineKind.INSTRUCTION, read(it).kind) }
+        // What those rules mustn't take: a push-up, a push press, a named dumbbell row, a
+        // counted row, and a surge of nothing.
+        val exercises = listOf(
+            "* 30 sec push-up", "* 1 min push press", "* 30 sec of low row", "* 1 min of single arm low row", "* 8 x row",
+            "* 30 sec of bicep curl, rest", "* 8 x clear the bar press", "* 12 x remembered squat",
+        )
+        exercises.forEach { assertEquals(it, LineKind.EXERCISE, read(it).kind) }
+        // A block shared by two stations is a heading like any other, and "When done:" still
+        // names what follows it.
+        listOf("**Floor / Row Block 1 - 3 minutes**", "**Row / Tread Block 2 - 6.5 minutes**", "* When done:").forEach {
+            assertEquals(it, LineKind.HEADING, read(it).kind)
+        }
+    }
 }

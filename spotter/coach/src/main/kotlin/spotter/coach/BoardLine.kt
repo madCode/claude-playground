@@ -80,6 +80,12 @@ data class BoardLine(
         // Lines that tell the class what to do, rather than naming an exercise. Reading one as an
         // exercise is how "Good morning, all!" once became the good-morning lift (trap 5).
         private val instructionStart = Regex("""^(repeat|goal|until|match|increase|then|complete|rest|member|check|wr)\b""")
+        // What to do with the rower's or treadmill's screen, where to pick up, who is quoted,
+        // and rowing until a signal ("row until time is called" is the rower, not a dumbbell
+        // row): said to the class, and never the name of an exercise.
+        private val housekeeping = Regex(
+            """^(?:clear screen|set monitor\b|collapse\b|remember\b|begin at\b|count (?:&|and) remember\b|when done\b|(?:red|orange|green) goal\b|reposting\b|row (?:until|for)\b)""",
+        )
         // A second sentence of five words or more; "alt." and a short cue ("count & check reps")
         // after a full stop are still part of a workout line.
         private val moreSentences = Regex("""\.\s+\S+(?:\s+\S+){4,}""")
@@ -91,6 +97,16 @@ data class BoardLine(
         // Time between blocks: "90 sec recovery", "1 min to transition to the rower", "90 sec WR".
         // Only a whole line of it: "30 sec of active recovery: bird dog" is still a bird dog.
         private val between = Regex("""^~?\d{1,4}\s*(?:sec|secs|seconds|min|mins|minutes)\s+(?:of\s+)?(?:active\s+)?(?:recovery|rest|base|wr\b.*|to transition\b.*)$""")
+        // A timed effort on the rower or the treadmill, the whole line: "1 min push row",
+        // "30 sec recovery row", "1 min row (1:3 tempo)", "2.5 min base", "30 sec speed surge",
+        // "2 min push (PW @ 5+)", "30 sec transition". A bare "row" after a time is the rower
+        // (a dumbbell row says which: "low row"); "push" only when nothing follows it but the
+        // rower or a note, so a push-up and a push press stay exercises.
+        private val machine = Regex(
+            """^~?\d{1,4}(?:\.\d)?\s*(?:sec|secs|seconds|min|mins|minutes)\s+(?:of\s+)?""" +
+                """(?:(?:(?:recovery|push|base)\s+)?row|(?:walking\s+)?recovery|base|push|(?:speed\s+|elevation\s+|incline\s+)?surge|transition)""" +
+                """(?:\s*\(.*\)?)?$""",
+        )
 
         fun read(raw: String): BoardLine {
             if (raw.length > MAX_LENGTH) return other(raw, LineKind.INSTRUCTION, raw.take(80))
@@ -110,14 +126,16 @@ data class BoardLine(
             // "# 2G intel": the post's title.
             if (text.startsWith("#")) return other(raw, LineKind.HEADING, text.trimStart('#', ' '))
             if (instructionStart.containsMatchIn(text)) return other(raw, LineKind.INSTRUCTION, text)
-            if (text.endsWith(":") || Regex("""^(?:floor|tread|row|tread / row|tread/row) block|^block \d|\bchallenge:?$""").containsMatchIn(text)) {
+            if (text.endsWith(":") || Regex("""^(?:floor|tread|row)(?:\s*/\s*(?:floor|tread|row))* block|^block \d|\bchallenge:?$""").containsMatchIn(text)) {
                 return other(raw, LineKind.HEADING, text)
             }
+            // After the headings: "When done:" names what follows, and rows are filed under it.
+            if (housekeeping.containsMatchIn(text)) return other(raw, LineKind.INSTRUCTION, text)
             // Commentary: a cheer, a question, a sentence to the reader, or more than one sentence.
             if (text.contains('!') || text.contains('?') || talk.containsMatchIn(text) || moreSentences.containsMatchIn(text) || sentence.matches(text)) {
                 return other(raw, LineKind.INSTRUCTION, text)
             }
-            if (cardio.containsMatchIn(text) || between.containsMatchIn(text)) return other(raw, LineKind.INSTRUCTION, text)
+            if (cardio.containsMatchIn(text) || between.containsMatchIn(text) || machine.matches(text)) return other(raw, LineKind.INSTRUCTION, text)
 
             var count: Count? = null
             trailingCount.find(text)?.let { m ->

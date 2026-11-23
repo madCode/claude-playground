@@ -134,8 +134,10 @@ what is on the board, and nothing says so.
     come off.
   - Lines that tell the class something ("Goal: match or beat…", "Repeat until time is
     called…", a cheer, a question, a sentence to the reader, a run recap), tread and rower
-    lines ("600 m row", "1 min all out"), and block headings are never exercises (trap 5),
-    even when they hold an exercise's name.
+    lines ("600 m row", "1 min all out", "1 min push row", "30 sec speed surge", "2.5 min
+    base", "Clear screen", "Set monitor to…", "When done, WR until…"), and block headings are
+    never exercises (trap 5), even when they hold an exercise's name. A bare "row" after a
+    time, or "row until…", is the rower; a dumbbell row says which ("low row").
   - A line over 300 characters is commentary, unread: that also keeps a hostile line from
     stalling the reader.
 - **Then the words are named** (`Identity`), longest phrase first, into one or more parts,

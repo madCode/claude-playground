@@ -2,6 +2,14 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 32 — fix: instructions aren't rows
+
+- Dump every corpus line's reading to a file before the change and after it, and diff the two:
+  it showed one rule turning "When done:" headings into instructions (which would have moved
+  row ids), and two list additions that gained nothing and made a conflict. Both were undone
+  before any test was written.
+- A list addition is kept only if the diff shows a line it makes readable.
+
 ### Cycle 31 — build: the review list, read only
 
 - The real feed through the new list before review changed its unit: per word it listed
@@ -70,8 +78,3 @@ For the next cycle: what to do differently. What was built is in DEVLOG.md. Newe
 - A rule change that most tests lean on: add the one input the old behaviour now needs
   ("felt easy") to fixtures whose point lies elsewhere, and rewrite only the tests about the
   rule itself. Check each expectation that moved the other way by hand.
-
-### Cycle 21 — build: the history on the phone
-
-- Check each Java call against the project's lowest Android version before the review does:
-  `readNBytes` compiled, and would have crashed on Android 8 to 12.

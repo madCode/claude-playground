@@ -21,7 +21,7 @@ data class SheetRow(
     val lastHeld: Load? = null,
 ) {
     /** The board's own words, as posted, without the bullet. */
-    val shown: String get() = line.raw.trim().trimStart('*', '•', '-', ' ').replace("**", "")
+    val shown: String get() = line.raw.trim().trimStart('*', '•', '-', ' ').replace("**", "").replace("&amp;", "&")
 
     /** What Spotter read the line as, shown beneath the board's words so a misreading is visible. */
     val understood: String

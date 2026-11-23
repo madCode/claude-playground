@@ -67,11 +67,11 @@ Step 3, logging:
   "10 / 8 / 6" says nothing yet to a later "6 x" row, which converts from round one's. And a
   twinge or a stop is put on the heaviest round, since the screen doesn't ask which.
   *(cycle 24)*
-- [ ] The reader, from the review list on a real week of boards (cycle 31): tread and rower
-  instructions inside a floor post read as exercise rows with unknown words ("Set monitor to
-  14 minute count down", "Clear screen", "Remember incline", "High plank until ready for next
-  round"); the feed's "&amp;" isn't decoded; "band around the wrists", "front foot on bosu"
-  and "low to high raise" are setups and a movement worth listing.
+- [ ] The reader, what the review list still shows after cycle 32 took the tread and rower
+  instructions out: "front foot on bosu" beside "bosu" reads as two stabilities in conflict
+  (the more specific should win); "band around the wrists" and "low to high raise" aren't
+  listed; "High plank until ready for next round" and a finisher named inside a "When done"
+  line stay unread. 422 corpus lines are still "not sure" for unknown words.
 - [ ] Log screen, from the cycle 25 review: "12 total x chest press" typed for a two-handed
   lift is read as 6 a side, as a board line is.
 - [ ] Log screen, from the cycle 24 review: "Last time" under "Heaviest dumbbell" shows the
