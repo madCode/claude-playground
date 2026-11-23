@@ -1,6 +1,6 @@
 ---
 name: cycles
-description: Run work cycles on a project - each cycle picks one backlog item or one audit, does it to the project's rules, ships it, and writes down what the next cycle should do differently. Use when a scheduled task or madCode asks for a cycle, "run cycles" or "overnight cycles", or for work on a project for a set time or until a set amount is done.
+description: Run work cycles on a project - each cycle picks one backlog item or one audit, does it to the project's rules, ships it, and writes down what the next cycle should do differently. Use when a scheduled task or madCode asks for a cycle, "run cycles" or "overnight cycles", or for work on a project for a set time or until a set amount is done; also for an audit by name (an instructions pass, backlog grooming, a documentation pass), the morning page, and scheduling or stopping a run.
 ---
 
 # Cycles
@@ -61,13 +61,13 @@ An item that turns out to need a decision stops there. How it waits depends on i
 - **A smaller call** (a wording, a threshold, which of two behaviours) stays in BACKLOG.md,
   under the project's "your call" heading.
 
-**Audit**: one persona reading the real thing (the app as built, its real output, real data
-where the project allows it), never fixtures. The project's CLAUDE.md or the prompt names the
-personas; otherwise pick from someone the app is for, a UX designer, a security researcher, an
-architect after simple code, test health, a documentation pass, backlog grooming, and an
-instructions pass. When BACKLOG.md says a
+**Audit**: when BACKLOG.md says a
 [recurring review](https://github.com/madCode/claude-playground/blob/main/practices/recurring-reviews.md)
-is due, that is the audit.
+is due, that is the audit. Otherwise one persona reading the real thing (the app as built, its
+real output, real data where the project allows it), never fixtures. The project's CLAUDE.md or
+the prompt names the personas; otherwise pick from someone the app is for, a UX designer, a
+security researcher, an architect after simple code, test health, a documentation pass, backlog
+grooming, and an instructions pass.
 
 **Backlog grooming** is an audit of BACKLOG.md itself: drop or merge what is stale, done or
 duplicated (checked against the code, not the wording), split items too big for one cycle, and
@@ -104,8 +104,9 @@ All the project's rules apply. These are for unattended work, each learned by ge
 - **Falsify every new test.** Commit first (`git status --porcelain` empty), break the code the
   test covers, watch that test go red, restore with git. A break no test notices has falsified
   nothing; the break must change behaviour, and moving code breaks it harder than deleting it.
-- **Measure the way it really runs**: through the real entry point, the command the owner
-  runs, the way CI runs it. Before and after in separate processes and directories. A result
+- **Run it the way it really runs**, a new command or flag as much as a measurement: through
+  the real entry point, the command the owner runs with the arguments they would type, the way
+  CI runs it. Before and after in separate processes and directories. A result
   that comes back empty or identical gets its harness checked before it is believed.
 - **Don't state a number you haven't measured.**
 - **Read back every scripted edit.** A replacement whose anchor drifted exits 0 and changes
@@ -114,9 +115,11 @@ All the project's rules apply. These are for unattended work, each learned by ge
 - **A red test is a claim to check, not a fixture to update.**
 - **Render a changed screen and look at it.** A test on the data doesn't show the screen.
 - **Leave the tree alone while a review agent reads it**, and stop any background work in the
-  step that reads its result.
+  step that reads its result. A falsification run edits the tree: give it a worktree of its
+  own, or the reviewer one.
 - **A test that can't fail looks like one that passes.** Known ways: asserting on a `LazyColumn`
-  row never scrolled into view (it isn't composed, so `assertDoesNotExist` passes); a
+  row never scrolled into view (it isn't composed, so `assertDoesNotExist` passes), or on a
+  merged node when the text sits in a child (`useUnmergedTree`); a
   `captureToImage` that came back flat; a fixture that names something real as "unknown"; a
   fixture with one of a thing, which can't tell a ratio from a count; inputs that route to the
   other branch. A falsification run where every break stays green is more likely a broken
@@ -155,7 +158,7 @@ with its own PR red unless the PR says why.
 Two readers, so two files:
 
 - **DEVLOG.md is for madCode**: what was asked, found, shipped and left, newest first, and its
-  status block (*Lately*, *Watching*, *Waiting on you*) kept current.
+  status block (as the project's DEVLOG.md has it, from the template) kept current.
 - **The cycle log is for the next cycle**: `docs/CYCLES.md`, unless the project's CLAUDE.md
   names another. A `### Cycle N — build|audit: <what>` entry at the top, N one more than the
   last, then the one or two things the next cycle should do differently. What was built is in

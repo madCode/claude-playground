@@ -22,6 +22,11 @@ or the docs rather than guess: the order may change, nothing is built on a guess
   the replay tool's `-PperMovement`, and one link, "alternating" at the same weight. Next:
   the links madCode rules on (Your call, "Variations that share a weight"), the two-clean
   count shared across a link, and the person's own measured ratio replacing a stated factor.
+  The measured ratio waits (cycle 28): a ratio measured on one movement is only sound for
+  that movement, and there its one-leg version then has a log of its own, which already
+  outranks any factor. Carried to another movement it would be the loose relative trap 11
+  rules out. Worth building only if the replay on a real history shows first goes it would
+  have helped.
 - [ ] Progress, the new-word review screen, sharing a board (step 6).
 
 ## Next
@@ -107,6 +112,20 @@ Asked in chat on 2026-11-22; until answered, the app keeps what it does now. The
 - **Coming back to a lighter weight.** After 30 clean, a clean 25 goes back up after that one
   session, however long ago the 30 was. Keep, or add a time limit?
 
+From the instructions pass (cycle 28), where two instructions disagree and which one stands is
+madCode's to say:
+
+- **The morning page.** The cycles skill says each project keeps a page of its own; the
+  new-project skill says a project gets a section on an existing page, which is what Spotter
+  has.
+- **"One thing per cycle"** in the cycles skill, against madCode's "30 minutes apart: take a
+  step-sized slice" for Spotter, which three cycles since have followed by shipping two or
+  three small things together.
+- **The emulator and watchdog section** of the cycles skill (28 lines) is read every cycle and
+  Spotter has no emulator: move it to `practices/android.md`?
+- **`practices/lifecycle.md`** restates the handle-issues skill's approval rule and sorting
+  table; one could point at the other.
+
 Settled on 2026-11-22: up after two clean sessions or one that felt easy (built, cycle 22); a
 ladder's one number is its heaviest round's (as built; "+ Each round" for the rest, built in
 cycle 24); a log from
@@ -121,9 +140,9 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 - [ ] Security and supply chain: before the first release
 - [x] Architecture and test health: cycle 10, 2026-11-22. Its smaller findings are under
-  "Tidy-up", below.
-- [ ] Skills and instructions: overdue (was due around cycle 12). Cycle 23 checked the docs
-  against the code, not the skills.
+  "Tidy-up", below. Next: around cycle 40, or before the first release.
+- [x] Skills and instructions: cycle 28, 2026-11-23. Next: around cycle 45. What it left for
+  madCode is under "Your call".
 
 ## Tidy-up (from the cycle 10 review, when a cycle has room)
 

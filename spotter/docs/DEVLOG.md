@@ -15,6 +15,16 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 28: the skills and instructions, checked against what cycles did
+- **Why:** the review was overdue (due around cycle 12).
+- **Done:** a reader with no stake compared the skills, the CLAUDE.md files and the practices
+  with 27 cycles of notes. Rules that cycles had relearned were moved up or reworded so they
+  cover the case (run a new command for real; a due review is the audit; falsify in a
+  worktree). Six lessons that kept coming back are now in `spotter/CLAUDE.md`, and the cycle
+  log is back to its last ten entries. Nothing about the app changed.
+- **For you:** four places where two instructions disagree are in BACKLOG, "Your call".
+- **Not built:** your own measured ratio in place of the 0.6 one-leg factor; BACKLOG says why.
+
 ### Cycle 27: strength per movement, the switch and its first link
 - **Why:** step 5. The Log screen's list is done but for your calls.
 - **Shipped, switched off:** a rule set the app doesn't use (`Rules`), and the replay tool's

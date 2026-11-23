@@ -40,6 +40,20 @@ JDK 21 and the Android SDK are required.
 `../jekyll-poster/tools/install-android-sdk.sh` installs it for a cloud session, with the Maven
 mirror Gradle needs there.
 
+## What cycles keep relearning
+
+- A fresh checkout needs `local.properties` with `sdk.dir=/opt/android-sdk` before the full
+  build, or it fails in a second with "SDK location not found". A session that can't push
+  says so on the morning page and stops; it doesn't build locally.
+- Put real-shaped data through a new piece before the review does: the board corpus, a real
+  feed board, Carry's invented history. Format notes alone have been wrong.
+- A fixture is sound when only the rule under test decides its outcome, and its values differ
+  where the rule tells them apart (a 20 to 25 step is a big jump: it holds and offers a test).
+- Store what was said and derive the reading when the coach reads it, so a better reading
+  later needs no migration.
+- Cycles run 30 minutes apart at madCode's ask (2026-11-22): take a whole step-sized slice.
+- A fix after a review gets its second look: it found a real bug in three of four cycles.
+
 ## Privacy
 
 madCode's training history, baselines, calendar and scorecard figures are private: never in this
