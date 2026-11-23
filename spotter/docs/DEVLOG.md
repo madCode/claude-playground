@@ -15,6 +15,24 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 32: tread and rower instructions aren't rows
+- **Why:** the review list showed it on a real week of boards: "Clear screen", "Set monitor to
+  14 minute count down", "30 sec recovery row" and the like sat on the sheet as "not sure"
+  rows.
+- **Shipped:** the reader takes them for what they are, instructions, so they are no longer
+  rows. On the board corpus and the last four days of the feed (12,180 lines), 544 lines went
+  from "not sure" to instruction, and 9 two-station block titles are read as headings.
+- **Five wrong reads fixed:** "1 min row" and "row until time is called" are the rower; they
+  were being read as the dumbbell row, which could have borrowed its number.
+- **Nothing else changed its reading**, checked line by line before and after.
+- **The review tried 145 made-up lines** and found the first rules too greedy: "30 sec row
+  (single arm)" would have vanished from the sheet. Now only the rower's own notes (a tempo, a
+  stroke rate) keep such a line an instruction, and a line that names an exercise after
+  "When done" is still a row. The second look found a dumbbell note that mentions a tempo
+  ("30 sec row (single arm, slow tempo)") still hidden: a note that names an arm, a dumbbell
+  or a weight now keeps the row.
+- **Also:** a row shows "&" where the feed wrote "&amp;".
+
 ### Cycle 31: the words Spotter doesn't know yet
 - **Why:** the part of step 6's review screen that needs no ruling from you.
 - **Shipped:** a card under Progress, "Words Spotter doesn't know yet". It reads the boards kept

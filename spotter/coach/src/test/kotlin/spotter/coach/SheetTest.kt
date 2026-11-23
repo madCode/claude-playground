@@ -185,4 +185,11 @@ class SheetTest {
         assertEquals("not sure: unknown words (zorbing)", unknown.understood)
         assertEquals(listOf("Not sure what this is, so no number."), unknown.why)
     }
+
+    // The feed writes "&" as "&amp;": the row shows the board's words, not its markup.
+    @Test
+    fun aRowShowsAnAmpersandAsOne() {
+        val row = Sheet.make(listOf("* 8 x squat &amp; press"), emptyList(), identity).rows.single()
+        assertEquals("8 x squat & press", row.shown)
+    }
 }
