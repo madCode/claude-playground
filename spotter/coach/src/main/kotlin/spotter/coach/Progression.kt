@@ -142,15 +142,21 @@ object Progression {
      *
      * An earlier day, because the same exercise twice in one class is one session's evidence.
      * This weight or more, because a weight done clean before isn't new when it is come back to;
-     * one lifted above the sheet's number is.
+     * one lifted above the sheet's number is. But a heavier weight only vouches for a lighter one
+     * for [COMEBACK_WEEKS]: after that long it says little about today (TRAINING.md, 9), and the
+     * lighter weight earns its step with two sessions of its own.
      */
     private fun settled(basis: Logged, own: List<Logged>): Boolean {
         val earlier = own.takeWhile { it !== basis }
         val before = earlier.lastOrNull { it.anchor == basis.anchor && it.date < basis.date } ?: return false
         val between = earlier.dropWhile { it !== before }.drop(1)
-        return before.outcome == Outcome.CLEAN && before.load.count == basis.load.count && before.load.lb >= basis.load.lb &&
+        val recent = before.load.lb == basis.load.lb || !before.date.isBefore(basis.date.minusWeeks(COMEBACK_WEEKS))
+        return before.outcome == Outcome.CLEAN && before.load.count == basis.load.count && before.load.lb >= basis.load.lb && recent &&
             between.all { it.outcome == Outcome.CLEAN || it.outcome == Outcome.IN_RANGE }
     }
+
+    /** How long a heavier weight done clean still vouches for a lighter one (madCode, 2026-11-23). */
+    private const val COMEBACK_WEEKS = 8L
 
     /** A step more than this much heavier is a big jump: the sheet holds and offers a test. */
     private const val BIG_JUMP = 1.2

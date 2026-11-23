@@ -319,6 +319,26 @@ class ProgressionTest {
         assertTrue(s.reasons.single().contains("0.6"))
     }
 
+    // A heavier weight done clean vouches for a lighter one come back to, for eight weeks
+    // (madCode, 2026-11-23): after that the lighter weight earns its step with two of its own.
+    @Test
+    fun aHeavierWeightVouchesForALighterOneOnlyForEightWeeks() {
+        fun on(date: LocalDate, lb: Int) = Logged(date, press, Load(lb, 2), 8..8, listOf(8, 8))
+        val back = LocalDate.of(2026, 6, 1)
+        // Clean at 30 seven weeks ago, clean at 25 today: back to 30.
+        assertEquals(Load(30, 2), weight(listOf(on(back.minusWeeks(7), 30), on(back, 25))).load)
+        // Nine weeks ago: 25 holds, and says one more.
+        val stale = weight(listOf(on(back.minusWeeks(9), 30), on(back, 25)))
+        assertEquals(listOf(Load(25, 2), true), listOf(stale.load, stale.oneMore))
+        // Eight weeks to the day still counts; a day more doesn't.
+        assertEquals(Load(30, 2), weight(listOf(on(back.minusWeeks(8), 30), on(back, 25))).load)
+        assertEquals(Load(25, 2), weight(listOf(on(back.minusWeeks(8).minusDays(1), 30), on(back, 25))).load)
+        // Its second clean session goes up, as any weight's does.
+        assertEquals(Load(30, 2), weight(listOf(on(back.minusWeeks(9), 30), on(back, 25), on(back.plusDays(3), 25))).load)
+        // Two clean sessions at the same weight count however far apart.
+        assertEquals(Load(30, 2), weight(listOf(on(back.minusWeeks(20), 25), on(back, 25))).load)
+    }
+
     // A step up earned at other reps isn't taken on a conversion, but the dumbbell it would have
     // meant is offered to try (madCode, 2026-11-23).
     @Test

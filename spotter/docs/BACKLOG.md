@@ -123,8 +123,8 @@ says otherwise.
   agree: factors for single arm, single leg, split stance, bosu, tempo, incline. The yardstick
   is the share of weighted rows with a number when an invented lifter works through the board
   corpus: 110 of 361 before this work, 128 with the first set built (without grip words).
-- **Coming back to a lighter weight:** add a limit, six to eight weeks or a number of classes.
-  TRAINING.md has nothing on time away yet: read the research first.
+- **Coming back to a lighter weight:** a limit of eight weeks (built). The research counts in
+  weeks, not classes, and eight is on the cautious side (TRAINING.md, 9).
 - **Sharing a board:** start with the floor rows. madCode: "and maybe row weights only", which
   needs asking (the rows' weights, or the rower?) before it is built.
 - **The morning page:** it depends on the project. Spotter belongs on Carry's page; it would
@@ -133,8 +133,15 @@ says otherwise.
 - **"One thing per cycle":** the project's own pace wins when it states one.
 - **The emulator and watchdog section:** move it to `practices/android.md`.
 - **`practices/lifecycle.md`:** point at the handle-issues skill instead of restating it.
+  (These four are written into the skills and practices, 2026-11-23.)
 
 Still open:
+
+- **A step earned long ago.** Two clean sessions at 30, then nothing for five months: the
+  sheet still says 35. The eight-week limit only covers a heavier weight vouching for a lighter
+  one. Should an earned step, or any number, go stale after a long gap, and to what: hold, or
+  "new: go light"? The research (TRAINING.md, 9) says strength falls after about a month of no
+  training at all, and comes back fast.
 
 - **Sorting a word on the review list.** How should the phone ask? Proposed first step: two
   answers only, "ignore this word" (filler) and "it's another name for …" with a movement
