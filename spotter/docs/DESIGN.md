@@ -69,7 +69,8 @@ both are installed side by side.
     reps (so a number from long ago doesn't come back). A near miss since, or a latest session
     that can't be compared, only stops a step up. Otherwise the weight converts by Epley from
     the reps done, rounded down, starting from the weight held and never from a step up
-    (TRAINING.md, 5). ▲ ▼ = compare with the session the number rests on.
+    (TRAINING.md, 5). A step up that was earned at the other reps isn't lost: the dumbbell
+    above the converted number is offered, "try 30 if set 1 felt easy", unless it twinged since. ▲ ▼ = compare with the session the number rests on.
     A ladder's sets are each judged against their own round. A ladder logged as "changed" has
     one weight, its heaviest round's: it never raises a number, and stands for that round's
     reps, so round one gets what it converts to. A ladder ticked as listed was done at the
