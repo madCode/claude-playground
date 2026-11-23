@@ -126,20 +126,24 @@ class LoggingTest {
     // offers its two ends.
     @Test
     fun aRangesCountsAreTheBoardsNumbers() {
-        val lines = listOf("* 12 - 16 total x alt reverse lunge", "* 4 - 14 x deadlift")
+        val lines = listOf("* 12 - 16 total x alt reverse lunge", "* 4 - 14 x deadlift", "* 9 - 15 total x alt lateral lunge")
         fun at(day: LocalDate) = Sheet.make(lines, Journal.history(written.filter { it.date < day }, vocabulary), identity)
         val start = at(monday)
         write(Logging.events(
             LogDraft().with(start.rows[0].id, LogDraft.picked(start.rows[0], 20).copy(count = 2))
-                .with(start.rows[1].id, LogDraft.picked(start.rows[1], 40).copy(count = 2)),
+                .with(start.rows[1].id, LogDraft.picked(start.rows[1], 40).copy(count = 2))
+                .with(start.rows[2].id, LogDraft.picked(start.rows[2], 20).copy(count = 2)),
             start, ClassLog(), monday, "2G", at = 1L,
         ))
-        val (lunge, deadlift) = at(thursday).rows
+        val (lunge, deadlift, odd) = at(thursday).rows
+        // An odd total halves to counts the board doesn't say: it keeps the tick.
+        assertNull(LogDraft.counts(odd))
+        assertTrue(LogDraft.asListed(odd) != null)
         assertEquals(listOf("12", "14", "16"), LogDraft.counts(lunge)!!.map { LogDraft.countLabel(lunge, it) })
         assertEquals(listOf(4, 14), LogDraft.counts(deadlift))
     }
 
-    // A range is logged at its low end; a ladder keeps its rounds, a side each; a timed row no reps.
+    // A weight picked on a range starts at its low end; a ladder keeps its rounds, a side each; a timed row no reps.
     @Test
     fun eachKindOfRowIsLoggedInItsOwnTerms() {
         val sheet = sheet(monday)

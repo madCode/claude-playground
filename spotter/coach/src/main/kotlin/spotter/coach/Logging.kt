@@ -103,7 +103,10 @@ data class LogDraft(
          * asks one count, or the sheet has no number to have done them at.
          */
         fun counts(row: SheetRow): List<Int>? {
-            if (asListed(row) == null || row.line.scheme !is Scheme.Reps) return null
+            val scheme = row.line.scheme as? Scheme.Reps ?: return null
+            // An odd total has no whole count a side: its halves would offer numbers the board
+            // doesn't say ("9 - 15 total" as 8 to 14), so it keeps the tick.
+            if (asListed(row) == null || (scheme.count == Count.TOTAL && (scheme.low % 2 != 0 || scheme.high % 2 != 0))) return null
             val range = row.target?.takeIf { it.first < it.last } ?: return null
             return if (range.count() <= MAX_COUNTS) range.toList() else listOf(range.first, range.last)
         }

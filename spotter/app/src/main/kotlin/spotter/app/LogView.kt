@@ -205,9 +205,11 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
                 // A range has no tick: a button for each count, so the reps saved are ones that were seen.
                 counts?.forEach { reps ->
                     val label = LogDraft.countLabel(row, reps)
-                    Choice(label, listed && plain?.reps == reps, "${row.shown}: did $label at the sheet's weight") {
-                        open = false
-                        onChange(asListed!!.copy(reps = reps, count = asListed.count ?: log?.count, easy = listed && log?.easy == true))
+                    Choice(label, log?.reps == reps, "${row.shown}: did $label") {
+                        // On a row being changed it is that set's reps: the weight picked and
+                        // what was said about it stay. Otherwise it was done at the sheet's weight.
+                        if (log != null && !listed) onChange(log.copy(reps = reps))
+                        else onChange(asListed!!.copy(reps = reps, count = asListed.count ?: log?.count, easy = listed && log?.easy == true))
                     }
                 }
                 if (asListed != null && counts == null) {

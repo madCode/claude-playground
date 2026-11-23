@@ -4,7 +4,7 @@ import java.time.LocalDate
 
 /**
  * One exercise as logged in one class: what was held, what was asked, and how each set went.
- * [reps] are reps a side, one entry per set; "✓ as listed" logs the target for every set.
+ * [reps] are reps a side, one entry per set; "✓ as listed" logs the target for every set, and a range the count tapped.
  */
 data class Logged(
     val date: LocalDate,

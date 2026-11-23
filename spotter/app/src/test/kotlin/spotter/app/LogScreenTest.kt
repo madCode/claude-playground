@@ -176,17 +176,25 @@ class LogScreenTest {
         compose.onNodeWithText("Log this class").performClick()
         compose.onNodeWithContentDescription("8 - 10 x deadlift: done as listed").assertDoesNotExist()
         compose.onNodeWithContentDescription("8 x chest press: done as listed").assertIsDisplayed()
-        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 9 at the sheet's weight").performClick()
-        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 9 at the sheet's weight").assertIsSelected()
-        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 10 at the sheet's weight").assertIsNotSelected()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 9").performClick()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 9").assertIsSelected()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 10").assertIsNotSelected()
         compose.onNodeWithContentDescription("8 - 10 x deadlift: changed").assertIsNotSelected()
         compose.onNodeWithText("Logged: 2×40 · 9 reps").performScrollTo().assertIsDisplayed()
         shoot("log-range")
         // Another count replaces the first; felt easy stays one tap beside it.
-        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 10 at the sheet's weight").performClick()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 10").performClick()
         compose.onNodeWithContentDescription("8 - 10 x deadlift: felt easy").performClick()
+        compose.onNodeWithText("Logged: 2×40 · 10 reps · felt easy").performScrollTo().assertIsDisplayed()
+        // On a row being changed, a count is that set's reps: the weight and the twinge stay.
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: changed").performClick()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: 45 pounds").performClick()
+        compose.onNodeWithText("Twinge").performClick()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 9").performClick()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 9").assertIsSelected()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: changed").assertIsSelected()
         compose.onNodeWithText("Save").performScrollTo().performClick()
-        assertEquals(spotter.coach.RowLog(40, 2, 10, easy = true), saved!!.rows.values.single())
+        assertEquals(spotter.coach.RowLog(45, 2, 9, easy = true, hurt = true), saved!!.rows.values.single())
     }
 
     // "Felt easy" is one tap beside the tick, and the row is still as listed with it.
