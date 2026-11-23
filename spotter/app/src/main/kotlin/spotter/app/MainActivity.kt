@@ -230,12 +230,16 @@ class MainActivity : ComponentActivity() {
             today.value = Today.afterKept(today.value, kept?.let { Today.of(it, entries, identity, vocabulary, beside) }, logged)
             // From the boards already on the phone, then again once today's has been fetched:
             // weak signal mustn't hold the card back, or drop it in mid-read.
-            launch { unknownWords.value = withContext(Dispatchers.IO) { ReviewList.of(boards.all(), identity) } }
+            val fromKept = launch { unknownWords.value = withContext(Dispatchers.IO) { ReviewList.of(boards.all(), identity) } }
             earlier.value = withContext(Dispatchers.IO) { loader.earlier(LocalDateTime.now(), logged) }
                 ?.let { Today.of(it, entries, identity, vocabulary, beside) as? Today.Showing }
             val fetched = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), logged = logged) }
             if (fetched != null) today.value = Today.of(fetched, entries, identity, vocabulary, beside)
-            if (fetched != null) unknownWords.value = withContext(Dispatchers.IO) { ReviewList.of(boards.all(), identity) }
+            if (fetched != null) {
+                // The earlier reading mustn't land after this one and take today's board away.
+                fromKept.cancel()
+                unknownWords.value = withContext(Dispatchers.IO) { ReviewList.of(boards.all(), identity) }
+            }
         }
     }
 

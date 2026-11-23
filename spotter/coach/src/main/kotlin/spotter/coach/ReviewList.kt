@@ -20,24 +20,31 @@ data class UnknownWord(val word: String, val line: String, val lastSeen: LocalDa
  * board of junk would outrank a real word seen all week.
  */
 object ReviewList {
-    /** More than any class's board has; a board built to be slow to read stops here. */
-    const val MAX_LINES = 150
+    /** More lines than a day's classes have between them; a board built to be slow to read stops here. */
+    const val MAX_LINES = 300
 
-    // Line breaks, tabs and other controls, and the marks that reorder text: none belongs in a
-    // board line, and on a card they would stretch it or reverse what follows.
-    private val unprintable = Regex("""[\p{Cc}\u200E\u200F\u202A-\u202E\u2066-\u2069]+""")
+    /** Longer than any exercise line; reading a line costs by its length. */
+    const val MAX_CHARS = 160
+
+    // Line breaks, tabs and other controls: none belongs in a board line, and on a card they
+    // would stretch it. Each stands where a space might have.
+    private val breaks = Regex("""[\p{Cc}\u2028\u2029]+""")
+
+    // Marks that reorder text or hide inside a word: taken out with nothing left behind, so
+    // the word is the word it reads as.
+    private val marks = Regex("""[\u00AD\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]+""")
 
     fun of(boards: List<DayBoard>, identity: Identity): List<UnknownWord> {
         val seen = boards.flatMap { board ->
             // A line once, whichever class had it: the 2G and 3G boards often share a block.
-            val lines = board.classes.values.flatMap { it.take(MAX_LINES) }.distinct()
+            // Bounded over the whole board: a file may name any number of classes.
+            val lines = board.classes.values.asSequence().flatten().filter { it.length <= MAX_CHARS }.distinct().take(MAX_LINES).toList()
             Sheet.make(lines, emptyList(), identity).rows
                 .mapNotNull { row ->
                     (row.reading as? Reading.NotSure)?.takeIf { it.why == Why.UNKNOWN_WORDS }
                         ?.let { Triple(clean(it.words.joinToString(" ")), board.date, clean(row.shown)) }
                 }
                 .filter { it.first.isNotEmpty() }
-                .distinctBy { it.first }
         }
         return seen.groupBy { it.first }
             .map { (words, at) ->
@@ -48,5 +55,5 @@ object ReviewList {
             .sortedWith(compareByDescending<UnknownWord> { it.days }.thenByDescending { it.lastSeen }.thenBy { it.word })
     }
 
-    private fun clean(text: String) = text.replace(unprintable, " ").replace(Regex("""\s+"""), " ").trim()
+    private fun clean(text: String) = text.replace(marks, "").replace(breaks, " ").replace(Regex("""\s+"""), " ").trim()
 }

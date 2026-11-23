@@ -47,12 +47,19 @@ class ReviewListTest {
     fun aHostileBoardIsBoundedAndCleaned() {
         val broken = ReviewList.of(listOf(board(20, "2G" to listOf("* 8 x zorb\n\n\n\tflib \u202Esquat\u0007"))), identity).single()
         assertEquals(listOf("zorb flib squat", "8 x zorb flib squat"), listOf(broken.word, broken.line))
-        // A mark inside a word doesn't make it another word.
-        assertEquals(listOf(2), ReviewList.of(listOf(board(20, "2G" to listOf("* 8 x \u200Fzorbing")), board(21, "2G" to listOf("* 8 x zorbing"))), identity).map { it.days })
+        // A mark inside a word doesn't make it another word, or two; a line separator is a break.
+        val marked = listOf(board(20, "2G" to listOf("* 8 x zor\u200Ebi\u00ADng")), board(21, "2G" to listOf("* 8 x zorbing")))
+        assertEquals(listOf("zorbing" to 2), ReviewList.of(marked, identity).map { it.word to it.days })
+        assertEquals("8 x zorb flib", ReviewList.of(listOf(board(20, "2G" to listOf("* 8 x zorb\u2028\u2029flib"))), identity).single().line)
         val junk = board(22, "2G" to (1..400).map { "* $it x aaa press" })
         val real = (20..21).map { board(it, "2G" to listOf("* 8 x zorbing")) }
         assertEquals(listOf("zorbing" to 2, "aaa press" to 1), ReviewList.of(real + junk, identity).map { it.word to it.days })
-        val many = board(22, "2G" to (1..400).map { "* 8 x junk$it press" })
+        // The bound is on the board, however many classes it is split across, and a line longer
+        // than any exercise line isn't read at all.
+        val many = DayBoard(day(22), (1..40).associate { c -> "class$c" to (1..100).map { "* 8 x junk${c}x$it press" } })
         assertEquals(ReviewList.MAX_LINES, ReviewList.of(listOf(many), identity).size)
+        val long = "* 8 x zorbing " + "press ".repeat(30)
+        assertTrue(long.length in (ReviewList.MAX_CHARS + 1)..BoardLine.MAX_LENGTH)
+        assertTrue(ReviewList.of(listOf(board(20, "2G" to listOf(long))), identity).isEmpty())
     }
 }
