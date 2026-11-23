@@ -166,6 +166,37 @@ EMG studies). Reasoned for a dumbbell skier swing.
 - McGill & Marshall 2012, doi:10.1519/JSC.0b013e31823a4063; Zebis et al. 2013,
   doi:10.1136/bjsports-2011-090281; Van Gelder et al. 2015, PMID 26618061 (abstracts).
 
+## 9. Coming back to a weight after time away
+
+- **With no training at all, strength holds for about three to four weeks and then falls**,
+  more the longer the break (several agree on the shape; the sizes vary a lot). One review of
+  elite contact-sport athletes found strength kept "for up to 3 weeks" and an average loss of
+  about 14% over breaks averaging seven weeks.
+- **What is lost comes back fast**: after ten weeks off, novices regained their strength within
+  five weeks of training (thin: one trial).
+- **A small dose keeps it**: one session a week, at the same relative load, held strength for
+  up to 32 weeks (thin: one trial and a narrative review).
+- **Nothing measures a lift left out while the same muscles go on training**, which is this
+  app's case. That strength lasts well beyond eight weeks is reasoned from the line above; the
+  skill of the lift itself (balance, coordination) isn't measured by anything found.
+- **Every source counts in weeks, none in sessions.**
+
+For Spotter: a heavier weight done clean vouches for a lighter one come back to for eight
+weeks, madCode's choice (2026-11-23). It is on the cautious side for someone still training,
+and costs little: after it, the lighter weight goes up on its own two clean sessions. Weeks,
+not classes, so a long absence expires it too. DESIGN.md, "Progression".
+
+All abstracts only, but for Rowe:
+
+- McMaster et al. 2013, doi:10.1007/s40279-013-0031-3: the three weeks and the 14%.
+- Bosquet et al. 2013, doi:10.1111/sms.12047: 103 studies; loss grows with the break.
+- Halonen et al. 2024, doi:10.1111/sms.14739: ten weeks off, regained in five.
+- Bickel et al. 2011, doi:10.1249/MSS.0b013e318207c15d; Spiering et al. 2021,
+  doi:10.1519/JSC.0000000000003964: the maintenance dose.
+- Hwang et al. 2017, doi:10.1519/JSC.0000000000001807; Ogasawara et al. 2011,
+  doi:10.1111/j.1475-097X.2011.01031.x: no loss after two or three weeks.
+- Rowe et al. 2024, doi:10.1007/s00421-024-05509-z (full text): 1RM unchanged after four weeks.
+
 ## Leads, not conclusions
 
 - The NSCA textbook's exact 2-for-2 wording.

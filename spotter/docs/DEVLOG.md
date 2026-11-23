@@ -13,14 +13,22 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 - **Built:** steps 1 to 4 in full. Step 5 has shared weights for wordings that don't change the
   weight. Step
   6 has the Progress card, the advice counts and the read-only list of unknown words.
-- **Answered and waiting to be built** (BACKLOG, "Your call"): the Epley "try" offer, shared
-  weights, a time limit on coming back to a lighter weight, sharing a board, four fixes to the
-  instructions.
+- **Built from madCode's answers today:** count buttons for a range, shared weights, the Epley
+  "try" offer, the eight-week limit, and four fixes to the instructions. Sharing a board waits
+  on what it should send.
 - **Waiting on you:** how sorting a word should work; and with the phone (DEVICE.md), choose a
   backup folder, import your history file, and the hand checks.
 - **Not started:** step 7, the Garmin watch.
 
 ## Monday 23 November 2026
+
+### A heavier weight vouches for a lighter one for eight weeks
+- **Why:** after 30 clean, a clean 25 went straight back to 30 however long ago the 30 was.
+  madCode: add a limit, six to eight weeks.
+- **Shipped:** eight weeks. After that the 25 goes up on two clean sessions of its own.
+- **What the research says** (TRAINING.md, 9, new): strength holds three to four weeks with no
+  training at all and then falls; nothing measures a lift left out while training goes on, so
+  eight weeks is cautious. It counts in weeks, never sessions, so the limit is in weeks.
 
 ### A step earned at other reps is offered as a try
 - **Why:** madCode: this is the point of the app over a notebook. Two clean sessions at 8 reps

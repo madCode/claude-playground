@@ -123,8 +123,8 @@ says otherwise.
   agree: factors for single arm, single leg, split stance, bosu, tempo, incline. The yardstick
   is the share of weighted rows with a number when an invented lifter works through the board
   corpus: 110 of 361 before this work, 128 with the first set built (without grip words).
-- **Coming back to a lighter weight:** add a limit, six to eight weeks or a number of classes.
-  TRAINING.md has nothing on time away yet: read the research first.
+- **Coming back to a lighter weight:** a limit of eight weeks (built). The research counts in
+  weeks, not classes, and eight is on the cautious side (TRAINING.md, 9).
 - **Sharing a board:** start with the floor rows. madCode: "and maybe row weights only", which
   needs asking (the rows' weights, or the rower?) before it is built.
 - **The morning page:** it depends on the project. Spotter belongs on Carry's page; it would
@@ -133,6 +133,7 @@ says otherwise.
 - **"One thing per cycle":** the project's own pace wins when it states one.
 - **The emulator and watchdog section:** move it to `practices/android.md`.
 - **`practices/lifecycle.md`:** point at the handle-issues skill instead of restating it.
+  (These four are written into the skills and practices, 2026-11-23.)
 
 Still open:
 
