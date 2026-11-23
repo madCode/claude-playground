@@ -330,6 +330,9 @@ class ProgressionTest {
         // Nine weeks ago: 25 holds, and says one more.
         val stale = weight(listOf(on(back.minusWeeks(9), 30), on(back, 25)))
         assertEquals(listOf(Load(25, 2), true), listOf(stale.load, stale.oneMore))
+        // Eight weeks to the day still counts; a day more doesn't.
+        assertEquals(Load(30, 2), weight(listOf(on(back.minusWeeks(8), 30), on(back, 25))).load)
+        assertEquals(Load(25, 2), weight(listOf(on(back.minusWeeks(8).minusDays(1), 30), on(back, 25))).load)
         // Its second clean session goes up, as any weight's does.
         assertEquals(Load(30, 2), weight(listOf(on(back.minusWeeks(9), 30), on(back, 25), on(back.plusDays(3), 25))).load)
         // Two clean sessions at the same weight count however far apart.

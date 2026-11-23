@@ -184,7 +184,9 @@ EMG studies). Reasoned for a dumbbell skier swing.
 For Spotter: a heavier weight done clean vouches for a lighter one come back to for eight
 weeks, madCode's choice (2026-11-23). It is on the cautious side for someone still training,
 and costs little: after it, the lighter weight goes up on its own two clean sessions. Weeks,
-not classes, so a long absence expires it too. DESIGN.md, "Progression".
+not classes, as the research counts. The eight weeks run between the heavier session and the
+lighter one. A step already earned doesn't expire, however long the lift then goes undone:
+whether it should is madCode's to say (BACKLOG, "Your call"). DESIGN.md, "Progression".
 
 All abstracts only, but for Rowe:
 

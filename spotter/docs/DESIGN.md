@@ -60,7 +60,8 @@ both are installed side by side.
     sessions are two days: the same exercise twice in a class is one. Anything between them
     that wasn't clean (a twinge, a miss, a near miss, at any reps) breaks the run, and one
     dumbbell and two aren't the same weight. Coming back to a weight done clean before isn't
-    new, if a heavier one was done clean within eight weeks (TRAINING.md, 9); after longer it
+    new: a clean session at the same weight counts however old, and one at a heavier weight if
+    it was within the eight weeks before (TRAINING.md, 9). After longer the lighter weight
     earns its step with two sessions of its own. A weight lifted above the sheet's number becomes the number and waits its own two;
     one that twinged isn't taken up. A big jump's test weight is offered once the weight has settled.
     A clean set that "felt hard" waits a session before stepping up (TRAINING.md, 3).
