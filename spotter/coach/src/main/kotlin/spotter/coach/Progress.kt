@@ -8,7 +8,7 @@ import java.time.LocalDate
  * says anything the next sheet won't bear out.
  */
 data class Progress(val wentUp: List<WentUp> = emptyList(), val next: List<Next> = emptyList()) {
-    /** Heavier than the clean session before it at the same reps, and clean again. */
+    /** A new best: heavier than every clean session before it at the same reps, and clean. */
     data class WentUp(val exercise: String, val from: Load, val to: Load, val reps: Int?, val on: LocalDate)
 
     /**
@@ -25,8 +25,10 @@ data class Progress(val wentUp: List<WentUp> = emptyList(), val next: List<Next>
         const val MOST = 8
 
         fun of(log: List<Logged>, today: LocalDate): Progress {
-            // Sessions on one date keep the order they were logged in.
-            val byExercise = log.filter { it.judged }.sortedBy { it.date }.groupBy { it.key }
+            // Sessions on one date keep the order they were logged in. An exercise the sheet
+            // gives no weight (a banded or bodyweight one an import still has a number for)
+            // has no number to move.
+            val byExercise = log.filter { it.judged && Sheet.wantsWeight(it.exercise) }.sortedBy { it.date }.groupBy { it.key }
             val wentUp = byExercise.values.mapNotNull { sessions -> wentUp(sessions, today) }
                 .sortedByDescending { it.on }.take(MOST)
             // Only what was lifted lately: an exercise last seen in the spring is ready too, and
@@ -36,24 +38,29 @@ data class Progress(val wentUp: List<WentUp> = emptyList(), val next: List<Next>
                     ?: return@mapNotNull null
                 when {
                     s.change == Change.UP && s.caution == null -> Next(last.key, s.load, last.firstTarget, ready = true)
-                    s.oneMore -> Next(last.key, s.load, last.firstTarget, ready = false)
+                    // Promised only where the count is known: a session logged next with its
+                    // count said starts the two afresh against one whose count nobody said.
+                    s.oneMore && last.load.count != null -> Next(last.key, s.load, last.firstTarget, ready = false)
                     else -> null
                 }
             }.sortedBy { !it.ready }.take(MOST)
             return Progress(wentUp, next)
         }
 
-        // The latest sound session against the one before it at the same reps and the same
-        // number of dumbbells: other reps, or one dumbbell against two, aren't the same lift.
+        // A new best: the latest session, clean, heavier than every clean session before it at
+        // the same reps and the same number of dumbbells. Other reps, or one dumbbell against
+        // two, aren't the same lift; coming back to a weight held before isn't going up; and a
+        // timed set has no reps to say it was "for".
         private fun wentUp(sessions: List<Logged>, today: LocalDate): WentUp? {
             val latest = sessions.last()
-            if (latest.date.isBefore(today.minusWeeks(WEEKS)) || !sound(latest)) return null
-            val before = sessions.dropLast(1).lastOrNull {
-                it.date < latest.date && sound(it) && it.anchor == latest.anchor && it.load.count == latest.load.count
-            } ?: return null
-            return if (latest.load.lb > before.load.lb) WentUp(latest.key, before.load, latest.load, latest.anchor, latest.date) else null
+            if (latest.date.isBefore(today.minusWeeks(WEEKS)) || !sound(latest) || latest.anchor == null) return null
+            val before = sessions.filter { it.date < latest.date && sound(it) && it.anchor == latest.anchor && it.load.count == latest.load.count }
+            val best = before.maxByOrNull { it.load.lb } ?: return null
+            return if (latest.load.lb > best.load.lb) WentUp(latest.key, best.load, latest.load, latest.anchor, latest.date) else null
         }
 
-        private fun sound(l: Logged) = l.outcome == Outcome.CLEAN || l.outcome == Outcome.IN_RANGE
+        // Every set at the top of what was asked, and a ladder's first weight kept: "in range"
+        // would say "for 10" of a set done for 8.
+        private fun sound(l: Logged) = l.outcome == Outcome.CLEAN && !l.faded
     }
 }

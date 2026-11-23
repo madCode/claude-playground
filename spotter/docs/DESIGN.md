@@ -358,8 +358,9 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   it, since it was never on the sheet before class.
 
 - **Progress**, a card under the sheet once there is something to say (`Progress` in the
-  coach). "Went up in the last 4 weeks": an exercise whose latest clean session was heavier
-  than the clean one before it at the same reps and the same number of dumbbells. "Next", for
+  coach). "Went up in the last 4 weeks": an exercise whose latest session was clean (every set
+  at the top of what was asked) and heavier than every clean one before it at the same reps
+  and the same number of dumbbells, so a new best, not a return to old ground. "Next", for
   exercises lifted in the last 4 weeks: up a dumbbell next time, or one more clean session
   from it. Both are read by the sheet's own rules from the same history, so the card never
   says what the next sheet won't. Eight lines of each at most, the most recent first.

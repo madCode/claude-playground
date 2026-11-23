@@ -34,9 +34,37 @@ class ProgressTest {
         assertTrue(single(logged(10, press, 25, reps = 12), logged(20, press, 30)).isEmpty())
         assertTrue(single(logged(10, press, 25, count = 1), logged(20, press, 30)).isEmpty())
         assertTrue(single(logged(10, press, 25), logged(20, press, 30, hurt = true)).isEmpty())
-        // "Lately" is four weeks; before that it is history, not news.
-        assertTrue(Progress.of(log, today.plusWeeks(4)).wentUp.isEmpty())
-        assertEquals(1, Progress.of(log, day(20).plusWeeks(4)).wentUp.size)
+        // "Lately" is four weeks to the day; before that it is history, not news.
+        assertEquals(listOf(1, 0), listOf(28L, 29L).map { Progress.of(log, day(20).plusDays(it)).wentUp.size })
+        // In range isn't at the top: 30 done for 8 of "8-10" didn't go up "for 10".
+        fun ranged(day: Int, lb: Int, done: Int) = Logged(day(day), press, Load(lb, 2), 8..10, listOf(done, done))
+        assertTrue(single(ranged(10, 25, 10), ranged(20, 30, 8)).isEmpty())
+        assertEquals(10, single(ranged(10, 25, 10), ranged(20, 30, 10)).single().reps)
+        // Nor is the earlier session a base unless it was clean, and back to a weight held
+        // before isn't up: only a new best is.
+        assertTrue(single(logged(10, press, 25, done = 6), logged(20, press, 30)).isEmpty())
+        assertTrue(single(logged(2, press, 30), logged(10, press, 25), logged(20, press, 30)).isEmpty())
+        assertEquals(Load(30, 2), single(logged(2, press, 30), logged(10, press, 25), logged(20, press, 35)).single().from)
+        // A ladder that went lighter in a later round didn't keep its weight; a timed set has
+        // no reps to have gone up "for"; an exercise the sheet gives no weight has no number.
+        fun ladder(day: Int, rounds: List<Int>) = Journal.history(
+            listOf(Journal.logged(1, day(day), "2G", "r", "8 / 6 / 4 x chest press", press, Load(rounds[0], 2), 8..8, listOf(8, 6, 4), listOf(8, 6, 4), roundLb = rounds).copy(id = day.toLong())),
+            Vocabulary.starting(),
+        ).single()
+        assertTrue(single(ladder(10, listOf(25, 25, 25)), ladder(20, listOf(30, 25, 20))).isEmpty())
+        assertEquals(1, single(ladder(10, listOf(25, 25, 25)), ladder(20, listOf(30, 30, 30))).size)
+        fun timed(day: Int, lb: Int) = Logged(day(day), press, Load(lb, 2), null, emptyList())
+        assertTrue(single(timed(10, 25), timed(20, 30)).isEmpty())
+        val pushUp = exercise("8 x push-up")
+        assertTrue(single(logged(10, pushUp, 25), logged(20, pushUp, 30)).isEmpty())
+        assertTrue(Progress.of(listOf(logged(10, pushUp, 25), logged(14, pushUp, 25)), today).next.isEmpty())
+        // The most recent first, and no more than a glance holds.
+        val several = Vocabulary.starting().movements.filter { !it.bodyweight }.take(10).flatMapIndexed { i, m ->
+            val ex = Reading.Known(listOf(Part(m, emptyMap())), emptySet())
+            listOf(logged(1, ex, 25), logged(10 + i, ex, 30))
+        }
+        val ups = Progress.of(several, today).wentUp
+        assertEquals(listOf(Progress.MOST, day(19), day(12)), listOf(ups.size, ups.first().on, ups.last().on))
         // The same exercise twice in one class is one session, not a step.
         assertTrue(single(logged(20, press, 25), logged(20, press, 30)).isEmpty())
     }
@@ -64,6 +92,15 @@ class ProgressTest {
         // A twinge since holds the weight, so nothing is promised; a big jump is a test, not a step.
         assertTrue(Progress.of(listOf(logged(10, press, 25), logged(14, press, 25, hurt = true)), today).next.isEmpty())
         assertTrue(Progress.of(listOf(logged(14, curl, 12)), today).next.isEmpty())
+        // The promise needs the count said: a session logged next with its count starts afresh.
+        assertTrue(Progress.of(listOf(Logged(day(14), curl, Load(30, null), 8..8, listOf(8, 8))), today).next.isEmpty())
+        // A twinge and a clean session in one class, the twinge logged first: the sheet holds
+        // with its warning, and nothing is promised.
+        val sameDay = listOf(logged(14, curl, 30, hurt = true), logged(14, curl, 30))
+        assertEquals(false, (Progression.suggest(curl, 8..8, sameDay) as Suggestion.Weight).oneMore)
+        assertTrue(Progress.of(sameDay, today).next.isEmpty())
+        // Ready before "one more", whichever was lifted later.
+        assertEquals(listOf(true, false), Progress.of(listOf(logged(10, press, 25), logged(14, press, 25), logged(20, curl, 30)), today).next.map { it.ready })
         // Only what was lifted lately, the most recent first within each kind.
         assertTrue(Progress.of(log, today.plusWeeks(5)).next.isEmpty())
         val recent = log + listOf(logged(16, deadlift, 35), logged(18, deadlift, 35))

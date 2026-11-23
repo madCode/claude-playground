@@ -212,9 +212,12 @@ class MainActivity : ComponentActivity() {
             val read = withContext(Dispatchers.IO) { imported.result(identity, LocalDate.now()) }
             val beside = HistoryPick.beside(read?.logged.orEmpty(), entries)
             val logged = Today.loggedClasses(entries)
-            // From everything logged or imported, as the next sheet would read it.
-            progress.value = withContext(Dispatchers.Default) {
-                Progress.of((beside + Journal.history(entries, vocabulary)).sortedBy { it.date }, LocalDate.now())
+            // From everything logged or imported, as the next sheet would read it. Beside the
+            // sheet, not before it: a long history takes a moment the door doesn't have.
+            launch {
+                progress.value = withContext(Dispatchers.Default) {
+                    Progress.of((beside + Journal.history(entries, vocabulary)).sortedBy { it.date }, LocalDate.now())
+                }
             }
             // The kept board first, then the fetched one.
             val kept = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), fetch = false, logged) }
