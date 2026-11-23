@@ -49,11 +49,11 @@ data class Progress(val wentUp: List<WentUp> = emptyList(), val next: List<Next>
 
         // A new best: the latest session, clean, heavier than every clean session before it at
         // the same reps and the same number of dumbbells. Other reps, or one dumbbell against
-        // two, aren't the same lift; coming back to a weight held before isn't going up; and a
-        // timed set has no reps to say it was "for".
+        // two, aren't the same lift, and a count nobody said could be either; coming back to a
+        // weight held before isn't going up; and a timed set has no reps to say it was "for".
         private fun wentUp(sessions: List<Logged>, today: LocalDate): WentUp? {
             val latest = sessions.last()
-            if (latest.date.isBefore(today.minusWeeks(WEEKS)) || !sound(latest) || latest.anchor == null) return null
+            if (latest.date.isBefore(today.minusWeeks(WEEKS)) || !sound(latest) || latest.anchor == null || latest.load.count == null) return null
             val before = sessions.filter { it.date < latest.date && sound(it) && it.anchor == latest.anchor && it.load.count == latest.load.count }
             val best = before.maxByOrNull { it.load.lb } ?: return null
             return if (latest.load.lb > best.load.lb) WentUp(latest.key, best.load, latest.load, latest.anchor, latest.date) else null

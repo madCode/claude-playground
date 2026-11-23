@@ -58,6 +58,9 @@ class ProgressTest {
         val pushUp = exercise("8 x push-up")
         assertTrue(single(logged(10, pushUp, 25), logged(20, pushUp, 30)).isEmpty())
         assertTrue(Progress.of(listOf(logged(10, pushUp, 25), logged(14, pushUp, 25)), today).next.isEmpty())
+        // A count nobody said could be one dumbbell then or two now: not known to be up.
+        fun uncounted(day: Int, lb: Int) = Logged(day(day), press, Load(lb, null), 8..8, listOf(8, 8))
+        assertTrue(single(uncounted(10, 25), uncounted(20, 30)).isEmpty())
         // The most recent first, and no more than a glance holds.
         val several = Vocabulary.starting().movements.filter { !it.bodyweight }.take(10).flatMapIndexed { i, m ->
             val ex = Reading.Known(listOf(Part(m, emptyMap())), emptySet())
