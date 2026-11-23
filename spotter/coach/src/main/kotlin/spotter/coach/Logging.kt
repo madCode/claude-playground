@@ -89,13 +89,31 @@ data class LogDraft(
          * "✓ as listed": the sheet's number and the board's reps. Null when the sheet has no number
          * to have done as listed ("new: go light"), so the row has to say what was held.
          *
-         * For a range ("8-10") as listed is its low end: done within the range, which holds the
-         * weight rather than raising it on reps nobody said were reached.
+         * For a range ("8-10") this is its low end, and the screen doesn't offer it as a tick:
+         * it asks which count was done ([counts]), so no reps are logged that nobody saw.
          */
         fun asListed(row: SheetRow): RowLog? {
             val load = (row.suggestion as? Suggestion.Weight)?.load ?: return null
             return RowLog(load.lb, load.count, reps(row))
         }
+
+        /**
+         * The counts a row with a range offers in place of the tick, in reps a side: each one of
+         * "8-10", or only the two ends of a range too wide for a button each. Null when the line
+         * asks one count, or the sheet has no number to have done them at.
+         */
+        fun counts(row: SheetRow): List<Int>? {
+            if (asListed(row) == null || row.line.scheme !is Scheme.Reps) return null
+            val range = row.target?.takeIf { it.first < it.last } ?: return null
+            return if (range.count() <= MAX_COUNTS) range.toList() else listOf(range.first, range.last)
+        }
+
+        /** [reps] a side in the board's own number: "12 - 16 total" is offered as 12, 14, 16. */
+        fun countLabel(row: SheetRow, reps: Int): String =
+            if ((row.line.scheme as? Scheme.Reps)?.count == Count.TOTAL) "${reps * 2}" else "$reps"
+
+        /** "6 - 12" is the widest range common on a board: seven buttons wrap to two lines. */
+        private const val MAX_COUNTS = 7
 
         /**
          * "Changed", once a weight is picked from the rack: that weight at the board's reps.

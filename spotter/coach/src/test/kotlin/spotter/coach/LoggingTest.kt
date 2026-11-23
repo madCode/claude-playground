@@ -100,6 +100,45 @@ class LoggingTest {
         assertTrue(save(monday, draft).isEmpty())
     }
 
+    // A range offers each of its counts in place of the tick, and the count tapped is what the
+    // coach reads: the top of the range twice running goes up, the low end twice holds.
+    @Test
+    fun aRangeIsLoggedAtTheCountThatWasDone() {
+        val first = row(sheet(monday), "8-10 x deadlift")
+        // Nothing to have done on a new row, and one count has its tick.
+        assertNull(LogDraft.counts(first))
+        save(monday, LogDraft().with(first.id, LogDraft.picked(first, 40).copy(count = 2, reps = 10)))
+        assertNull(LogDraft.counts(row(sheet(thursday), "8 x chest press")))
+
+        val next = row(sheet(thursday), "8-10 x deadlift")
+        assertEquals(listOf(8, 9, 10), LogDraft.counts(next))
+        val friday = thursday.plusDays(1)
+        val before = written.toList()
+        save(thursday, LogDraft().with(next.id, LogDraft.asListed(next)!!.copy(reps = 10)))
+        assertEquals("2×45 ▲", sheet(friday).glance(row(sheet(friday), "8-10 x deadlift")))
+        // The same day at the low end instead: within the range, so the weight holds.
+        written.clear(); written += before
+        save(thursday, LogDraft().with(next.id, LogDraft.asListed(next)!!.copy(reps = 8)))
+        assertEquals("2×40 =", sheet(friday).glance(row(sheet(friday), "8-10 x deadlift")))
+    }
+
+    // Counts are offered in the board's own numbers, and a range too wide for a button each
+    // offers its two ends.
+    @Test
+    fun aRangesCountsAreTheBoardsNumbers() {
+        val lines = listOf("* 12 - 16 total x alt reverse lunge", "* 4 - 14 x deadlift")
+        fun at(day: LocalDate) = Sheet.make(lines, Journal.history(written.filter { it.date < day }, vocabulary), identity)
+        val start = at(monday)
+        write(Logging.events(
+            LogDraft().with(start.rows[0].id, LogDraft.picked(start.rows[0], 20).copy(count = 2))
+                .with(start.rows[1].id, LogDraft.picked(start.rows[1], 40).copy(count = 2)),
+            start, ClassLog(), monday, "2G", at = 1L,
+        ))
+        val (lunge, deadlift) = at(thursday).rows
+        assertEquals(listOf("12", "14", "16"), LogDraft.counts(lunge)!!.map { LogDraft.countLabel(lunge, it) })
+        assertEquals(listOf(4, 14), LogDraft.counts(deadlift))
+    }
+
     // A range is logged at its low end; a ladder keeps its rounds, a side each; a timed row no reps.
     @Test
     fun eachKindOfRowIsLoggedInItsOwnTerms() {

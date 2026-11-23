@@ -163,6 +163,32 @@ class LogScreenTest {
         compose.onNodeWithText("Logged: 1×35 · 12 reps").performScrollTo().assertIsDisplayed()
     }
 
+    // A line with a range has no tick: the count done is tapped, and that count is saved.
+    @Test
+    fun aRangeAsksWhichCountWasDone() {
+        fun on(day: LocalDate) = Today.of(
+            TodaysBoard.Lines(BookedClass("2G", day, day.atTime(9, 50), "Orange 60 Min 2G"), listOf("* 8 - 10 x deadlift", "* 8 x chest press")),
+            log.entries(), identity, vocabulary,
+        ) as Today.Showing
+        save(on(monday), LogDraft().with(on(monday).sheet.rows[0].id, spotter.coach.RowLog(40, 2, 10)).with(on(monday).sheet.rows[1].id, spotter.coach.RowLog(25, 2, 8)))
+        var saved: LogDraft? = null
+        show(on(saturday)) { _, d -> saved = d }
+        compose.onNodeWithText("Log this class").performClick()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: done as listed").assertDoesNotExist()
+        compose.onNodeWithContentDescription("8 x chest press: done as listed").assertIsDisplayed()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 9 at the sheet's weight").performClick()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 9 at the sheet's weight").assertIsSelected()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 10 at the sheet's weight").assertIsNotSelected()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: changed").assertIsNotSelected()
+        compose.onNodeWithText("Logged: 2×40 · 9 reps").performScrollTo().assertIsDisplayed()
+        shoot("log-range")
+        // Another count replaces the first; felt easy stays one tap beside it.
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: did 10 at the sheet's weight").performClick()
+        compose.onNodeWithContentDescription("8 - 10 x deadlift: felt easy").performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(spotter.coach.RowLog(40, 2, 10, easy = true), saved!!.rows.values.single())
+    }
+
     // "Felt easy" is one tap beside the tick, and the row is still as listed with it.
     @Test
     fun feltEasyIsOneTapOnATickedRow() {

@@ -107,52 +107,35 @@ Step 3, logging:
 
 ## Your call
 
-Asked in chat on 2026-11-22; until answered, the app keeps what it does now. The research is in
-[TRAINING.md](TRAINING.md); the choice is madCode's.
+Answered by madCode in chat on 2026-11-23; each is built in the order under "Next" unless it
+says otherwise.
 
-- **Ticks on a range** ("8-10 x"). Today "✓ as listed" logs the low end without saying so.
-  Proposed: two ticks that carry their number, "✓ 8" and "✓ 10", in its place; the rest through
-  "Changed". Research: reach the top before adding weight, so the top should be one tap.
-- **An Epley "try" offer.** A conversion from other reps never sets a step up (the estimate is
-  off by as much as a dumbbell). Proposed: when it predicts the next dumbbell, offer it as
-  "try 30 if set 1 feels easy", as a big jump does.
-- **Variations that share a weight.** madCode: Orange Theory varies exercises a lot, so two
-  clean sessions should be derivable from very similar ones. Proposed: stated groups where the
-  weight carries straight across, each approved by madCode, sharing the number and the
-  two-clean count; built behind step 5's switch and graded with the replay tool first.
-  Candidates to rule on: front and regular squat; sumo or wide stance and regular; close or
-  neutral grip and regular; tempo words ("explosive", "pause"); alternating and both sides.
-  Not candidates: one dumbbell against two (a goblet squat and a two-dumbbell squat).
-- **Coming back to a lighter weight.** After 30 clean, a clean 25 goes back up after that one
-  session, however long ago the 30 was. Keep, or add a time limit?
+- **Ticks on a range:** no tick; a button for each count (built).
+- **An Epley "try" offer:** yes. When a conversion from other reps predicts the next dumbbell,
+  offer it as "try 30 if set 1 feels easy"; it never sets the number.
+- **Variations that share a weight:** yes, build it. First set, where the number carries
+  straight across: alternating; naming the implement; "floor" or "bench" on a pullover or
+  press; "seated" on an upper-body row or curl; grip words; "(heavy)" and "(light)". Still to
+  agree: factors for single arm, single leg, split stance, bosu, tempo, incline. The yardstick
+  is the share of weighted rows with a number when an invented lifter works through the board
+  corpus: 110 of 361 before this work.
+- **Coming back to a lighter weight:** add a limit, six to eight weeks or a number of classes.
+  TRAINING.md has nothing on time away yet: read the research first.
+- **Sharing a board:** start with the floor rows. madCode: "and maybe row weights only", which
+  needs asking (the rows' weights, or the rower?) before it is built.
+- **The morning page:** it depends on the project. Spotter belongs on Carry's page; it would
+  not belong on newspapeRSS's, nor share one with the BART widget or Jekyll Poster. Both
+  skills should say: a project shares a page only with a project it works beside.
+- **"One thing per cycle":** the project's own pace wins when it states one.
+- **The emulator and watchdog section:** move it to `practices/android.md`.
+- **`practices/lifecycle.md`:** point at the handle-issues skill instead of restating it.
 
-What is left of step 6 (cycle 31), each needing madCode's word on what it should do:
+Still open:
 
-- **Sorting a word on the review list.** DESIGN says each new word is sorted once: which
-  movement, which variation, harder or easier, or filler, and the answer is an event in the
-  log. How should the phone ask? Proposed first step: two answers only, "ignore this word"
-  (filler) and "it's another name for …" with a movement picked from a search box; variations
-  and "harder or easier" later, as a proposal with mockups. An answer changes how every later
-  board reads, so it shouldn't be guessed at.
-- **Sharing a board** when nobody posted the class's workout. What should go out, and where?
-  The phone only knows a borrowed board and the rows logged. Proposed: the lines of the rows
-  you logged or added, in the board's words, never a weight, shown in full first, then handed
-  to Android's share sheet for you to post. There is still no Reddit key in the app. Is that
-  the right content, or is the tread and rower part wanted too, typed in?
-
-From the instructions pass (cycle 28), where two instructions disagree and which one stands is
-madCode's to say:
-
-- **The morning page.** The cycles skill says each project keeps a page of its own; the
-  new-project skill says a project gets a section on an existing page, which is what Spotter
-  has.
-- **"One thing per cycle"** in the cycles skill, against madCode's "30 minutes apart: take a
-  step-sized slice" for Spotter, which three cycles since have followed by shipping two or
-  three small things together.
-- **The emulator and watchdog section** of the cycles skill (28 lines) is read every cycle and
-  Spotter has no emulator: move it to `practices/android.md`?
-- **`practices/lifecycle.md`** restates the handle-issues skill's approval rule and sorting
-  table; one could point at the other.
+- **Sorting a word on the review list.** How should the phone ask? Proposed first step: two
+  answers only, "ignore this word" (filler) and "it's another name for …" with a movement
+  picked from a search box. An answer changes how every later board reads, so it shouldn't be
+  guessed at.
 
 Settled on 2026-11-22: up after two clean sessions or one that felt easy (built, cycle 22); a
 ladder's one number is its heaviest round's (as built; "+ Each round" for the rest, built in
