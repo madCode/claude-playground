@@ -356,7 +356,7 @@ class ProgressionTest {
         for ((a, b) in listOf(
             "8 x chest press" to "8 x incline chest press", "8 x chest press" to "8 x single arm chest press", "8 x low row" to "8 x low row (explosive)",
             "8 x squat" to "8 x sumo squat", "8 x chest press" to "8 x bosu chest press", "8 x squat" to "8 x goblet squat",
-            "8 x squat" to "8 x bench squat", "8 x chest press" to "8 x chest fly",
+            "8 x squat" to "8 x bench squat", "8 x chest press" to "8 x chest fly", "8 x calf raise" to "8 x seated calf raise",
         )) {
             assertTrue("$a and $b", !shares(a, b) && !shares(b, a))
         }
