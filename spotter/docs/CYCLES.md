@@ -2,6 +2,13 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 27 — build: the per-movement switch
+
+- Run a new command-line flag for real before trusting it: the unit tests passed while the
+  Gradle task dropped the flag (`hasProperty` inside a task is the task's, not the project's).
+- A rule that waits on the person's ruling can still ship its mechanism with the one link
+  nobody would dispute; say which links wait and on whom.
+
 ### Cycle 26 — fix: two classes in a day
 
 - Before changing a key that the log, the export and the calendar all share, look for a fact

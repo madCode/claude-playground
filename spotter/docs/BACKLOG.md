@@ -18,7 +18,10 @@ or the docs rather than guess: the order may change, nothing is built on a guess
 - [x] History import (step 4): a `history.jsonl` madCode picks on the phone; tested on invented
   data only.
 - [ ] Strength per movement (step 5), built behind a switch and left off: turning it on waits
-  for the scorecard on madCode's real history.
+  for the scorecard on madCode's real history. Built so far (cycle 27): the switch (`Rules`),
+  the replay tool's `-PperMovement`, and one link, "alternating" at the same weight. Next:
+  the links madCode rules on (Your call, "Variations that share a weight"), the two-clean
+  count shared across a link, and the person's own measured ratio replacing a stated factor.
 - [ ] Progress, the new-word review screen, sharing a board (step 6).
 
 ## Next
@@ -136,8 +139,6 @@ See [practices/recurring-reviews.md](../../practices/recurring-reviews.md).
 
 ## Later
 
-- The replay tool's switch for strength per movement, when step 5 is built
-  ([REPLAY.md](REPLAY.md)). The gym-coach session asked for it (2026-11-22).
 - The Garmin watch view, a Connect IQ app the phone sends the sheet to. (Step 7.)
 - Choose which calendar Spotter reads, for privacy. Android's calendar permission covers every
   calendar on the phone, so the choice lives in Spotter: list the calendars by name, let the

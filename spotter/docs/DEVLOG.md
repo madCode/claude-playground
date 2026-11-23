@@ -15,6 +15,21 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 27: strength per movement, the switch and its first link
+- **Why:** step 5. The Log screen's list is done but for your calls.
+- **Shipped, switched off:** a rule set the app doesn't use (`Rules`), and the replay tool's
+  `-PperMovement` to grade it. Its first link: an exercise done one side at a time
+  ("alternating bicep curl") starts from the dumbbells of the plain one, and the other way
+  round, where the plain rules say "new: go light".
+- **Nothing changes on your phone.** On the invented history, the switch numbers 431 of 880
+  lifted rows where the plain rules number 420; whether those numbers are good is for the
+  scorecard on your real history to say (REPLAY.md).
+- **The review found two ways the link could say too much**, both fixed: a single dumbbell
+  held in both hands was lent to each arm (double the load), and the "never a step up" cap
+  compared against the last session at any reps. It now lends only between two-dumbbell
+  versions, and at most what was held the last time these reps were asked.
+- **Waiting on you for more links:** which variations share a weight (BACKLOG, Your call).
+
 ### Cycle 26: two classes in a day, and two Log-screen leftovers
 - **Why:** from earlier reviews; small, and the first could put a wrong number on a sheet.
 - **Fixed:** with a morning and an evening class of different formats, the morning's sheet read

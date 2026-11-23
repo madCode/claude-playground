@@ -162,8 +162,16 @@ what is on the board, and nothing says so.
     a variation of the movement before it, not a combo.
 - **Related exercises are linked by stated factors**, shown in "Why this number". One exists so
   far: one leg from the two-legged lift, at about 0.6. Where no sound factor exists, the row
-  says "new: go light". Until strength per movement is built and switched on (see the
+  says "new: go light". Until strength per movement is switched on (see the
   scorecard), only identical exercises share history.
+- **Strength per movement** is being built behind a switch that the app leaves off (`Rules`);
+  the replay tool can turn it on to grade it. Its first link: a variation that differs only in
+  doing one side at a time ("alternating") takes the same dumbbells as the one already logged,
+  either way round. Only between versions logged with two dumbbells (one held in both
+  hands isn't one in each). It borrows at most what was held the last time these reps were
+  asked, never a step up, nothing from a version that twinged, and only until the variation
+  has a log of its own. More links wait on
+  madCode's ruling on which variations share a weight.
 - **New words go to a review list** (not built yet: step 6). madCode sorts each new word or name once: which movement,
   which variation, harder or easier, or filler. The answer is an event in the phone's log, so it
   never relabels history already logged and is backed up with it. A useful answer can be
