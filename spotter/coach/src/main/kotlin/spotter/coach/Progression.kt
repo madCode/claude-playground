@@ -249,6 +249,8 @@ object Progression {
 
         // ▲ ▼ = say what the rules decided, not what a change of reps converted to.
         var decided = lb
+        // Said only if a twinge below doesn't take the offer away.
+        var offer: String? = null
         // Different reps from last time: Epley, only where it holds, from the reps the weight
         // was done for. A timed set and a counted one don't convert either way. The estimate is
         // off by as much as a dumbbell step (TRAINING.md, 5), so it never rides on a step up:
@@ -256,7 +258,11 @@ object Progression {
         // After a miss the step down is expected to reach what was asked, so it converts from that.
         val from = if (basis.outcome == Outcome.MISS) basis.anchor else basis.repsDone ?: basis.anchor
         if (basis.anchor != to) {
-            if (lb > held) {
+            // A step up earned at other reps isn't taken, but it isn't lost either: what that
+            // dumbbell converts to is offered, to try if the first set feels easy (madCode,
+            // 2026-11-23). A big jump is such a step too: its "try" was for those reps.
+            val earned = if (lb > held) lb else test?.lb
+            if (earned != null) {
                 lb = held
                 decided = held
                 reasons.clear()
@@ -269,7 +275,15 @@ object Progression {
                 ?: return Suggestion.NoNumber("$to reps is lighter than the lightest dumbbell from last time's weight")
             if (converted != lb) reasons += "$from reps last time, $to now: $converted"
             lb = converted
-            test = null
+            // Only when the earned dumbbell converts to more than the number: rounded down
+            // like the number, it never offers more than was earned. And one dumbbell above
+            // the number at most: to far fewer reps the estimate climbs faster than a first
+            // set should.
+            val next = Rack.up(converted)
+            test = earned?.let { convert(it, from, to) }?.takeIf { it > converted && next != null }?.let { minOf(it, next!!) }?.let { up ->
+                offer = "a step up was earned at $from reps: try $up if set 1 feels easy"
+                basis.load.copy(lb = up)
+            }
         }
 
         // The latest set that hurt, since the last sound one, caps the number at what hurt, or
@@ -299,6 +313,9 @@ object Progression {
             if ((test?.lb ?: 0) >= cap) test = null
         }
 
+        // An offer made on a conversion goes with any twinge since, as "one more" does.
+        if (offer != null && caution != null) test = null
+        if (test != null) offer?.let { reasons += it }
         val load = basis.load.copy(lb = lb)
         // Against the session the number rests on, so the arrow agrees with the reason; after a
         // twinge, against what twinged, so holding there never reads as "up".

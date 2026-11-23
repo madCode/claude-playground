@@ -113,8 +113,8 @@ Answered by madCode in chat on 2026-11-23; each is built in the order under "Nex
 says otherwise.
 
 - **Ticks on a range:** no tick; a button for each count (built).
-- **An Epley "try" offer:** yes. When a conversion from other reps predicts the next dumbbell,
-  offer it as "try 30 if set 1 feels easy"; it never sets the number.
+- **An Epley "try" offer:** yes (built). A step up earned at other reps is offered as "try 30
+  if set 1 feels easy" above the converted number; it never sets the number.
 - **Variations that share a weight:** yes, build it. First set, where the number carries
   straight across: alternating; naming the implement; "floor" or "bench" on a pullover or
   press; "seated" on an upper-body row or curl; grip words; "(heavy)" and "(light)". Built,

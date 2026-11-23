@@ -22,6 +22,13 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Monday 23 November 2026
 
+### A step earned at other reps is offered as a try
+- **Why:** madCode: this is the point of the app over a notebook. Two clean sessions at 8 reps
+  earn a step up, but a board asking 6 or 12 next got only the converted weight, and the step
+  was dropped.
+- **Shipped:** the sheet keeps the converted number and adds "try 30 if set 1 felt easy", the
+  dumbbell above it. Not after a twinge, and not when no step was earned.
+
 ### Wordings that leave the weight alone share a history
 - **Why:** madCode asked whether Spotter's silence could have been found here. It could: an
   invented lifter working through the public board corpus, same weight every time, got a

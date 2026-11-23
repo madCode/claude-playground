@@ -319,6 +319,42 @@ class ProgressionTest {
         assertTrue(s.reasons.single().contains("0.6"))
     }
 
+    // A step up earned at other reps isn't taken on a conversion, but the dumbbell it would have
+    // meant is offered to try (madCode, 2026-11-23).
+    @Test
+    fun aStepEarnedAtOtherRepsIsOfferedAsATry() {
+        val earned = listOf(logged(1, 25, listOf(8, 8)), logged(2, 25, listOf(8, 8)))
+        assertEquals(Load(30, 2), weight(earned).load)
+        // Fewer reps: what was held, and the next dumbbell to try.
+        val six = weight(earned, target = 6..6)
+        assertEquals(listOf(Load(25, 2), Load(30, 2), Change.SAME), listOf(six.load, six.test, six.change))
+        assertEquals(listOf("done at 2×25", "a step up was earned at 8 reps: try 30 if set 1 feels easy"), six.reasons)
+        // More reps: the conversion comes down, and the try is the dumbbell above it.
+        val twelve = weight(earned, target = 12..12)
+        assertEquals(listOf(Load(20, 2), Load(25, 2)), listOf(twelve.load, twelve.test))
+        // Nothing earned, nothing offered: one clean session, or one that came up short.
+        assertNull(weight(earned.take(1), target = 6..6).test)
+        assertNull(weight(listOf(logged(1, 25, listOf(8, 6))), target = 6..6).test)
+        // A twinge since takes the offer away, and the reasons don't make it.
+        val twinged = weight(earned + logged(3, 25, listOf(8, 8), hurt = true), target = 6..6)
+        assertNull(twinged.test)
+        assertTrue(twinged.reasons.none { "try" in it })
+        // A twinge above the offer takes it away too.
+        assertNull(weight(earned + logged(3, 35, listOf(8, 8), hurt = true), target = 6..6).test)
+        // A step that is a big jump was earned as well: its try is for these reps, not those.
+        val big = weight(listOf(logged(1, 20, listOf(8, 8)), logged(2, 20, listOf(8, 8))), target = 6..6)
+        assertEquals(listOf(Load(20, 2), Load(25, 2)), listOf(big.load, big.test))
+        assertEquals(listOf("done at 2×20", "a step up was earned at 8 reps: try 25 if set 1 feels easy"), big.reasons)
+        // Never more than the earned dumbbell converts to: 35 for 5 is no more than 25 for 12.
+        val far = weight(listOf(logged(1, 30, listOf(5, 5), 5..5), logged(2, 30, listOf(5, 5), 5..5)), target = 12..12)
+        assertEquals(listOf(Load(25, 2), null), listOf(far.load, far.test))
+        // To far fewer reps the earned 20 converts to 25: one dumbbell above the number is offered.
+        val few = weight(listOf(logged(1, 15, listOf(12, 12), 12..12), logged(2, 15, listOf(12, 12), 12..12)), target = 3..3)
+        assertEquals(listOf(Load(15, 2), Load(20, 2)), listOf(few.load, few.test))
+        // Taken and done clean, it is these reps' own history from then on.
+        assertEquals(Load(30, 2), weight(earned + logged(3, 30, listOf(6, 6), 6..6), target = 6..6).load)
+    }
+
     // Wordings that leave the dumbbells as they are share one history (madCode, 2026-11-23):
     // the number, the two clean sessions and a twinge all carry across.
     @Test
