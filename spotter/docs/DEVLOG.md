@@ -28,7 +28,9 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 - **The review tried 145 made-up lines** and found the first rules too greedy: "30 sec row
   (single arm)" would have vanished from the sheet. Now only the rower's own notes (a tempo, a
   stroke rate) keep such a line an instruction, and a line that names an exercise after
-  "When done" is still a row.
+  "When done" is still a row. The second look found a dumbbell note that mentions a tempo
+  ("30 sec row (single arm, slow tempo)") still hidden: a note that names an arm, a dumbbell
+  or a weight now keeps the row.
 - **Also:** a row shows "&" where the feed wrote "&amp;".
 
 ### Cycle 31: the words Spotter doesn't know yet

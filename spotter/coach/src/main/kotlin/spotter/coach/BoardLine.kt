@@ -107,12 +107,12 @@ data class BoardLine(
         private val machine = Regex(
             """^~?\d{1,4}(?:\.\d{1,2})?\s*(?:sec|secs|second|seconds|s|min|mins|minute|minutes)\s+(?:of\s+)?""" +
                 """(?:(?:(?:recovery|push|base)\s+)?row|(?:walking\s+)?recovery|base|push|(?:speed\s+|elevation\s+|incline\s+)?surge|transition)""" +
-                """(?:\s*[(@,](?=.*(?:tempo|strokes|@|\bpw\b|\d:\d|intensity)).*)?(?:\s+or)?\.?$""",
+                """(?:\s*[(@,](?=.*(?:tempo|strokes|@|\bpw\b|\d:\d|intensity))(?!.*\b(?:arms?|dumbbells?|db|heavy|weight)\b).*)?(?:\s+or)?\.?$""",
         )
 
         // A count or a time "of" something inside a line: an exercise is being named, whatever
         // the line opens with ("When done - 8 x squat").
-        private val namesAnExercise = Regex("""\d\s*(?:x|×)\s|\b(?:sec|secs|seconds|min|mins|minutes)\s+(?:each\s+(?:side\s+)?)?of\b""")
+        private val namesAnExercise = Regex("""\d\s*(?:x|×)\s|\b(?:sec|secs|second|seconds|min|mins|minute|minutes)\s+(?:each\s+(?:side\s+)?)?of\b""")
 
         fun read(raw: String): BoardLine {
             if (raw.length > MAX_LENGTH) return other(raw, LineKind.INSTRUCTION, raw.take(80))

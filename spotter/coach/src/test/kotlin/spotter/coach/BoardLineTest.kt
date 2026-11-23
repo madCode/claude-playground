@@ -237,7 +237,8 @@ class BoardLineTest {
         val exercises = listOf(
             "* 30 sec push-up", "* 1 min push press", "* 30 sec of low row", "* 1 min of single arm low row", "* 8 x row",
             // A note that isn't the machine's makes it a lift: one arm, a strap, a side.
-            "30 sec row (single arm)", "30 sec row (TRX)", "1 min row (L)", "30 sec push (chest press)", "1 min base (hold plank)",
+            "30 sec row (single arm)", "30 sec row (single arm, slow tempo)", "1 min row (single arm @ heavy)",
+            "30 sec row, alt arms @ heavy", "When done: 30 second of plank", "30 sec row (TRX)", "1 min row (L)", "30 sec push (chest press)", "1 min base (hold plank)",
             "30 sec rows", "30 sec surge squat", "1 min recovery lunge",
             // An exercise named after the opening words is still an exercise line.
             "When done - 8 x squat", "Remember: 8 x squat", "Orange goal: 8 x squat", "Row for 12 x each arm",
