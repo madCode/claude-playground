@@ -71,7 +71,9 @@ Step 3, logging:
   instructions out: "front foot on bosu" beside "bosu" reads as two stabilities in conflict
   (the more specific should win); "band around the wrists" and "low to high raise" aren't
   listed; "High plank until ready for next round" and a finisher named inside a "When done"
-  line stay unread. 422 corpus lines are still "not sure" for unknown words.
+  line stay unread. 414 corpus lines are still "not sure" for unknown words. A bare timed "row"
+  under a label ("Finisher: 30 sec row") is taken for the rower, and typed on the Log screen
+  it is refused as not an exercise: write "low row" there.
 - [ ] Log screen, from the cycle 25 review: "12 total x chest press" typed for a two-handed
   lift is read as 6 a side, as a board line is.
 - [ ] Log screen, from the cycle 24 review: "Last time" under "Heaviest dumbbell" shows the

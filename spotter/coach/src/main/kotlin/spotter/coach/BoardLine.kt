@@ -101,12 +101,18 @@ data class BoardLine(
         // "30 sec recovery row", "1 min row (1:3 tempo)", "2.5 min base", "30 sec speed surge",
         // "2 min push (PW @ 5+)", "30 sec transition". A bare "row" after a time is the rower
         // (a dumbbell row says which: "low row"); "push" only when nothing follows it but the
-        // rower or a note, so a push-up and a push press stay exercises.
+        // rower or a note, so a push-up and a push press stay exercises. The note after it
+        // must be the machine's (a tempo, a stroke rate, a wattage): "30 sec row (single arm)"
+        // is a dumbbell in one hand.
         private val machine = Regex(
-            """^~?\d{1,4}(?:\.\d)?\s*(?:sec|secs|seconds|min|mins|minutes)\s+(?:of\s+)?""" +
+            """^~?\d{1,4}(?:\.\d{1,2})?\s*(?:sec|secs|second|seconds|s|min|mins|minute|minutes)\s+(?:of\s+)?""" +
                 """(?:(?:(?:recovery|push|base)\s+)?row|(?:walking\s+)?recovery|base|push|(?:speed\s+|elevation\s+|incline\s+)?surge|transition)""" +
-                """(?:\s*\(.*\)?)?$""",
+                """(?:\s*[(@,](?=.*(?:tempo|strokes|@|\bpw\b|\d:\d|intensity)).*)?(?:\s+or)?\.?$""",
         )
+
+        // A count or a time "of" something inside a line: an exercise is being named, whatever
+        // the line opens with ("When done - 8 x squat").
+        private val namesAnExercise = Regex("""\d\s*(?:x|×)\s|\b(?:sec|secs|seconds|min|mins|minutes)\s+(?:each\s+(?:side\s+)?)?of\b""")
 
         fun read(raw: String): BoardLine {
             if (raw.length > MAX_LENGTH) return other(raw, LineKind.INSTRUCTION, raw.take(80))
@@ -130,7 +136,7 @@ data class BoardLine(
                 return other(raw, LineKind.HEADING, text)
             }
             // After the headings: "When done:" names what follows, and rows are filed under it.
-            if (housekeeping.containsMatchIn(text)) return other(raw, LineKind.INSTRUCTION, text)
+            if (housekeeping.containsMatchIn(text) && !namesAnExercise.containsMatchIn(text)) return other(raw, LineKind.INSTRUCTION, text)
             // Commentary: a cheer, a question, a sentence to the reader, or more than one sentence.
             if (text.contains('!') || text.contains('?') || talk.containsMatchIn(text) || moreSentences.containsMatchIn(text) || sentence.matches(text)) {
                 return other(raw, LineKind.INSTRUCTION, text)
