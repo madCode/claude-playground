@@ -17,29 +17,18 @@ can file.
 
 ## 2. It is sorted before it is built
 
-The `handle-issues` skill runs daily and sorts each issue by what answering it costs:
-
-| It is | What happens | Approval before building |
-|---|---|---|
-| A bug in an existing feature | Fixed now | None |
-| A change to what people see or do | A written proposal, with mockups | The reporter, then madCode |
-| A change to how the thing is built | A written proposal, with a diagram | madCode |
+The `handle-issues` skill runs daily and sorts each issue by what answering it costs: a bug in
+an existing feature is fixed now, and a change to what people see or do, or to how the thing is
+built, becomes a written proposal first. The table, and what to do when in doubt, are in the
+skill ("Decide what each issue is").
 
 The split is the whole point. A bug is a promise the code already made and broke, so fixing it
 needs no permission. Anything else is a decision, and decisions are madCode's.
 
-When in doubt it is treated as a change, not a bug. A "bug" whose fix turns out to need a design
-decision stops and becomes a proposal.
-
 ## 3. Approval is explicit, or it hasn't happened
 
-A clear yes, in a comment, from the person whose approval is needed, posted **after** the proposal.
-A yes to the idea before there was a proposal doesn't count. Labels and reactions don't count.
-Someone else saying "go" doesn't count.
-
-`waiting on madCode` marks whose turn it is, so the owner can find their own queue.
-
-Proposals that wait 14 days for a reporter ask madCode whether to go ahead without them.
+A clear yes from the person whose approval is needed, posted after the proposal. What counts,
+what doesn't, and what happens when a reporter doesn't answer are in the skill ("Proposals").
 
 ## 4. It is built, and the author reviews their own work first
 
