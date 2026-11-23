@@ -209,6 +209,14 @@ class ProgressTest {
         // The class's own board: carried over untouched, it still stands as it was logged.
         save(listOf("* 12 x chest press"), tick = false)
         assertEquals(Progress.Advice(asSuggested = 1), Progress.advice(written, vocabulary, today))
+        // Said on the new row to have been the same weight for its 12: other reps than the
+        // number was shown for, so not "as suggested" on the strength of the weight alone.
+        val own = Sheet.make(listOf("* 12 x chest press"), history, identity)
+        val carried = Logging.logged(own, written, day(20), "2G")
+        val same = Logging.events(LogDraft.from(own, carried.byRow).with(own.rows[0].id, RowLog(written.last().lb, 2, 12)), own, carried, day(20), "2G", 1L)
+            .map { it.copy(id = written.size + 1L) }
+        assertEquals(listOf(12, written.last().shownLb), same.single().let { listOf(it.targetLow, it.lb) })
+        assertEquals(Progress.Advice(), Progress.advice(written + same, vocabulary, today))
         // Ticked as listed on the new row: a lighter weight for more reps, as that sheet said.
         save(listOf("* 12 x chest press"), tick = true)
         assertTrue(written.last().let { it.kind == JournalEntry.Kind.CORRECTED && it.lb < it.shownLb!! })
