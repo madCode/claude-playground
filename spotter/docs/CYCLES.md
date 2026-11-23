@@ -2,6 +2,13 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 29 — build: the progress card
+
+- The invented history through the new reading, before any review, showed in one look what
+  the hand-made fixtures couldn't: a list with no time limit fills with stale exercises.
+- A summary of what the coach will do calls the coach (`Progression.suggest`) and reads a flag
+  it sets, rather than re-deriving the rule or matching on its reason text.
+
 ### Cycle 28 — audit: the skills and instructions
 
 - A due review is the audit: this one sat "overdue" for sixteen cycles behind builds. Check
@@ -67,8 +74,3 @@ For the next cycle: what to do differently. What was built is in DEVLOG.md. Newe
 - Carry's fixtures hold an invented history in the real format: look at a sample of real-shaped
   rows before writing a reader from the format notes alone. The notes said reps on "12 total"
   are the person's own number; the rows showed reps and asked reps always share terms.
-
-### Cycle 18 — build: a log follows the exercise
-
-- A test board whose first line isn't a block header the reader knows becomes a row, and every
-  index after it is off by one: check `sheet.rows` before indexing a new fixture.

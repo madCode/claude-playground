@@ -172,7 +172,7 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
 
         // Trap 6: a bare squat wants a weight. Bodyweight and TRX don't, nor a band, hold or pulse
         // with nothing held, nor a bare push-up or plank, done without one unless the line names it.
-        private fun wantsWeight(reading: Reading.Known): Boolean = reading.parts.any { wantsWeight(it) }
+        internal fun wantsWeight(reading: Reading.Known): Boolean = reading.parts.any { wantsWeight(it) }
 
         private fun wantsWeight(p: Part): Boolean = when (p.implement) {
             "bodyweight", "trx" -> false

@@ -58,7 +58,7 @@ data class JournalEntry(
     val roundLb: List<Int>? = null,
 ) {
     /** [roundLb] when it can be set against the ladder, round for round; null when not said, or damaged. */
-    val rounds: List<Int>? get() = roundLb?.takeIf { ladder != null && it.size == ladder.size && it.all { lb -> lb > 0 } }
+    val rounds: List<Int>? get() = roundLb?.takeIf { ladder != null && it.isNotEmpty() && it.size == ladder.size && it.all { lb -> lb > 0 } }
 
     enum class Kind { LOGGED, CORRECTED, REMOVED }
 }

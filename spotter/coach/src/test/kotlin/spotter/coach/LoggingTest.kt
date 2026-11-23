@@ -236,6 +236,8 @@ class LoggingTest {
             assertEquals(RowLog(30, 2, null), RowLog.of(saved.copy(roundLb = bad)))
         }
         assertEquals(30, Journal.history(listOf(saved.copy(id = 1, roundLb = listOf(-5, 999, 30))), vocabulary).single().load.lb)
+        // An emptied ladder with emptied rounds is a damaged row that loses itself, not a crash.
+        assertTrue(Journal.history(listOf(saved.copy(id = 1, ladder = emptyList(), roundLb = emptyList(), reps = emptyList())), vocabulary).all { it.ladder == null })
         // And a straight set has no rounds, whatever the cell says.
         val press = row(sheet(monday), "8 x chest press")
         val straight = save(monday, LogDraft().with(press.id, RowLog(25, 2, 8))).single()
