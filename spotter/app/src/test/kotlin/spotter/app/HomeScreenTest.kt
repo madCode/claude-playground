@@ -106,12 +106,17 @@ class HomeScreenTest {
         words = listOf(spotter.coach.UnknownWord("zorbing", "6 x zorbing", day, 3), spotter.coach.UnknownWord("frobnicated", "10 x frobnicated squat", day, 1)) +
             (1..8).map { spotter.coach.UnknownWord("word$it", "8 x word$it press", day, 1) }
         compose.onNodeWithText("Words Spotter doesn't know yet").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("zorbing · 3 rows", useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithContentDescription("frobnicated: 1 row, as in 10 x frobnicated squat").assertIsDisplayed()
+        compose.onNodeWithText("zorbing · 3 days", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription("frobnicated: on 1 day, as in 10 x frobnicated squat").assertIsDisplayed()
         compose.onNodeWithText("8 x word6 press", useUnmergedTree = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("8 x word7 press", useUnmergedTree = true).assertDoesNotExist()
         compose.onNodeWithText("and 2 more").performScrollTo().assertIsDisplayed()
         shoot("home-unknown-words")
+        // A stranger's very long line takes two lines of the card, not the screen.
+        val normal = compose.onNodeWithText("Words Spotter doesn't know yet").fetchSemanticsNode().layoutInfo.parentInfo!!.height
+        words = words.map { it.copy(line = "8 x " + "verylongword ".repeat(22)) }
+        val long = compose.onNodeWithText("Words Spotter doesn't know yet").fetchSemanticsNode().layoutInfo.parentInfo!!.height
+        assertTrue("$long against $normal", long < normal * 2)
     }
 
     // What the numbers are made from is said, with what the import left out, and removing it

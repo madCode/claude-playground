@@ -17,9 +17,9 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ### Cycle 31: the words Spotter doesn't know yet
 - **Why:** the part of step 6's review screen that needs no ruling from you.
-- **Shipped:** a card under Progress, "Words Spotter doesn't know yet". It reads the week of
-  boards kept on the phone and lists the unknown words of each "not sure" line, the ones
-  costing the most rows first, with a line they were on. Read only: nothing can be sorted yet.
+- **Shipped:** a card under Progress, "Words Spotter doesn't know yet". It reads the boards kept
+  on the phone and lists the unknown words of each "not sure" line, the ones seen on the most
+  days first, with a line they were on. Read only: nothing can be sorted yet.
 - **On a real week of boards it found** mostly tread and rower instructions that the reader
   takes for exercises, and three real gaps in the lists. Both are in BACKLOG.
 - **For you:** how sorting a word should work, and what sharing a board should send, are in

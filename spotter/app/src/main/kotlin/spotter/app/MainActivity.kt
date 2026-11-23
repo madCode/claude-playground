@@ -228,12 +228,14 @@ class MainActivity : ComponentActivity() {
             // The kept board first, then the fetched one.
             val kept = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), fetch = false, logged) }
             today.value = Today.afterKept(today.value, kept?.let { Today.of(it, entries, identity, vocabulary, beside) }, logged)
+            // From the boards already on the phone, then again once today's has been fetched:
+            // weak signal mustn't hold the card back, or drop it in mid-read.
+            launch { unknownWords.value = withContext(Dispatchers.IO) { ReviewList.of(boards.all(), identity) } }
             earlier.value = withContext(Dispatchers.IO) { loader.earlier(LocalDateTime.now(), logged) }
                 ?.let { Today.of(it, entries, identity, vocabulary, beside) as? Today.Showing }
             val fetched = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), logged = logged) }
             if (fetched != null) today.value = Today.of(fetched, entries, identity, vocabulary, beside)
-            // After the fetch, so today's board is among those read.
-            unknownWords.value = withContext(Dispatchers.IO) { ReviewList.of(boards.all(), identity) }
+            if (fetched != null) unknownWords.value = withContext(Dispatchers.IO) { ReviewList.of(boards.all(), identity) }
         }
     }
 

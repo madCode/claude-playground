@@ -39,7 +39,7 @@ class BoardsTest {
         File(dir, "$day.json").writeText("not a board")
         assertEquals(Boards.KEEP - 1, boards.all().size)
         val words = spotter.coach.ReviewList.of(boards.all(), spotter.coach.Identity(spotter.coach.Vocabulary.starting()))
-        assertEquals(listOf("zorbing" to Boards.KEEP - 1), words.map { it.word to it.rows })
+        assertEquals(listOf("zorbing" to Boards.KEEP - 1), words.map { it.word to it.days })
     }
 
     @Test
