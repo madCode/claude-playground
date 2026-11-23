@@ -14,7 +14,7 @@ From `spotter/`:
     ./gradlew -q :coach:replay -Phistory=/path/to/history.jsonl -Pout=/path/to/sessions
 
 - `history`: the file to replay. It is only read.
-- Add `-PperMovement` to grade strength per movement, a rule the app doesn't use yet
+- Add `-PperMovement` (after both paths are given) to grade strength per movement, a rule the app doesn't use yet
   (DESIGN.md, "Words and identity"). The first line of the report then ends "(strength per
   movement on)". Replay the same file both ways, into two folders, and compare the grades.
 - `out`: a folder for the session files, made if missing. **It must be outside any git

@@ -137,9 +137,9 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
          * A row for a line the person typed, read exactly as a board line is; null when it isn't
          * an exercise line at all. Its number comes from the [log] like any row's.
          */
-        fun added(id: String, typed: String, log: List<Logged>, identity: Identity): SheetRow? {
+        fun added(id: String, typed: String, log: List<Logged>, identity: Identity, rules: Rules = Rules()): SheetRow? {
             val line = BoardLine.read(typed)
-            return if (line.kind == LineKind.EXERCISE) row(id, ADDED, line, log, identity) else null
+            return if (line.kind == LineKind.EXERCISE) row(id, ADDED, line, log, identity, rules) else null
         }
 
         // A row id's count, in a format of its own: ids are stored in the log, so a renamed field
@@ -151,7 +151,7 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
             Scheme.AsManyAsPossible -> "amrap"
         }
 
-        private fun row(id: String, block: String?, line: BoardLine, log: List<Logged>, identity: Identity, rules: Rules = Rules()): SheetRow {
+        private fun row(id: String, block: String?, line: BoardLine, log: List<Logged>, identity: Identity, rules: Rules): SheetRow {
             val reading = identity.read(line.words)
             val target = when (val s = line.scheme) {
                 is Scheme.Reps -> s.perSide()

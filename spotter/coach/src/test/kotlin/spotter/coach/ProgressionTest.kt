@@ -333,7 +333,7 @@ class ProgressionTest {
         assertEquals(Suggestion.NoNumber.NEW, suggest(log, ex = alternating))
         val s = Progression.suggest(alternating, 8..8, log, on) as Suggestion.Weight
         assertEquals(listOf(Load(25, 2), Change.NEW, null), listOf(s.load, s.change, s.test))
-        assertEquals("new: the same dumbbells as your bicep curl (2×25)", s.reasons.single())
+        assertEquals("new: starts where your bicep curl stands (2×25)", s.reasons.single())
         // The other way round too, and at other reps through the curl's own conversion.
         val back = Progression.suggest(curl, 8..8, listOf(logged(1, 25, listOf(8, 8), ex = alternating)), on) as Suggestion.Weight
         assertEquals(Load(25, 2), back.load)
@@ -345,6 +345,22 @@ class ProgressionTest {
         assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(alternating, 8..8, listOf(logged(1, 25, listOf(8, 8), ex = curl, hurt = true)), on))
         assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(exercise("8 x alternating hammer curl"), 8..8, log, on))
         assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(exercise("8 x alternating chest press"), 8..8, log, on))
+        // The cap is what was held at these reps, whatever was held since at others: an easy 25
+        // for 12 and then 35 for 6 has earned the curl 30 for 12, and lends 25.
+        val mixed = listOf(logged(1, 25, listOf(12, 12), 12..12, ex = curl, easy = true), logged(3, 35, listOf(6, 6), 6..6, ex = curl))
+        assertEquals(Load(30, 2), weight(mixed, ex = curl, target = 12..12).load)
+        assertEquals(Load(25, 2), (Progression.suggest(alternating, 12..12, mixed, on) as Suggestion.Weight).load)
+        // One dumbbell may be one held in both hands: in one arm it would be double. A count
+        // nobody said lends nothing either, nor a row whose own words say one dumbbell.
+        for (count in listOf(1, null)) {
+            assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(alternating, 8..8, listOf(logged(1, 25, listOf(8, 8), ex = curl, count = count)), on))
+        }
+        assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(alternating, 8..8, log + logged(2, 25, listOf(8, 8), ex = curl, count = 1), on))
+        val oneArm = exercise("8 x single arm alternating bicep curl")
+        assertEquals(1, Sheet.rowCount(oneArm))
+        assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(oneArm, 8..8, listOf(logged(1, 25, listOf(8, 8), ex = exercise("8 x single arm bicep curl"))), on))
+        // Lent from the alternating one, the reason names it.
+        assertEquals("new: starts where your alternating bicep curl stands (2×25)", back.reasons.single())
         // The one-leg link is as it was, switch or no switch.
         val deadlift = listOf(logged(1, 40, listOf(8, 8, 8), ex = exercise("8 x deadlift"), easy = true))
         assertEquals(suggest(deadlift, ex = exercise("8 x single leg deadlift")), Progression.suggest(exercise("8 x single leg deadlift"), 8..8, deadlift, on))

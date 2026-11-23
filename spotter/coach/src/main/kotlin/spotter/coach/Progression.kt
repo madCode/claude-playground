@@ -325,20 +325,29 @@ object Progression {
 
     /**
      * Strength per movement, its first link: a variation that takes the same dumbbells as one
-     * already logged starts from that one's weight. Never from a step up: what was held last is
-     * the most a first go borrows, and a version that twinged lends nothing.
+     * already logged starts where that one stands. Never from a step up: the most a first go
+     * borrows is what was last held at these reps, and a version that twinged lends nothing.
      */
     private fun sameWeight(part: Part, target: IntRange?, log: List<Logged>): Suggestion? {
-        val source = log.filter { logged ->
+        val sessions = log.filter { logged ->
             val p = logged.exercise.parts.singleOrNull() ?: return@filter false
             logged.judged && p.movement == part.movement && p.variations != part.variations &&
                 p.variations - SAME_WEIGHT == part.variations - SAME_WEIGHT
-        }.maxByOrNull { it.date } ?: return null
+        }.sortedBy { it.date }
+        val source = sessions.lastOrNull() ?: return null
+        // Only a dumbbell in each hand is the same thing done a side at a time. One dumbbell may
+        // be held in both hands, and that weight in one arm would be double; a count nobody
+        // said could be either. The row's own words, where they fix a count, must agree.
+        if (source.load.count != 2 || sessions.any { it.load.count != 2 }) return null
+        if (Sheet.rowCount(Reading.Known(listOf(part), emptySet())).let { it != null && it != 2 }) return null
         val from = suggest(source.exercise, target, log) as? Suggestion.Weight ?: return null
         if (from.caution != null) return null
-        val held = log.last { it.key == source.key && it.judged }.load
-        val load = if (from.load.lb > held.lb) held else from.load
-        return Suggestion.Weight(load, Change.NEW, listOf("new: the same dumbbells as your ${source.key} (${load.label})"))
+        // What was held the last time these reps were asked. With no such session the number is
+        // a conversion from other reps, which never rides on a step up.
+        val held = sessions.lastOrNull { it.firstTarget == target?.last }?.load?.lb
+        val load = from.load.copy(lb = minOf(from.load.lb, held ?: from.load.lb))
+        val name = (if (source.exercise.parts.single().variations.keys.any { it in SAME_WEIGHT }) "alternating " else "") + part.movement.name
+        return Suggestion.Weight(load, Change.NEW, listOf("new: starts where your $name stands (${load.label})"))
     }
 
     // Variation axes that leave the dumbbells as they are: done one side at a time, the weight
