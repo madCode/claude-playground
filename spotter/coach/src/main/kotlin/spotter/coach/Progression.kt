@@ -131,8 +131,8 @@ sealed interface Suggestion {
  * grade it.
  */
 data class Rules(
-    /** Variations of one movement read each other's history through stated links (step 5). */
-    val perMovement: Boolean = false,
+    /** Wordings that leave the weight as it is share one history ([Reading.Known.weightKey]). */
+    val shared: Boolean = true,
 )
 
 object Progression {
@@ -168,7 +168,7 @@ object Progression {
      */
     fun suggest(exercise: Reading.Known, target: IntRange?, log: List<Logged>, rules: Rules = Rules()): Suggestion {
         // Sessions on one date keep the order they were logged in.
-        val own = log.filter { it.key == exercise.key && it.judged }.sortedBy { it.date }
+        val own = log.filter { it.judged && (it.key == exercise.key || (rules.shared && shares(it, exercise))) }.sortedBy { it.date }
         if (own.isEmpty()) return borrow(exercise, target, log, rules)
 
         val last = own.last()
@@ -308,8 +308,24 @@ object Progression {
             decided < against -> Change.DOWN
             else -> Change.SAME
         }
+        // Said when the number rests on another wording, so it can be checked.
+        if (basis.key != exercise.key) {
+            val said = SharedWeight.words(basis.exercise)
+            reasons += "from your ${if (said.isEmpty()) "plain" else said} ${basis.exercise.parts.joinToString(" to ") { it.movement.name }}: the same weight"
+        }
         // A twinge since holds the weight whatever was promised.
         return Suggestion.Weight(load, change, reasons, test, caution, oneMore && caution == null)
+    }
+
+    /**
+     * Whether [logged] is another wording of [exercise] at the same weight. Across "alternating"
+     * only with a dumbbell in each hand: one dumbbell may have been held in both hands, and that
+     * weight in one arm would be double; a count nobody said could be either.
+     */
+    private fun shares(logged: Logged, exercise: Reading.Known): Boolean {
+        if (logged.exercise.weightKey != exercise.weightKey) return false
+        fun alternating(e: Reading.Known) = e.parts.map { it.variations["alternating"] }
+        return alternating(logged.exercise) == alternating(exercise) || logged.load.count == 2
     }
 
     /** [lb] done for [from] reps as a weight for [to], rounded down to the rack; null where Epley doesn't hold. */
@@ -323,56 +339,26 @@ object Progression {
      */
     private fun borrow(exercise: Reading.Known, target: IntRange?, log: List<Logged>, rules: Rules): Suggestion {
         val part = exercise.parts.singleOrNull() ?: return Suggestion.NoNumber.NEW
-        val oneLeg = oneLeg(part, target, log)
-        if (oneLeg is Suggestion.Weight || !rules.perMovement) return oneLeg
-        return sameWeight(part, target, log) ?: oneLeg
+        return oneLeg(part, target, log, rules)
     }
 
-    /**
-     * Strength per movement, its first link: a variation that takes the same dumbbells as one
-     * already logged starts where that one stands. Never from a step up: the most a first go
-     * borrows is what was last held at these reps, and a version that twinged lends nothing.
-     */
-    private fun sameWeight(part: Part, target: IntRange?, log: List<Logged>): Suggestion? {
-        val sessions = log.filter { logged ->
-            val p = logged.exercise.parts.singleOrNull() ?: return@filter false
-            logged.judged && p.movement == part.movement && p.variations != part.variations &&
-                p.variations - SAME_WEIGHT == part.variations - SAME_WEIGHT
-        }.sortedBy { it.date }
-        val source = sessions.lastOrNull() ?: return null
-        // Only a dumbbell in each hand is the same thing done a side at a time. One dumbbell may
-        // be held in both hands, and that weight in one arm would be double; a count nobody
-        // said could be either. The row's own words, where they fix a count, must agree.
-        if (sessions.any { it.load.count != 2 }) return null
-        if (Sheet.rowCount(Reading.Known(listOf(part), emptySet())).let { it != null && it != 2 }) return null
-        val from = suggest(source.exercise, target, log) as? Suggestion.Weight ?: return null
-        if (from.caution != null) return null
-        // What was held the last time these reps were asked, picked as [suggest] picks its
-        // basis: a session that twinged, or a ladder's heaviest round, isn't it. With no such
-        // session the number is a conversion from other reps, which never rides on a step up.
-        val held = sessions.lastOrNull { it.outcome != Outcome.HURT && it.anchor == target?.last }?.load?.lb
-        val load = from.load.copy(lb = minOf(from.load.lb, held ?: from.load.lb))
-        val name = (if (source.exercise.parts.single().variations.keys.any { it in SAME_WEIGHT }) "alternating " else "") + part.movement.name
-        return Suggestion.Weight(load, Change.NEW, listOf("new: starts where your $name stands (${load.label})"))
-    }
+    // The variations that bear on the weight: all of them, or without the shared wordings.
+    private fun weighing(p: Part, rules: Rules) =
+        if (rules.shared) p.variations.filterNot { SharedWeight.neutral(p.movement, it.key, it.value) } else p.variations
 
-    // Variation axes that leave the dumbbells as they are: done one side at a time, the weight
-    // in each hand is what it is with both together. More are madCode's to rule on (BACKLOG).
-    private val SAME_WEIGHT = setOf("alternating")
-
-    private fun oneLeg(part: Part, target: IntRange?, log: List<Logged>): Suggestion {
+    private fun oneLeg(part: Part, target: IntRange?, log: List<Logged>, rules: Rules): Suggestion {
         // One leg is a factor on what the legs move; a curl on one leg is a balance, not a 0.6.
         if (!part.oneLeg || part.movement.pattern !in setOf("squat", "lunge", "hinge")) return Suggestion.NoNumber.NEW
         val twoLegged = log.filter { logged ->
             val p = logged.exercise.parts.singleOrNull() ?: return@filter false
             // The plain two-legged lift: a sumo or wide stance is a variation of its own.
             p.movement == part.movement && !p.oneLeg && p.variations["legs"] in setOf(null, "standing") &&
-                p.variations - "legs" == part.variations - "legs"
+                weighing(p, rules) - "legs" == weighing(part, rules) - "legs"
         }
         // The plain lift before a "standing" one, then the most recent.
         val source = twoLegged.filter { it.judged }.sortedWith(compareBy({ it.exercise.parts.single().variations["legs"] == null }, { it.date })).lastOrNull()
             ?: return Suggestion.NoNumber.NEW
-        val from = suggest(source.exercise, target, log) as? Suggestion.Weight ?: return Suggestion.NoNumber.NEW
+        val from = suggest(source.exercise, target, log, rules) as? Suggestion.Weight ?: return Suggestion.NoNumber.NEW
         // A two-legged lift that twinged is no basis for a first go on one leg.
         if (from.caution != null) return Suggestion.NoNumber.NEW
         val lb = Rack.atMost(from.load.lb * ONE_LEG) ?: return Suggestion.NoNumber.NEW

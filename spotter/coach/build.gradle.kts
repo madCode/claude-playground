@@ -20,7 +20,7 @@ tasks.test {
 }
 
 // Replays a history file through the coach, for grading it in private (docs/REPLAY.md):
-//   ./gradlew :coach:replay -Phistory=/path/history.jsonl -Pout=/path/outside/any/repo [-PperMovement]
+//   ./gradlew :coach:replay -Phistory=/path/history.jsonl -Pout=/path/outside/any/repo [-PnoShared]
 tasks.register<JavaExec>("replay") {
     group = "verification"
     description = "Replays a history.jsonl through the coach and writes a scorecard session per class."
@@ -31,9 +31,9 @@ tasks.register<JavaExec>("replay") {
     notCompatibleWithConfigurationCache("resolves its paths from the folder it is run in")
     val from = gradle.startParameter.currentDir
     val paths = listOf("history", "out").map { name -> (findProperty(name) as String?)?.let { from.resolve(it).path } ?: "" }.filter { it.isNotEmpty() }
-    // Grades a rule the app doesn't use yet (docs/REPLAY.md). Only the bare flag or "true" turns
-    // it on, so "-PperMovement=false" is the plain run it says it is; and only with both paths,
-    // so the flag can't be taken for one of them.
-    val perMovement = (project.findProperty("perMovement") as String?).let { it == "" || it == "true" }
-    args(paths + listOfNotNull("per-movement".takeIf { perMovement && paths.size == 2 }))
+    // Grades the coach without shared weights, to compare (docs/REPLAY.md). Only the bare flag or
+    // "true" turns it on, so "-PnoShared=false" is the plain run it says it is; and only with
+    // both paths, so the flag can't be taken for one of them.
+    val noShared = (project.findProperty("noShared") as String?).let { it == "" || it == "true" }
+    args(paths + listOfNotNull("no-shared".takeIf { noShared && paths.size == 2 }))
 }

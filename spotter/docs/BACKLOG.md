@@ -17,11 +17,13 @@ or the docs rather than guess: the order may change, nothing is built on a guess
   up. (What the Log screen still lacks is under Next.)
 - [x] History import (step 4): a `history.jsonl` madCode picks on the phone; tested on invented
   data only.
-- [ ] Strength per movement (step 5), built behind a switch and left off: turning it on waits
-  for the scorecard on madCode's real history. Built so far (cycle 27): the switch (`Rules`),
-  the replay tool's `-PperMovement`, and one link, "alternating" at the same weight. Next:
-  the links madCode rules on (Your call, "Variations that share a weight"), the two-clean
-  count shared across a link, and the person's own measured ratio replacing a stated factor.
+- [ ] Strength per movement (step 5). Built: wordings that leave the weight as it is share one
+  history, switched on (DESIGN.md, "Words that share a weight"). On the yardstick (an invented
+  lifter working through the board corpus) that took the rows with a number from 110 to 135 of
+  361. Next, each needing madCode's word on a factor, by how many blank rows it holds on the
+  yardstick: one arm (18), "explosive" (12), one leg (10), one dumbbell in both hands against
+  two (10), sumo (9), a band (12), a bosu (8), incline or overhead (10). Then the person's own
+  measured ratio replacing a stated factor.
   The measured ratio waits (cycle 28): a ratio measured on one movement is only sound for
   that movement, and there its one-leg version then has a log of its own, which already
   outranks any factor. Carried to another movement it would be the loose relative trap 11
@@ -118,7 +120,7 @@ says otherwise.
   press; "seated" on an upper-body row or curl; grip words; "(heavy)" and "(light)". Still to
   agree: factors for single arm, single leg, split stance, bosu, tempo, incline. The yardstick
   is the share of weighted rows with a number when an invented lifter works through the board
-  corpus: 110 of 361 before this work.
+  corpus: 110 of 361 before this work, 135 with the first set built.
 - **Coming back to a lighter weight:** add a limit, six to eight weeks or a number of classes.
   TRAINING.md has nothing on time away yet: read the research first.
 - **Sharing a board:** start with the floor rows. madCode: "and maybe row weights only", which

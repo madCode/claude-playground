@@ -18,15 +18,59 @@ sealed interface Reading {
          * The exercise's identity, fixed when a row is logged: each movement with its variations
          * in a set order, parts joined by " + ". Intensity hints ("heavy") are not part of it.
          */
-        val key: String
-            get() = parts.joinToString(" + ") { p ->
-                val vs = p.variations.toSortedMap().entries.joinToString(", ") { "${it.key}=${it.value}" }
-                if (vs.isEmpty()) p.movement.name else "${p.movement.name} [$vs]"
-            }
+        val key: String get() = keyOf { true }
+
+        /**
+         * The history this exercise shares with its other wordings: [key] without the words that
+         * leave the weight as it is (DESIGN.md, "Words that share a weight"). "Alt chest press",
+         * "chest press" and "floor close grip chest press" are one history.
+         */
+        val weightKey: String get() = keyOf { (p, axis, value) -> !SharedWeight.neutral(p.movement, axis, value) }
+
+        private fun keyOf(keep: (Triple<Part, String, String>) -> Boolean) = parts.joinToString(" + ") { p ->
+            val vs = p.variations.toSortedMap().entries.filter { keep(Triple(p, it.key, it.value)) }.joinToString(", ") { "${it.key}=${it.value}" }
+            if (vs.isEmpty()) p.movement.name else "${p.movement.name} [$vs]"
+        }
     }
 
     /** Not read with confidence. It is shown and can be logged, but it borrows no number. */
     data class NotSure(val why: Why, val words: List<String>) : Reading
+}
+
+/**
+ * The words that leave the dumbbells as they are, as madCode ruled on 2026-11-23. Each needs its
+ * reason: a word that changes leverage or balance (one arm, one leg, a bosu, a tempo, an incline)
+ * is not here, and keeps a history of its own.
+ */
+internal object SharedWeight {
+    // Lifts done lying down, where the floor only shortens the range a bench allows.
+    private val lying = setOf("horizontal_push", "fly", "pullover", "triceps")
+
+    // Lifts the legs don't move: sitting or standing changes the balance, not the load.
+    private val upper = lying + setOf("vertical_push", "horizontal_pull", "vertical_pull", "curl", "raise")
+
+    fun neutral(movement: Movement, axis: String, value: String): Boolean = when (axis) {
+        // One side at a time, with the same dumbbell in each hand.
+        "alternating" -> true
+        // How the handle is turned: the same muscles within a dumbbell step.
+        "grip" -> true
+        // "Dumbbell" on a lift already done with dumbbells says nothing new.
+        "implement" -> value == "dumbbell"
+        "position" -> value in setOf("floor", "bench") && movement.pattern in lying
+        "legs" -> value in setOf("seated", "standing") && movement.pattern in upper
+        else -> false
+    }
+
+    /** The neutral words of [exercise], as they'd be said before its name: "alternating", "close grip". */
+    fun words(exercise: Reading.Known): String = exercise.parts.flatMap { p ->
+        p.variations.toSortedMap().filter { neutral(p.movement, it.key, it.value) }.map { (axis, value) ->
+            when (axis) {
+                "alternating" -> "alternating"
+                "grip" -> "$value grip"
+                else -> value
+            }
+        }
+    }.joinToString(" ")
 }
 
 /** Why a line is "not sure". */

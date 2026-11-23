@@ -8,9 +8,10 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   morning. Nothing is scheduled.
 - **The finding that matters most:** on realistic boards Spotter is mostly silent. An invented
   lifter working through the board corpus got a number on 110 of 361 weighted rows, because a
-  reworded repeat ("floor pullover" after "pullover") is treated as new. Fixing that comes
-  first (BACKLOG, "Your call", variations that share a weight).
-- **Built:** steps 1 to 4 in full. Step 5 has its first link behind a switch that is off. Step
+  reworded repeat ("floor pullover" after "pullover") was treated as new. The first fix is
+  in (135 of 361); the rest needs factors from madCode (BACKLOG, step 5).
+- **Built:** steps 1 to 4 in full. Step 5 has shared weights for wordings that don't change the
+  weight. Step
   6 has the Progress card, the advice counts and the read-only list of unknown words.
 - **Answered and waiting to be built** (BACKLOG, "Your call"): the Epley "try" offer, shared
   weights, a time limit on coming back to a lighter weight, sharing a board, four fixes to the
@@ -20,6 +21,18 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 - **Not started:** step 7, the Garmin watch.
 
 ## Monday 23 November 2026
+
+### Wordings that leave the weight alone share a history
+- **Why:** madCode asked whether Spotter's silence could have been found here. It could: an
+  invented lifter working through the public board corpus, same weight every time, got a
+  number on 110 of 361 weighted rows. Most blanks were a movement lifted before in other words.
+- **Shipped:** "alternating", a grip word, "dumbbell", "floor" or "bench" on a lying lift, and
+  "seated" or "standing" on an upper-body lift no longer make a new exercise for the coach:
+  such wordings share the number, the two clean sessions and a twinge. It is on in the app.
+- **On the yardstick:** 135 of 361 now. What is left blank is mostly words that do change the
+  weight (one arm, a tempo, one leg, sumo, a band): each needs a factor from madCode.
+- **Replaces** the per-movement switch and its one link, which the grading on real history
+  showed never fired. The replay tool's flag is now `-PnoShared`, to compare both ways.
 
 ### A range asks which count was done
 - **Why:** "✓ as listed" on "8 - 10 x" saved 8 reps without saying so, and the coach only goes
