@@ -309,6 +309,32 @@ class LoggingTest {
         assertTrue(Logging.events(stale, now, Logging.logged(now, written, monday, "2G"), monday, "2G", 2L).isEmpty())
     }
 
+    // Logged when its line still read, and now it doesn't (the word lists changed): what is
+    // logged stays through a save, and can be cleared, though nothing new can be said of it.
+    @Test
+    fun aLoggedRowThatNoLongerReadsCanStillBeCleared() {
+        val press = row(sheet(monday), "8 x chest press")
+        save(monday, LogDraft().with(press.id, RowLog(25, 2, 8)))
+        val unread = sheet(monday).let { s -> s.copy(rows = s.rows.map { if (it.id == press.id) it.copy(suggestion = null) else it }) }
+        val log = Logging.logged(unread, written, monday, "2G")
+        val draft = LogDraft.from(unread, log.byRow)
+        assertEquals(RowLog(25, 2, 8), draft.rows[press.id])
+        assertTrue(Logging.events(draft, unread, log, monday, "2G", 5L).isEmpty())
+        assertTrue(Logging.events(draft.with(press.id, RowLog(30, 2, 8)), unread, log, monday, "2G", 5L).isEmpty())
+        val cleared = Logging.events(draft.with(press.id, null), unread, log, monday, "2G", 5L).single()
+        assertEquals(listOf(JournalEntry.Kind.REMOVED, written.single().id), listOf(cleared.kind, cleared.target))
+    }
+
+    // An added line taken back before it was saved leaves nothing behind, entered or not.
+    @Test
+    fun anAddedLineCanBeTakenBack() {
+        val board = sheet(monday)
+        val draft = LogDraft().adding("10 x hammer curl", board).adding("8 x goblet squat", board)
+        val (curl, squat) = draft.added.keys.toList()
+        val left = draft.with(curl, RowLog(15, 2, 10)).with(squat, RowLog(30, 1, 8)).removing(curl)
+        assertEquals(listOf(setOf(squat), setOf(squat)), listOf(left.added.keys, left.rows.keys))
+    }
+
     // "Last time" is the last logged, also when two fall on one day (one exercise in two blocks).
     @Test
     fun lastHeldIsTheLastLogged() {

@@ -2,6 +2,12 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 26 — fix: two classes in a day
+
+- Before changing a key that the log, the export and the calendar all share, look for a fact
+  already stored that answers the question: when an entry was written did, with no migration.
+- Split a backlog item whose halves differ in cost: the common half shipped, the rare one stays.
+
 ### Cycle 25 — build: add an exercise
 
 - A new kind of row meets every rule that matches rows to entries: ask of each one (carry-over,

@@ -52,10 +52,8 @@ Step 3, logging:
   "10 / 8 / 6" says nothing yet to a later "6 x" row, which converts from round one's. And a
   twinge or a stop is put on the heaviest round, since the screen doesn't ask which.
   *(cycle 24)*
-- [ ] Log screen, from the cycle 25 review: a logged row whose line no longer reads in full
-  (the word lists changed) shows "Not read" with no "Logged:" line and no Clear, on a board row
-  or an added one; an added row not yet logged can't be removed, only left unlogged; "12 total
-  x chest press" typed for a two-handed lift is read as 6 a side, as a board line is.
+- [ ] Log screen, from the cycle 25 review: "12 total x chest press" typed for a two-handed
+  lift is read as 6 a side, as a board line is.
 - [ ] Log screen, from the cycle 24 review: "Last time" under "Heaviest dumbbell" shows the
   weight the coach read a ladder at, which can be round one's; a carried ladder's rounds are
   labelled with this row's reps when the two have as many rounds.
@@ -69,8 +67,8 @@ Step 3, logging:
   - A repeat of a line added above the one done shifts the repeat number, so the log moves to
     the other copy (same words, so the same weight).
   - Two classes of the same format on one day share one log (keyed by date and "2G"), so
-    logging the first skips the second's sheet; and with two formats in a day, the earlier
-    one's sheet reads the later one's log. Key a class by its start as well. *(cycles 12, 15)*
+    logging the first skips the second's sheet. Key a class by its start as well; rare enough
+    to wait for a second "2G" in one day to be a real plan. *(cycles 12, 15)*
   - "… isn't logged yet" counts rows by id, so a class logged from a board since changed reads
     as not logged; it also can't be dismissed for a class left unlogged on purpose. *(cycle 15)*
 - [ ] A board that alternates 8s and 12s, following the sheet: the 12s stall behind the big
