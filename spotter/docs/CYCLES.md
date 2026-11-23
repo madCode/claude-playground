@@ -2,6 +2,11 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 30 — build: is the advice working
+
+- A summary of the person's own results shows counts and names what it leaves out; a
+  percentage or a verdict would be a grade, and grading is the scorecard's.
+
 ### Cycle 29 — build: the progress card
 
 - The invented history through the new reading, before any review, showed in one look what
@@ -68,9 +73,3 @@ For the next cycle: what to do differently. What was built is in DEVLOG.md. Newe
 
 - Run a new command for real once, with the arguments a person would type, before writing its
   doc: the test called the function, and only the run showed how relative paths resolve.
-
-### Cycle 19 — build: reading the history file
-
-- Carry's fixtures hold an invented history in the real format: look at a sample of real-shaped
-  rows before writing a reader from the format notes alone. The notes said reps on "12 total"
-  are the person's own number; the rows showed reps and asked reps always share terms.

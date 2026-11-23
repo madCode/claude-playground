@@ -116,4 +116,110 @@ class ProgressTest {
         val capped = Progress.of(many, today)
         assertEquals(listOf(Progress.MOST, true), listOf(capped.next.size, capped.next.all { it.ready }))
     }
+
+    // Whether the sheet's numbers are working: what became of each one, counted from the log.
+    @Test
+    fun adviceCountsWhatBecameOfTheSheetsNumbers() {
+        val vocabulary = Vocabulary.starting()
+        var id = 0L
+        fun entry(
+            day: Int, ex: Reading.Known, lb: Int, shown: Int?, done: Int = 8, target: IntRange? = 8..8, count: Int = 2, shownCount: Int = 2,
+            hurt: Boolean = false, stopped: Boolean = false, easier: Boolean = false, row: String = "row",
+            ladder: List<Int>? = null, heaviestOnly: Boolean = false, rounds: List<Int>? = null,
+        ) = Journal.logged(
+            1, day(day), "2G", row, "line", ex, Load(lb, count), target, ladder, ladder ?: if (target == null) emptyList() else listOf(done, done),
+            hurt = hurt, stopped = stopped, easier = easier, heaviestOnly = heaviestOnly, shown = shown?.let { Load(it, shownCount) }, roundLb = rounds,
+        ).copy(id = ++id)
+        fun advice(vararg e: JournalEntry, on: LocalDate = today) = Progress.advice(e.toList(), vocabulary, on)
+        val counted = arrayOf(
+            // As suggested: at the number and every set done; the low end of a range was asked
+            // for; a timed row done.
+            entry(20, press, 25, shown = 25),
+            entry(20, curl, 15, shown = 15, done = 8, target = 8..10),
+            entry(20, deadlift, 40, shown = 40, target = null),
+            // Heavier than the sheet said, whatever came of it.
+            entry(21, deadlift, 45, shown = 40),
+            // Lighter, or at the number and short, stopped, with a twinge, or a ladder that faded.
+            entry(22, press, 20, shown = 25),
+            entry(22, curl, 15, shown = 15, done = 6),
+            entry(22, deadlift, 40, shown = 40, hurt = true),
+            entry(23, deadlift, 40, shown = 40, target = null, stopped = true),
+            entry(23, press, 25, shown = 25, ladder = listOf(8, 6, 4), rounds = listOf(25, 20, 20)),
+        )
+        assertEquals(Progress.Advice(asSuggested = 3, heavier = 1, lighterOrShort = 5), advice(*counted))
+        assertEquals(9, advice(*counted).numbered)
+        // Not counted: a row the sheet had no number for (an entry from before the log kept
+        // the sheet's number looks the same), a row the person added, an easier version, a
+        // ladder by its heaviest round, another number of dumbbells than the sheet said, an
+        // exercise the sheet gives no weight, a class after today or more than four weeks back.
+        val apart = arrayOf(
+            entry(20, press, 25, shown = null),
+            entry(20, press, 25, shown = 25, row = Sheet.addedId(1)),
+            entry(20, press, 25, shown = 25, easier = true),
+            entry(20, press, 35, shown = 25, ladder = listOf(8, 6, 4), heaviestOnly = true),
+            entry(20, press, 40, shown = 25, count = 1),
+            entry(20, exercise("8 x push-up"), 25, shown = 25),
+            entry(31, press, 25, shown = 25),
+            entry(1, press, 25, shown = 25),
+        )
+        assertEquals(Progress.Advice(), advice(*apart))
+        assertEquals(1, advice(*apart, on = day(1).plusDays(28)).asSuggested)
+        // A row counts as last corrected, and not at all once removed.
+        val first = entry(20, press, 20, shown = 25)
+        val corrected = first.copy(id = ++id, kind = JournalEntry.Kind.CORRECTED, target = first.id, lb = 25)
+        assertEquals(Progress.Advice(asSuggested = 1), advice(first, corrected))
+        val removed = first.copy(id = ++id, kind = JournalEntry.Kind.REMOVED, target = first.id)
+        assertEquals(Progress.Advice(), advice(first, corrected, removed))
+    }
+
+    // Logged as listed from a borrowed board, then ticked as listed again on the class's own
+    // board, which asks other reps and shows another number: the person did what each sheet
+    // said, so it is never "lighter or short" against the first sheet's number.
+    @Test
+    fun aRowCorrectedOntoOtherRepsIsNotHeldToItsFirstNumber() {
+        val vocabulary = Vocabulary.starting()
+        val history = listOf(logged(1, press, 30, easy = true), logged(1, press, 25, reps = 12, easy = true))
+        val written = mutableListOf<JournalEntry>()
+        fun save(lines: List<String>, tick: Boolean) {
+            val sheet = Sheet.make(lines, history, identity)
+            val log = Logging.logged(sheet, written, day(20), "2G")
+            val draft = LogDraft.from(sheet, log.byRow).let { if (tick) it.with(sheet.rows[0].id, LogDraft.asListed(sheet.rows[0])!!) else it }
+            Logging.events(draft, sheet, log, day(20), "2G", 1L).forEach { written += it.copy(id = written.size + 1L) }
+        }
+        // A ladder first: carried to another board's ladder and ticked there, it keeps its own
+        // words and rounds with the new sheet's weight, and isn't held to the first number.
+        save(listOf("* 8 / 6 / 4 x chest press"), tick = true)
+        assertEquals(Progress.Advice(asSuggested = 1), Progress.advice(written, vocabulary, today))
+        save(listOf("* 12 / 10 / 8 x chest press"), tick = true)
+        assertTrue(written.last().let { it.kind == JournalEntry.Kind.CORRECTED && it.ladder == listOf(8, 6, 4) && it.lb < it.shownLb!! })
+        assertEquals(Progress.Advice(), Progress.advice(written, vocabulary, today))
+        written.clear()
+        // A poster's change of a capital isn't another row: corrected to fewer reps there, the
+        // set still counts, as short.
+        save(listOf("* 8 x chest press"), tick = true)
+        val revised = Sheet.make(listOf("* 8 x Chest Press"), history, identity)
+        val log = Logging.logged(revised, written, day(20), "2G")
+        val row = revised.rows[0]
+        Logging.events(LogDraft.from(revised, log.byRow).with(row.id, LogDraft.asListed(row)!!.copy(reps = 6)), revised, log, day(20), "2G", 1L)
+            .forEach { written += it.copy(id = written.size + 1L) }
+        assertEquals(Progress.Advice(lighterOrShort = 1), Progress.advice(written, vocabulary, today))
+        written.clear()
+        save(listOf("* 8 x chest press"), tick = true)
+        assertEquals(Progress.Advice(asSuggested = 1), Progress.advice(written, vocabulary, today))
+        // The class's own board: carried over untouched, it still stands as it was logged.
+        save(listOf("* 12 x chest press"), tick = false)
+        assertEquals(Progress.Advice(asSuggested = 1), Progress.advice(written, vocabulary, today))
+        // Said on the new row to have been the same weight for its 12: other reps than the
+        // number was shown for, so not "as suggested" on the strength of the weight alone.
+        val own = Sheet.make(listOf("* 12 x chest press"), history, identity)
+        val carried = Logging.logged(own, written, day(20), "2G")
+        val same = Logging.events(LogDraft.from(own, carried.byRow).with(own.rows[0].id, RowLog(written.last().lb, 2, 12)), own, carried, day(20), "2G", 1L)
+            .map { it.copy(id = written.size + 1L) }
+        assertEquals(listOf(12, written.last().shownLb), same.single().let { listOf(it.targetLow, it.lb) })
+        assertEquals(Progress.Advice(), Progress.advice(written + same, vocabulary, today))
+        // Ticked as listed on the new row: a lighter weight for more reps, as that sheet said.
+        save(listOf("* 12 x chest press"), tick = true)
+        assertTrue(written.last().let { it.kind == JournalEntry.Kind.CORRECTED && it.lb < it.shownLb!! })
+        assertEquals(Progress.Advice(), Progress.advice(written, vocabulary, today))
+    }
 }

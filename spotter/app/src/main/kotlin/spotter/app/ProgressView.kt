@@ -31,7 +31,8 @@ private val day = DateTimeFormatter.ofPattern("d MMM", Locale.UK)
  */
 @Composable
 fun ProgressView(progress: Progress) {
-    if (progress.wentUp.isEmpty() && progress.next.isEmpty()) return
+    val advice = progress.advice
+    if (progress.wentUp.isEmpty() && progress.next.isEmpty() && advice.numbered == 0) return
     Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Progress", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = ink, modifier = Modifier.semantics { heading() })
@@ -46,7 +47,7 @@ fun ProgressView(progress: Progress) {
                 }
             }
             if (progress.next.isNotEmpty()) {
-                Text("Next", fontSize = 14.sp, color = muted, modifier = Modifier.padding(top = 4.dp).semantics { heading() })
+                Text("Next", fontSize = 14.sp, color = muted, modifier = Modifier.padding(top = if (progress.wentUp.isEmpty()) 0.dp else 4.dp).semantics { heading() })
                 progress.next.forEach {
                     if (it.ready) {
                         Line(it.exercise, "${it.load.label}${reps(it.reps)} next time ▲", "${it.exercise}: up to ${words(it.load)}${reps(it.reps)} next time")
@@ -58,6 +59,20 @@ fun ProgressView(progress: Progress) {
                         )
                     }
                 }
+            }
+            if (advice.numbered > 0) {
+                Text(
+                    "The sheet's numbers, last ${Progress.WEEKS} weeks",
+                    fontSize = 14.sp,
+                    color = muted,
+                    modifier = Modifier.padding(top = if (progress.wentUp.isEmpty() && progress.next.isEmpty()) 0.dp else 4.dp).semantics { heading() },
+                )
+                // Counts in plain words: what happened to the numbers, not a grade of them.
+                Text("${advice.asSuggested} of ${advice.numbered} done as suggested", fontSize = 16.sp, color = ink)
+                listOfNotNull(
+                    "${advice.heavier} lifted heavier".takeIf { advice.heavier > 0 },
+                    "${advice.lighterOrShort} lighter or short".takeIf { advice.lighterOrShort > 0 },
+                ).takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" · "), fontSize = 15.sp, color = muted) }
             }
         }
     }

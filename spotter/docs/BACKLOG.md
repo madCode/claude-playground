@@ -30,8 +30,10 @@ or the docs rather than guess: the order may change, nothing is built on a guess
 - [ ] Progress, the new-word review screen, sharing a board (step 6). Built: the progress card
   (cycle 29). It names an exercise by its key ("bicep curl [alternating=yes]"), as the sheet
   does beneath a row; plainer names want the reader's help. Its "for 6" is reps a side, also for a row the board
-  writes as "12 total". Still to build: "know whether the
-  advice is working" (were the suggested weights completed?), the new-word review, sharing.
+  writes as "12 total". "Whether the advice is working" is on it too, as counts (cycle 30);
+  taking the sheet's "try" weight counts as "lifted heavier", since the log doesn't keep the
+  try weight.
+  Still to build: the new-word review, sharing a board.
 
 ## Next
 

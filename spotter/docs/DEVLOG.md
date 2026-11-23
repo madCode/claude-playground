@@ -15,6 +15,18 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 30: is the advice working
+- **Why:** the handoff's "know whether the advice is working: are the suggested weights
+  completed?", and it needs no ruling from you.
+- **Shipped:** two lines at the foot of the Progress card, for the last four weeks: how many
+  of the sheet's numbers you did as suggested, and how many you lifted heavier, or lighter or
+  came up short on.
+- **Counts, not a grade.** The scorecard still does the grading, on the export. Rows that
+  can't fairly be compared (one you added, an easier version, a ladder logged by its heaviest
+  round) are left out.
+- **Dropped after review:** a "rows had no number" line. The classes you logged on 22 Nov,
+  before the log kept the sheet's number, would have been counted there untruly.
+
 ### Cycle 29: progress, what went up and what is next
 - **Why:** step 6's first slice, and the one that needs no ruling from you.
 - **Shipped:** a "Progress" card under the sheet. "Went up in the last 4 weeks" lists what

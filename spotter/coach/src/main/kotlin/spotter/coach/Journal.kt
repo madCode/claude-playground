@@ -95,8 +95,11 @@ object Journal {
      * as last corrected, removed rows left out. A correction or removal of an entry that isn't
      * there is ignored, so a damaged log loses that one change, not the rest.
      */
-    fun history(entries: List<JournalEntry>, vocabulary: Vocabulary): List<Logged> =
-        live(entries).mapNotNull { toLogged(it, vocabulary) }
+    fun history(entries: List<JournalEntry>, vocabulary: Vocabulary): List<Logged> = read(entries, vocabulary).map { it.second }
+
+    /** Each live row beside what the coach reads it as; a damaged row is left out. */
+    fun read(entries: List<JournalEntry>, vocabulary: Vocabulary): List<Pair<JournalEntry, Logged>> =
+        live(entries).mapNotNull { e -> toLogged(e, vocabulary)?.let { e to it } }
 
     /** Each row as last corrected, removed rows left out, in the order first logged. */
     fun live(entries: List<JournalEntry>): List<JournalEntry> {
