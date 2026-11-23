@@ -4,14 +4,29 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Status
 
-- **Built so far:** the design; loads per hand on the rack's steps; reading a board line's
-  count; naming its exercise, in full on 91% of Carry's board rows; the suggested weight from a
-  log; the app, which updates itself; today's sheet on the phone; logging a class; the export
-  and backup; reading a history file, on the phone and in the replay tool.
-- **Waiting on you:** choose a backup folder, and import your history file, on the phone
-  (DEVICE.md, "Backup folder" and "History import"); and four questions in BACKLOG, "Your
-  call" (range ticks, an Epley "try" offer, variations that share a weight, coming back to a
-  lighter weight).
+- **The run that began on 21 November has stopped** (23 November, after cycle 32): everything
+  left in the build order waits on an answer from you. Nothing is scheduled.
+- **Built:** steps 1 to 4 in full (the coach, today's sheet, logging with export and backup,
+  history import). Step 5, strength per movement, has its first link behind a switch that is
+  off. Step 6 has the Progress card, the advice counts and the read-only list of words Spotter
+  doesn't know.
+- **Waiting on your answers** (BACKLOG, "Your call"): range ticks, an Epley "try" offer,
+  variations that share a weight (this one holds up the rest of step 5), coming back to a
+  lighter weight, how sorting a word should work and what sharing a board should send (these
+  two are what is left of step 6), and four places where the instructions disagree.
+- **Waiting on you with the phone** (DEVICE.md): choose a backup folder, import your history
+  file, and the hand checks, of which "Adding an exercise" is the newest.
+- **For the gym-coach session to run:** the replay with and without `-PperMovement`, into two
+  empty folders, and compare (REPLAY.md). The switch stays off until that says it helps.
+- **Not started:** step 7, the Garmin watch.
+
+## Monday 23 November 2026
+
+### The run closes
+- **Why:** you said to end cycles when they ran out of things to do. After cycle 32 every item
+  left needs one of your answers, and a cycle doesn't guess one.
+- **Done:** the 4-hourly task is switched off, not deleted, so it can be turned back on.
+- **To start again:** answer on the morning page or in BACKLOG, then ask for cycles.
 
 ## Sunday 22 November 2026
 
