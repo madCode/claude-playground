@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -57,6 +58,29 @@ class HomeScreenTest {
         compose.onNodeWithText("Couldn't copy your log to Download/Spotter. Choose the folder again.").assertIsDisplayed()
         compose.onNodeWithText("Change folder").performClick()
         assertEquals(2, picks)
+    }
+
+    // Progress is under the sheet once there is some: what went up, and what is about to, each
+    // heard as one sentence. With nothing to say, there is no heading.
+    @Test
+    fun progressShowsWhatMovedAndWhatIsNext() {
+        var progress by mutableStateOf(spotter.coach.Progress())
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, progress = progress) }
+        compose.onNodeWithText("Progress").assertDoesNotExist()
+        val load = { lb: Int -> spotter.coach.Load(lb, 2) }
+        progress = spotter.coach.Progress(
+            wentUp = listOf(spotter.coach.Progress.WentUp("chest press", load(25), load(30), 8, java.time.LocalDate.of(2026, 11, 20))),
+            next = listOf(
+                spotter.coach.Progress.Next("deadlift", load(45), 8, ready = true),
+                spotter.coach.Progress.Next("bicep curl [alternating=yes]", load(20), 12, ready = false),
+            ),
+        )
+        compose.onNodeWithText("Progress").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("2×25 → 2×30 for 8 · 20 Nov", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription("chest press: up from two 25 pound dumbbells to two 30 pound dumbbells for 8, on 20 Nov").assertIsDisplayed()
+        compose.onNodeWithContentDescription("deadlift: up to two 45 pound dumbbells for 8 next time").assertIsDisplayed()
+        compose.onNodeWithText("one more clean session at 2×20 for 12", useUnmergedTree = true).assertIsDisplayed()
+        shoot("home-progress")
     }
 
     // What the numbers are made from is said, with what the import left out, and removing it

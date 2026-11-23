@@ -15,6 +15,17 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 29: progress, what went up and what is next
+- **Why:** step 6's first slice, and the one that needs no ruling from you.
+- **Shipped:** a "Progress" card under the sheet. "Went up in the last 4 weeks" lists what
+  you lifted heavier than the clean time before, at the same reps. "Next" lists what goes up
+  a dumbbell next time, and what is one clean session away. It appears once there is
+  something to say.
+- **It reads your log and the imported history by the sheet's own rules**, so it never
+  promises what the next sheet won't show.
+- **Found on the invented history before review:** "Next" had no time limit and filled with
+  exercises last done months ago; it now keeps to the last four weeks.
+
 ### Cycle 28: the skills and instructions, checked against what cycles did
 - **Why:** the review was overdue (due around cycle 12).
 - **Done:** a reader with no stake compared the skills, the CLAUDE.md files and the practices

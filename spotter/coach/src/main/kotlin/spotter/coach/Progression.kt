@@ -107,6 +107,8 @@ sealed interface Suggestion {
         val test: Load? = null,
         /** Said on the row before the number: pain last time. */
         val caution: String? = null,
+        /** One more clean session at this weight and these reps goes up a dumbbell. */
+        val oneMore: Boolean = false,
     ) : Suggestion
 
     /** No sound basis: [NEW], or why not. A gap beats a guess. */
@@ -200,6 +202,7 @@ object Progression {
         val noStep = basis !== latest && (borneOut == null || since.any { it.outcome == Outcome.NEAR_MISS })
         val reasons = mutableListOf<String>()
         var test: Load? = null
+        var oneMore = false
         val held = basis.load.lb
         var lb = when {
             basis.outcome == Outcome.HURT -> held
@@ -222,6 +225,7 @@ object Progression {
                 // big jump, and nothing logged since (a twinge after it breaks the run).
                 val up = Rack.up(held)
                 reasons += if (basis.anchor == to && up != null && up <= held * BIG_JUMP && basis === own.last()) {
+                    oneMore = true
                     "clean at ${basis.load.label} once: up after one more clean session, or one that felt easy"
                 } else {
                     "clean at ${basis.load.label} once: same again"
@@ -304,7 +308,8 @@ object Progression {
             decided < against -> Change.DOWN
             else -> Change.SAME
         }
-        return Suggestion.Weight(load, change, reasons, test, caution)
+        // A twinge since holds the weight whatever was promised.
+        return Suggestion.Weight(load, change, reasons, test, caution, oneMore && caution == null)
     }
 
     /** [lb] done for [from] reps as a weight for [to], rounded down to the rack; null where Epley doesn't hold. */

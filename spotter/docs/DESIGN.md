@@ -357,7 +357,14 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   row again, built from its own entry. The scorecard is told the sheet showed no number for
   it, since it was never on the sheet before class.
 
-Later: progress, review of new exercise names, sharing a board for others, the watch.
+- **Progress**, a card under the sheet once there is something to say (`Progress` in the
+  coach). "Went up in the last 4 weeks": an exercise whose latest clean session was heavier
+  than the clean one before it at the same reps and the same number of dumbbells. "Next", for
+  exercises lifted in the last 4 weeks: up a dumbbell next time, or one more clean session
+  from it. Both are read by the sheet's own rules from the same history, so the card never
+  says what the next sheet won't. Eight lines of each at most, the most recent first.
+
+Later: review of new exercise names, sharing a board for others, the watch.
 
 ## Updating itself
 

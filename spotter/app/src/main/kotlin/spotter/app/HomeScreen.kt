@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import spotter.app.history.HistoryState
 import spotter.app.today.Today
 import spotter.coach.LogDraft
+import spotter.coach.Progress
 
 /** Where the log is copied to, and how the last copy went. [at] is ready to show ("22 Nov, 14:30"). */
 data class BackupState(val folder: String? = null, val at: String? = null, val ok: Boolean = true)
@@ -134,6 +135,7 @@ fun HomeScreen(
     onImportHistory: () -> Unit = {},
     onRemoveHistory: () -> Unit = {},
     onStopHistory: () -> Unit = {},
+    progress: Progress = Progress(),
 ) {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
@@ -170,6 +172,7 @@ fun HomeScreen(
                     }
                 }
                 TodayView(today, onAllowCalendar, onSaveLog, earlier)
+                ProgressView(progress)
                 Spacer(Modifier.heightIn(min = 8.dp))
                 HistoryView(history, onImportHistory, onRemoveHistory, onStopHistory)
                 BackupView(backup, onChooseFolder)

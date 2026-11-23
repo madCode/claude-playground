@@ -27,7 +27,9 @@ import spotter.app.history.HistoryStore
 import spotter.app.export.ExportWorker
 import spotter.app.log.EventLog
 import spotter.app.log.LogDatabase
+import spotter.coach.Journal
 import spotter.coach.LogDraft
+import spotter.coach.Progress
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import spotter.app.today.Boards
@@ -47,6 +49,7 @@ class MainActivity : ComponentActivity() {
     private val waiting = mutableIntStateOf(0)
     private val today = mutableStateOf<Today>(Today.Loading)
     private val earlier = mutableStateOf<Today.Showing?>(null)
+    private val progress = mutableStateOf(Progress())
     private val backup = mutableStateOf(BackupState())
     private val history = mutableStateOf(HistoryState())
     private val imported by lazy { HistoryStore.shared(filesDir) }
@@ -129,6 +132,7 @@ class MainActivity : ComponentActivity() {
                 onAllowCalendar = ::allowCalendar,
                 onSaveLog = ::saveLog,
                 earlier = earlier.value,
+                progress = progress.value,
                 backup = backup.value,
                 onChooseFolder = { pickFolder.launch(null) },
                 history = history.value,
@@ -208,6 +212,10 @@ class MainActivity : ComponentActivity() {
             val read = withContext(Dispatchers.IO) { imported.result(identity, LocalDate.now()) }
             val beside = HistoryPick.beside(read?.logged.orEmpty(), entries)
             val logged = Today.loggedClasses(entries)
+            // From everything logged or imported, as the next sheet would read it.
+            progress.value = withContext(Dispatchers.Default) {
+                Progress.of((beside + Journal.history(entries, vocabulary)).sortedBy { it.date }, LocalDate.now())
+            }
             // The kept board first, then the fetched one.
             val kept = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), fetch = false, logged) }
             today.value = Today.afterKept(today.value, kept?.let { Today.of(it, entries, identity, vocabulary, beside) }, logged)
