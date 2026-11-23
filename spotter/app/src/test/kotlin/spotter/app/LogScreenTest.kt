@@ -370,8 +370,14 @@ class LogScreenTest {
         // One added by mistake is taken back, with what was entered; a saved one has no "Remove".
         compose.onNodeWithText(field).performScrollTo().performTextInput("8 x front squat")
         compose.onNodeWithText("Add an exercise").performScrollTo().performClick()
+        // The row after it keeps its rack open when the one above goes.
+        compose.onNodeWithText(field).performScrollTo().performTextInput("8 x sumo squat")
+        compose.onNodeWithText("Add an exercise").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("8 x sumo squat: changed").performScrollTo().performClick()
         compose.onNodeWithContentDescription("8 x front squat: remove").performScrollTo().performClick()
         compose.onNodeWithText("8 x front squat").assertDoesNotExist()
+        compose.onNodeWithContentDescription("8 x sumo squat: 30 pounds").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("8 x sumo squat: remove").performScrollTo().performClick()
         compose.onNodeWithContentDescription("10 x hammer curl: remove").assertDoesNotExist()
         compose.onNodeWithText("Save").performScrollTo().performClick()
         save(saved!!.first, saved!!.second)
@@ -390,7 +396,8 @@ class LogScreenTest {
     fun aLoggedRowThatNoLongerReadsShowsItsLogAndClears() {
         save(today(saturday), LogDraft().with(today(saturday).sheet.rows[0].id, spotter.coach.RowLog(25, 2, 8)))
         val logged = today(saturday)
-        val unread = logged.copy(sheet = logged.sheet.copy(rows = logged.sheet.rows.mapIndexed { i, r -> if (i == 0) r.copy(suggestion = null) else r }))
+        // No row on the board can be logged any more, and the log is still reachable.
+        val unread = logged.copy(sheet = logged.sheet.copy(rows = logged.sheet.rows.map { it.copy(suggestion = null) }))
         var saved: LogDraft? = null
         show(unread) { _, d -> saved = d }
         compose.onNodeWithText("Change the log (1 logged)").performClick()

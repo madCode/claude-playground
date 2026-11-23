@@ -21,6 +21,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -82,11 +83,14 @@ fun LogView(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit,
                     )
                 }
             }
-            LogRowView(
-                row, today.sheet.glance(row), draft.rows[row.id],
-                // Only a line added on this screen and not yet saved: a saved one is cleared.
-                onRemove = if (row.id in draft.added) ({ onChange(draft.removing(row.id)) }) else null,
-            ) { onChange(draft.with(row.id, it)) }
+            // Keyed, so that removing a row doesn't hand its open rack to the row below.
+            key(row.id) {
+                LogRowView(
+                    row, today.sheet.glance(row), draft.rows[row.id],
+                    // Only a line added on this screen and not yet saved: a saved one is cleared.
+                    onRemove = if (row.id in draft.added) ({ onChange(draft.removing(row.id)) }) else null,
+                ) { onChange(draft.with(row.id, it)) }
+            }
         }
         AddExercise(today, draft, onChange)
         if (today.strays.isNotEmpty()) {

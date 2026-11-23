@@ -18,8 +18,8 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 ### Cycle 26: two classes in a day, and two Log-screen leftovers
 - **Why:** from earlier reviews; small, and the first could put a wrong number on a sheet.
 - **Fixed:** with a morning and an evening class of different formats, the morning's sheet read
-  the evening's log as its history. Now a class reads another class of the same day only when
-  that log was begun before it started.
+  the evening's log as its history. Now a class reads a row of another class the same day only when
+  that row was first logged before it started.
 - **Also:** an added row not yet saved has "Remove". A logged row whose line Spotter can no
   longer read still shows what is logged, and can be cleared.
 - **Left:** two classes of the *same* format in one day still share a log (BACKLOG).

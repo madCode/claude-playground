@@ -71,13 +71,19 @@ sealed interface Today {
             val lines = chosen as? TodaysBoard.Lines ?: return from(chosen, emptyList(), identity)
             val date = lines.booked.date
             val name = className(lines)
-            // Another class of the same day counts only when its log was begun before this one
-            // started: a morning class's sheet mustn't read the evening's log as its history.
-            // The log doesn't keep a class's start, but nothing is logged before its class.
+            // A row of another class the same day counts only when it was first logged before
+            // this class started: a morning class's sheet mustn't read the evening's log as its
+            // history, nor a row of the morning's logged after the evening class began, which
+            // this sheet never showed. The log doesn't keep a class's start, but nothing is
+            // logged before its class. A later correction of a row belongs with the row.
             val start = lines.booked.start?.atZone(zone)?.toInstant()?.toEpochMilli()
-            val sameDay = entries.filter { it.date == date && it.className != name }.groupBy { it.className }
-                .filterValues { logged -> start == null || logged.minOf { it.at } < start }.keys
-            val before = entries.filter { it.date < date || (it.date == date && it.className in sameDay) }
+            val firstLogged = mutableMapOf<Long, Long>()
+            entries.filter { it.id > 0 }.sortedBy { it.id }.forEach { e ->
+                (if (e.kind == JournalEntry.Kind.LOGGED) e.at else firstLogged[e.target])?.let { firstLogged[e.id] = it }
+            }
+            val before = entries.filter {
+                it.date < date || (it.date == date && it.className != name && (start == null || (firstLogged[it.id] ?: Long.MAX_VALUE) < start))
+            }
             // By date, the imported rows first within a day: what was logged here is the later word.
             val history = (imported.filter { it.date < date } + Journal.history(before, vocabulary)).sortedBy { it.date }
             return from(chosen, history, identity, entries)

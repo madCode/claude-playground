@@ -325,9 +325,9 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   tap, since it is what lets a weight go up after one session. Save writes events (`Logging` in the coach, one transaction):
   a new row is logged, a changed one corrected, one cleared removed, an unchanged one left
   alone. Reopened, the screen shows what is logged. A class's own sheet keeps the numbers from
-  before it; the next class reads what was done. With two classes in a day, a class reads the
-  other's log only when that log was begun before it started, so the morning's sheet never
-  rests on the evening's lifting.
+  before it; the next class reads what was done. With two classes in a day, a class reads a row of
+  the other's log only when that row was first logged before it started, so the morning's
+  sheet never rests on the evening's lifting.
 - When the board changes under a log (the class's own board replaces a borrowed one, or its
   poster revises a line), what was logged follows the exercise: an entry whose row is gone
   carries over to the first free row with the same exercise and the same kind of count, keeping
