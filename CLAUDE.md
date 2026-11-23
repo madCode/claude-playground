@@ -107,7 +107,8 @@ the findings, a short second look at just the new diff is enough.
 A PR that changes how a screen looks shows it: before and after images in the description, one
 pair per screen or state that changes (only "after" for a new screen).
 
-- Render both with the project's `ScreenshotTest`: "before" from `origin/main`, "after" from the
+- Render both with the project's screenshot tests (`ScreenshotTest`, or the ones its CLAUDE.md
+  names): "before" from `origin/main`, "after" from the
   branch. A changed screen the test doesn't shoot yet gets a shot added, which also guards it.
 - Open the PR, then commit the PNGs to the `claude/screenshots` branch (never merged) under
   `<project>/pr-<N>/` as `<screen>-before.png` and `<screen>-after.png`, and edit them into the
