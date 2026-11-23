@@ -78,7 +78,7 @@ object Replay {
         val numbered = replayed.sumOf { r -> r.session.sets.count { it.suggestedWeight != null && it.weight != null } }
         val weighted = replayed.sumOf { r -> r.session.sets.count { it.weight != null } }
         return buildString {
-            appendLine("${replayed.size} classes, $sets rows, written to $out" + if (rules.perMovement) " (strength per movement on)" else "")
+            appendLine("${replayed.size} classes, $sets rows, written to $out" + if (!rules.shared) " (shared weights off)" else "")
             appendLine("$weighted rows with a weight lifted; $numbered of them had a number on the sheet")
             appendLine("rows read into history: ${history.rows.size}; left out: " + history.left.entries.joinToString { "${it.key.name.lowercase().replace('_', ' ')} ${it.value}" }.ifEmpty { "none" })
         }
@@ -87,14 +87,14 @@ object Replay {
     const val NO_CLASS = "class"
 }
 
-/** `replay <history.jsonl> <out-folder> [per-movement]`: see docs/REPLAY.md. */
+/** `replay <history.jsonl> <out-folder> [no-shared]`: see docs/REPLAY.md. */
 fun main(args: Array<String>) {
-    if (args.size !in 2..3 || (args.size == 3 && args[2] != "per-movement")) {
-        System.err.println("usage: replay <history.jsonl> <out-folder> [per-movement]")
+    if (args.size !in 2..3 || (args.size == 3 && args[2] != "no-shared")) {
+        System.err.println("usage: replay <history.jsonl> <out-folder> [no-shared]")
         exitProcess(2)
     }
     try {
-        print(Replay.write(File(args[0]), File(args[1]), rules = Rules(perMovement = args.size == 3)))
+        print(Replay.write(File(args[0]), File(args[1]), rules = Rules(shared = args.size == 2)))
     } catch (e: Exception) {
         // The message only: a stack trace could carry a line of the file.
         System.err.println("replay failed: ${e.message}")

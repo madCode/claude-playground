@@ -319,61 +319,77 @@ class ProgressionTest {
         assertTrue(s.reasons.single().contains("0.6"))
     }
 
-    // Strength per movement, its first link, and only when switched on: a curl done one arm at
-    // a time takes the dumbbells the curl does. What was held, not the step up the curl has earned.
+    // Wordings that leave the dumbbells as they are share one history (madCode, 2026-11-23):
+    // the number, the two clean sessions and a twinge all carry across.
     @Test
-    fun aVariationWithTheSameDumbbellsBorrowsWhenSwitchedOn() {
+    fun wordingsThatLeaveTheWeightShareAHistory() {
         val curl = exercise("8 x bicep curl")
         val alternating = exercise("8 x alternating bicep curl")
         assertEquals("bicep curl [alternating=yes]", alternating.key)
-        val on = Rules(perMovement = true)
-        val log = listOf(logged(1, 25, listOf(8, 8), ex = curl, easy = true))
-        assertEquals(Load(30, 2), weight(log, ex = curl).load)
-        // As shipped, only identical exercises share history.
-        assertEquals(Suggestion.NoNumber.NEW, suggest(log, ex = alternating))
-        val s = Progression.suggest(alternating, 8..8, log, on) as Suggestion.Weight
-        assertEquals(listOf(Load(25, 2), Change.NEW, null), listOf(s.load, s.change, s.test))
-        assertEquals("new: starts where your bicep curl stands (2×25)", s.reasons.single())
-        // The other way round too, and at other reps through the curl's own conversion.
-        val back = Progression.suggest(curl, 8..8, listOf(logged(1, 25, listOf(8, 8), ex = alternating)), on) as Suggestion.Weight
-        assertEquals(Load(25, 2), back.load)
-        assertEquals(Load(20, 2), (Progression.suggest(alternating, 12..12, log, on) as Suggestion.Weight).load)
-        // Its own history, once there is any, is the only word.
-        val own = log + logged(2, 15, listOf(8, 8), ex = alternating)
-        assertEquals(Load(15, 2), (Progression.suggest(alternating, 8..8, own, on) as Suggestion.Weight).load)
-        // A version that twinged lends nothing, nor one that differs in more than how the sides take turns.
-        assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(alternating, 8..8, listOf(logged(1, 25, listOf(8, 8), ex = curl, hurt = true)), on))
-        assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(exercise("8 x alternating hammer curl"), 8..8, log, on))
-        assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(exercise("8 x alternating chest press"), 8..8, log, on))
-        // The cap is what was held at these reps, whatever was held since at others: an easy 25
-        // for 12 and then 35 for 6 has earned the curl 30 for 12, and lends 25.
-        val mixed = listOf(logged(1, 25, listOf(12, 12), 12..12, ex = curl, easy = true), logged(3, 35, listOf(6, 6), 6..6, ex = curl))
-        assertEquals(Load(30, 2), weight(mixed, ex = curl, target = 12..12).load)
-        assertEquals(Load(25, 2), (Progression.suggest(alternating, 12..12, mixed, on) as Suggestion.Weight).load)
-        // Nor does a heavier ladder since, or a twinge at the next dumbbell, let the step through.
-        val easy = logged(1, 25, listOf(8, 8), ex = curl, easy = true)
-        val ladder = Logged(day(3), curl, Load(35, 2), 8..8, listOf(8, 6, 4), ladder = listOf(8, 6, 4), heaviestOnly = true)
-        val twinge = listOf(easy, logged(2, 30, listOf(8, 8), ex = curl, hurt = true), logged(3, 20, listOf(10, 10), 10..10, ex = curl))
-        for (history in listOf(listOf(easy, ladder), twinge)) {
-            assertEquals(Load(30, 2), weight(history, ex = curl).load)
-            assertEquals(Load(25, 2), (Progression.suggest(alternating, 8..8, history, on) as Suggestion.Weight).load)
+        assertEquals("bicep curl", alternating.weightKey)
+        val once = listOf(logged(1, 25, listOf(8, 8), ex = curl))
+        val s = weight(once, ex = alternating)
+        assertEquals(listOf(Load(25, 2), Change.SAME), listOf(s.load, s.change))
+        assertEquals("counted with its other wordings, which take the same dumbbells", s.reasons.last())
+        // The second clean session may be in other words: then the third goes up, whichever it is.
+        val twice = once + logged(2, 25, listOf(8, 8), ex = alternating)
+        assertEquals(Load(30, 2), weight(twice, ex = exercise("8 x seated bicep curl")).load)
+        assertEquals(Load(30, 2), weight(twice, ex = curl).load)
+        // Said also when the row's own session is the basis and the other wording made it two.
+        assertEquals(listOf("clean at 2×25: up a dumbbell", "counted with its other wordings, which take the same dumbbells"), weight(twice, ex = alternating).reasons)
+        assertEquals(listOf("clean at 2×25 once: up after one more clean session, or one that felt easy"), weight(once, ex = curl).reasons)
+        // A twinge in one wording holds the others.
+        val hurt = twice + logged(3, 30, listOf(8, 8), ex = curl, hurt = true)
+        assertEquals("it twinged last time at 2×30", weight(hurt, ex = alternating).caution)
+        // Switched off, only identical exercises share.
+        assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(alternating, 8..8, once, Rules(shared = false)))
+
+        // Each of the words, on a lift it leaves alone.
+        fun shares(a: String, b: String) = suggest(listOf(logged(1, 25, listOf(8, 8), ex = exercise(a))), ex = exercise(b)) is Suggestion.Weight
+        for ((a, b) in listOf(
+            "8 x chest press" to "8 x floor chest press", "8 x bench pullover" to "8 x pullover", "8 x chest fly" to "8 x bench chest fly",
+            "8 x low row" to "8 x seated low row", "8 x shoulder press" to "8 x seated shoulder press", "8 x deadlift" to "8 x dumbbell deadlift",
+            "8 x shoulder press" to "8 x standing alternating shoulder press", "8 x tricep extension" to "8 x seated tricep extension",
+        )) {
+            assertTrue("$a and $b", shares(a, b) && shares(b, a))
         }
-        // An older one-dumbbell session behind a two-dumbbell one lends nothing either.
-        assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(alternating, 8..8, listOf(logged(1, 25, listOf(8, 8), ex = curl, count = 1, easy = true), logged(3, 30, listOf(6, 6), 6..6, ex = curl)), on))
-        // One dumbbell may be one held in both hands: in one arm it would be double. A count
-        // nobody said lends nothing either, nor a row whose own words say one dumbbell.
+        // Words that change the leverage or the balance keep a history of their own, and so do
+        // "bench" and "seated" on a lift the legs do.
+        for ((a, b) in listOf(
+            "8 x chest press" to "8 x incline chest press", "8 x chest press" to "8 x single arm chest press", "8 x low row" to "8 x low row (explosive)",
+            "8 x squat" to "8 x sumo squat", "8 x chest press" to "8 x bosu chest press", "8 x squat" to "8 x goblet squat",
+            "8 x squat" to "8 x bench squat", "8 x chest press" to "8 x chest fly", "8 x calf raise" to "8 x seated calf raise",
+            // A grip is lifted at its own weight beside the plain lift; a triceps extension on a
+            // bench is another lift than one overhead; legs drive a thruster.
+            "8 x chest press" to "8 x close grip chest press", "8 x bicep curl" to "8 x hammer curl", "8 x tricep extension" to "8 x bench tricep extension",
+            "8 x thruster" to "8 x seated thruster",
+        )) {
+            assertTrue("$a and $b", !shares(a, b) && !shares(b, a))
+        }
+    }
+
+    // One side at a time is the same weight only with a dumbbell in each hand: one dumbbell may
+    // have been held in both hands, which in one arm would be double, and a count nobody said
+    // could be either.
+    @Test
+    fun alternatingSharesOnlyWithADumbbellInEachHand() {
+        val curl = exercise("8 x bicep curl")
+        val alternating = exercise("8 x alternating bicep curl")
         for (count in listOf(1, null)) {
-            assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(alternating, 8..8, listOf(logged(1, 25, listOf(8, 8), ex = curl, count = count)), on))
+            assertEquals(Suggestion.NoNumber.NEW, suggest(listOf(logged(1, 25, listOf(8, 8), ex = curl, count = count)), ex = alternating))
+            assertEquals(Suggestion.NoNumber.NEW, suggest(listOf(logged(1, 25, listOf(8, 8), ex = alternating, count = count)), ex = curl))
         }
-        assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(alternating, 8..8, log + logged(2, 25, listOf(8, 8), ex = curl, count = 1), on))
-        val oneArm = exercise("8 x single arm alternating bicep curl")
-        assertEquals(1, Sheet.rowCount(oneArm))
-        assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(oneArm, 8..8, listOf(logged(1, 25, listOf(8, 8), ex = exercise("8 x single arm bicep curl"))), on))
-        // Lent from the alternating one, the reason names it.
-        assertEquals("new: starts where your alternating bicep curl stands (2×25)", back.reasons.single())
-        // The one-leg link is as it was, switch or no switch.
-        val deadlift = listOf(logged(1, 40, listOf(8, 8, 8), ex = exercise("8 x deadlift"), easy = true))
-        assertEquals(suggest(deadlift, ex = exercise("8 x single leg deadlift")), Progression.suggest(exercise("8 x single leg deadlift"), 8..8, deadlift, on))
+        // A one-dumbbell session is left out; the two-dumbbell one still lends.
+        val mixed = listOf(logged(1, 40, listOf(8, 8), ex = curl, count = 1), logged(2, 20, listOf(8, 8), ex = curl))
+        assertEquals(Load(20, 2), weight(mixed, ex = alternating).load)
+        // Between two wordings that are both a side at a time, the count is whatever it was;
+        // and where the words say how it is held, a side at a time doesn't change it.
+        assertEquals(Load(25, 1), weight(listOf(logged(1, 25, listOf(8, 8), ex = alternating, count = 1)), ex = exercise("8 x seated alternating bicep curl")).load)
+        val goblet = listOf(logged(1, 30, listOf(8, 8), ex = exercise("8 x goblet lateral lunge"), count = 1))
+        assertEquals(Load(30, 1), weight(goblet, ex = exercise("8 x goblet alt lateral lunge")).load)
+        // The one-leg link reads a shared history too.
+        val deadlift = listOf(logged(1, 40, listOf(8, 8, 8), ex = exercise("8 x dumbbell deadlift"), easy = true))
+        assertTrue(suggest(deadlift, ex = exercise("8 x single leg deadlift")) is Suggestion.Weight)
     }
 
     // Trap 11: a loose relative is no basis. A fly says nothing about a press.

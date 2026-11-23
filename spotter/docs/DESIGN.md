@@ -164,16 +164,24 @@ what is on the board, and nothing says so.
     a variation of the movement before it, not a combo.
 - **Related exercises are linked by stated factors**, shown in "Why this number". One exists so
   far: one leg from the two-legged lift, at about 0.6. Where no sound factor exists, the row
-  says "new: go light". Until strength per movement is switched on (see the
-  scorecard), only identical exercises share history.
-- **Strength per movement** is being built behind a switch that the app leaves off (`Rules`);
-  the replay tool can turn it on to grade it. Its first link: a variation that differs only in
-  doing one side at a time ("alternating") takes the same dumbbells as the one already logged,
-  either way round. Only between versions logged with two dumbbells (one held in both
-  hands isn't one in each). It borrows at most what was held the last time these reps were
-  asked, never a step up, nothing from a version that twinged, and only until the variation
-  has a log of its own. More links wait on
-  madCode's ruling on which variations share a weight.
+  says "new: go light".
+- **Words that share a weight.** Some wordings leave the dumbbells as they are, and those share
+  one history: the number, the two clean sessions and a twinge all carry across, and "Why this
+  number" says other wordings were counted. The Progress card lists such wordings once. madCode
+  ruled on the first set (2026-11-23):
+  - "alternating": one side at a time, the same dumbbell in each hand. Only between sessions
+    logged with two dumbbells, or where the words say how it is held ("goblet", "single
+    arm"): one dumbbell held in both hands would be double in one arm.
+  - "dumbbell": it names what the lift is already done with.
+  - "floor" or "bench" on a press, fly or pullover: the floor only shortens the range. Not a
+    triceps extension, which on a bench is another lift than one overhead.
+  - "seated" or "standing" on a lift the legs don't move (not a thruster or push press).
+  - "(heavy)" and "(light)" were never part of an exercise's name.
+  Everything else keeps a history of its own until a factor is agreed: one arm, one leg, a
+  split or sumo stance, a bosu, a tempo, an incline, one dumbbell against two. So does a grip
+  word, though madCode's first set had it: boards set "close grip chest press" beside "chest
+  press", lifted at different weights, and the latest session would speak for both. The replay tool
+  can switch sharing off (`-PnoShared`) to grade the coach both ways.
 - **New words go to a review list.** The list is built, read only (`ReviewList`): a card
   under Progress, "Words Spotter doesn't know yet", reads the boards kept on the phone (the
   last 7 fetched) and lists each line's unknown words together ("front foot"), the ones seen
@@ -467,6 +475,6 @@ Beside it, the board corpus is to be graded line by line (not built yet: BACKLOG
 grade"): how many rows are read fully, unsure, or wrong against hand-checked answers. Wrong
 stays at zero; unsure falls as the review list grows.
 Spotter switches on for real when, over the same weeks of real classes, it numbers more rows
-than Carry, gets more close, and is high no more often. Strength per movement (variations
-reading one estimate through stated factors) ships behind a switch and is judged the same way
-against plain per-exercise rules before it is turned on.
+than Carry, gets more close, and is high no more often. Shared weights are on, at madCode's word
+(2026-11-23), and the replay tool can switch them off to judge them the same way. Factors
+between variations that do change the weight are judged there before they are turned on.

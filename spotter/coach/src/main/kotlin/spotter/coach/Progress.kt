@@ -46,13 +46,19 @@ data class Progress(val wentUp: List<WentUp> = emptyList(), val next: List<Next>
         fun of(log: List<Logged>, today: LocalDate): Progress {
             // Sessions on one date keep the order they were logged in. An exercise the sheet
             // gives no weight (a banded or bodyweight one an import still has a number for)
-            // has no number to move.
-            val byExercise = log.filter { it.judged && Sheet.wantsWeight(it.exercise) }.sortedBy { it.date }.groupBy { it.key }
-            val wentUp = byExercise.values.mapNotNull { sessions -> wentUp(sessions, today) }
+            // has no number to move. Wordings that share a weight are one exercise here, as
+            // they are to the coach, or one step would be listed once for each.
+            val weighted = log.filter { it.judged && Sheet.wantsWeight(it.exercise) }
+            // Each wording's history as the coach reads it; wordings that end on the same
+            // session are one exercise. Not by [Reading.Known.weightKey] alone: the coach keeps
+            // "alternating" apart from a session with one dumbbell, and so must the card.
+            val byExercise = weighted.map { it.exercise }.distinctBy { it.key }
+                .map { exercise -> Progression.own(exercise, weighted) }.filter { it.isNotEmpty() }.distinctBy { it.last() }
+            val wentUp = byExercise.mapNotNull { sessions -> wentUp(sessions, today) }
                 .sortedByDescending { it.on }.take(MOST)
             // Only what was lifted lately: an exercise last seen in the spring is ready too, and
             // a list of those would bury the ones coming up. The most recent first.
-            val next = byExercise.values.map { it.last() }.filter { !it.date.isBefore(today.minusWeeks(WEEKS)) }.sortedByDescending { it.date }.mapNotNull { last ->
+            val next = byExercise.map { it.last() }.filter { !it.date.isBefore(today.minusWeeks(WEEKS)) }.sortedByDescending { it.date }.mapNotNull { last ->
                 val s = Progression.suggest(last.exercise, last.target, log) as? Suggestion.Weight
                     ?: return@mapNotNull null
                 when {
