@@ -29,6 +29,19 @@ class BoardsTest {
 
     private fun ok(text: String) = Download.Answer(200, text)
 
+    // The review list reads every board kept: the week's, and none that no longer reads as one.
+    @Test
+    fun everyKeptBoardThatStillReadsIsListed() {
+        var date = day
+        val boards = Boards(dir) { ok(file(date, line = "* 8 x zorbing")) }
+        repeat(Boards.KEEP + 2) { date = day.minusDays(it.toLong()); boards.fetch(date) }
+        assertEquals((0 until Boards.KEEP).map { day.minusDays(it.toLong()) }.toSet(), boards.all().map { it.date }.toSet())
+        File(dir, "$day.json").writeText("not a board")
+        assertEquals(Boards.KEEP - 1, boards.all().size)
+        val words = spotter.coach.ReviewList.of(boards.all(), spotter.coach.Identity(spotter.coach.Vocabulary.starting()))
+        assertEquals(listOf("zorbing" to Boards.KEEP - 1), words.map { it.word to it.rows })
+    }
+
     @Test
     fun aFetchedBoardIsKeptAndAFailedOneLeavesTheKeptOne() {
         val urls = mutableListOf<String>()

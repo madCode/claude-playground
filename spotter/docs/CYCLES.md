@@ -2,6 +2,13 @@
 
 For the next cycle: what to do differently. What was built is in DEVLOG.md. Newest first.
 
+### Cycle 31 — build: the review list, read only
+
+- The real feed through the new list before review changed its unit: per word it listed
+  "front" and "foot" apart, four entries for one line; per line's words it reads as one find.
+- A list of what the reader doesn't know is also a reader audit: most of a real week's
+  entries were instructions it takes for exercises. That went to BACKLOG, not into this PR.
+
 ### Cycle 30 — build: is the advice working
 
 - A summary of the person's own results shows counts and names what it leaves out; a
@@ -68,8 +75,3 @@ For the next cycle: what to do differently. What was built is in DEVLOG.md. Newe
 
 - Check each Java call against the project's lowest Android version before the review does:
   `readNBytes` compiled, and would have crashed on Android 8 to 12.
-
-### Cycle 20 — build: the replay tool
-
-- Run a new command for real once, with the arguments a person would type, before writing its
-  doc: the test called the function, and only the run showed how relative paths resolve.

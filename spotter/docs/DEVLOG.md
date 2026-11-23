@@ -15,6 +15,16 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Sunday 22 November 2026
 
+### Cycle 31: the words Spotter doesn't know yet
+- **Why:** the part of step 6's review screen that needs no ruling from you.
+- **Shipped:** a card under Progress, "Words Spotter doesn't know yet". It reads the week of
+  boards kept on the phone and lists the unknown words of each "not sure" line, the ones
+  costing the most rows first, with a line they were on. Read only: nothing can be sorted yet.
+- **On a real week of boards it found** mostly tread and rower instructions that the reader
+  takes for exercises, and three real gaps in the lists. Both are in BACKLOG.
+- **For you:** how sorting a word should work, and what sharing a board should send, are in
+  BACKLOG, "Your call". Those two are what is left of step 6.
+
 ### Cycle 30: is the advice working
 - **Why:** the handoff's "know whether the advice is working: are the suggested weights
   completed?", and it needs no ruling from you.

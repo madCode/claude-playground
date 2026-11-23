@@ -172,7 +172,10 @@ what is on the board, and nothing says so.
   asked, never a step up, nothing from a version that twinged, and only until the variation
   has a log of its own. More links wait on
   madCode's ruling on which variations share a weight.
-- **New words go to a review list** (not built yet: step 6). madCode sorts each new word or name once: which movement,
+- **New words go to a review list.** The list is built, read only (`ReviewList`): a card
+  under Progress, "Words Spotter doesn't know yet", reads the week of boards kept on the
+  phone and lists each line's unknown words together ("front foot"), the ones costing the most
+  rows first, with the latest line they were on. Sorting them isn't built yet: madCode sorts each new word or name once: which movement,
   which variation, harder or easier, or filler. The answer is an event in the phone's log, so it
   never relabels history already logged and is backed up with it. A useful answer can be
   proposed back to the starting list in a PR.
@@ -373,7 +376,7 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   than its number was shown for, or carried to another board's row and given another weight there. Rows the sheet had no number for aren't counted either: an entry
   from before the log kept the sheet's number looks the same as one.
 
-Later: review of new exercise names, sharing a board for others, the watch.
+Later: sorting the review list's words, sharing a board for others, the watch.
 
 ## Updating itself
 

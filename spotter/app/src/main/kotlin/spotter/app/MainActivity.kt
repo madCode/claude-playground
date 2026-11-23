@@ -30,6 +30,8 @@ import spotter.app.log.LogDatabase
 import spotter.coach.Journal
 import spotter.coach.LogDraft
 import spotter.coach.Progress
+import spotter.coach.ReviewList
+import spotter.coach.UnknownWord
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import spotter.app.today.Boards
@@ -50,6 +52,7 @@ class MainActivity : ComponentActivity() {
     private val today = mutableStateOf<Today>(Today.Loading)
     private val earlier = mutableStateOf<Today.Showing?>(null)
     private val progress = mutableStateOf(Progress())
+    private val unknownWords = mutableStateOf(emptyList<UnknownWord>())
     private val backup = mutableStateOf(BackupState())
     private val history = mutableStateOf(HistoryState())
     private val imported by lazy { HistoryStore.shared(filesDir) }
@@ -133,6 +136,7 @@ class MainActivity : ComponentActivity() {
                 onSaveLog = ::saveLog,
                 earlier = earlier.value,
                 progress = progress.value,
+                unknownWords = unknownWords.value,
                 backup = backup.value,
                 onChooseFolder = { pickFolder.launch(null) },
                 history = history.value,
@@ -207,7 +211,8 @@ class MainActivity : ComponentActivity() {
         // One load at a time: a rotation or a return from settings starts afresh.
         loading?.cancel()
         loading = lifecycleScope.launch {
-            val loader = TodayLoader(Boards(File(filesDir, "boards")), calendar::events)
+            val boards = Boards(File(filesDir, "boards"))
+            val loader = TodayLoader(boards, calendar::events)
             val entries = withContext(Dispatchers.IO) { log.entries() }
             val read = withContext(Dispatchers.IO) { imported.result(identity, LocalDate.now()) }
             val beside = HistoryPick.beside(read?.logged.orEmpty(), entries)
@@ -227,6 +232,8 @@ class MainActivity : ComponentActivity() {
                 ?.let { Today.of(it, entries, identity, vocabulary, beside) as? Today.Showing }
             val fetched = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), logged = logged) }
             if (fetched != null) today.value = Today.of(fetched, entries, identity, vocabulary, beside)
+            // After the fetch, so today's board is among those read.
+            unknownWords.value = withContext(Dispatchers.IO) { ReviewList.of(boards.all(), identity) }
         }
     }
 
