@@ -338,7 +338,7 @@ object Progression {
         // Only a dumbbell in each hand is the same thing done a side at a time. One dumbbell may
         // be held in both hands, and that weight in one arm would be double; a count nobody
         // said could be either. The row's own words, where they fix a count, must agree.
-        if (source.load.count != 2 || sessions.any { it.load.count != 2 }) return null
+        if (source.load.count != 2) return null
         if (Sheet.rowCount(Reading.Known(listOf(part), emptySet())).let { it != null && it != 2 }) return null
         val from = suggest(source.exercise, target, log) as? Suggestion.Weight ?: return null
         if (from.caution != null) return null
