@@ -46,6 +46,9 @@ class Boards(private val dir: File, private val get: (String) -> Download.Answer
         kept().filter { !it.first.isAfter(date) }.sortedByDescending { it.first }
             .firstNotNullOfOrNull { (_, file) -> runCatching { DayBoard.parse(file.readText()) }.getOrNull() }
 
+    /** Every board kept that still reads as one, for what they have in common (the review list). */
+    fun all(): List<DayBoard> = kept().mapNotNull { (_, file) -> runCatching { DayBoard.parse(file.readText()) }.getOrNull() }
+
     private fun kept(): List<Pair<LocalDate, File>> =
         dir.listFiles().orEmpty().mapNotNull { f ->
             f.name.removeSuffix(".json").takeIf { f.name.endsWith(".json") }

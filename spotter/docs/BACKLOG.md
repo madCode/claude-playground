@@ -30,10 +30,11 @@ or the docs rather than guess: the order may change, nothing is built on a guess
 - [ ] Progress, the new-word review screen, sharing a board (step 6). Built: the progress card
   (cycle 29). It names an exercise by its key ("bicep curl [alternating=yes]"), as the sheet
   does beneath a row; plainer names want the reader's help. Its "for 6" is reps a side, also for a row the board
-  writes as "12 total". "Whether the advice is working" is on it too, as counts (cycle 30);
+  writes as "12 total". The review list is built read only (cycle 31): sorting a word, and sharing a board, wait
+  on madCode (Your call). "Whether the advice is working" is on it too, as counts (cycle 30);
   taking the sheet's "try" weight counts as "lifted heavier", since the log doesn't keep the
   try weight.
-  Still to build: the new-word review, sharing a board.
+  Still to build: sorting a word on the review list, sharing a board.
 
 ## Next
 
@@ -66,6 +67,11 @@ Step 3, logging:
   "10 / 8 / 6" says nothing yet to a later "6 x" row, which converts from round one's. And a
   twinge or a stop is put on the heaviest round, since the screen doesn't ask which.
   *(cycle 24)*
+- [ ] The reader, from the review list on a real week of boards (cycle 31): tread and rower
+  instructions inside a floor post read as exercise rows with unknown words ("Set monitor to
+  14 minute count down", "Clear screen", "Remember incline", "High plank until ready for next
+  round"); the feed's "&amp;" isn't decoded; "band around the wrists", "front foot on bosu"
+  and "low to high raise" are setups and a movement worth listing.
 - [ ] Log screen, from the cycle 25 review: "12 total x chest press" typed for a two-handed
   lift is read as 6 a side, as a board line is.
 - [ ] Log screen, from the cycle 24 review: "Last time" under "Heaviest dumbbell" shows the
@@ -117,6 +123,20 @@ Asked in chat on 2026-11-22; until answered, the app keeps what it does now. The
   Not candidates: one dumbbell against two (a goblet squat and a two-dumbbell squat).
 - **Coming back to a lighter weight.** After 30 clean, a clean 25 goes back up after that one
   session, however long ago the 30 was. Keep, or add a time limit?
+
+What is left of step 6 (cycle 31), each needing madCode's word on what it should do:
+
+- **Sorting a word on the review list.** DESIGN says each new word is sorted once: which
+  movement, which variation, harder or easier, or filler, and the answer is an event in the
+  log. How should the phone ask? Proposed first step: two answers only, "ignore this word"
+  (filler) and "it's another name for …" with a movement picked from a search box; variations
+  and "harder or easier" later, as a proposal with mockups. An answer changes how every later
+  board reads, so it shouldn't be guessed at.
+- **Sharing a board** when nobody posted the class's workout. What should go out, and where?
+  The phone only knows a borrowed board and the rows logged. Proposed: the lines of the rows
+  you logged or added, in the board's words, never a weight, shown in full first, then handed
+  to Android's share sheet for you to post. There is still no Reddit key in the app. Is that
+  the right content, or is the tread and rower part wanted too, typed in?
 
 From the instructions pass (cycle 28), where two instructions disagree and which one stands is
 madCode's to say:
