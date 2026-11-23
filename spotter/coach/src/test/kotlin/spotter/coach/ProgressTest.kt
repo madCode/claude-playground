@@ -116,4 +116,49 @@ class ProgressTest {
         val capped = Progress.of(many, today)
         assertEquals(listOf(Progress.MOST, true), listOf(capped.next.size, capped.next.all { it.ready }))
     }
+
+    // Whether the sheet's numbers are working: what became of each one, counted from the log.
+    @Test
+    fun adviceCountsWhatBecameOfTheSheetsNumbers() {
+        val vocabulary = Vocabulary.starting()
+        var id = 0L
+        fun entry(
+            day: Int, ex: Reading.Known, lb: Int, shown: Int?, done: Int = 8, target: IntRange = 8..8, count: Int = 2, shownCount: Int = 2,
+            hurt: Boolean = false, row: String = "row", ladder: List<Int>? = null, heaviestOnly: Boolean = false,
+        ) = Journal.logged(
+            1, day(day), "2G", row, "line", ex, Load(lb, count), target, ladder, ladder ?: listOf(done, done),
+            hurt = hurt, heaviestOnly = heaviestOnly, shown = shown?.let { Load(it, shownCount) },
+        ).copy(id = ++id)
+        val counted = listOf(
+            // As suggested: at the number and every set done; the low end of a range was asked for.
+            entry(20, press, 25, shown = 25),
+            entry(20, curl, 15, shown = 15, done = 8, target = 8..10),
+            // Heavier than the sheet said, whatever came of it.
+            entry(20, deadlift, 45, shown = 40),
+            // Lighter, or at the number and short, or with a twinge.
+            entry(22, press, 20, shown = 25),
+            entry(22, curl, 15, shown = 15, done = 6),
+            entry(22, deadlift, 40, shown = 40, hurt = true),
+            // The sheet had nothing to say.
+            entry(24, press, 25, shown = null),
+        )
+        assertEquals(Progress.Advice(asSuggested = 2, heavier = 1, lighterOrShort = 3, noNumber = 1), Progress.advice(counted, vocabulary, today))
+        assertEquals(6, Progress.advice(counted, vocabulary, today).numbered)
+        // Not set side by side: a row the person added, a ladder by its heaviest round, another
+        // number of dumbbells than the sheet said, a class more than four weeks back.
+        val apart = listOf(
+            entry(20, press, 25, shown = null, row = Sheet.addedId(1)),
+            entry(20, press, 35, shown = 25, ladder = listOf(8, 6, 4), heaviestOnly = true),
+            entry(20, press, 40, shown = 25, count = 1),
+            entry(1, press, 25, shown = 25),
+        )
+        assertEquals(Progress.Advice(), Progress.advice(apart, vocabulary, today.plusDays(1)))
+        assertEquals(1, Progress.advice(apart, vocabulary, day(1).plusDays(28)).asSuggested)
+        // A row counts as last corrected, and not at all once removed.
+        val first = entry(20, press, 20, shown = 25)
+        val corrected = first.copy(id = ++id, kind = JournalEntry.Kind.CORRECTED, target = first.id, lb = 25)
+        assertEquals(Progress.Advice(asSuggested = 1), Progress.advice(listOf(first, corrected), vocabulary, today))
+        val removed = first.copy(id = ++id, kind = JournalEntry.Kind.REMOVED, target = first.id)
+        assertEquals(Progress.Advice(), Progress.advice(listOf(first, corrected, removed), vocabulary, today))
+    }
 }

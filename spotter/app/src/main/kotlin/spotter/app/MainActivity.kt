@@ -217,6 +217,7 @@ class MainActivity : ComponentActivity() {
             launch {
                 progress.value = withContext(Dispatchers.Default) {
                     Progress.of((beside + Journal.history(entries, vocabulary)).sortedBy { it.date }, LocalDate.now())
+                        .copy(advice = Progress.advice(entries, vocabulary, LocalDate.now()))
                 }
             }
             // The kept board first, then the fetched one.

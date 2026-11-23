@@ -80,7 +80,17 @@ class HomeScreenTest {
         compose.onNodeWithContentDescription("chest press: up from two 25 pound dumbbells to two 30 pound dumbbells for 8, on 20 Nov").assertIsDisplayed()
         compose.onNodeWithContentDescription("deadlift: up to two 45 pound dumbbells for 8 next time").assertIsDisplayed()
         compose.onNodeWithText("one more clean session at 2×20 for 12", useUnmergedTree = true).assertIsDisplayed()
+        // And what became of the sheet's numbers, in counts; a kind with none isn't listed.
+        compose.onNodeWithText("The sheet's numbers, last 4 weeks").assertDoesNotExist()
+        progress = progress.copy(advice = spotter.coach.Progress.Advice(asSuggested = 14, heavier = 3, lighterOrShort = 0, noNumber = 1))
+        compose.onNodeWithText("14 of 17 done as suggested").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("3 lifted heavier").assertIsDisplayed()
+        compose.onNodeWithText("1 row had no number yet").assertIsDisplayed()
         shoot("home-progress")
+        // With only that to say, the card is still there.
+        progress = spotter.coach.Progress(advice = spotter.coach.Progress.Advice(noNumber = 4))
+        compose.onNodeWithText("4 rows had no number yet").assertIsDisplayed()
+        compose.onNodeWithText("Next").assertDoesNotExist()
     }
 
     // What the numbers are made from is said, with what the import left out, and removing it
