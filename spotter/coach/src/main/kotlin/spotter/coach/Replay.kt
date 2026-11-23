@@ -17,7 +17,7 @@ object Replay {
     /** One class replayed: its file name and the session. */
     data class Replayed(val file: String, val session: ScorecardSession)
 
-    fun run(history: HistoryImport.Result, identity: Identity): List<Replayed> {
+    fun run(history: HistoryImport.Result, identity: Identity, rules: Rules = Rules()): List<Replayed> {
         val classes = history.all.groupBy { it.date to (it.className ?: NO_CLASS) }
         return classes.entries.sortedBy { it.key.first }.map { (cls, rows) ->
             val (date, name) = cls
@@ -29,15 +29,15 @@ object Replay {
                 sheetId = "$date:$name",
                 date = date.toString(),
                 className = name,
-                sets = rows.mapIndexed { i, row -> set(i, row, before, identity) },
+                sets = rows.mapIndexed { i, row -> set(i, row, before, identity, rules) },
             )
             Replayed(Export.sessionFile(date, name, sameDay), session)
         }
     }
 
-    private fun set(ref: Int, row: HistoryImport.Row, before: List<Logged>, identity: Identity): ScorecardRow {
+    private fun set(ref: Int, row: HistoryImport.Row, before: List<Logged>, identity: Identity, rules: Rules): ScorecardRow {
         // A sheet of the one line: the number depends on the history, not on the line's neighbours.
-        val sheetRow = row.line?.let { Sheet.make(listOf(it), before, identity).rows.singleOrNull() }
+        val sheetRow = row.line?.let { Sheet.make(listOf(it), before, identity, rules = rules).rows.singleOrNull() }
         val made = if (sheetRow != null) {
             ScorecardRow.from(ref, sheetRow, row.logged?.takeIf { it.key == (sheetRow.reading as? Reading.Known)?.key }, row.skipped)
         } else {
@@ -54,7 +54,7 @@ object Replay {
     }
 
     /** Writes each class's session into [out] and says what it did in counts. */
-    fun write(historyFile: File, out: File, today: LocalDate = LocalDate.now()): String {
+    fun write(historyFile: File, out: File, today: LocalDate = LocalDate.now(), rules: Rules = Rules()): String {
         // Sessions are someone's training data: never into a folder git would offer to commit.
         // The folder as it really is: a link into a checkout is in it, "../.." out of one is not.
         val folder = out.canonicalFile
@@ -66,7 +66,7 @@ object Replay {
         require(!folder.exists() || (folder.isDirectory && folder.list()?.isEmpty() == true)) { "$out isn't an empty folder. Choose a new or empty one." }
         val identity = Identity(Vocabulary.starting())
         val history = HistoryImport.read(historyFile.readText(), identity, today)
-        val replayed = run(history, identity)
+        val replayed = run(history, identity, rules)
         try {
             folder.mkdirs()
             replayed.forEach { File(folder, it.file).writeText(it.session.toJson() + "\n") }
@@ -78,7 +78,7 @@ object Replay {
         val numbered = replayed.sumOf { r -> r.session.sets.count { it.suggestedWeight != null && it.weight != null } }
         val weighted = replayed.sumOf { r -> r.session.sets.count { it.weight != null } }
         return buildString {
-            appendLine("${replayed.size} classes, $sets rows, written to $out")
+            appendLine("${replayed.size} classes, $sets rows, written to $out" + if (rules.perMovement) " (strength per movement on)" else "")
             appendLine("$weighted rows with a weight lifted; $numbered of them had a number on the sheet")
             appendLine("rows read into history: ${history.rows.size}; left out: " + history.left.entries.joinToString { "${it.key.name.lowercase().replace('_', ' ')} ${it.value}" }.ifEmpty { "none" })
         }
@@ -87,14 +87,14 @@ object Replay {
     const val NO_CLASS = "class"
 }
 
-/** `replay <history.jsonl> <out-folder>`: see docs/REPLAY.md. */
+/** `replay <history.jsonl> <out-folder> [per-movement]`: see docs/REPLAY.md. */
 fun main(args: Array<String>) {
-    if (args.size != 2) {
-        System.err.println("usage: replay <history.jsonl> <out-folder>")
+    if (args.size !in 2..3 || (args.size == 3 && args[2] != "per-movement")) {
+        System.err.println("usage: replay <history.jsonl> <out-folder> [per-movement]")
         exitProcess(2)
     }
     try {
-        print(Replay.write(File(args[0]), File(args[1])))
+        print(Replay.write(File(args[0]), File(args[1]), rules = Rules(perMovement = args.size == 3)))
     } catch (e: Exception) {
         // The message only: a stack trace could carry a line of the file.
         System.err.println("replay failed: ${e.message}")

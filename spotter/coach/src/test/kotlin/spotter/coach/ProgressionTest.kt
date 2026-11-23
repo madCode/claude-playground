@@ -319,6 +319,37 @@ class ProgressionTest {
         assertTrue(s.reasons.single().contains("0.6"))
     }
 
+    // Strength per movement, its first link, and only when switched on: a curl done one arm at
+    // a time takes the dumbbells the curl does. What was held, not the step up the curl has earned.
+    @Test
+    fun aVariationWithTheSameDumbbellsBorrowsWhenSwitchedOn() {
+        val curl = exercise("8 x bicep curl")
+        val alternating = exercise("8 x alternating bicep curl")
+        assertEquals("bicep curl [alternating=yes]", alternating.key)
+        val on = Rules(perMovement = true)
+        val log = listOf(logged(1, 25, listOf(8, 8), ex = curl, easy = true))
+        assertEquals(Load(30, 2), weight(log, ex = curl).load)
+        // As shipped, only identical exercises share history.
+        assertEquals(Suggestion.NoNumber.NEW, suggest(log, ex = alternating))
+        val s = Progression.suggest(alternating, 8..8, log, on) as Suggestion.Weight
+        assertEquals(listOf(Load(25, 2), Change.NEW, null), listOf(s.load, s.change, s.test))
+        assertEquals("new: the same dumbbells as your bicep curl (2×25)", s.reasons.single())
+        // The other way round too, and at other reps through the curl's own conversion.
+        val back = Progression.suggest(curl, 8..8, listOf(logged(1, 25, listOf(8, 8), ex = alternating)), on) as Suggestion.Weight
+        assertEquals(Load(25, 2), back.load)
+        assertEquals(Load(20, 2), (Progression.suggest(alternating, 12..12, log, on) as Suggestion.Weight).load)
+        // Its own history, once there is any, is the only word.
+        val own = log + logged(2, 15, listOf(8, 8), ex = alternating)
+        assertEquals(Load(15, 2), (Progression.suggest(alternating, 8..8, own, on) as Suggestion.Weight).load)
+        // A version that twinged lends nothing, nor one that differs in more than how the sides take turns.
+        assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(alternating, 8..8, listOf(logged(1, 25, listOf(8, 8), ex = curl, hurt = true)), on))
+        assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(exercise("8 x alternating hammer curl"), 8..8, log, on))
+        assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(exercise("8 x alternating chest press"), 8..8, log, on))
+        // The one-leg link is as it was, switch or no switch.
+        val deadlift = listOf(logged(1, 40, listOf(8, 8, 8), ex = exercise("8 x deadlift"), easy = true))
+        assertEquals(suggest(deadlift, ex = exercise("8 x single leg deadlift")), Progression.suggest(exercise("8 x single leg deadlift"), 8..8, deadlift, on))
+    }
+
     // Trap 11: a loose relative is no basis. A fly says nothing about a press.
     @Test
     fun aLooseRelativeIsNoBasis() {

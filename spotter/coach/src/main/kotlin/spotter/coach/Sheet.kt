@@ -89,7 +89,7 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
          */
         private val topLevel = Regex("""\bblock\b|intel""")
 
-        fun make(lines: List<String>, log: List<Logged>, identity: Identity, borrowedFrom: String? = null): Sheet {
+        fun make(lines: List<String>, log: List<Logged>, identity: Identity, borrowedFrom: String? = null, rules: Rules = Rules()): Sheet {
             var block: String? = null
             val rows = mutableListOf<SheetRow>()
             val seen = mutableMapOf<Pair<String, String>, Int>()
@@ -108,7 +108,7 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
                         val name = block?.split(" · ")?.joinToString(" · ") { it.substringBefore(" - ").trim() }.orEmpty()
                         val read = listOfNotNull(line.label, line.scheme?.let(::schemeId), line.words, line.side).joinToString(" ")
                         val n = seen.merge(name to read, 1, Int::plus)!!
-                        rows += row("$name / $read / $n", block, line, log, identity)
+                        rows += row("$name / $read / $n", block, line, log, identity, rules)
                     }
                 }
             }
@@ -151,7 +151,7 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
             Scheme.AsManyAsPossible -> "amrap"
         }
 
-        private fun row(id: String, block: String?, line: BoardLine, log: List<Logged>, identity: Identity): SheetRow {
+        private fun row(id: String, block: String?, line: BoardLine, log: List<Logged>, identity: Identity, rules: Rules = Rules()): SheetRow {
             val reading = identity.read(line.words)
             val target = when (val s = line.scheme) {
                 is Scheme.Reps -> s.perSide()
@@ -164,7 +164,7 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
             }
             if (!wantsWeight(reading)) return SheetRow(id, block, line, reading, target, null, emptyList())
             val warnings = mutableListOf<String>()
-            val suggestion = withRowCount(combo(reading, target, log, warnings), reading)
+            val suggestion = withRowCount(combo(reading, target, log, warnings, rules), reading)
             (suggestion as? Suggestion.Weight)?.caution?.let { warnings += it }
             val lastHeld = log.filter { it.key == reading.key && it.judged }.sortedBy { it.date }.lastOrNull()?.load
             return SheetRow(id, block, line, reading, target, suggestion, warnings, lastHeld)
@@ -189,13 +189,13 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
          * the combo without one: a gap beats the heavier part's guess. A part that twinged holds
          * the combo at what twinged, with the warning.
          */
-        private fun combo(reading: Reading.Known, target: IntRange?, log: List<Logged>, warnings: MutableList<String>): Suggestion {
-            val own = Progression.suggest(reading, target, log)
+        private fun combo(reading: Reading.Known, target: IntRange?, log: List<Logged>, warnings: MutableList<String>, rules: Rules): Suggestion {
+            val own = Progression.suggest(reading, target, log, rules)
             if (reading.parts.size == 1 || own is Suggestion.Weight) return own
             if (log.any { it.key == reading.key }) return own
             val weighted = reading.parts.filter { wantsWeight(it) }
             if (weighted.map { it.implement }.toSet().size > 1) return Suggestion.NoNumber("new: its parts are held differently")
-            val parts = weighted.map { part -> part to Progression.suggest(Reading.Known(listOf(part), emptySet()), target, log) }
+            val parts = weighted.map { part -> part to Progression.suggest(Reading.Known(listOf(part), emptySet()), target, log, rules) }
             val missing = parts.filter { it.second !is Suggestion.Weight }
             if (missing.isNotEmpty()) {
                 if (missing.size < parts.size) warnings += "no number for the ${missing.joinToString(" or ") { it.first.movement.name }} yet"

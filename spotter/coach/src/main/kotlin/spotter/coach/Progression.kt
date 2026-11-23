@@ -123,6 +123,16 @@ sealed interface Suggestion {
  * dumbbell after a clean session, hold after a near miss or a twinge, down a step after a miss.
  * See DESIGN.md, "Progression".
  */
+/**
+ * Rules the coach has but doesn't use until they have earned it on the scorecard (DESIGN.md,
+ * "The scorecard decides"). The app runs with none on; the replay tool can turn one on to
+ * grade it.
+ */
+data class Rules(
+    /** Variations of one movement read each other's history through stated links (step 5). */
+    val perMovement: Boolean = false,
+)
+
 object Progression {
     /**
      * Whether [basis] is the second clean session running at its weight: an earlier day's session
@@ -154,10 +164,10 @@ object Progression {
      * The weight for a row of [exercise] asking [target] reps a side (the first round, for a
      * ladder; null when timed), from [log] in the order it was logged.
      */
-    fun suggest(exercise: Reading.Known, target: IntRange?, log: List<Logged>): Suggestion {
+    fun suggest(exercise: Reading.Known, target: IntRange?, log: List<Logged>, rules: Rules = Rules()): Suggestion {
         // Sessions on one date keep the order they were logged in.
         val own = log.filter { it.key == exercise.key && it.judged }.sortedBy { it.date }
-        if (own.isEmpty()) return borrow(exercise, target, log)
+        if (own.isEmpty()) return borrow(exercise, target, log, rules)
 
         val last = own.last()
         // madCode: a twinge holds the weight and notes it. With nothing but twinges logged, the
@@ -306,8 +316,36 @@ object Progression {
      * A new exercise borrows only through a stated factor: a one-legged version of a two-legged
      * lift you've done, at 0.6 (trap 10). A loose relative is no basis (trap 11): no number.
      */
-    private fun borrow(exercise: Reading.Known, target: IntRange?, log: List<Logged>): Suggestion {
+    private fun borrow(exercise: Reading.Known, target: IntRange?, log: List<Logged>, rules: Rules): Suggestion {
         val part = exercise.parts.singleOrNull() ?: return Suggestion.NoNumber.NEW
+        val oneLeg = oneLeg(part, target, log)
+        if (oneLeg is Suggestion.Weight || !rules.perMovement) return oneLeg
+        return sameWeight(part, target, log) ?: oneLeg
+    }
+
+    /**
+     * Strength per movement, its first link: a variation that takes the same dumbbells as one
+     * already logged starts from that one's weight. Never from a step up: what was held last is
+     * the most a first go borrows, and a version that twinged lends nothing.
+     */
+    private fun sameWeight(part: Part, target: IntRange?, log: List<Logged>): Suggestion? {
+        val source = log.filter { logged ->
+            val p = logged.exercise.parts.singleOrNull() ?: return@filter false
+            logged.judged && p.movement == part.movement && p.variations != part.variations &&
+                p.variations - SAME_WEIGHT == part.variations - SAME_WEIGHT
+        }.maxByOrNull { it.date } ?: return null
+        val from = suggest(source.exercise, target, log) as? Suggestion.Weight ?: return null
+        if (from.caution != null) return null
+        val held = log.last { it.key == source.key && it.judged }.load
+        val load = if (from.load.lb > held.lb) held else from.load
+        return Suggestion.Weight(load, Change.NEW, listOf("new: the same dumbbells as your ${source.key} (${load.label})"))
+    }
+
+    // Variation axes that leave the dumbbells as they are: done one side at a time, the weight
+    // in each hand is what it is with both together. More are madCode's to rule on (BACKLOG).
+    private val SAME_WEIGHT = setOf("alternating")
+
+    private fun oneLeg(part: Part, target: IntRange?, log: List<Logged>): Suggestion {
         // One leg is a factor on what the legs move; a curl on one leg is a balance, not a 0.6.
         if (!part.oneLeg || part.movement.pattern !in setOf("squat", "lunge", "hinge")) return Suggestion.NoNumber.NEW
         val twoLegged = log.filter { logged ->

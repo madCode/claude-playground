@@ -57,6 +57,21 @@ class ReplayTest {
         assertEquals(listOf(30.0, 30.0), listOf(press(3).suggestedWeight, press(3).weight))
     }
 
+    // A rule the app doesn't use yet can be graded: with strength per movement on, a row the
+    // plain rules leave blank has a number, and the report says which run it was.
+    @Test
+    fun aRuleNotYetInTheAppCanBeReplayed() {
+        val curls = listOf(row("2026-03-02", "2G", "8 x bicep curl", "15", 8), row("2026-03-05", "2G", "8 x alternating bicep curl", "15", 8)).joinToString("\n")
+        val read = HistoryImport.read(curls, identity, today)
+        fun second(rules: Rules) = Replay.run(read, identity, rules)[1].session.sets.single().suggestedWeight
+        assertEquals(listOf(null, 15.0), listOf(second(Rules()), second(Rules(perMovement = true))))
+        val file = tmp.newFile("curls.jsonl").apply { writeText(curls) }
+        val report = Replay.write(file, File(tmp.root, "on"), today, Rules(perMovement = true))
+        assertEquals("2 classes, 2 rows, written to ${File(tmp.root, "on")} (strength per movement on)", report.lines().first())
+        assertTrue("1 of them had a number" in report)
+        assertTrue("0 of them had a number" in Replay.write(file, File(tmp.root, "off"), today))
+    }
+
     // Rows the coach couldn't read are in the session with what was lifted and no suggestion: a
     // blank row counts against the coach. A skipped row has no weight; a weight is as written.
     @Test
