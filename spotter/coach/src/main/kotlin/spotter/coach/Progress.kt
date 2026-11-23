@@ -46,8 +46,9 @@ data class Progress(val wentUp: List<WentUp> = emptyList(), val next: List<Next>
         fun of(log: List<Logged>, today: LocalDate): Progress {
             // Sessions on one date keep the order they were logged in. An exercise the sheet
             // gives no weight (a banded or bodyweight one an import still has a number for)
-            // has no number to move.
-            val byExercise = log.filter { it.judged && Sheet.wantsWeight(it.exercise) }.sortedBy { it.date }.groupBy { it.key }
+            // has no number to move. Wordings that share a weight are one exercise here, as
+            // they are to the coach, or one step would be listed once for each.
+            val byExercise = log.filter { it.judged && Sheet.wantsWeight(it.exercise) }.sortedBy { it.date }.groupBy { it.exercise.weightKey }
             val wentUp = byExercise.values.mapNotNull { sessions -> wentUp(sessions, today) }
                 .sortedByDescending { it.on }.take(MOST)
             // Only what was lifted lately: an exercise last seen in the spring is ready too, and

@@ -126,9 +126,8 @@ sealed interface Suggestion {
  * See DESIGN.md, "Progression".
  */
 /**
- * Rules the coach has but doesn't use until they have earned it on the scorecard (DESIGN.md,
- * "The scorecard decides"). The app runs with none on; the replay tool can turn one on to
- * grade it.
+ * Rules the replay tool can switch, to grade the coach both ways on the scorecard (DESIGN.md,
+ * "The scorecard decides"). The defaults are what the app runs.
  */
 data class Rules(
     /** Wordings that leave the weight as it is share one history ([Reading.Known.weightKey]). */
@@ -168,7 +167,7 @@ object Progression {
      */
     fun suggest(exercise: Reading.Known, target: IntRange?, log: List<Logged>, rules: Rules = Rules()): Suggestion {
         // Sessions on one date keep the order they were logged in.
-        val own = log.filter { it.judged && (it.key == exercise.key || (rules.shared && shares(it, exercise))) }.sortedBy { it.date }
+        val own = own(exercise, log, rules)
         if (own.isEmpty()) return borrow(exercise, target, log, rules)
 
         val last = own.last()
@@ -308,25 +307,29 @@ object Progression {
             decided < against -> Change.DOWN
             else -> Change.SAME
         }
-        // Said when the number rests on another wording, so it can be checked.
-        if (basis.key != exercise.key) {
-            val said = SharedWeight.words(basis.exercise)
-            reasons += "from your ${if (said.isEmpty()) "plain" else said} ${basis.exercise.parts.joinToString(" to ") { it.movement.name }}: the same weight"
-        }
+        // Said whenever another wording had a say, whether as the basis or as one of the two
+        // clean sessions, so the number can be checked against the log.
+        if (own.any { it.key != exercise.key }) reasons += "counted with its other wordings, which take the same dumbbells"
         // A twinge since holds the weight whatever was promised.
         return Suggestion.Weight(load, change, reasons, test, caution, oneMore && caution == null)
     }
 
     /**
      * Whether [logged] is another wording of [exercise] at the same weight. Across "alternating"
-     * only with a dumbbell in each hand: one dumbbell may have been held in both hands, and that
-     * weight in one arm would be double; a count nobody said could be either.
+     * only with a dumbbell in each hand, or where the words say how it is held: one dumbbell may
+     * have been held in both hands, and that weight in one arm would be double; a count nobody
+     * said could be either.
      */
     private fun shares(logged: Logged, exercise: Reading.Known): Boolean {
         if (logged.exercise.weightKey != exercise.weightKey) return false
         fun alternating(e: Reading.Known) = e.parts.map { it.variations["alternating"] }
-        return alternating(logged.exercise) == alternating(exercise) || logged.load.count == 2
+        // Where the words fix the count ("single arm", "goblet"), both wordings have them.
+        return alternating(logged.exercise) == alternating(exercise) || logged.load.count == 2 || Sheet.rowCount(logged.exercise) != null
     }
+
+    /** The sessions [exercise]'s number is read from, oldest first: its own, and its shared wordings'. */
+    fun own(exercise: Reading.Known, log: List<Logged>, rules: Rules = Rules()): List<Logged> =
+        log.filter { it.judged && (it.key == exercise.key || (rules.shared && shares(it, exercise))) }.sortedBy { it.date }
 
     /** [lb] done for [from] reps as a weight for [to], rounded down to the rack; null where Epley doesn't hold. */
     internal fun converted(lb: Int, from: Int, to: Int): Int? = if (from in epleyReps && to in epleyReps) convert(lb, from, to) else null

@@ -9,7 +9,7 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 - **The finding that matters most:** on realistic boards Spotter is mostly silent. An invented
   lifter working through the board corpus got a number on 110 of 361 weighted rows, because a
   reworded repeat ("floor pullover" after "pullover") was treated as new. The first fix is
-  in (135 of 361); the rest needs factors from madCode (BACKLOG, step 5).
+  in (128 of 361); the rest needs factors from madCode (BACKLOG, step 5).
 - **Built:** steps 1 to 4 in full. Step 5 has shared weights for wordings that don't change the
   weight. Step
   6 has the Progress card, the advice counts and the read-only list of unknown words.
@@ -26,10 +26,15 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 - **Why:** madCode asked whether Spotter's silence could have been found here. It could: an
   invented lifter working through the public board corpus, same weight every time, got a
   number on 110 of 361 weighted rows. Most blanks were a movement lifted before in other words.
-- **Shipped:** "alternating", a grip word, "dumbbell", "floor" or "bench" on a lying lift, and
-  "seated" or "standing" on an upper-body lift no longer make a new exercise for the coach:
-  such wordings share the number, the two clean sessions and a twinge. It is on in the app.
-- **On the yardstick:** 135 of 361 now. What is left blank is mostly words that do change the
+- **Shipped:** "alternating", "dumbbell", "floor" or "bench" on a lying lift, and "seated" or
+  "standing" on an upper-body lift no longer make a new exercise for the coach: such wordings
+  share the number, the two clean sessions and a twinge. It is on in the app.
+- **The review ran every corpus line through it** and found grip words don't belong: boards
+  set "close grip chest press" beside "chest press", and the lighter one would have pulled the
+  other's number down. They are left out, for madCode to rule on again. It also found a
+  triceps extension on a bench merged with the overhead one, a combo's "no number" bypassed
+  through its other wording, and the Progress card listing one step twice. All fixed.
+- **On the yardstick:** 128 of 361 now. What is left blank is mostly words that do change the
   weight (one arm, a tempo, one leg, sumo, a band): each needs a factor from madCode.
 - **Replaces** the per-movement switch and its one link, which the grading on real history
   showed never fired. The replay tool's flag is now `-PnoShared`, to compare both ways.

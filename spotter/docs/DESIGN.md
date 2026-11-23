@@ -167,17 +167,20 @@ what is on the board, and nothing says so.
   says "new: go light".
 - **Words that share a weight.** Some wordings leave the dumbbells as they are, and those share
   one history: the number, the two clean sessions and a twinge all carry across, and "Why this
-  number" names the wording it came from. madCode ruled on the first set (2026-11-23):
+  number" says other wordings were counted. The Progress card lists such wordings once. madCode
+  ruled on the first set (2026-11-23):
   - "alternating": one side at a time, the same dumbbell in each hand. Only between sessions
-    logged with two dumbbells: one held in both hands would be double in one arm.
-  - a grip word (close, neutral, hammer, reverse, wide): the same muscles within a dumbbell step.
+    logged with two dumbbells, or where the words say how it is held ("goblet", "single
+    arm"): one dumbbell held in both hands would be double in one arm.
   - "dumbbell": it names what the lift is already done with.
-  - "floor" or "bench" on a press, fly, pullover or triceps lift: the floor only shortens the
-    range.
-  - "seated" or "standing" on a lift the legs don't move.
+  - "floor" or "bench" on a press, fly or pullover: the floor only shortens the range. Not a
+    triceps extension, which on a bench is another lift than one overhead.
+  - "seated" or "standing" on a lift the legs don't move (not a thruster or push press).
   - "(heavy)" and "(light)" were never part of an exercise's name.
   Everything else keeps a history of its own until a factor is agreed: one arm, one leg, a
-  split or sumo stance, a bosu, a tempo, an incline, one dumbbell against two. The replay tool
+  split or sumo stance, a bosu, a tempo, an incline, one dumbbell against two. So does a grip
+  word, though madCode's first set had it: boards set "close grip chest press" beside "chest
+  press", lifted at different weights, and the latest session would speak for both. The replay tool
   can switch sharing off (`-PnoShared`) to grade the coach both ways.
 - **New words go to a review list.** The list is built, read only (`ReviewList`): a card
   under Progress, "Words Spotter doesn't know yet", reads the boards kept on the phone (the

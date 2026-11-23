@@ -330,12 +330,14 @@ class ProgressionTest {
         val once = listOf(logged(1, 25, listOf(8, 8), ex = curl))
         val s = weight(once, ex = alternating)
         assertEquals(listOf(Load(25, 2), Change.SAME), listOf(s.load, s.change))
-        assertEquals("from your plain bicep curl: the same weight", s.reasons.last())
+        assertEquals("counted with its other wordings, which take the same dumbbells", s.reasons.last())
         // The second clean session may be in other words: then the third goes up, whichever it is.
         val twice = once + logged(2, 25, listOf(8, 8), ex = alternating)
-        assertEquals(Load(30, 2), weight(twice, ex = exercise("8 x hammer curl")).load)
+        assertEquals(Load(30, 2), weight(twice, ex = exercise("8 x seated bicep curl")).load)
         assertEquals(Load(30, 2), weight(twice, ex = curl).load)
-        assertEquals("from your alternating bicep curl: the same weight", weight(twice, ex = curl).reasons.last())
+        // Said also when the row's own session is the basis and the other wording made it two.
+        assertEquals(listOf("clean at 2×25: up a dumbbell", "counted with its other wordings, which take the same dumbbells"), weight(twice, ex = alternating).reasons)
+        assertEquals(listOf("clean at 2×25 once: up after one more clean session, or one that felt easy"), weight(once, ex = curl).reasons)
         // A twinge in one wording holds the others.
         val hurt = twice + logged(3, 30, listOf(8, 8), ex = curl, hurt = true)
         assertEquals("it twinged last time at 2×30", weight(hurt, ex = alternating).caution)
@@ -345,9 +347,9 @@ class ProgressionTest {
         // Each of the words, on a lift it leaves alone.
         fun shares(a: String, b: String) = suggest(listOf(logged(1, 25, listOf(8, 8), ex = exercise(a))), ex = exercise(b)) is Suggestion.Weight
         for ((a, b) in listOf(
-            "8 x chest press" to "8 x floor chest press", "8 x bench pullover" to "8 x pullover", "8 x chest press" to "8 x close grip chest press",
+            "8 x chest press" to "8 x floor chest press", "8 x bench pullover" to "8 x pullover", "8 x chest fly" to "8 x bench chest fly",
             "8 x low row" to "8 x seated low row", "8 x shoulder press" to "8 x seated shoulder press", "8 x deadlift" to "8 x dumbbell deadlift",
-            "8 x neutral grip shoulder press" to "8 x standing alternating shoulder press",
+            "8 x shoulder press" to "8 x standing alternating shoulder press", "8 x tricep extension" to "8 x seated tricep extension",
         )) {
             assertTrue("$a and $b", shares(a, b) && shares(b, a))
         }
@@ -357,6 +359,10 @@ class ProgressionTest {
             "8 x chest press" to "8 x incline chest press", "8 x chest press" to "8 x single arm chest press", "8 x low row" to "8 x low row (explosive)",
             "8 x squat" to "8 x sumo squat", "8 x chest press" to "8 x bosu chest press", "8 x squat" to "8 x goblet squat",
             "8 x squat" to "8 x bench squat", "8 x chest press" to "8 x chest fly", "8 x calf raise" to "8 x seated calf raise",
+            // A grip is lifted at its own weight beside the plain lift; a triceps extension on a
+            // bench is another lift than one overhead; legs drive a thruster.
+            "8 x chest press" to "8 x close grip chest press", "8 x bicep curl" to "8 x hammer curl", "8 x tricep extension" to "8 x bench tricep extension",
+            "8 x thruster" to "8 x seated thruster",
         )) {
             assertTrue("$a and $b", !shares(a, b) && !shares(b, a))
         }
@@ -376,8 +382,11 @@ class ProgressionTest {
         // A one-dumbbell session is left out; the two-dumbbell one still lends.
         val mixed = listOf(logged(1, 40, listOf(8, 8), ex = curl, count = 1), logged(2, 20, listOf(8, 8), ex = curl))
         assertEquals(Load(20, 2), weight(mixed, ex = alternating).load)
-        // Between two wordings that are both a side at a time, the count is whatever it was.
-        assertEquals(Load(25, 1), weight(listOf(logged(1, 25, listOf(8, 8), ex = alternating, count = 1)), ex = exercise("8 x alternating hammer curl")).load)
+        // Between two wordings that are both a side at a time, the count is whatever it was;
+        // and where the words say how it is held, a side at a time doesn't change it.
+        assertEquals(Load(25, 1), weight(listOf(logged(1, 25, listOf(8, 8), ex = alternating, count = 1)), ex = exercise("8 x seated alternating bicep curl")).load)
+        val goblet = listOf(logged(1, 30, listOf(8, 8), ex = exercise("8 x goblet lateral lunge"), count = 1))
+        assertEquals(Load(30, 1), weight(goblet, ex = exercise("8 x goblet alt lateral lunge")).load)
         // The one-leg link reads a shared history too.
         val deadlift = listOf(logged(1, 40, listOf(8, 8, 8), ex = exercise("8 x dumbbell deadlift"), easy = true))
         assertTrue(suggest(deadlift, ex = exercise("8 x single leg deadlift")) is Suggestion.Weight)

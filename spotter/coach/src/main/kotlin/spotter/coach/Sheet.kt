@@ -166,7 +166,7 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
             val warnings = mutableListOf<String>()
             val suggestion = withRowCount(combo(reading, target, log, warnings, rules), reading)
             (suggestion as? Suggestion.Weight)?.caution?.let { warnings += it }
-            val lastHeld = log.filter { it.key == reading.key && it.judged }.sortedBy { it.date }.lastOrNull()?.load
+            val lastHeld = Progression.own(reading, log, rules).lastOrNull()?.load
             return SheetRow(id, block, line, reading, target, suggestion, warnings, lastHeld)
         }
 
@@ -192,7 +192,8 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
         private fun combo(reading: Reading.Known, target: IntRange?, log: List<Logged>, warnings: MutableList<String>, rules: Rules): Suggestion {
             val own = Progression.suggest(reading, target, log, rules)
             if (reading.parts.size == 1 || own is Suggestion.Weight) return own
-            if (log.any { it.key == reading.key }) return own
+            // Logged in any wording, its "no number" stands: the parts aren't a way round it.
+            if (log.any { it.key == reading.key } || Progression.own(reading, log, rules).isNotEmpty()) return own
             val weighted = reading.parts.filter { wantsWeight(it) }
             if (weighted.map { it.implement }.toSet().size > 1) return Suggestion.NoNumber("new: its parts are held differently")
             val parts = weighted.map { part -> part to Progression.suggest(Reading.Known(listOf(part), emptySet()), target, log, rules) }

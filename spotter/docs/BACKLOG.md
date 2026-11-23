@@ -19,8 +19,8 @@ or the docs rather than guess: the order may change, nothing is built on a guess
   data only.
 - [ ] Strength per movement (step 5). Built: wordings that leave the weight as it is share one
   history, switched on (DESIGN.md, "Words that share a weight"). On the yardstick (an invented
-  lifter working through the board corpus) that took the rows with a number from 110 to 135 of
-  361. Next, each needing madCode's word on a factor, by how many blank rows it holds on the
+  lifter working through the board corpus) that took the rows with a number from 110 to 128 of
+  361. Grip words were in madCode's set and are left out (DESIGN says why): ask. Next, each needing madCode's word on a factor, by how many blank rows it holds on the
   yardstick: one arm (18), "explosive" (12), one leg (10), one dumbbell in both hands against
   two (10), sumo (9), a band (12), a bosu (8), incline or overhead (10). Then the person's own
   measured ratio replacing a stated factor.
@@ -117,10 +117,12 @@ says otherwise.
   offer it as "try 30 if set 1 feels easy"; it never sets the number.
 - **Variations that share a weight:** yes, build it. First set, where the number carries
   straight across: alternating; naming the implement; "floor" or "bench" on a pullover or
-  press; "seated" on an upper-body row or curl; grip words; "(heavy)" and "(light)". Still to
+  press; "seated" on an upper-body row or curl; grip words; "(heavy)" and "(light)". Built,
+  but for grip words (a board lists "close grip chest press" beside "chest press" at another
+  weight): share them or not is madCode's to say again. Still to
   agree: factors for single arm, single leg, split stance, bosu, tempo, incline. The yardstick
   is the share of weighted rows with a number when an invented lifter works through the board
-  corpus: 110 of 361 before this work, 135 with the first set built.
+  corpus: 110 of 361 before this work, 128 with the first set built (without grip words).
 - **Coming back to a lighter weight:** add a limit, six to eight weeks or a number of classes.
   TRAINING.md has nothing on time away yet: read the research first.
 - **Sharing a board:** start with the floor rows. madCode: "and maybe row weights only", which

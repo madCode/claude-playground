@@ -73,6 +73,17 @@ class ProgressTest {
     }
 
     // What is next is what the next sheet will say: up a dumbbell, or one clean session from it.
+    // Wordings that share a weight are one exercise on the card, as they are to the coach.
+    @Test
+    fun sharedWordingsAreListedOnce() {
+        val floor = exercise("8 x floor chest press")
+        val two = Progress.of(listOf(logged(20, press, 25), logged(22, floor, 25)), today)
+        assertEquals(listOf(Load(30, 2) to true), two.next.map { it.load to it.ready })
+        // Up on the floor from what was pressed on the bench is a step up, once.
+        val up = Progress.of(listOf(logged(20, press, 25), logged(22, floor, 25), logged(24, floor, 30)), today)
+        assertEquals(listOf(Load(25, 2) to Load(30, 2)), up.wentUp.map { it.from to it.to })
+    }
+
     @Test
     fun whatIsNextIsWhatTheNextSheetWillSay() {
         val log = listOf(

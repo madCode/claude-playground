@@ -81,6 +81,23 @@ class SheetTest {
         assertTrue(pushUp.warnings.isEmpty())
     }
 
+    // A combo that hurt at the lightest dumbbell has no number, and its other wording doesn't
+    // get one from its parts instead. The last weight held is the shared history's too.
+    @Test
+    fun aCombosNoNumberStandsInItsOtherWording() {
+        val log = listOf(
+            logged("8 x lateral lunge", 20, listOf(8, 8)),
+            logged("8 x upright row", 15, listOf(8, 8)),
+            Logged(LocalDate.of(2026, 3, 2), exercise("8 x alt lateral lunge to upright row"), Load(3, 2), 8..8, listOf(4), hurt = true, stopped = true),
+        )
+        for (line in listOf("8 x alt lateral lunge to upright row", "8 x lateral lunge to upright row")) {
+            val row = Sheet.make(listOf(line), log, identity).rows.single()
+            assertTrue(line, row.suggestion is Suggestion.NoNumber && !(row.suggestion as Suggestion.NoNumber).new)
+        }
+        val floor = Sheet.make(listOf("8 x floor chest press"), listOf(logged("8 x chest press", 25, listOf(8, 8))), identity).rows.single()
+        assertEquals(Load(25, 2), floor.lastHeld)
+    }
+
     // Trap 6: bodyweight and banded-with-nothing-held rows want no weight; a bare line does.
     @Test
     fun bodyweightAndBandedRowsWantNoWeight() {

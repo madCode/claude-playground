@@ -40,37 +40,29 @@ sealed interface Reading {
 /**
  * The words that leave the dumbbells as they are, as madCode ruled on 2026-11-23. Each needs its
  * reason: a word that changes leverage or balance (one arm, one leg, a bosu, a tempo, an incline)
- * is not here, and keeps a history of its own.
+ * is not here, and keeps a history of its own. Nor is a grip: a board sets "close grip chest
+ * press" beside "chest press", and the two are lifted at different weights.
  */
 internal object SharedWeight {
-    // Lifts done lying down, where the floor only shortens the range a bench allows.
-    private val lying = setOf("horizontal_push", "fly", "pullover", "triceps")
+    // Lifts done lying down, where the floor only shortens the range a bench allows. Not a
+    // triceps extension: on a bench it is two dumbbells lying back, bare it is one overhead.
+    private val lying = setOf("horizontal_push", "fly", "pullover")
 
     // Lifts the legs don't move: sitting or standing changes the balance, not the load.
-    private val upper = lying + setOf("vertical_push", "horizontal_pull", "vertical_pull", "curl", "raise")
+    private val upper = lying + setOf("vertical_push", "horizontal_pull", "vertical_pull", "curl", "raise", "triceps")
+
+    // Presses the legs drive, whatever their pattern says.
+    private val legDriven = setOf("thruster", "push press", "clean and press")
 
     fun neutral(movement: Movement, axis: String, value: String): Boolean = when (axis) {
         // One side at a time, with the same dumbbell in each hand.
         "alternating" -> true
-        // How the handle is turned: the same muscles within a dumbbell step.
-        "grip" -> true
         // "Dumbbell" on a lift already done with dumbbells says nothing new.
         "implement" -> value == "dumbbell"
         "position" -> value in setOf("floor", "bench") && movement.pattern in lying
-        "legs" -> value in setOf("seated", "standing") && movement.pattern in upper
+        "legs" -> value in setOf("seated", "standing") && movement.pattern in upper && movement.name !in legDriven
         else -> false
     }
-
-    /** The neutral words of [exercise], as they'd be said before its name: "alternating", "close grip". */
-    fun words(exercise: Reading.Known): String = exercise.parts.flatMap { p ->
-        p.variations.toSortedMap().filter { neutral(p.movement, it.key, it.value) }.map { (axis, value) ->
-            when (axis) {
-                "alternating" -> "alternating"
-                "grip" -> "$value grip"
-                else -> value
-            }
-        }
-    }.joinToString(" ")
 }
 
 /** Why a line is "not sure". */
