@@ -32,7 +32,7 @@ private val day = DateTimeFormatter.ofPattern("d MMM", Locale.UK)
 @Composable
 fun ProgressView(progress: Progress) {
     val advice = progress.advice
-    if (progress.wentUp.isEmpty() && progress.next.isEmpty() && advice.numbered + advice.noNumber == 0) return
+    if (progress.wentUp.isEmpty() && progress.next.isEmpty() && advice.numbered == 0) return
     Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Progress", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = ink, modifier = Modifier.semantics { heading() })
@@ -60,7 +60,7 @@ fun ProgressView(progress: Progress) {
                     }
                 }
             }
-            if (advice.numbered + advice.noNumber > 0) {
+            if (advice.numbered > 0) {
                 Text(
                     "The sheet's numbers, last ${Progress.WEEKS} weeks",
                     fontSize = 14.sp,
@@ -68,16 +68,11 @@ fun ProgressView(progress: Progress) {
                     modifier = Modifier.padding(top = if (progress.wentUp.isEmpty() && progress.next.isEmpty()) 0.dp else 4.dp).semantics { heading() },
                 )
                 // Counts in plain words: what happened to the numbers, not a grade of them.
-                if (advice.numbered > 0) {
-                    Text("${advice.asSuggested} of ${advice.numbered} done as suggested", fontSize = 16.sp, color = ink)
-                    listOfNotNull(
-                        "${advice.heavier} lifted heavier".takeIf { advice.heavier > 0 },
-                        "${advice.lighterOrShort} lighter or short".takeIf { advice.lighterOrShort > 0 },
-                    ).takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" · "), fontSize = 15.sp, color = muted) }
-                }
-                if (advice.noNumber > 0) {
-                    Text(if (advice.noNumber == 1) "1 row had no number yet" else "${advice.noNumber} rows had no number yet", fontSize = 15.sp, color = muted)
-                }
+                Text("${advice.asSuggested} of ${advice.numbered} done as suggested", fontSize = 16.sp, color = ink)
+                listOfNotNull(
+                    "${advice.heavier} lifted heavier".takeIf { advice.heavier > 0 },
+                    "${advice.lighterOrShort} lighter or short".takeIf { advice.lighterOrShort > 0 },
+                ).takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" · "), fontSize = 15.sp, color = muted) }
             }
         }
     }

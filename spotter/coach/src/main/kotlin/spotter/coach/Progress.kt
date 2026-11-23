@@ -10,18 +10,19 @@ import java.time.LocalDate
 data class Progress(val wentUp: List<WentUp> = emptyList(), val next: List<Next> = emptyList(), val advice: Advice = Advice()) {
     /**
      * Whether the sheet's numbers are working (HANDOFF.md: "are the suggested weights
-     * completed?"), over the rows logged lately that the sheet had a say on. A count of what
-     * happened, with no score: the scorecard does the grading, on the export.
+     * completed?"), over the rows logged lately that the sheet had a number for. A count of
+     * what happened, with no score: the scorecard does the grading, on the export.
+     *
+     * Rows the sheet had no number for aren't counted: an entry from before the log kept the
+     * sheet's number looks the same as one, and would be called "no number" untruly.
      */
     data class Advice(
         /** Lifted at the sheet's number, every set reaching what was asked. */
         val asSuggested: Int = 0,
-        /** Lifted heavier than the sheet said. */
+        /** Lifted heavier than the sheet's number (its "try" weight included: the log doesn't keep that). */
         val heavier: Int = 0,
         /** Lifted lighter than the sheet said, or at its number and short, stopped or with a twinge. */
         val lighterOrShort: Int = 0,
-        /** The sheet had no number for the row. */
-        val noNumber: Int = 0,
     ) {
         val numbered: Int get() = asSuggested + heavier + lighterOrShort
     }
@@ -68,27 +69,30 @@ data class Progress(val wentUp: List<WentUp> = emptyList(), val next: List<Next>
         /**
          * What became of the sheet's numbers for the rows logged on the phone in the last
          * [WEEKS] weeks. Left out, because the two can't fairly be set side by side: a row the
-         * person added (the sheet never showed it), a ladder logged by its heaviest round
-         * against a number for its first, and a lift with another number of dumbbells than
-         * the sheet said.
+         * person added (the sheet never showed it), an easier version (not that exercise's
+         * set), a ladder logged by its heaviest round against a number for its first, a lift
+         * with another number of dumbbells than the sheet said, and a row since corrected onto
+         * other words or reps than the ones its number was shown for.
          */
         fun advice(entries: List<JournalEntry>, vocabulary: Vocabulary, today: LocalDate): Advice {
             var asSuggested = 0
             var heavier = 0
             var lighterOrShort = 0
-            var noNumber = 0
+            val byId = entries.associateBy { it.id }
+            // The entry a row was first logged as: a correction keeps the number shown then.
+            fun first(e: JournalEntry) = generateSequence(e) { c -> c.target?.takeIf { c.kind == JournalEntry.Kind.CORRECTED }?.let(byId::get) }.take(entries.size + 1).last()
             for ((e, logged) in Journal.read(entries, vocabulary)) {
-                if (e.date.isBefore(today.minusWeeks(WEEKS)) || e.date > today || Sheet.isAdded(e.row) || !Sheet.wantsWeight(logged.exercise)) continue
-                val shown = e.shownLb
+                if (e.date.isBefore(today.minusWeeks(WEEKS)) || e.date > today || Sheet.isAdded(e.row) || e.easier || !Sheet.wantsWeight(logged.exercise)) continue
+                val shown = e.shownLb ?: continue
+                val asFirst = first(e).let { it.line == e.line && it.targetLow == e.targetLow && it.targetHigh == e.targetHigh }
                 when {
-                    shown == null -> noNumber++
-                    logged.heaviestOnly || (e.shownCount != null && logged.load.count != null && e.shownCount != logged.load.count) -> Unit
+                    !asFirst || logged.heaviestOnly || (e.shownCount != null && logged.load.count != null && e.shownCount != logged.load.count) -> Unit
                     logged.load.lb > shown -> heavier++
                     logged.load.lb < shown || !done(logged) -> lighterOrShort++
                     else -> asSuggested++
                 }
             }
-            return Advice(asSuggested, heavier, lighterOrShort, noNumber)
+            return Advice(asSuggested, heavier, lighterOrShort)
         }
 
         // Every set reached what was asked (the low end of a range counts: it was asked for).

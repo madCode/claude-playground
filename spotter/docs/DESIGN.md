@@ -366,10 +366,12 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   says what the next sheet won't. Eight lines of each at most, the most recent first.
   Below them, "The sheet's numbers, last 4 weeks": of the rows logged on the phone that the
   sheet had a number for, how many were done as suggested (at the number, every set reaching
-  what was asked), lifted heavier, or lighter or short; and how many had no number. Counts,
-  not a grade: the scorecard grades, on the export. A row the person added, a ladder logged
-  by its heaviest round, and a lift with another number of dumbbells than the sheet said are
-  left out, since the two can't fairly be compared.
+  what was asked), lifted heavier, or lighter or short. Counts, not a grade: the scorecard
+  grades, on the export. Left out, since the two can't fairly be compared: a row the person
+  added, an easier version, a ladder logged by its heaviest round, a lift with another number
+  of dumbbells than the sheet said, and a row since corrected onto other words or reps than
+  its number was shown for. Rows the sheet had no number for aren't counted either: an entry
+  from before the log kept the sheet's number looks the same as one.
 
 Later: review of new exercise names, sharing a board for others, the watch.
 
