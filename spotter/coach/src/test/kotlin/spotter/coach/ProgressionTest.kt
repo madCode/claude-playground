@@ -350,6 +350,16 @@ class ProgressionTest {
         val mixed = listOf(logged(1, 25, listOf(12, 12), 12..12, ex = curl, easy = true), logged(3, 35, listOf(6, 6), 6..6, ex = curl))
         assertEquals(Load(30, 2), weight(mixed, ex = curl, target = 12..12).load)
         assertEquals(Load(25, 2), (Progression.suggest(alternating, 12..12, mixed, on) as Suggestion.Weight).load)
+        // Nor does a heavier ladder since, or a twinge at the next dumbbell, let the step through.
+        val easy = logged(1, 25, listOf(8, 8), ex = curl, easy = true)
+        val ladder = Logged(day(3), curl, Load(35, 2), 8..8, listOf(8, 6, 4), ladder = listOf(8, 6, 4), heaviestOnly = true)
+        val twinge = listOf(easy, logged(2, 30, listOf(8, 8), ex = curl, hurt = true), logged(3, 20, listOf(10, 10), 10..10, ex = curl))
+        for (history in listOf(listOf(easy, ladder), twinge)) {
+            assertEquals(Load(30, 2), weight(history, ex = curl).load)
+            assertEquals(Load(25, 2), (Progression.suggest(alternating, 8..8, history, on) as Suggestion.Weight).load)
+        }
+        // An older one-dumbbell session behind a two-dumbbell one lends nothing either.
+        assertEquals(Suggestion.NoNumber.NEW, Progression.suggest(alternating, 8..8, listOf(logged(1, 25, listOf(8, 8), ex = curl, count = 1, easy = true), logged(3, 30, listOf(6, 6), 6..6, ex = curl)), on))
         // One dumbbell may be one held in both hands: in one arm it would be double. A count
         // nobody said lends nothing either, nor a row whose own words say one dumbbell.
         for (count in listOf(1, null)) {
