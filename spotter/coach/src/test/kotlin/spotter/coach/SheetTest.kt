@@ -94,6 +94,9 @@ class SheetTest {
             val row = Sheet.make(listOf(line), log, identity).rows.single()
             assertTrue(line, row.suggestion is Suggestion.NoNumber && !(row.suggestion as Suggestion.NoNumber).new)
         }
+        // Nor when it was held another way, which the coach doesn't count: still not the parts'.
+        val oneDumbbell = log.dropLast(1) + Logged(LocalDate.of(2026, 3, 2), exercise("8 x alt lateral lunge to upright row"), Load(10, 1), 8..8, listOf(8, 8))
+        assertEquals(Suggestion.NoNumber.NEW, Sheet.make(listOf("8 x lateral lunge to upright row"), oneDumbbell, identity).rows.single().suggestion)
         val floor = Sheet.make(listOf("8 x floor chest press"), listOf(logged("8 x chest press", 25, listOf(8, 8))), identity).rows.single()
         assertEquals(Load(25, 2), floor.lastHeld)
     }

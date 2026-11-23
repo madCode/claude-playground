@@ -192,8 +192,9 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
         private fun combo(reading: Reading.Known, target: IntRange?, log: List<Logged>, warnings: MutableList<String>, rules: Rules): Suggestion {
             val own = Progression.suggest(reading, target, log, rules)
             if (reading.parts.size == 1 || own is Suggestion.Weight) return own
-            // Logged in any wording, its "no number" stands: the parts aren't a way round it.
-            if (log.any { it.key == reading.key } || Progression.own(reading, log, rules).isNotEmpty()) return own
+            // Logged in any wording, however it was held and judged or not, its "no number"
+            // stands: the parts aren't a way round it.
+            if (log.any { it.key == reading.key || (rules.shared && it.exercise.weightKey == reading.weightKey) }) return own
             val weighted = reading.parts.filter { wantsWeight(it) }
             if (weighted.map { it.implement }.toSet().size > 1) return Suggestion.NoNumber("new: its parts are held differently")
             val parts = weighted.map { part -> part to Progression.suggest(Reading.Known(listOf(part), emptySet()), target, log, rules) }

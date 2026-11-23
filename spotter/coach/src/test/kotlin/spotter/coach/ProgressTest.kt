@@ -82,6 +82,12 @@ class ProgressTest {
         // Up on the floor from what was pressed on the bench is a step up, once.
         val up = Progress.of(listOf(logged(20, press, 25), logged(22, floor, 25), logged(24, floor, 30)), today)
         assertEquals(listOf(Load(25, 2) to Load(30, 2)), up.wentUp.map { it.from to it.to })
+        // One dumbbell a side at a time and one in both hands aren't the same lift to the coach,
+        // so 25 then 35 is no step up, and each stands on the card for itself.
+        val alternating = exercise("8 x alt chest press")
+        val apart = Progress.of(listOf(logged(18, alternating, 25, count = 1), logged(20, alternating, 25, count = 1), logged(22, press, 35, count = 1)), today)
+        assertTrue(apart.wentUp.isEmpty())
+        assertEquals(listOf("chest press" to false, "chest press [alternating=yes]" to true), apart.next.map { it.exercise to it.ready }.sortedBy { it.first })
     }
 
     @Test
