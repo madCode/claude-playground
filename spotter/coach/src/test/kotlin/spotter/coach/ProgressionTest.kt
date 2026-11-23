@@ -339,6 +339,15 @@ class ProgressionTest {
         val twinged = weight(earned + logged(3, 25, listOf(8, 8), hurt = true), target = 6..6)
         assertNull(twinged.test)
         assertTrue(twinged.reasons.none { "try" in it })
+        // A twinge above the offer takes it away too.
+        assertNull(weight(earned + logged(3, 35, listOf(8, 8), hurt = true), target = 6..6).test)
+        // A step that is a big jump was earned as well: its try is for these reps, not those.
+        val big = weight(listOf(logged(1, 20, listOf(8, 8)), logged(2, 20, listOf(8, 8))), target = 6..6)
+        assertEquals(listOf(Load(20, 2), Load(25, 2)), listOf(big.load, big.test))
+        assertEquals(listOf("done at 2×20", "a step up was earned at 8 reps: try 25 if set 1 feels easy"), big.reasons)
+        // Never more than the earned dumbbell converts to: 35 for 5 is no more than 25 for 12.
+        val far = weight(listOf(logged(1, 30, listOf(5, 5), 5..5), logged(2, 30, listOf(5, 5), 5..5)), target = 12..12)
+        assertEquals(listOf(Load(25, 2), null), listOf(far.load, far.test))
         // Taken and done clean, it is these reps' own history from then on.
         assertEquals(Load(30, 2), weight(earned + logged(3, 30, listOf(6, 6), 6..6), target = 6..6).load)
     }

@@ -258,11 +258,11 @@ object Progression {
         // After a miss the step down is expected to reach what was asked, so it converts from that.
         val from = if (basis.outcome == Outcome.MISS) basis.anchor else basis.repsDone ?: basis.anchor
         if (basis.anchor != to) {
-            // A step up earned at other reps isn't taken, but it isn't lost either: the
-            // dumbbell it would have meant is offered, to try if the first set feels easy
-            // (madCode, 2026-11-23).
-            val earned = lb > held
-            if (earned) {
+            // A step up earned at other reps isn't taken, but it isn't lost either: what that
+            // dumbbell converts to is offered, to try if the first set feels easy (madCode,
+            // 2026-11-23). A big jump is such a step too: its "try" was for those reps.
+            val earned = if (lb > held) lb else test?.lb
+            if (earned != null) {
                 lb = held
                 decided = held
                 reasons.clear()
@@ -275,7 +275,9 @@ object Progression {
                 ?: return Suggestion.NoNumber("$to reps is lighter than the lightest dumbbell from last time's weight")
             if (converted != lb) reasons += "$from reps last time, $to now: $converted"
             lb = converted
-            test = Rack.up(converted)?.takeIf { earned }?.let { up ->
+            // Only when the earned dumbbell converts to more than the number: rounded down
+            // like the number, it never offers more than was earned.
+            test = earned?.let { convert(it, from, to) }?.takeIf { it > converted }?.let { up ->
                 offer = "a step up was earned at $from reps: try $up if set 1 feels easy"
                 basis.load.copy(lb = up)
             }
@@ -308,6 +310,8 @@ object Progression {
             if ((test?.lb ?: 0) >= cap) test = null
         }
 
+        // An offer made on a conversion goes with any twinge since, as "one more" does.
+        if (offer != null && caution != null) test = null
         if (test != null) offer?.let { reasons += it }
         val load = basis.load.copy(lb = lb)
         // Against the session the number rests on, so the arrow agrees with the reason; after a
