@@ -166,6 +166,7 @@ object Progression {
 
     /** One leg from two (trap 10): well under the two-legged weight. */
     private const val ONE_LEG = 0.6
+    private const val STAGGERED = 0.8
 
     // Epley's estimate is only sound for sets of 3 to 12 reps.
     private val epleyReps = 3..12
@@ -389,7 +390,11 @@ object Progression {
             val tweaks = tweaks(p)
             // A row the sheet gives no weight (a band with nothing held) has none to lend.
             logged.judged && Sheet.wantsWeight(logged.exercise) && p.movement == part.movement && tweaks.isNotEmpty() &&
-                tweaks.all { Estimated.sameWeight(part.movement, it.key, it.value) } &&
+                tweaks.all { Estimated.factor(part.movement, it.key, it.value) != null } &&
+                // A version held another way, with no stated multiple across, isn't near at all:
+                // it mustn't stand in the way of one that is. Nor a stronger grip the row lacks.
+                Estimated.holds(part, Estimated.hold(p)) &&
+                (weighing(p, rules).entries - mine).none { Estimated.stronger(part.movement, it.key, it.value) } &&
                 // Two arms from one only where the arm is the limit: on a lunge it would double
                 // what the legs move, and a swing or pullover is one dumbbell in both hands.
                 (oneArm || p.variations["arms"] != "single" || Estimated.armLimited(part.movement)) &&
@@ -401,27 +406,51 @@ object Progression {
         // the other's would be the heavier of the two.
         val fewest = near.minOfOrNull { tweaks(it.exercise.parts.single()).size } ?: return null
         val nearest = near.filter { tweaks(it.exercise.parts.single()).size == fewest }.map { it.exercise }.distinctBy { it.key }
-            .map { from(it, oneArm, target, log, rules) ?: return null }
+            .map { from(it, part, target, log, rules) ?: return null }
         return nearest.minByOrNull { it.load.lb }
     }
 
-    private fun from(source: Reading.Known, oneArm: Boolean, target: IntRange?, log: List<Logged>, rules: Rules): Suggestion.Weight? {
+    private fun from(source: Reading.Known, part: Part, target: IntRange?, log: List<Logged>, rules: Rules): Suggestion.Weight? {
         val from = suggest(source, target, log, rules) as? Suggestion.Weight ?: return null
         if (from.caution != null) return null
+        val theirs = source.parts.single()
         val sessions = own(source, log, rules).filter { it.outcome != Outcome.HURT }
-        // One arm from two, or two from one: the dumbbell in each hand is the same one, which
-        // is only known when the session the number rests on was two dumbbells, or one.
-        val count = when {
-            oneArm == (source.parts.single().variations["arms"] == "single") -> from.load.count
-            oneArm -> if (from.load.count == 2) 1 else return null
-            else -> if (from.load.count == 1) 2 else return null
+        val oneArm = part.variations["arms"] == "single"
+        val arms = oneArm != (theirs.variations["arms"] == "single")
+        val (mine, held) = Estimated.hold(part) to Estimated.hold(theirs)
+        // How the weight is held, and what that does to the number. Only ever from a session
+        // that says how many dumbbells it was: a count nobody said could be either.
+        val (count, hands) = when {
+            // One arm from two, or two from one: the dumbbell in each hand is the same one.
+            arms -> when {
+                mine != held -> return null
+                oneArm -> (if (from.load.count == 2) 1 else return null) to 1.0
+                else -> (if (from.load.count == 1) 2 else return null) to 1.0
+            }
+            mine == held -> from.load.count to 1.0
+            // One dumbbell in both hands from one in each, and back: a stated multiple.
+            mine == 1 -> 1 to (Estimated.inBothHands(part)?.takeIf { from.load.count == 2 } ?: return null)
+            // Only to a row that says two: a bare one could be done either way.
+            held == 1 -> 2 to (Estimated.inBothHands(part)?.takeIf { mine == 2 && from.load.count == 1 }?.let { 1 / it } ?: return null)
+            // "Two dumbbells" said of one side only: the same lift, if the other was two.
+            else -> (if (from.load.count == 2) 2 else return null) to 1.0
         }
+        // A session logged against its own words (a "two dumbbell" row done with one) lends nothing.
+        if (Sheet.rowCount(Reading.Known(listOf(part), emptySet())).let { it != null && count != null && it != count }) return null
+        // A tweak this version has and that one hasn't takes its factor. The other way round
+        // the harder version's weight stands: dividing by a guess would make a heavier one.
+        val added = (weighing(part, rules).entries - weighing(theirs, rules).entries)
+            .fold(1.0) { f, (axis, value) -> f * (Estimated.factor(part.movement, axis, value) ?: return null) }
         // What was held at these reps, or the conversion from other reps: never a step up, and
         // never more than that version was ever lifted at.
-        val held = sessions.lastOrNull { it.anchor == target?.last }?.load?.lb
+        val last = sessions.lastOrNull { it.anchor == target?.last }?.load?.lb
         val most = sessions.maxOfOrNull { it.load.lb } ?: return null
-        val load = Load(minOf(from.load.lb, held ?: from.load.lb, most), count)
-        return Suggestion.Weight(load, Change.EST, listOf("an estimate: your ${Estimated.name(source)} stands at ${from.load.copy(lb = load.lb).label}, and this is a small change to it"))
+        val stands = minOf(from.load.lb, last ?: from.load.lb, most)
+        val factor = added * hands
+        val lb = if (factor == 1.0) stands else Rack.atMost(stands * factor) ?: return null
+        val said = "your ${Estimated.name(source)} stands at ${from.load.copy(lb = stands).label}"
+        val why = if (factor == 1.0) "and this is a small change to it" else "and this starts at about ${"%.2f".format(java.util.Locale.ROOT, factor).trimEnd('0').trimEnd('.')} times that dumbbell"
+        return Suggestion.Weight(Load(lb, count), Change.EST, listOf("an estimate: $said, $why"))
     }
 
     // The variations that bear on the weight: all of them, or without the shared wordings.
@@ -443,11 +472,13 @@ object Progression {
         val from = suggest(source.exercise, target, log, rules) as? Suggestion.Weight ?: return Suggestion.NoNumber.NEW
         // A two-legged lift that twinged is no basis for a first go on one leg.
         if (from.caution != null) return Suggestion.NoNumber.NEW
-        val lb = Rack.atMost(from.load.lb * ONE_LEG) ?: return Suggestion.NoNumber.NEW
+        // A staggered stance keeps the back foot down: more than one leg, less than two.
+        val staggered = part.variations["legs"] == "staggered"
+        val lb = Rack.atMost(from.load.lb * (if (staggered) STAGGERED else ONE_LEG)) ?: return Suggestion.NoNumber.NEW
         return Suggestion.Weight(
             from.load.copy(lb = lb),
             Change.EST,
-            listOf("an estimate on one leg: about 0.6 of the ${from.load.label} your ${part.movement.name} would be next"),
+            listOf("an estimate ${if (staggered) "in a staggered stance: about 0.8" else "on one leg: about 0.6"} of the ${from.load.label} your ${part.movement.name} would be next"),
         )
     }
 }

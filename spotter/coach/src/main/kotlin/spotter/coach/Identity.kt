@@ -49,7 +49,7 @@ internal object SharedWeight {
     private val lying = setOf("horizontal_push", "fly", "pullover")
 
     // Lifts the legs don't move: sitting or standing changes the balance, not the load.
-    private val upper = lying + setOf("vertical_push", "horizontal_pull", "vertical_pull", "curl", "raise", "triceps")
+    val upper = lying + setOf("vertical_push", "horizontal_pull", "vertical_pull", "curl", "raise", "triceps")
 
     // Presses the legs drive, whatever their pattern says.
     val legDriven = setOf("thruster", "push press", "clean and press")
@@ -82,18 +82,83 @@ internal object Estimated {
     /** A lift an arm limits, so two arms take the dumbbell one arm held; not a press the legs drive. */
     fun armLimited(movement: Movement) = movement.pattern in arms && movement.name !in SharedWeight.legDriven
 
-    fun sameWeight(movement: Movement, axis: String, value: String): Boolean = when (axis) {
+    private val lying = setOf("horizontal_push", "fly", "pullover")
+
+    /**
+     * What a tweak does to the weight of a lift that has it, against the same lift without:
+     * 1.0 is the same dumbbell. Null is a word that makes it another lift, with no estimate
+     * across. The reasons and what stands behind each number are in TRAINING.md, 10 to 12; a
+     * tweak that makes the lift harder with nothing measured takes the lighter guess.
+     */
+    fun factor(movement: Movement, axis: String, value: String): Double? = when (axis) {
         // The same dumbbell in the one hand as in each of two.
-        "arms" -> value == "single"
-        // Faster, not heavier.
-        "tempo" -> value == "explosive"
+        "arms" -> 1.0.takeIf { value == "single" }
+        "tempo" -> when (value) {
+            // Faster, not heavier.
+            "explosive" -> 1.0
+            "slow", "eccentric", "pulse" -> 0.85
+            "pause", "stick" -> 0.9
+            else -> null
+        }
         // The band pulls somewhere the dumbbell doesn't: on a squat it works the hips sideways.
-        "band" -> true
-        // Measured with a barbell, a wide stance lifts the same or a little less (TRAINING.md, 10).
-        "legs" -> value == "sumo" && movement.pattern in legs
-        "position" -> value == "incline" && movement.pattern in pressed
-        else -> false
+        "band" -> 1.0
+        "legs" -> when (value) {
+            // Measured with a barbell, a wide stance lifts the same or a little less.
+            "sumo" -> 1.0.takeIf { movement.pattern in legs }
+            "b-stance" -> 0.8.takeIf { movement.pattern in legs }
+            // Off the feet, an arm lift is the same lift; a squat or a push press isn't.
+            "kneeling", "half kneeling" -> 1.0.takeIf { movement.pattern in SharedWeight.upper && movement.name !in SharedWeight.legDriven }
+            else -> null
+        }
+        "position" -> 1.0.takeIf { value in setOf("incline", "decline") && movement.pattern in pressed }
+        "stability" -> when (value) {
+            // Lying on it costs a press less than standing on it costs anything.
+            "bosu" -> if (movement.pattern in lying) 0.9 else 0.8
+            "feet on bosu" -> 1.0
+            else -> null
+        }
+        // How the handle is turned. Not a shared history: a board sets a grip beside the plain
+        // lift at its own weight. But the plain lift's weight is where a first go starts. Not
+        // "reverse": nothing was found on it, and on a press it is another lift.
+        "grip" -> 1.0.takeIf { value in setOf("close", "neutral", "hammer", "wide") }
+        // How many dumbbells, and in how many hands, is [hold]. A kettlebell or y-bell isn't
+        // here: they come in other weights than the dumbbells do, usually one in both hands.
+        "implement" -> 1.0.takeIf { value in setOf("one dumbbell, both hands", "two dumbbells") }
+        else -> null
     }
+
+    /** One dumbbell held in both hands, or one in each, where the words say: "goblet", "two dumbbells". */
+    fun hold(part: Part): Int? = when (part.implement) {
+        "one dumbbell, both hands" -> 1
+        "two dumbbells" -> 2
+        else -> null
+    }
+
+    /**
+     * How many of one of a pair the single dumbbell held in both hands weighs: 1.5 where it is
+     * held up at the chest or overhead, which the arms tire of first; 2 on a deadlift, where it
+     * hangs from straight arms as the pair does (madCode, 2026-11-24; TRAINING.md, 12). Null on
+     * any other lift.
+     */
+    fun inBothHands(part: Part): Double? = when {
+        part.movement.pattern in setOf("squat", "lunge") || part.movement.name == "tricep extension" -> 1.5
+        // Not every hinge: a good morning holds it at the chest, and a swing is one by nature.
+        // Nor on one leg, where "single dumbbell" is as often one hand's.
+        part.movement.name in setOf("deadlift", "romanian deadlift") -> 2.0.takeIf { !part.oneLeg }
+        else -> null
+    }
+
+    /** Whether a lift held as [mine] can take an estimate from one held as [theirs] at all. */
+    fun holds(part: Part, theirs: Int?): Boolean = hold(part).let { mine ->
+        when {
+            mine == theirs -> true
+            mine == 1 || theirs == 1 -> mine != null && inBothHands(part) != null
+            else -> true
+        }
+    }
+
+    /** The stronger grip on a curl: its weight says too much for the plain one (TRAINING.md, 11). */
+    fun stronger(movement: Movement, axis: String, value: String) = axis == "grip" && movement.pattern == "curl" && value in setOf("hammer", "neutral")
 
     /** How a reason names the version an estimate came from: every word that tells it apart. */
     fun name(exercise: Reading.Known): String = exercise.parts.joinToString(" to ") { p ->
@@ -104,6 +169,11 @@ internal object Estimated {
                 "legs" -> if (value == "single") "single leg" else value
                 "band" -> "banded"
                 "grip" -> "$value grip"
+                "implement" -> when (value) {
+                    "one dumbbell, both hands" -> "one-dumbbell"
+                    "two dumbbells" -> "two-dumbbell"
+                    else -> value
+                }
                 // A yes-or-no axis is said by its name: "lying".
                 else -> if (value == "yes") axis else value
             }

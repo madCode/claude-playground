@@ -223,6 +223,58 @@ rack either way. The person's own log moves it from there.
   doi:10.3389/fspor.2021.719013 (full text): squat stance width.
 - Escamilla et al. 2000, doi:10.1097/00005768-200007000-00013 (abstract): the shorter bar path.
 
+## 11. Tweaks that make a lift harder
+
+Nearly all with a barbell, in trained young men. Read as abstracts unless marked.
+
+- **An unstable surface lowers what can be lifted** (thin). Standing: squat force was 19% lower
+  on a bosu than on the floor. Lying: a barbell press on a ball or cushion was 7 to 8% lower.
+- **A slow lower costs load** (several agree, all bench press): 6% less at a 5-second lower,
+  12 to 13% less at 8 to 10 seconds, and fewer reps at a set weight.
+- **A pause costs a little**: about 6% on a bench press (one study, known from a summary only).
+- **Grip width moves a barbell press by under 11%**, a neutral curl is as strong as any, and a
+  decline press is within 3% of flat: all under a step on this rack.
+- **A kettlebell and a dumbbell of the same weight work the same muscles about as hard.**
+  Nothing on a y-bell.
+- **Nothing found** on a pulse, a staggered or b-stance, kneeling, or feet on a bosu.
+
+For Spotter (madCode approved the set, 2026-11-24): a first go at a tweaked lift starts from
+the plain lift's weight, times 0.8 standing on a bosu, 0.9 lying on one, 0.85 for a slow lower
+or a pulse, 0.9 for a pause, 0.8 for a staggered or b-stance; and the same weight for a
+close, neutral, hammer or wide grip, a decline, kneeling on an arm lift, or feet on a bosu.
+Where nothing was found and the tweak makes the lift harder, the lighter guess. The person's
+own log replaces it after one session. Left out after review: a kettlebell or y-bell (the
+muscles agree, but the weights on offer don't match the dumbbells'), a reverse grip (nothing
+found, and on a press another lift), and a hammer curl's weight for the plain curl (it is the
+stronger).
+
+- Saeterbakken & Fimland 2013, doi:10.1519/JSC.0b013e3182541d43: the bosu squat.
+- Saeterbakken & Fimland 2013, doi:10.1519/JSC.0b013e3182606d3d: the unstable press.
+- Wilk et al. 2020, doi:10.2478/hukin-2020-0001 (full text): the slow lower.
+- Saeterbakken et al. 2017, doi:10.1515/hukin-2017-0047 (full text): grip width and decline.
+- Lockie et al. 2017, doi:10.1515/hukin-2017-0109 (full text): close grip.
+- O'Connell et al. 2021, doi:10.3233/WOR-213486: curl grips.
+- Busch et al. 2024, PMID 38432822: kettlebell and dumbbell.
+
+## 12. One dumbbell in both hands, or one in each
+
+- **Nothing compares a goblet hold with two dumbbells.** The nearest measure is a barbell
+  held in front against one on the back: the front squat was 74 to 82% of the back squat in
+  three studies (thin). Of a pair of dumbbells that is 1.5 to 1.6 of one of them.
+- **A goblet squat is limited by the hold**, the arms and upper back, before the legs
+  (reasoned; one trainer's guide says the same).
+- **Nothing on a deadlift or a tricep extension** held as one dumbbell or two. A dumbbell
+  hanging from straight arms asks no more of them than one in each hand (reasoned).
+
+For Spotter (madCode, 2026-11-24): one dumbbell in both hands starts at 1.5 of one of the pair
+on a squat, a lunge and a tricep extension, and at 2 on a deadlift or Romanian deadlift. 1.8
+would be above every ratio found. Other hinges take no estimate: a good morning holds the
+dumbbell at the chest, and a swing is one dumbbell by nature.
+
+- Gullett et al. 2009, doi:10.1519/JSC.0b013e31818546bb (full text): 78%.
+- Coratella et al. 2021, PMID 33477561 (full text): 74 to 82%.
+- Bozkurt et al. 2026, doi:10.3389/fphys.2025.1727141 (full text): 74%.
+
 ## Leads, not conclusions
 
 - The NSCA textbook's exact 2-for-2 wording.
