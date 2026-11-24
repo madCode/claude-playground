@@ -76,6 +76,7 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
                     Change.DOWN -> " ▼"
                     Change.SAME -> " ="
                     Change.NEW -> " new"
+                    Change.EST -> " est."
                 },
             )
             s.test?.let { append(" · try ${it.lb} if set 1 felt easy") }

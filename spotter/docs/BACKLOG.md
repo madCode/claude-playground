@@ -18,12 +18,14 @@ or the docs rather than guess: the order may change, nothing is built on a guess
 - [x] History import (step 4): a `history.jsonl` madCode picks on the phone; tested on invented
   data only.
 - [ ] Strength per movement (step 5). Built: wordings that leave the weight as it is share one
-  history, switched on (DESIGN.md, "Words that share a weight"). On the yardstick (an invented
-  lifter working through the board corpus) that took the rows with a number from 110 to 128 of
-  361. Grip words were in madCode's set and are left out (DESIGN says why): ask. Next, each needing madCode's word on a factor, by how many blank rows it holds on the
-  yardstick: one arm (18), "explosive" (12), one leg (10), one dumbbell in both hands against
-  two (10), sumo (9), a band (12), a bosu (8), incline or overhead (10). Then the person's own
-  measured ratio replacing a stated factor.
+  history, and a tweaked lift takes an estimate from its nearest logged version (DESIGN.md,
+  "Words that share a weight" and "Tweaks that take an estimate"). On the yardstick (an
+  invented lifter working through the board corpus): 110 rows of 361 with a number before,
+  128 with shared wordings, 146 with estimates. Next: one dumbbell in both hands against two
+  (madCode: link them, at 1.5 to 1.8 of one of the pair; research under way); the tweaks the
+  research round says don't keep the weight (a bosu, other tempos, other stances); what to do
+  when a history doesn't say how many dumbbells, which holds up "alternating" and one arm.
+  Then the person's own measured ratio replacing a stated factor.
   The measured ratio waits (cycle 28): a ratio measured on one movement is only sound for
   that movement, and there its one-leg version then has a log of its own, which already
   outranks any factor. Carried to another movement it would be the loose relative trap 11

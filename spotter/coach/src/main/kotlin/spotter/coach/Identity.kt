@@ -59,9 +59,45 @@ internal object SharedWeight {
         "alternating" -> true
         // "Dumbbell" on a lift already done with dumbbells says nothing new.
         "implement" -> value == "dumbbell"
-        "position" -> value in setOf("floor", "bench") && movement.pattern in lying
+        // A bare "tricep extension" on these boards is the overhead one (madCode, 2026-11-24).
+        "position" -> (value in setOf("floor", "bench") && movement.pattern in lying) ||
+            (value == "overhead" && movement.name == "tricep extension")
         "legs" -> value in setOf("seated", "standing") && movement.pattern in upper && movement.name !in legDriven
         else -> false
+    }
+}
+
+/**
+ * Tweaks to a lift that leave the weight about as it is, as madCode ruled on 2026-11-24: "if
+ * it's the same exercise with minor tweaks", the sheet gives a number. Unlike [SharedWeight]
+ * these keep a history of their own once logged; before that, the nearest logged version lends
+ * its weight as an estimate.
+ */
+internal object Estimated {
+    private val pressed = setOf("horizontal_push", "fly")
+
+    fun sameWeight(movement: Movement, axis: String, value: String): Boolean = when (axis) {
+        // The same dumbbell in the one hand as in each of two.
+        "arms" -> value == "single"
+        // Faster, not heavier.
+        "tempo" -> value == "explosive"
+        // The band pulls somewhere the dumbbell doesn't: on a squat it works the hips sideways.
+        "band" -> true
+        // Measured with a barbell, a wide stance lifts the same or a little less (TRAINING.md, 10).
+        "legs" -> value == "sumo"
+        "position" -> value == "incline" && movement.pattern in pressed
+        else -> false
+    }
+
+    /** How a reason names the version an estimate came from: its movement, with what was said of it. */
+    fun name(exercise: Reading.Known): String = exercise.parts.joinToString(" to ") { p ->
+        (p.variations.toSortedMap().filter { (axis, value) -> sameWeight(p.movement, axis, value) }.map { (axis, value) ->
+            when (axis) {
+                "arms" -> "single arm"
+                "band" -> "banded"
+                else -> value
+            }
+        } + p.movement.name).joinToString(" ")
     }
 }
 

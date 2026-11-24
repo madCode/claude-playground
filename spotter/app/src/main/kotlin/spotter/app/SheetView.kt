@@ -236,6 +236,7 @@ internal fun spoken(row: SheetRow, glance: String): String {
         Change.DOWN -> "down from last time"
         Change.SAME -> "same as last time"
         Change.NEW -> "new"
+        Change.EST -> "an estimate"
     }
     return listOfNotNull(held, change, s.test?.let { "try ${it.lb} if set 1 felt easy" }).joinToString(", ")
 }

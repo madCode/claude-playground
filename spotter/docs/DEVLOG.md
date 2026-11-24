@@ -20,6 +20,18 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   backup folder, import your history file, and the hand checks.
 - **Not started:** step 7, the Garmin watch.
 
+## Tuesday 24 November 2026
+
+### A tweaked lift takes an estimate
+- **Why:** madCode, going through the blank rows one question at a time: "I'm very rarely going
+  to want to say 'new: go light' if it's literally the same exercise with minor tweaks."
+- **Shipped:** a lift never logged in these words takes the weight its nearest logged version
+  last held, shown as "est.": one arm, "explosive", a band, sumo, incline. One leg's 0.6 shows
+  "est." too. "Overhead tricep extension" shares a history with the bare one outright.
+- **On the yardstick:** 146 of 361 rows now have a number (128 before).
+- **Research:** sumo against a regular stance is in TRAINING.md, 10: the same weight, and no
+  reason to try heavier.
+
 ## Monday 23 November 2026
 
 ### A heavier weight vouches for a lighter one for eight weeks
