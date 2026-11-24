@@ -17,6 +17,11 @@ From `spotter/`:
 - Add `-PnoShared` (after both paths are given) to grade the coach without shared weights
   (DESIGN.md, "Words that share a weight"). The first line of the report then ends "(shared
   weights off)". Replay the same file both ways, into two folders, and compare the grades.
+- Add `-Pcounts=/path/to/dumbbell_counts.yaml` to give the owner's dumbbell counts
+  ([COUNTS-FORMAT.md](COUNTS-FORMAT.md)): a row that doesn't say how many dumbbells takes its
+  count from them. A fourth line of the report then says how many movements the file rules on
+  and how many rows it filled. Without the flag the run is exactly as it was. The file is only
+  read; a file that can't be read in full stops the run with the reason.
 - `out`: a folder for the session files, made if missing. **It must be outside any git
   checkout**: the tool refuses a folder git would offer to commit, since the sessions are the
   owner's training data. It must also be new or empty, so no session from an earlier run is
