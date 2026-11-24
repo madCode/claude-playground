@@ -578,6 +578,21 @@
    ]
   },
   {
+   "name": "bridge row",
+   "aliases": [
+    "trx bridge row",
+    "strap bridge row",
+    "bridge rows"
+   ],
+   "pattern": "horizontal_pull",
+   "muscles": [
+    "back",
+    "biceps",
+    "glutes"
+   ],
+   "bodyweight": true
+  },
+  {
    "name": "upright row",
    "aliases": [
     "upright rows"
@@ -1544,6 +1559,20 @@
    "pattern": "core",
    "muscles": [
     "core"
+   ],
+   "bodyweight": true
+  },
+  {
+   "name": "side plank pendulum",
+   "aliases": [
+    "low side plank pendulum",
+    "high side plank pendulum",
+    "side plank pendulums"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "glutes"
    ],
    "bodyweight": true
   },

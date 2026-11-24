@@ -22,6 +22,15 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Tuesday 24 November 2026
 
+### Two moves named from coaches' videos
+- **Why:** "TRX bridge row" and "side plank pendulum with kickstand" read as "not sure".
+  madCode: look them up as Orangetheory coaches show them.
+- **Shipped:** "bridge row" (a row on the straps with the hips held up: one move) and "side
+  plank pendulum" (a side plank with the top leg swinging; "with kickstand" is the easier
+  support). Both are done with nothing held, so the sheet says "no weight".
+- **Left:** "cross carry to halo". No coach source uses the name; it may be the "cross catch
+  halo", which isn't certain enough to list.
+
 ### Lifts filed under different names lend each other a first number
 - **Why:** a reverse lunge after months of forward lunges said "new: go light". madCode had
   agreed the set: forward and reverse the same, lateral at 0.8, a split squat at 0.6.

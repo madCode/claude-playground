@@ -95,7 +95,6 @@ class IdentityTest {
     @Test
     fun twoMovementsSideBySideAreNotSure() {
         assertEquals(Why.TWO_MOVEMENTS, notSure("6 - 10 each x bench bird dog low row, rest").why)
-        assertEquals(Why.TWO_MOVEMENTS, notSure("12 x TRX bridge row").why)
     }
 
     // Each is plain from the boards, and a row the reader can't name is a row the coach never
@@ -118,6 +117,23 @@ class IdentityTest {
         assertEquals("squat [implement=dumbbell, legs=sumo] + frogger [implement=dumbbell]", known("8 x dumbbell sumo squat to frogger").key)
         // The plank's own name still reads with the bench as where the hands are.
         assertEquals("plank jack [position=bench]", known("8 x bench high plank jack").key)
+    }
+
+    // Looked up in Orangetheory coaches' own videos (2026-11-24): a row on the straps with the
+    // hips held up in a bridge is one move, and so is a side plank with the top leg swinging.
+    // Both are done with nothing held.
+    @Test
+    fun movesNamedFromCoachesVideosRead() {
+        assertEquals("bridge row", known("8 x TRX bridge row").key)
+        assertEquals("side plank pendulum [stability=kickstand]", known("1 min of low side plank pendulum with kickstand (L)").key)
+        assertEquals("side plank pendulum", known("30 sec of side plank pendulum").key)
+        listOf("8 x TRX bridge row", "1 min of low side plank pendulum with kickstand (L)").forEach {
+            assertEquals(it, "no weight", Sheet.make(listOf(it), emptyList(), identity).let { s -> s.glance(s.rows.single()) })
+        }
+        // "Kickstand" before a lift is a stance nobody has ruled on: only "with kickstand" is listed.
+        assertEquals(Why.UNKNOWN_WORDS, notSure("8 x kickstand deadlift").why)
+        // A bridge and a row that aren't this move stay two movements.
+        assertEquals(Why.TWO_MOVEMENTS, notSure("8 x bridge low row").why)
     }
 
     // A count inside a combo says how often the part is done; it isn't a word of the name.
