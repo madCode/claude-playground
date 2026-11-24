@@ -578,11 +578,10 @@
    ]
   },
   {
-   "name": "bridge row",
+   "name": "trx bridge row",
    "aliases": [
-    "trx bridge row",
     "strap bridge row",
-    "bridge rows"
+    "trx bridge rows"
    ],
    "pattern": "horizontal_pull",
    "muscles": [

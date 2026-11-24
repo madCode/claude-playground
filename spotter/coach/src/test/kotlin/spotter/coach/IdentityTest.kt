@@ -124,7 +124,7 @@ class IdentityTest {
     // Both are done with nothing held.
     @Test
     fun movesNamedFromCoachesVideosRead() {
-        assertEquals("bridge row", known("8 x TRX bridge row").key)
+        assertEquals("trx bridge row", known("8 x TRX bridge row").key)
         assertEquals("side plank pendulum [stability=kickstand]", known("1 min of low side plank pendulum with kickstand (L)").key)
         assertEquals("side plank pendulum", known("30 sec of side plank pendulum").key)
         listOf("8 x TRX bridge row", "1 min of low side plank pendulum with kickstand (L)").forEach {
@@ -139,7 +139,8 @@ class IdentityTest {
         assertEquals(Why.UNKNOWN_WORDS, notSure("12 x cross carry").why)
         // "Kickstand" before a lift is a stance nobody has ruled on: only "with kickstand" is listed.
         assertEquals(Why.UNKNOWN_WORDS, notSure("8 x kickstand deadlift").why)
-        // A bridge and a row that aren't this move stay two movements.
+        // Without the straps it could be a dumbbell row lying in a bridge: still two movements.
+        assertEquals(Why.TWO_MOVEMENTS, notSure("8 x bridge row").why)
         assertEquals(Why.TWO_MOVEMENTS, notSure("8 x bridge low row").why)
     }
 

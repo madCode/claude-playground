@@ -25,7 +25,7 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 ### Three moves named from coaches' videos
 - **Why:** "TRX bridge row" and "side plank pendulum with kickstand" read as "not sure".
   madCode: look them up as Orangetheory coaches show them.
-- **Shipped:** "bridge row" (a row on the straps with the hips held up: one move) and "side
+- **Shipped:** "TRX bridge row" (a row on the straps with the hips held up: one move; a bare "bridge row" stays unread) and "side
   plank pendulum" (a side plank with the top leg swinging; "with kickstand" is the easier
   support). Both are done with nothing held, so the sheet says "no weight".
 - **Also:** "cross carry to halo" reads as the coaches' "cross catch halo" (one weight brought
