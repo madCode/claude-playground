@@ -121,16 +121,18 @@ sealed interface Today {
                     chosen.staleFrom?.let { "This is the board from ${it.format(day)}: the one for ${booked.date.format(day)} couldn't be fetched." },
                     chosen.borrowedFrom?.let { "No ${booked.tag} board yet, so this is the $it board. Leave rows that aren't in your class." },
                 )
-                val board = Sheet.make(chosen.lines, log, identity, chosen.borrowedFrom, Rules(today = booked.date))
+                // One day for every row, typed or from the board, so they agree on what is stale.
+                val rules = Rules(today = booked.date)
+                val board = Sheet.make(chosen.lines, log, identity, chosen.borrowedFrom, rules)
                 val name = className(chosen)
                 // What the person added and logged is a row again, built from its own entry.
                 val added = Journal.live(entries)
                     .filter { it.date == booked.date && it.className == name && Sheet.isAdded(it.row) }
-                    .mapNotNull { Sheet.added(it.row, it.line, log, identity) }
+                    .mapNotNull { Sheet.added(it.row, it.line, log, identity, rules) }
                     .distinctBy { it.id }
                 val sheet = board.copy(rows = board.rows + added)
                 val logged = Logging.logged(sheet, entries, booked.date, name)
-                Showing(title, notes, sheet, booked.date, name, logged.byRow, logged.strays) { id, typed -> Sheet.added(id, typed, log, identity) }
+                Showing(title, notes, sheet, booked.date, name, logged.byRow, logged.strays) { id, typed -> Sheet.added(id, typed, log, identity, rules) }
             }
         }
     }

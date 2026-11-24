@@ -440,7 +440,7 @@ class ProgressionTest {
         // After longer it is held, and says why.
         val late = on(day(3).plusWeeks(20))
         assertEquals(listOf(Load(25, 2), Change.SAME, null), listOf(late.load, late.change, late.test))
-        assertEquals(listOf("clean at 2×25, but that was 20 weeks ago: same again first, then up"), late.reasons)
+        assertEquals(listOf("clean at 2×25, but it's 20 weeks since you did this: same again first"), late.reasons)
         // One clean session at it on coming back, and the step is taken.
         val back = earned + Logged(day(3).plusWeeks(20), press, Load(25, 2), 8..8, clean)
         assertEquals(Load(30, 2), on(day(3).plusWeeks(21), back).load)
@@ -448,7 +448,12 @@ class ProgressionTest {
         val big = listOf(logged(1, 20, clean), logged(3, 20, clean))
         assertEquals(Load(25, 2), on(day(4), big).test)
         assertNull(on(day(3).plusWeeks(20), big).test)
-        assertNull(on(day(3).plusWeeks(20), target = 6..6).test)
+        val six = on(day(3).plusWeeks(20), target = 6..6)
+        assertNull(six.test)
+        assertEquals(listOf("done at 2×25, 20 weeks ago"), six.reasons)
+        // Kept at it at other reps since: not away from the lift, so the step stands.
+        val tens = earned + Logged(day(3).plusWeeks(19), press, Load(25, 2), 10..10, listOf(10, 10))
+        assertEquals(Load(30, 2), on(day(3).plusWeeks(20), tens).load)
         // "Felt easy" long ago is a step earned long ago too.
         assertEquals(Load(25, 2), on(day(1).plusWeeks(20), listOf(logged(1, 25, clean, easy = true))).load)
         // A weight that was only held is as it was: nothing to wait for.

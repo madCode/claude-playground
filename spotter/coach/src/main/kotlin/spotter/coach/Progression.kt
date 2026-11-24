@@ -262,14 +262,18 @@ object Progression {
                 ?: held.also { reasons += "missed at ${basis.load.label}, the lightest there is: same again" }
         }
 
-        // A step earned long ago waits a session (madCode, 2026-11-24): after that long the
-        // weight is held once first, and a clean session at it then takes the step.
-        if (rules.today != null && basis.date.isBefore(rules.today.minusWeeks(COMEBACK_WEEKS)) && (lb > held || test != null)) {
+        // A step earned before a long gap waits (madCode, 2026-11-24): the weight is held first.
+        // The gap is since the lift was last done at any reps: someone who kept at it at 10s
+        // hasn't been away from it. No promise of what comes next: a twinge, a big jump or
+        // other reps may each decide otherwise.
+        val lastDone = (latest ?: last).date
+        if (rules.today != null && lastDone.isBefore(rules.today.minusWeeks(COMEBACK_WEEKS)) && (lb > held || test != null)) {
             lb = held
             test = null
-            val weeks = java.time.temporal.ChronoUnit.WEEKS.between(basis.date, rules.today)
+            val weeks = java.time.temporal.ChronoUnit.WEEKS.between(lastDone, rules.today)
             reasons.clear()
-            reasons += "clean at ${basis.load.label}, but that was $weeks weeks ago: same again first, then up"
+            reasons += if (basis.anchor == to) "clean at ${basis.load.label}, but it's $weeks weeks since you did this: same again first"
+            else "done at ${basis.load.label}, $weeks weeks ago"
         }
 
         // ▲ ▼ = say what the rules decided, not what a change of reps converted to.
