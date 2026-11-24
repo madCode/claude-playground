@@ -217,8 +217,8 @@ what is on the board, and nothing says so.
   - a lift filed under another name that is the same lift done another way (madCode,
     2026-11-24): a lunge, forward lunge and reverse lunge lend each other their weight; a
     lateral lunge starts at 0.8 of theirs and lends them its own as it stands; a split squat
-    starts at 0.6 of the squat, and the squat takes nothing back. The lift's own other wording
-    is nearer than any of these. Curtsy, cross-back and walking lunges aren't linked: nobody
+    starts at 0.6 of the squat, and the squat takes nothing back. Another movement is looked at
+    only when no wording of the lift itself is near. Curtsy, cross-back and walking lunges aren't linked: nobody
     ruled on them.
   A tweak that makes the lift harder starts it lighter, by a factor rounded down to the rack
   (TRAINING.md, 11): standing on a bosu 0.8, lying on one for a press 0.9; a slow or

@@ -454,6 +454,12 @@ class ProgressionTest {
         // version decides, not the heavier forward lunge.
         val both = forward + of("8 x reverse lunge", 15)
         assertEquals(Load(20, 1), (estimate("8 x goblet reverse lunge", both) as Suggestion.Weight).load)
+        // However far its own version is worded, it comes before a kin worded alike: the kin
+        // can't outweigh it, and a kin that twinged can't blank it.
+        val slowBosu = listOf(of("8 x reverse lunge", 15), of("8 x slow bosu forward lunge", 20))
+        assertEquals(Load(10, 2), (estimate("8 x slow bosu reverse lunge", slowBosu) as Suggestion.Weight).load)
+        val twinged = listOf(of("8 x bosu reverse lunge", 15), logged(2, 25, listOf(8, 4), ex = exercise("8 x forward lunge"), hurt = true))
+        assertEquals(Load(15, 2), (estimate("8 x reverse lunge", twinged) as Suggestion.Weight).load)
         // Kin and a tweak together: one dumbbell in both hands from the forward lunge's two.
         assertEquals(Load(35, 1), (estimate("8 x goblet reverse lunge", forward) as Suggestion.Weight).load)
         // Once logged in its own words the lift stands on its own.

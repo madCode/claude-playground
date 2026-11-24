@@ -385,14 +385,13 @@ object Progression {
         if (log.any { it.key == exercise.key || (rules.shared && it.exercise.weightKey == exercise.weightKey) }) return null
         val mine = weighing(part, rules).entries
         fun tweaks(p: Part) = weighing(p, rules).entries.let { theirs -> (mine - theirs) + (theirs - mine) }
-        // The same movement differently worded is nearer than another movement worded alike.
-        fun distance(p: Part) = tweaks(p).size + if (p.movement == part.movement) 0 else 1
+        fun own(p: Part) = p.movement == part.movement
         val oneArm = part.variations["arms"] == "single"
         val near = log.filter { logged ->
             val p = logged.exercise.parts.singleOrNull() ?: return@filter false
             val tweaks = tweaks(p)
             // A row the sheet gives no weight (pulses with nothing held) has none to lend.
-            logged.judged && Sheet.wantsWeight(logged.exercise) && Estimated.kin(part.movement, p.movement) != null && distance(p) > 0 &&
+            logged.judged && Sheet.wantsWeight(logged.exercise) && Estimated.kin(part.movement, p.movement) != null && (tweaks.isNotEmpty() || !own(p)) &&
                 tweaks.all { Estimated.factor(part.movement, it.key, it.value) != null } &&
                 // A version held another way, with no stated multiple across, isn't near at all:
                 // it mustn't stand in the way of one that is. Nor a stronger grip the row lacks.
@@ -407,8 +406,12 @@ object Progression {
         // The nearest versions; where two are as near, the lighter estimate. One of them with
         // nothing sound to lend (it twinged, or nobody said how it was held) leaves no number:
         // the other's would be the heavier of the two.
-        val fewest = near.minOfOrNull { distance(it.exercise.parts.single()) } ?: return null
-        val nearest = near.filter { distance(it.exercise.parts.single()) == fewest }.map { it.exercise }.distinctBy { it.key }
+        // The lift's own versions first, however worded: another movement is looked at only
+        // when none of its own is near, so a kin can neither outweigh nor blank what the
+        // lifter's own log says.
+        val candidates = near.filter { own(it.exercise.parts.single()) }.ifEmpty { near }
+        val fewest = candidates.minOfOrNull { tweaks(it.exercise.parts.single()).size } ?: return null
+        val nearest = candidates.filter { tweaks(it.exercise.parts.single()).size == fewest }.map { it.exercise }.distinctBy { it.key }
             .map { from(it, part, target, log, rules) ?: return null }
         return nearest.minByOrNull { it.load.lb }
     }
