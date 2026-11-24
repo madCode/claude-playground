@@ -62,10 +62,10 @@ data class Progress(val wentUp: List<WentUp> = emptyList(), val next: List<Next>
                 val s = Progression.suggest(last.exercise, last.target, log) as? Suggestion.Weight
                     ?: return@mapNotNull null
                 when {
-                    s.change == Change.UP && s.caution == null -> Next(last.key, s.load, last.firstTarget, ready = true)
+                    s.change == Change.UP && s.caution == null -> Next(Estimated.name(last.exercise), s.load, last.firstTarget, ready = true)
                     // Promised only where the count is known: a session logged next with its
                     // count said starts the two afresh against one whose count nobody said.
-                    s.oneMore && last.load.count != null -> Next(last.key, s.load, last.firstTarget, ready = false)
+                    s.oneMore && last.load.count != null -> Next(Estimated.name(last.exercise), s.load, last.firstTarget, ready = false)
                     else -> null
                 }
             }.sortedBy { !it.ready }.take(MOST)
@@ -118,7 +118,7 @@ data class Progress(val wentUp: List<WentUp> = emptyList(), val next: List<Next>
             if (latest.date.isBefore(today.minusWeeks(WEEKS)) || !sound(latest) || latest.anchor == null || latest.load.count == null) return null
             val before = sessions.filter { it.date < latest.date && sound(it) && it.anchor == latest.anchor && it.load.count == latest.load.count }
             val best = before.maxByOrNull { it.load.lb } ?: return null
-            return if (latest.load.lb > best.load.lb) WentUp(latest.key, best.load, latest.load, latest.anchor, latest.date) else null
+            return if (latest.load.lb > best.load.lb) WentUp(Estimated.name(latest.exercise), best.load, latest.load, latest.anchor, latest.date) else null
         }
 
         // Every set at the top of what was asked, and a ladder's first weight kept: "in range"

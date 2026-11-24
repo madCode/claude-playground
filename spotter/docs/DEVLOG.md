@@ -29,6 +29,10 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   and the two lend each other their number as an estimate. A lateral walk in a band stays
   weightless (madCode doesn't recall holding anything for one).
 - **On the yardstick:** 165 of 361 rows with a number (158 before).
+### The Progress card names exercises in words
+- **Why:** madCode's phone showed "chest fly [position=floor]" and "lateral shift
+  [implement=one dumbbell, both hands]": the key an exercise is filed under, not its name.
+- **Shipped:** "floor chest fly", "one-dumbbell lateral shift", "alternating low row".
 
 ### Harder tweaks start lighter, and one dumbbell against two
 - **Why:** madCode approved the rest of the tweaks after a research round on which of them
