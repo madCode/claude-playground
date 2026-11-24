@@ -33,7 +33,12 @@ history. A batch of such lines from the boards now reads:
   conflict. "plank up-down" ("up and down", "up & down") and "frogger" are listed.
 - "dumbbell goblet …" is a goblet hold: goblet says how the dumbbell is held.
 - "clean to press" is the clean and press. "rear foot on bosu" is a stability.
-- A count inside a combo ("to 2 x calf raise") is dropped: it says how often, not what.
+- A count after "to" in a combo ("to 2 x calf raise") is passed over: it says how often, not
+  what. Anywhere else a count still leaves the line unread.
+- A combo's dumbbell isn't put on a part done with nothing, so "dumbbell sumo squat to frogger"
+  takes the squat's number.
+- **The review caught:** the first version dropped any count in the words, so "3 x 8 x squat"
+  read as three reps and got a heavier number, and "squat and 8 x deadlift" read as one combo.
 
 Left unread, because the boards don't make them plain: "cross carry", "pendulum with
 kickstand", "TRX bridge row". On the whole corpus 46 strings that were "not sure" now read and

@@ -115,7 +115,10 @@ class IdentityTest {
         assertEquals(known("10 x goblet squat").key, known("10 x goblet dumbbell squat").key)
         assertEquals("clean and press [arms=single]", known("6 x single arm clean to press").key)
         assertEquals("split squat [arms=single, stability=rear foot on bosu]", known("8 x single arm split squat (rear foot on bosu, L)").key)
-        assertEquals("squat [implement=dumbbell, legs=sumo] + frogger [implement=dumbbell]", known("8 x dumbbell sumo squat to frogger").key)
+        // Nothing is held for the frogger: the dumbbell is the squat's.
+        assertEquals("squat [implement=dumbbell, legs=sumo] + frogger", known("8 x dumbbell sumo squat to frogger").key)
+        // The plank's own name still reads with the bench as where the hands are.
+        assertEquals("plank jack [position=bench]", known("8 x bench high plank jack").key)
     }
 
     // A count inside a combo says how often the part is done; it isn't a word of the name.
@@ -123,9 +126,11 @@ class IdentityTest {
     fun aCountInsideAComboIsNotAWord() {
         assertEquals(known("12 x ybell deadlift to calf raise").key, known("12 x ybell deadlift to 2x calf raise").key)
         assertEquals(known("12 total x alt reverse lunge to calf raise").key, known("12 total x alt reverse lunge to 2 x calf raise").key)
-        // A bare number, or a tempo like "1.5x", is still a word nobody listed.
-        assertEquals(Why.UNKNOWN_WORDS, notSure("10 x squat to 2 calf raise").why)
-        assertEquals(Why.UNKNOWN_WORDS, notSure("10 x 1.5x squat").why)
+        // Anywhere else a count is a word nobody listed: sets and reps misread as reps alone
+        // would raise the number, a second count after "and" is a second exercise, and
+        // "2 x dumbbell" is two dumbbells.
+        listOf("3 x 8 x squat", "8 x squat and 8 x deadlift", "8 x squat + 12 x deadlift", "8 x 2 x dumbbell squat", "8 x squat to 2 x dumbbell press", "10 x squat to 2 calf raise", "10 x 1.5x squat", "10 x squat to 1.5x press")
+            .forEach { assertEquals(it, Why.UNKNOWN_WORDS, notSure(it).why) }
     }
 
     @Test

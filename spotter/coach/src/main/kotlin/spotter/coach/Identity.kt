@@ -252,6 +252,12 @@ class Identity(private val vocabulary: Vocabulary) {
     )
 
     // A value that says more about another on the same axis.
+    // A plank with the hands on a bench is one position, not a bench and a plank in conflict.
+    private val together = mapOf(
+        setOf("bench", "high plank") to "bench high plank",
+        setOf("low bench", "high plank") to "low bench high plank",
+    )
+
     // "dumbbell goblet …" is one dumbbell in both hands: goblet says how the dumbbell is held.
     private val refines = mapOf("hands on bosu" to "bosu", "feet on bosu" to "bosu", "one dumbbell, both hands" to "dumbbell")
 
@@ -277,14 +283,27 @@ class Identity(private val vocabulary: Vocabulary) {
         }
     }
 
+    // "deadlift to 2 x calf raise": a count after "to" says how often the second part is done,
+    // not what it is, so it is passed over (how many tokens, or 0). Only there: "3 x 8 x squat"
+    // is sets and reps misread, "squat and 8 x deadlift" is two exercises, and "2 x dumbbell" is
+    // two dumbbells, so each of those stays a word nobody listed.
+    private fun innerCount(tokens: List<String>, at: Int, before: List<Pair<String, Meaning>>): Int {
+        val (phrase, last) = before.lastOrNull() ?: return 0
+        if (last !is Meaning.Connector || phrase !in setOf("to", "into", "with")) return 0
+        val length = when {
+            tokens[at].matches(Regex("""\d{1,2}x""")) -> 1
+            tokens[at].matches(Regex("""\d{1,2}""")) && tokens.getOrNull(at + 1) == "x" -> 2
+            else -> return 0
+        }
+        val next = tokens.getOrNull(at + length) ?: return 0
+        return if ((vocabulary.lookup(next) as? Meaning.Variation)?.axis == "implement") 0 else length
+    }
+
     private fun previous(before: List<Pair<String, Meaning>>): Movement? =
         (before.lastOrNull { it.second is Meaning.OfMovement }?.second as? Meaning.OfMovement)?.movement
 
     fun read(words: String): Reading {
-        // "deadlift to 2 x calf raise": a count inside a combo is how the part is done, not a word of
-        // its name, and the weight is the first part's either way.
-        val tokens = Vocabulary.normalise(words).replace(Regex("""[:;.]"""), " ").replace(Regex("""(?<![\w.])\d{1,2} ?x(?!\w)"""), " ")
-            .split(' ').filter { it.isNotEmpty() }
+        val tokens = Vocabulary.normalise(words).replace(Regex("""[:;.]"""), " ").split(' ').filter { it.isNotEmpty() }
         if (tokens.isEmpty()) return Reading.NotSure(Why.EMPTY, emptyList())
 
         // Longest phrase first, so "high plank" is a position before "high pull" can be tried.
@@ -302,6 +321,11 @@ class Identity(private val vocabulary: Vocabulary) {
                 break
             }
             if (!matched) {
+                val counted = innerCount(tokens, i, meanings)
+                if (counted > 0) {
+                    i += counted
+                    continue
+                }
                 val guessed = fromNeighbours(tokens[i], meanings)
                 if (guessed != null) meanings += tokens[i] to guessed else unknown += tokens[i]
                 i++
@@ -369,6 +393,7 @@ class Identity(private val vocabulary: Vocabulary) {
                     when {
                         refines[meaning.value] == earlier -> Unit
                         refines[earlier] == meaning.value -> variations[meaning.axis] = earlier
+                        setOf(earlier, meaning.value) in together -> variations[meaning.axis] = together.getValue(setOf(earlier, meaning.value))
                         else -> return Reading.NotSure(Why.CONFLICT, listOf(phrase))
                     }
                 }
@@ -388,7 +413,10 @@ class Identity(private val vocabulary: Vocabulary) {
         for (axis in listOf("implement", "stability", "band", "arms")) {
             val values = shared.mapNotNull { it.variations[axis] }.toSet()
             if (values.size != 1) continue
-            shared = shared.map { p -> if (axis in p.variations) p else p.copy(variations = p.variations + (axis to values.single())) }
+            // Nothing is held for a part done with nothing ("dumbbell squat to frogger"): the
+            // dumbbell is the squat's, and the combo takes the squat's number.
+            val held = axis == "implement" && values.single() !in setOf("bodyweight", "trx")
+            shared = shared.map { p -> if (axis in p.variations || (held && p.movement.bodyweight)) p else p.copy(variations = p.variations + (axis to values.single())) }
         }
         return shared
     }
