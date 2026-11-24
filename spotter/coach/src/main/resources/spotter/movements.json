@@ -829,6 +829,19 @@
    ]
   },
   {
+   "name": "cross catch halo",
+   "aliases": [
+    "cross catch to halo",
+    "cross carry halo",
+    "cross carry to halo"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "shoulders"
+   ]
+  },
+  {
    "name": "woodchopper",
    "aliases": [
     "woodchoppers",

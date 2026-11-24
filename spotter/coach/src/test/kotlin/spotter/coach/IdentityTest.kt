@@ -130,6 +130,13 @@ class IdentityTest {
         listOf("8 x TRX bridge row", "1 min of low side plank pendulum with kickstand (L)").forEach {
             assertEquals(it, "no weight", Sheet.make(listOf(it), emptyList(), identity).let { s -> s.glance(s.rows.single()) })
         }
+        // "Cross carry to halo" is the coaches' "cross catch halo": matched from its description
+        // and madCode's memory of it (2026-11-24), not from a source that uses the board's
+        // name. Its own exercise, so it borrows nothing from a plain halo.
+        assertEquals("cross catch halo [alternating=yes]", known("12 x alt cross carry to halo").key)
+        assertEquals(known("12 x cross catch halo").key, known("12 x cross carry to halo").key)
+        assertNotEquals(known("12 x halo").weightKey, known("12 x cross carry to halo").weightKey)
+        assertEquals(Why.UNKNOWN_WORDS, notSure("12 x cross carry").why)
         // "Kickstand" before a lift is a stance nobody has ruled on: only "with kickstand" is listed.
         assertEquals(Why.UNKNOWN_WORDS, notSure("8 x kickstand deadlift").why)
         // A bridge and a row that aren't this move stay two movements.
