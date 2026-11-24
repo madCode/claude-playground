@@ -50,8 +50,8 @@ Step 1, the coach core (ticked above; these are its leftovers):
   plank" and "side plank [high plank]", "bosu bridge" and "bridge (feet on bosu)". Settle per movement
   with the corpus grade. *(cycle 3)*
 - [ ] Refused but readable, from the same review: `position` holds what you're on, your body
-  shape and where the weight sits, so "low bench high plank … row" and "incline bench chest
-  press" clash; "high plank jack" loses "plank jack" to "high plank". *(cycle 3)*
+  shape and where the weight sits, so "incline bench chest press" clashes ("low bench high plank" and "bench high plank"
+  are now positions of their own); "high plank jack" loses "plank jack" to "high plank". *(cycle 3)*
 - [ ] More stated factors for borrowing, madCode asked for them (2026-11-22): single arm from two,
   Bosu, a b-stance or balance version from the plain one, each conservative and in the reason.
   One leg from two (0.6) is in. *(madCode)*

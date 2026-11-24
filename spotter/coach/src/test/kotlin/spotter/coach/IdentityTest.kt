@@ -96,7 +96,40 @@ class IdentityTest {
     fun twoMovementsSideBySideAreNotSure() {
         assertEquals(Why.TWO_MOVEMENTS, notSure("6 - 10 each x bench bird dog low row, rest").why)
         assertEquals(Why.TWO_MOVEMENTS, notSure("12 x TRX bridge row").why)
-        assertEquals(Why.TWO_MOVEMENTS, notSure("8 total x low bench alt step-down reverse lunge to hammer curl").why)
+    }
+
+    // Each is plain from the boards, and a row the reader can't name is a row the coach never
+    // learns from.
+    @Test
+    fun plainLinesThatWereNotSureRead() {
+        // A step down off the bench into a squat or a lunge is one move, not two side by side.
+        assertEquals("step-down squat [alternating=yes, implement=one dumbbell, both hands, position=low bench]", known("12 total x low bench goblet alt step-down squat").key)
+        assertEquals("step-down reverse lunge [alternating=yes, position=low bench] + bicep curl [grip=hammer]", known("8 total x low bench alt step-down reverse lunge to hammer curl").key)
+        assertNotEquals(known("8 x step-down").key, known("8 x step-down squat").key)
+        // Hands on the bench in a plank is one position, not a bench and a plank in conflict.
+        assertEquals("low row [arms=single, position=low bench high plank]", known("8 each x low bench high plank single arm low row").key)
+        assertEquals("reverse fly [arms=single, position=bench high plank]", known("8 x bench high plank single arm reverse fly").key)
+        assertEquals("plank up-down [alternating=yes, position=low bench high plank]", known("20 total x low bench high plank alt up &amp; down").key)
+        // Goblet says how the dumbbell is held; either order.
+        assertEquals("cross-back lunge [alternating=yes, implement=one dumbbell, both hands]", known("8 total x dumbbell goblet alt cross back lunge, rest").key)
+        assertEquals(known("10 x goblet squat").key, known("10 x goblet dumbbell squat").key)
+        assertEquals("clean and press [arms=single]", known("6 x single arm clean to press").key)
+        assertEquals("split squat [arms=single, stability=rear foot on bosu]", known("8 x single arm split squat (rear foot on bosu, L)").key)
+        assertEquals("squat [implement=dumbbell, legs=sumo] + frogger [implement=dumbbell]", known("8 x dumbbell sumo squat to frogger").key)
+        // The plank's own name still reads with the bench as where the hands are.
+        assertEquals("plank jack [position=bench]", known("8 x bench high plank jack").key)
+    }
+
+    // A count inside a combo says how often the part is done; it isn't a word of the name.
+    @Test
+    fun aCountInsideAComboIsNotAWord() {
+        assertEquals(known("12 x ybell deadlift to calf raise").key, known("12 x ybell deadlift to 2x calf raise").key)
+        assertEquals(known("12 total x alt reverse lunge to calf raise").key, known("12 total x alt reverse lunge to 2 x calf raise").key)
+        // Anywhere else a count is a word nobody listed: sets and reps misread as reps alone
+        // would raise the number, a second count after "and" is a second exercise, and
+        // "2 x dumbbell" is two dumbbells.
+        listOf("3 x 8 x squat", "8 x squat and 8 x deadlift", "8 x squat + 12 x deadlift", "8 x 2 x dumbbell squat", "8 x squat to 2 x dumbbell press", "10 x squat to 2 calf raise", "10 x 1.5x squat", "10 x squat to 1.5x press", "8 x squat to 2 x 2 x press", "8 x squat to 12 x press")
+            .forEach { assertEquals(it, Why.UNKNOWN_WORDS, notSure(it).why) }
     }
 
     @Test
@@ -115,7 +148,7 @@ class IdentityTest {
 
     @Test
     fun twoValuesOnOneAxisAreNotSure() {
-        assertEquals(Why.CONFLICT, notSure("8 each x low bench high plank single arm low row").why)
+        assertEquals(Why.CONFLICT, notSure("8 x incline floor chest press").why)
     }
 
     @Test
