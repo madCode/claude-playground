@@ -22,6 +22,30 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Tuesday 24 November 2026
 
+### Board lines the reader couldn't name
+
+A row whose line reads as "not sure" never reaches the coach, on the sheet or from an imported
+history. A batch of such lines from the boards now reads:
+
+- "step-down squat" and "step-down reverse lunge" are movements of their own (a step off the
+  bench into the squat or lunge), not two movements side by side.
+- "low bench high plank" and "bench high plank" are positions, not a bench and a plank in
+  conflict. "plank up-down" ("up and down", "up & down") and "frogger" are listed.
+- "dumbbell goblet …" is a goblet hold: goblet says how the dumbbell is held.
+- "clean to press" is the clean and press. "rear foot on bosu" is a stability.
+- A small count right after "to" in a combo ("to 2 x calf raise") is passed over: it says how
+  often, not what. Anywhere else a count still leaves the line unread.
+- **Still a gap:** "dumbbell sumo squat to frogger" reads but gets no number from the squat,
+  because the combo's dumbbell is put on the frogger too. Taking it off changed the key of
+  combos already logged on the phone, so that needs its own change.
+- **The review caught:** the first version dropped any count in the words, so "3 x 8 x squat"
+  read as three reps and got a heavier number, and "squat and 8 x deadlift" read as one combo.
+  Its second look caught the frogger fix orphaning logged combos, which was taken back out.
+
+Left unread, because the boards don't make them plain: "cross carry", "pendulum with
+kickstand", "TRX bridge row". On the whole corpus 46 strings that were "not sure" now read and
+no reading that existed changed.
+
 ### A band doesn't decide whether a row takes a weight
 - **Why:** "mid band upright row" showed "no weight", read as a band with nothing held. madCode
   sent a picture of a banded row: the band is round the wrists, pulled apart, across the lift.

@@ -340,6 +340,32 @@
    "oneLeg": true
   },
   {
+   "name": "step-down squat",
+   "aliases": [
+    "step-down squats"
+   ],
+   "pattern": "lunge",
+   "muscles": [
+    "legs",
+    "glutes",
+    "balance"
+   ],
+   "oneLeg": true
+  },
+  {
+   "name": "step-down reverse lunge",
+   "aliases": [
+    "step-down reverse lunges"
+   ],
+   "pattern": "lunge",
+   "muscles": [
+    "legs",
+    "glutes",
+    "balance"
+   ],
+   "oneLeg": true
+  },
+  {
    "name": "step-down toe tap",
    "aliases": [
     "step-down toe taps"
@@ -405,7 +431,8 @@
    "name": "clean and press",
    "aliases": [
     "clean & press",
-    "clean and presses"
+    "clean and presses",
+    "clean to press"
    ],
    "pattern": "vertical_push",
    "muscles": [
@@ -1208,6 +1235,33 @@
    "pattern": "core",
    "muscles": [
     "core"
+   ],
+   "bodyweight": true
+  },
+  {
+   "name": "plank up-down",
+   "aliases": [
+    "plank up-downs",
+    "up-down",
+    "up-downs",
+    "up and down",
+    "up & down"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "shoulders"
+   ],
+   "bodyweight": true
+  },
+  {
+   "name": "frogger",
+   "aliases": [
+    "froggers"
+   ],
+   "pattern": null,
+   "muscles": [
+    "full body"
    ],
    "bodyweight": true
   },

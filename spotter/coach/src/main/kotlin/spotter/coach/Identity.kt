@@ -252,7 +252,14 @@ class Identity(private val vocabulary: Vocabulary) {
     )
 
     // A value that says more about another on the same axis.
-    private val refines = mapOf("hands on bosu" to "bosu", "feet on bosu" to "bosu")
+    // A plank with the hands on a bench is one position, not a bench and a plank in conflict.
+    private val together = mapOf(
+        setOf("bench", "high plank") to "bench high plank",
+        setOf("low bench", "high plank") to "low bench high plank",
+    )
+
+    // "dumbbell goblet …" is one dumbbell in both hands: goblet says how the dumbbell is held.
+    private val refines = mapOf("hands on bosu" to "bosu", "feet on bosu" to "bosu", "one dumbbell, both hands" to "dumbbell")
 
     // Words that name a movement only next to certain others, as madCode read the boards
     // (2026-11-22): "with rotation" is a torso rotation, while "trx rotation chest press" isn't;
@@ -274,6 +281,22 @@ class Identity(private val vocabulary: Vocabulary) {
                 if (previous(before)?.name?.let { it.endsWith("squat") || it.endsWith("lunge") } == true) movement("shoulder press") else null
             else -> null
         }
+    }
+
+    // "deadlift to 2 x calf raise": a small count right after "to" says how often the second
+    // part is done, not what it is, so it is passed over (how many tokens, or 0). Only there:
+    // "3 x 8 x squat" is sets and reps misread, "squat and 8 x deadlift" or "squat to 12 x row"
+    // is two exercises, and "2 x dumbbell" is two dumbbells, so each stays a word nobody listed.
+    private fun innerCount(tokens: List<String>, at: Int, before: List<Pair<String, Meaning>>): Int {
+        val (phrase, last) = before.lastOrNull() ?: return 0
+        if (last !is Meaning.Connector || phrase !in setOf("to", "into", "with") || tokens.getOrNull(at - 1) != phrase) return 0
+        val length = when {
+            tokens[at].matches(Regex("""[2-4]x""")) -> 1
+            tokens[at].matches(Regex("""[2-4]""")) && tokens.getOrNull(at + 1) == "x" -> 2
+            else -> return 0
+        }
+        val next = tokens.getOrNull(at + length) ?: return 0
+        return if ((vocabulary.lookup(next) as? Meaning.Variation)?.axis == "implement") 0 else length
     }
 
     private fun previous(before: List<Pair<String, Meaning>>): Movement? =
@@ -298,6 +321,11 @@ class Identity(private val vocabulary: Vocabulary) {
                 break
             }
             if (!matched) {
+                val counted = innerCount(tokens, i, meanings)
+                if (counted > 0) {
+                    i += counted
+                    continue
+                }
                 val guessed = fromNeighbours(tokens[i], meanings)
                 if (guessed != null) meanings += tokens[i] to guessed else unknown += tokens[i]
                 i++
@@ -365,6 +393,7 @@ class Identity(private val vocabulary: Vocabulary) {
                     when {
                         refines[meaning.value] == earlier -> Unit
                         refines[earlier] == meaning.value -> variations[meaning.axis] = earlier
+                        setOf(earlier, meaning.value) in together -> variations[meaning.axis] = together.getValue(setOf(earlier, meaning.value))
                         else -> return Reading.NotSure(Why.CONFLICT, listOf(phrase))
                     }
                 }
