@@ -22,9 +22,9 @@ or the docs rather than guess: the order may change, nothing is built on a guess
   "Words that share a weight" and "Tweaks that take an estimate"). On the yardstick (an
   invented lifter working through the board corpus): 110 rows of 361 with a number before,
   128 with shared wordings, 140 with estimates, 158 with factors for the harder tweaks, 165 with a band no longer deciding and
-  one dumbbell against two. Next: links between movements that are filed apart (a reverse and
-  a forward lunge, a lateral lunge at 0.8, a split squat); what to do when a history doesn't
-  say how many dumbbells, which holds up "alternating", one arm and the goblet link.
+  one dumbbell against two, 167 with more board lines read, 170 with lifts filed apart linked (a reverse and
+  a forward lunge, a lateral lunge at 0.8, a split squat at 0.6 of the squat). Next: which
+  other movements are one lift under two names (curtsy, cross-back and walking lunges; rows).
   Then the person's own measured ratio replacing a stated factor.
   The measured ratio waits (cycle 28): a ratio measured on one movement is only sound for
   that movement, and there its one-leg version then has a log of its own, which already

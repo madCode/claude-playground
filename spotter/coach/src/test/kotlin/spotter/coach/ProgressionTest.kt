@@ -427,6 +427,41 @@ class ProgressionTest {
 
     // "If it's the same exercise with minor tweaks", the sheet gives a number (madCode,
     // 2026-11-24): a lift never logged in these words takes an estimate from a near version.
+    // madCode, 2026-11-24: lifts filed under different names that are one lift done another
+    // way lend each other a first number, never a heavier one.
+    @Test
+    fun aLiftFiledApartTakesAnEstimateFromItsKin() {
+        fun estimate(line: String, log: List<Logged>) = suggest(log, ex = exercise(line))
+        fun of(line: String, lb: Int, day: Int = 1, count: Int? = 2) = logged(day, lb, listOf(8, 8), ex = exercise(line), count = count)
+        val forward = listOf(of("8 x forward lunge", 25), of("8 x forward lunge", 25, day = 2))
+        // A step back is the same lunge: what was held, not the step up the other has earned.
+        val reverse = estimate("8 x reverse lunge", forward) as Suggestion.Weight
+        assertEquals(listOf(Load(25, 2), Change.EST), listOf(reverse.load, reverse.change))
+        assertEquals("an estimate: your forward lunge stands at 2×25, and this is a small change to it", reverse.reasons.single())
+        assertEquals(Load(25, 2), (estimate("8 x lunge", forward) as Suggestion.Weight).load)
+        // A lateral lunge starts lighter; a lunge takes a lateral lunge's weight as it stands.
+        val lateral = estimate("8 x lateral lunge", forward) as Suggestion.Weight
+        assertEquals(Load(20, 2), lateral.load)
+        assertEquals("an estimate: your forward lunge stands at 2×25, and this starts at about 0.8 times that dumbbell", lateral.reasons.single())
+        assertEquals(Load(15, 2), (estimate("8 x reverse lunge", listOf(of("8 x lateral lunge", 15))) as Suggestion.Weight).load)
+        // A split squat from the squat, and nothing the other way.
+        assertEquals(Load(15, 2), (estimate("8 x split squat", listOf(of("8 x squat", 30))) as Suggestion.Weight).load)
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x squat", listOf(of("8 x split squat", 20))))
+        // Lunges that weren't ruled on stay apart.
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x curtsy lunge", forward))
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x walking lunge", forward))
+        // The lift's own wording is nearer than its kin: the goblet reverse lunge's own plain
+        // version decides, not the heavier forward lunge.
+        val both = forward + of("8 x reverse lunge", 15)
+        assertEquals(Load(20, 1), (estimate("8 x goblet reverse lunge", both) as Suggestion.Weight).load)
+        // Kin and a tweak together: one dumbbell in both hands from the forward lunge's two.
+        assertEquals(Load(35, 1), (estimate("8 x goblet reverse lunge", forward) as Suggestion.Weight).load)
+        // Once logged in its own words the lift stands on its own.
+        assertEquals(Change.SAME, (estimate("8 x reverse lunge", forward + of("8 x reverse lunge", 15, day = 3)) as Suggestion.Weight).change)
+        // A kin that twinged, or whose count nobody said beside a one-arm row, lends nothing.
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x reverse lunge", listOf(logged(1, 25, listOf(8, 4), ex = exercise("8 x forward lunge"), hurt = true))))
+    }
+
     @Test
     fun aTweakedLiftTakesAnEstimateFromANearVersion() {
         val pressed = listOf(logged(1, 25, listOf(8, 8)), logged(2, 25, listOf(8, 8)))

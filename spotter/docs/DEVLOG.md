@@ -22,6 +22,13 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Tuesday 24 November 2026
 
+### Lifts filed under different names lend each other a first number
+- **Why:** a reverse lunge after months of forward lunges said "new: go light". madCode had
+  agreed the set: forward and reverse the same, lateral at 0.8, a split squat at 0.6.
+- **Shipped:** an estimate across those movements, by the same rules as a tweak's: what was
+  held, never a step up, nothing from a twinge, and the lift's own other wording first.
+- **On the yardstick:** 170 of 361 rows with a number (167 before).
+
 ### The dumbbell counts file is picked on the phone
 - **Why:** the import read the counts file only in the replay tool; the phone's history still
   had rows with no count, which blocks the one-arm, alternating and goblet links.

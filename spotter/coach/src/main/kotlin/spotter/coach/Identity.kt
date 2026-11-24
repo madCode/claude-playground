@@ -127,6 +127,23 @@ internal object Estimated {
         else -> null
     }
 
+    private val lunges = setOf("lunge", "forward lunge", "reverse lunge")
+
+    /**
+     * Movements filed apart that are one lift done another way, as madCode ruled on 2026-11-24:
+     * what [mine] starts at against a logged [theirs], or null where they aren't linked. A step
+     * forward or back is the same lunge; a lateral lunge starts lighter; a split squat is the
+     * squat mostly on one leg (TRAINING.md, 7). Never upwards: a squat takes nothing from a
+     * split squat, and a lunge takes a lateral lunge's weight as it stands.
+     */
+    fun kin(mine: Movement, theirs: Movement): Double? = when {
+        mine == theirs -> 1.0
+        mine.name in lunges && (theirs.name in lunges || theirs.name == "lateral lunge") -> 1.0
+        mine.name == "lateral lunge" && theirs.name in lunges -> 0.8
+        mine.name == "split squat" && theirs.name == "squat" -> 0.6
+        else -> null
+    }
+
     /** One dumbbell held in both hands, or one in each, where the words say: "goblet", "two dumbbells". */
     fun hold(part: Part): Int? = when (part.implement) {
         "one dumbbell, both hands" -> 1
