@@ -216,7 +216,7 @@ what is on the board, and nothing says so.
   dividing by a guess would make a heavier number.
   One dumbbell held in both hands, against one in each (TRAINING.md, 12): 1.5 of one of the
   pair on a squat, a lunge or a tricep extension, where it is held up; 2 on a deadlift or a
-  Romanian deadlift, where it hangs; no estimate on any other lift. Only between rows whose words say how the weight is held ("goblet", "two
+  Romanian deadlift on two legs, where it hangs; no estimate on any other lift. Only between rows whose words say how the weight is held ("goblet", "two
   dumbbells") or a session logged with two, never to a bare row from a goblet one.
   The replay tool can't yet switch estimates off on their own; `Rules.estimates` is there for it.
 - **New words go to a review list.** The list is built, read only (`ReviewList`): a card

@@ -512,7 +512,7 @@ class ProgressionTest {
         assertEquals(Load(25, 2), estimate("8 x bosu chest press", press))
         assertEquals(Load(30, 2), estimate("8 x bosu squat", squat))
         val bosu = suggest(squat, ex = exercise("8 x bosu squat")) as Suggestion.Weight
-        assertEquals(listOf("an estimate: your squat stands at 2×40, and this takes about 0.8 of that"), bosu.reasons)
+        assertEquals(listOf("an estimate: your squat stands at 2×40, and this starts at about 0.8 times that dumbbell"), bosu.reasons)
         // Tempos: slow and pulse 0.85, a pause 0.9, rounded down.
         assertEquals(Load(25, 2), estimate("8 x chest press (slow)", press))
         assertEquals(Load(25, 2), estimate("8 x chest press (pause)", press))
@@ -537,7 +537,7 @@ class ProgressionTest {
         assertEquals(Load(30, 2), estimate("8 x staggered deadlift", deadlift))
         assertEquals(Load(30, 2), estimate("8 x b-stance deadlift", deadlift))
         // 0.85 is said as 0.85, not rounded into a pause's 0.9.
-        assertEquals("an estimate: your chest press stands at 2×30, and this takes about 0.85 of that", (suggest(press, ex = exercise("8 x chest press (slow)")) as Suggestion.Weight).reasons.single())
+        assertEquals("an estimate: your chest press stands at 2×30, and this starts at about 0.85 times that dumbbell", (suggest(press, ex = exercise("8 x chest press (slow)")) as Suggestion.Weight).reasons.single())
         assertEquals(Load(20, 2), estimate("8 x single leg deadlift", deadlift))
     }
 
@@ -549,7 +549,7 @@ class ProgressionTest {
         fun estimate(line: String, log: List<Logged>) = suggest(log, ex = exercise(line))
         val goblet = estimate("8 x goblet squat", on("8 x squat", 20)) as Suggestion.Weight
         assertEquals(listOf(Load(30, 1), Change.EST), listOf(goblet.load, goblet.change))
-        assertEquals(listOf("an estimate: your squat stands at 2×20, and this takes about 1.5 of that"), goblet.reasons)
+        assertEquals(listOf("an estimate: your squat stands at 2×20, and this starts at about 1.5 times that dumbbell"), goblet.reasons)
         // 1.5 of 25 is 37.5: down to 35.
         assertEquals(Load(35, 1), (estimate("8 x goblet squat", on("8 x squat", 25)) as Suggestion.Weight).load)
         assertEquals(Load(30, 1), (estimate("8 x goblet reverse lunge", on("8 x reverse lunge", 20)) as Suggestion.Weight).load)
@@ -563,6 +563,13 @@ class ProgressionTest {
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x single dumbbell chest press", on("8 x chest press", 20)))
         // A bare row says nothing of how it is held: no estimate from the goblet one.
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x squat", on("8 x goblet squat", 30, count = 1)))
+        // Not on one leg, where "single dumbbell" is as often one hand's.
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x single dumbbell single leg deadlift", on("8 x single leg deadlift", 20)))
+        // Of two as near, the lower dumbbell, however each was held.
+        val mixed = on("8 x squat (slow)", 30) + logged(2, 35, listOf(8, 8), ex = exercise("8 x squat (pause)"), count = 1)
+        assertEquals(30, (estimate("8 x squat", mixed) as Suggestion.Weight).load.lb)
+        // A "two dumbbell" row logged with one lends nothing to a row that says two.
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x two dumbbell squat", on("8 x two dumbbell squat (slow)", 30, count = 1)))
         // Twice one of the pair on a deadlift only: a good morning holds it at the chest.
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x single dumbbell good morning", on("8 x good morning", 15)))
         // A goblet version in the log doesn't stand in the way of a nearer plain one.

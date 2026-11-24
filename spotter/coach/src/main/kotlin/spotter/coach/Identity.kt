@@ -140,18 +140,21 @@ internal object Estimated {
      * hangs from straight arms as the pair does (madCode, 2026-11-24; TRAINING.md, 12). Null on
      * any other lift.
      */
-    fun inBothHands(movement: Movement): Double? = when {
-        movement.pattern in setOf("squat", "lunge") || movement.name == "tricep extension" -> 1.5
+    fun inBothHands(part: Part): Double? = when {
+        part.movement.pattern in setOf("squat", "lunge") || part.movement.name == "tricep extension" -> 1.5
         // Not every hinge: a good morning holds it at the chest, and a swing is one by nature.
-        movement.name in setOf("deadlift", "romanian deadlift") -> 2.0
+        // Nor on one leg, where "single dumbbell" is as often one hand's.
+        part.movement.name in setOf("deadlift", "romanian deadlift") -> 2.0.takeIf { !part.oneLeg }
         else -> null
     }
 
     /** Whether a lift held as [mine] can take an estimate from one held as [theirs] at all. */
-    fun holds(movement: Movement, mine: Int?, theirs: Int?): Boolean = when {
-        mine == theirs -> true
-        mine == 1 || theirs == 1 -> mine != null && inBothHands(movement) != null
-        else -> true
+    fun holds(part: Part, theirs: Int?): Boolean = hold(part).let { mine ->
+        when {
+            mine == theirs -> true
+            mine == 1 || theirs == 1 -> mine != null && inBothHands(part) != null
+            else -> true
+        }
     }
 
     /** The stronger grip on a curl: its weight says too much for the plain one (TRAINING.md, 11). */
