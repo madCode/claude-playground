@@ -30,6 +30,15 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   weightless (madCode doesn't recall holding anything for one).
 - **On the yardstick:** 165 of 361 rows with a number (158 before).
 
+### The Progress card names exercises in words
+- **Why:** madCode's phone showed "chest fly [position=floor]" and "lateral shift
+  [implement=one dumbbell, both hands]": the key an exercise is filed under, not its name.
+- **Shipped:** "floor chest fly", "goblet lateral shift", "single arm split stance high row".
+  The reasons under "Why this number" use the same names.
+- **The review printed the name of every exercise in the corpus** and found the first try
+  wanting: "hold squat", "stick bicep curl", "high plank plank", and a combo saying "single
+  arm" before each of its parts. Rewritten in the order a person says it.
+
 ### Harder tweaks start lighter, and one dumbbell against two
 - **Why:** madCode approved the rest of the tweaks after a research round on which of them
   "the same weight" would be clearly wrong for.

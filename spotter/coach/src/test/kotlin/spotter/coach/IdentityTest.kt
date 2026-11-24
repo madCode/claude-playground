@@ -255,4 +255,26 @@ class IdentityTest {
         val combo = known("30 sec of bosu squat to push-up (hands on bosu)")
         assertEquals(listOf("bosu", "hands on bosu"), combo.parts.map { it.variations["stability"] })
     }
+
+    // An exercise is named as a person would say it: the card and the reasons show this, never
+    // the key it is filed under.
+    @Test
+    fun anExerciseIsNamedInWords() {
+        fun name(line: String) = Estimated.name(identity.read(BoardLine.read(line).words) as Reading.Known)
+        assertEquals(
+            listOf(
+                "floor chest fly", "single arm split stance high row", "alternating low row", "goblet squat", "one-dumbbell deadlift",
+                "squat hold", "bicep curl (stick it)", "pulsing split squat", "plank", "mid band upright row", "chest press on a bosu",
+                "glute bridge (feet on bosu)", "close grip explosive chest press", "lying bench tricep extension",
+            ),
+            listOf(
+                "8 x floor chest fly", "8 x split stance single arm high row", "8 x alt low row", "8 x goblet squat", "8 x single dumbbell deadlift",
+                "30 sec of squat hold", "5 x bicep curl (stick it)", "8 x pulsing split squat", "20 sec of high plank", "12 x mid band upright row", "8 x bosu chest press",
+                "8 x bridge (feet on bosu)", "8 x close grip chest press (explosive)", "8 x tricep extension (lying on bench)",
+            ).map(::name),
+        )
+        // What a combo's parts share is said once.
+        assertEquals("goblet reverse lunge to torso rotation", name("8 x goblet reverse lunge with torso rotation"))
+        assertEquals("single arm lateral lunge to upright row", name("8 x single arm lateral lunge to upright row"))
+    }
 }
