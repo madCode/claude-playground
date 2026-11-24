@@ -139,6 +139,12 @@
    ],
    "low bench": [
     "low bench"
+   ],
+   "bench high plank": [
+    "bench high plank"
+   ],
+   "low bench high plank": [
+    "low bench high plank"
    ]
   },
   "stability": {
@@ -165,6 +171,9 @@
    "feet in straps": [
     "feet in straps",
     "feet in the straps"
+   ],
+   "rear foot on bosu": [
+    "rear foot on bosu"
    ]
   },
   "grip": {

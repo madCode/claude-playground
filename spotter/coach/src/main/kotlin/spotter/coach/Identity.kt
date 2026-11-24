@@ -252,7 +252,8 @@ class Identity(private val vocabulary: Vocabulary) {
     )
 
     // A value that says more about another on the same axis.
-    private val refines = mapOf("hands on bosu" to "bosu", "feet on bosu" to "bosu")
+    // "dumbbell goblet …" is one dumbbell in both hands: goblet says how the dumbbell is held.
+    private val refines = mapOf("hands on bosu" to "bosu", "feet on bosu" to "bosu", "one dumbbell, both hands" to "dumbbell")
 
     // Words that name a movement only next to certain others, as madCode read the boards
     // (2026-11-22): "with rotation" is a torso rotation, while "trx rotation chest press" isn't;
@@ -280,7 +281,10 @@ class Identity(private val vocabulary: Vocabulary) {
         (before.lastOrNull { it.second is Meaning.OfMovement }?.second as? Meaning.OfMovement)?.movement
 
     fun read(words: String): Reading {
-        val tokens = Vocabulary.normalise(words).replace(Regex("""[:;.]"""), " ").split(' ').filter { it.isNotEmpty() }
+        // "deadlift to 2 x calf raise": a count inside a combo is how the part is done, not a word of
+        // its name, and the weight is the first part's either way.
+        val tokens = Vocabulary.normalise(words).replace(Regex("""[:;.]"""), " ").replace(Regex("""(?<![\w.])\d{1,2} ?x(?!\w)"""), " ")
+            .split(' ').filter { it.isNotEmpty() }
         if (tokens.isEmpty()) return Reading.NotSure(Why.EMPTY, emptyList())
 
         // Longest phrase first, so "high plank" is a position before "high pull" can be tried.
