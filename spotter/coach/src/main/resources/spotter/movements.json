@@ -292,7 +292,9 @@
   {
    "name": "curtsy lunge",
    "aliases": [
-    "curtsy lunges"
+    "curtsy lunges",
+    "curtsey lunge",
+    "curtsey lunges"
    ],
    "pattern": "lunge",
    "muscles": [
@@ -306,7 +308,9 @@
    "aliases": [
     "cross-back lunges",
     "cross back lunge",
-    "cross back lunges"
+    "cross back lunges",
+    "crossback lunge",
+    "crossback lunges"
    ],
    "pattern": "lunge",
    "muscles": [

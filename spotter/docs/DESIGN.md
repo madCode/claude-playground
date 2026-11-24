@@ -222,8 +222,8 @@ what is on the board, and nothing says so.
     their weight; a lateral, curtsy or cross-back lunge starts at 0.8 of theirs and lends them
     its own as it stands (a curtsy and a cross-back lunge are one move; a lateral lunge says
     nothing of them); a split squat
-    starts at 0.6 of the squat, and the squat takes nothing back. Another movement is looked at
-    only when no wording of the lift itself is near.
+    starts at 0.6 of the squat, and the squat takes nothing back. The nearest logged decides: the lift's
+    own wordings, then the same lift under another name, then one it only starts from.
   A tweak that makes the lift harder starts it lighter, by a factor rounded down to the rack
   (TRAINING.md, 11): standing on a bosu 0.8, lying on one for a press 0.9; a slow or
   "eccentric" lower, or a pulse, 0.85; a pause or "stick it" 0.9; a b-stance 0.8. Two such

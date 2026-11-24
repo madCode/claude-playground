@@ -152,6 +152,18 @@ internal object Estimated {
         else -> null
     }
 
+    /**
+     * How close a linked movement is: 0 the lift itself, 1 the same lift under another name (a
+     * forward and a reverse lunge; a curtsy and a cross-back), 2 a lift it only starts from.
+     * The closest logged decides, so a curtsy lunge can't pull a reverse lunge under what the
+     * forward lunge holds, nor a twinge on it blank that number.
+     */
+    fun kinship(mine: Movement, theirs: Movement): Int = when {
+        mine == theirs -> 0
+        (mine.name in lunges && theirs.name in lunges) || (mine.name in crossed && theirs.name in crossed) -> 1
+        else -> 2
+    }
+
     /** One dumbbell held in both hands, or one in each, where the words say: "goblet", "two dumbbells". */
     fun hold(part: Part): Int? = when (part.implement) {
         "one dumbbell, both hands" -> 1

@@ -144,6 +144,12 @@ class IdentityTest {
         assertEquals(Why.TWO_MOVEMENTS, notSure("8 x bridge low row").why)
     }
 
+    @Test
+    fun otherSpellingsOfTheCrossedLungesRead() {
+        assertEquals(known("8 x curtsy lunge").key, known("8 x curtsey lunge").key)
+        assertEquals(known("8 x cross-back lunge").key, known("8 x crossback lunge").key)
+    }
+
     // A count inside a combo says how often the part is done; it isn't a word of the name.
     @Test
     fun aCountInsideAComboIsNotAWord() {

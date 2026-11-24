@@ -493,6 +493,14 @@ class ProgressionTest {
         assertEquals(Load(15, 2), (estimate("8 x walking lunge", listOf(of("8 x curtsy lunge", 15))) as Suggestion.Weight).load)
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x curtsy lunge", listOf(of("8 x lateral lunge", 15))))
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x lateral lunge", listOf(of("8 x curtsy lunge", 15))))
+        // The same lift under another name decides before one it only starts from: a lighter
+        // or twinged curtsy doesn't touch what the forward lunge says of a reverse lunge, and
+        // a straight lunge doesn't undercut the cross-back's own other name.
+        val curtsy = forward + of("8 x curtsy lunge", 15, day = 3)
+        assertEquals(Load(25, 2), (estimate("8 x reverse lunge", curtsy) as Suggestion.Weight).load)
+        val hurt = forward + logged(3, 15, listOf(8, 4), ex = exercise("8 x curtsy lunge"), hurt = true)
+        assertEquals(Load(25, 2), (estimate("8 x reverse lunge", hurt) as Suggestion.Weight).load)
+        assertEquals(Load(30, 2), (estimate("8 x cross-back lunge", listOf(of("8 x forward lunge", 15), of("8 x curtsy lunge", 30, day = 2))) as Suggestion.Weight).load)
         // Other lunge-like moves stay apart.
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x step-up", forward))
         // The lift's own wording is nearer than its kin: the goblet reverse lunge's own plain
