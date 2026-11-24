@@ -33,7 +33,8 @@ class HistoryImportTest {
         val result = read(
             row("8 x chest press", "25.0", 8, 8, "double_dumbbell"),
             row("8 x goblet squat", "40", 8, 8),
-            row("8 x deadlift", "22.5", 8, 8),
+            // A lunge is done with one dumbbell or two: nobody said, so nobody knows.
+            row("8 x reverse lunge", "22.5", 8, 8),
             row("8 x deadlift", "30", 8, 8, "ybell"),
             // The name fixes the count: the hint says "two" by default on single-arm lines.
             row("8 each x single arm shoulder press", "15", 8, 8, "double_dumbbell"),
@@ -48,6 +49,22 @@ class HistoryImportTest {
 
     // Reported and asked reps are in the same terms, so the shortfall is what carries over, onto
     // the line's own reps a side: 12 of "12 total" is 6 a side done, not 12 (trap 7).
+    // Where the file doesn't say how many dumbbells, the lift's usual number is taken, and the
+    // row says so; a lift whose number varies stays unknown, and what the file says always wins.
+    @Test
+    fun aLiftWithAUsualNumberOfDumbbellsIsReadAtIt() {
+        val read = read(
+            row("8 x deadlift", "40", 8, 8), row("8 x chest fly", "15", 8, 8), row("8 x tricep extension", "20", 8, 8),
+            row("8 x reverse lunge", "20", 8, 8), row("8 x deadlift", "40", 8, 8, implement = "single_dumbbell", date = "2026-03-04"),
+            row("8 x single arm deadlift", "20", 8, 8, date = "2026-03-05"),
+        )
+        assertEquals(listOf(2, 2, 1, null, 1, 1), read.rows.map { it.logged.load.count })
+        assertEquals(listOf(true, true, true, false, false, false), read.rows.map { it.countAssumed })
+        // Which lets the plain lift lend to the one-armed one: the sheet has a number.
+        val sheet = Sheet.make(listOf("8 x single arm chest fly"), read.logged, identity)
+        assertEquals(Load(15, 1), (sheet.rows.single().suggestion as Suggestion.Weight).load)
+    }
+
     @Test
     fun repsAreSetAgainstTheLine() {
         val result = read(

@@ -77,6 +77,9 @@ private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: (
             } else {
                 Text("History imported: ${history.read} rows read.", fontSize = 14.sp, color = grey)
                 if (history.left.isNotEmpty()) Text("Left out: ${history.left.joinToString(", ")}.", fontSize = 14.sp, color = grey)
+                if (history.countAssumed > 0) {
+                    Text("${history.countAssumed} rows didn't say how many dumbbells: read as the lift's usual number.", fontSize = 14.sp, color = grey)
+                }
             }
             history.refused?.let { Text(it, fontSize = 14.sp, color = Color(0xFF8A4B00)) }
             if (history.reading) Text("Reading the file…", fontSize = 14.sp, color = Color(0xFF16181D))

@@ -30,6 +30,15 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   weightless (madCode doesn't recall holding anything for one).
 - **On the yardstick:** 165 of 361 rows with a number (158 before).
 
+### A lift's usual number of dumbbells, where the history doesn't say
+- **Why:** the private grading found every low or blank reworded row carried "(count?)": the
+  history only knows how many dumbbells where gym-coach's list has a default, and "alternating",
+  one arm and the goblet link need it.
+- **Shipped:** ten movements carry madCode's usual number: two for a deadlift, Romanian
+  deadlift, chest fly, lateral raise, upright row, high row and tricep kickback; one in both
+  hands for a tricep extension, good morning and halo. The import takes it where the file is
+  silent, and its card says how many rows that was. Lunges vary, so they stay unknown.
+
 ### The Progress card names exercises in words
 - **Why:** madCode's phone showed "chest fly [position=floor]" and "lateral shift
   [implement=one dumbbell, both hands]": the key an exercise is filed under, not its name.

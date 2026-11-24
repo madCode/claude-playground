@@ -17,6 +17,8 @@ data class HistoryState(
     val refused: String? = null,
     /** A picked file is being read. */
     val reading: Boolean = false,
+    /** Rows whose number of dumbbells the file didn't say, read at the lift's usual number. */
+    val countAssumed: Int = 0,
 )
 
 /** Taking a picked file as the history, and joining it to the log. Plain, so it runs in JVM tests. */
@@ -76,6 +78,7 @@ object HistoryPick {
     fun state(result: HistoryImport.Result?): HistoryState = if (result == null) HistoryState() else HistoryState(
         read = result.rows.size,
         left = result.left.entries.sortedByDescending { it.value }.map { "${it.value} ${words(it.key)}" },
+        countAssumed = result.rows.count { it.countAssumed },
     )
 
     private fun words(left: HistoryImport.Left) = when (left) {

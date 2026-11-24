@@ -328,7 +328,10 @@ reason, so the import can say what it didn't take:
 - **The weight** is one dumbbell's, brought down to a dumbbell on the rack (22.5 is read as 20).
   Heavier or lighter than the rack: left out, something else was held.
 - **The count** is fixed by the name where it can be (a goblet squat, a single-arm press: one),
-  then by the row's own hint (two dumbbells, one, a Ybell), else unknown.
+  then by the row's own hint (two dumbbells, one, a Ybell), then by the number madCode usually
+  does the lift with, where they have said one (`usual` in the movement list: a deadlift two,
+  a tricep extension one in both hands), else unknown: a lunge varies. The import card says how
+  many rows took the usual number.
 - **The reps** are a side. The row doesn't say whether its numbers count a side or both, so the
   asked number is matched to the line: against "12 total", asked 12 is both sides (8 done is 4
   a side) and asked 6 is a side. Where it can't be told (10 against "12 total", 8 against

@@ -139,9 +139,6 @@ says otherwise.
 
 Still open:
 
-- **A history row that doesn't say how many dumbbells.** "Alternating" and one arm only link
-  when the count is known. Assume two on lifts normally done with two?
-
 - **A step earned long ago.** Two clean sessions at 30, then nothing for five months: the
   sheet still says 35. The eight-week limit only covers a heavier weight vouching for a lighter
   one. Should an earned step, or any number, go stale after a long gap, and to what: hold, or

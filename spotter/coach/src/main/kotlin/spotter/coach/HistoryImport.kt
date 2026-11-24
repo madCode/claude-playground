@@ -11,7 +11,11 @@ import kotlinx.serialization.json.intOrNull
 import java.time.LocalDate
 
 /** One history row as the coach reads it, with the class it was logged in. */
-data class Imported(val logged: Logged, val className: String?, val line: String?)
+data class Imported(
+    val logged: Logged, val className: String?, val line: String?,
+    /** The file didn't say how many dumbbells: the lift's usual number was taken. */
+    val countAssumed: Boolean = false,
+)
 
 /**
  * Reads gym-coach's `history.jsonl` (docs/HISTORY-FORMAT.md) into the coach's own history.
@@ -136,13 +140,14 @@ object HistoryImport {
         val variant = o["variant"] as? JsonObject
         // A name that fixes the count wins (a goblet squat is one dumbbell, a single-arm press
         // one): the row's own hint is filled in by default and says "two" on single-arm lines.
-        // Where the name says nothing the hint is the only word, and without it the count
-        // stays unknown.
-        val count = Sheet.rowCount(exercise) ?: when (variant?.string("implement")) {
+        // Where the name says nothing the hint is the next word. Without it, the number the
+        // lift is usually done with, where madCode has said one; else the count stays unknown.
+        val said = Sheet.rowCount(exercise) ?: when (variant?.string("implement")) {
             "double_dumbbell" -> 2
             "single_dumbbell", "ybell" -> 1
             else -> null
         }
+        val count = said ?: exercise.parts.singleOrNull()?.movement?.usual
         val reps = o.int("reps")
         val asked = o.int("prescribed_reps")
         // Not finished, though the reps may not show it: read as "felt hard", which delays a step.
@@ -176,7 +181,7 @@ object HistoryImport {
                 Logged(date, exercise, load, asked..asked, listOf(reps), hurt = flags.hurt, hard = flags.hard, easy = flags.easy)
             }
         }
-        return Imported(logged, o.string("class"), written)
+        return Imported(logged, o.string("class"), written, countAssumed = said == null && count != null)
     }
 
     /**
