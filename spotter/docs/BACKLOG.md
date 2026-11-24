@@ -21,10 +21,10 @@ or the docs rather than guess: the order may change, nothing is built on a guess
   history, and a tweaked lift takes an estimate from its nearest logged version (DESIGN.md,
   "Words that share a weight" and "Tweaks that take an estimate"). On the yardstick (an
   invented lifter working through the board corpus): 110 rows of 361 with a number before,
-  128 with shared wordings, 140 with estimates. Next: one dumbbell in both hands against two
-  (madCode: link them, at 1.5 to 1.8 of one of the pair; research under way); the tweaks the
-  research round says don't keep the weight (a bosu, other tempos, other stances); what to do
-  when a history doesn't say how many dumbbells, which holds up "alternating" and one arm.
+  128 with shared wordings, 140 with estimates, 159 with factors for the harder tweaks and
+  one dumbbell against two. Next: links between movements that are filed apart (a reverse and
+  a forward lunge, a lateral lunge at 0.8, a split squat); what to do when a history doesn't
+  say how many dumbbells, which holds up "alternating", one arm and the goblet link.
   Then the person's own measured ratio replacing a stated factor.
   The measured ratio waits (cycle 28): a ratio measured on one movement is only sound for
   that movement, and there its one-leg version then has a log of its own, which already

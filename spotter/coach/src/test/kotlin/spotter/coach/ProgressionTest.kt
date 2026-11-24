@@ -487,8 +487,7 @@ class ProgressionTest {
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x sumo calf raise", listOf(logged(1, 30, listOf(8, 8), ex = exercise("8 x calf raise")))))
         // A version that twinged lends nothing, nor a tweak nobody ruled on, nor another lift.
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x incline chest press", pressed + logged(3, 25, listOf(8, 8), hurt = true)))
-        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x bosu chest press"))
-        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x low row (slow)", row))
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x single leg chest press"))
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x chest fly"))
         // Logged once, it has a history of its own, and the plain lift's no longer speaks for it.
         val own = pressed + logged(3, 20, listOf(8, 8), ex = exercise("8 x incline chest press"))
@@ -499,6 +498,63 @@ class ProgressionTest {
         // A bare "tricep extension" is the overhead one: those two share a history outright.
         val overhead = suggest(listOf(logged(1, 20, listOf(8, 8), ex = exercise("8 x tricep extension"), count = 1)), ex = exercise("8 x overhead tricep extension"))
         assertEquals(listOf(Load(20, 1), Change.SAME), (overhead as Suggestion.Weight).let { listOf(it.load, it.change) })
+    }
+
+    // The tweaks that make a lift harder start it lighter, by a stated factor rounded down to
+    // the rack; the easier way round, the harder version's weight stands (madCode, 2026-11-24).
+    @Test
+    fun aHarderTweakStartsLighter() {
+        fun on(line: String, lb: Int, count: Int? = 2) = listOf(logged(1, lb, listOf(8, 8), ex = exercise(line), count = count))
+        fun estimate(line: String, log: List<Logged>) = (suggest(log, ex = exercise(line)) as? Suggestion.Weight)?.load
+        val press = on("8 x chest press", 30)
+        val squat = on("8 x squat", 40)
+        // Lying on a bosu costs a press less than standing on one costs a squat.
+        assertEquals(Load(25, 2), estimate("8 x bosu chest press", press))
+        assertEquals(Load(30, 2), estimate("8 x bosu squat", squat))
+        val bosu = suggest(squat, ex = exercise("8 x bosu squat")) as Suggestion.Weight
+        assertEquals(listOf("an estimate: your squat stands at 2×40, and this takes about 0.8 of that"), bosu.reasons)
+        // Tempos: slow and pulse 0.85, a pause 0.9, rounded down.
+        assertEquals(Load(25, 2), estimate("8 x chest press (slow)", press))
+        assertEquals(Load(25, 2), estimate("8 x chest press (pause)", press))
+        assertEquals(Load(35, 2), estimate("8 x squat (pause)", squat))
+        // Two tweaks multiply: slow on a bosu is 0.85 of 0.9 of 30, which is under 25.
+        assertEquals(Load(20, 2), estimate("8 x bosu chest press (slow)", press))
+        // The same weight: a grip, a decline, kneeling, another handle.
+        for (line in listOf("8 x close grip chest press", "8 x decline chest press", "8 x kettlebell chest press")) assertEquals(line, Load(30, 2), estimate(line, press))
+        assertEquals(Load(20, 2), estimate("8 x half kneeling shoulder press", on("8 x shoulder press", 20)))
+        // The easier way round, the harder version's weight stands: never divided up.
+        assertEquals(Load(25, 2), estimate("8 x chest press", on("8 x bosu chest press", 25)))
+        assertEquals(Load(30, 2), estimate("8 x squat", on("8 x squat (pause)", 30)))
+        // A staggered stance is 0.8 of two legs, where one leg is 0.6.
+        val deadlift = on("8 x deadlift", 40)
+        assertEquals(Load(30, 2), estimate("8 x staggered deadlift", deadlift))
+        assertEquals(Load(20, 2), estimate("8 x single leg deadlift", deadlift))
+    }
+
+    // One dumbbell in both hands against one in each (madCode, 2026-11-24): 1.5 of one of the
+    // pair where it is held at the chest or overhead, 2 on a deadlift, where it hangs.
+    @Test
+    fun oneDumbbellInBothHandsIsAMultipleOfOneOfThePair() {
+        fun on(line: String, lb: Int, count: Int? = 2) = listOf(logged(1, lb, listOf(8, 8), ex = exercise(line), count = count))
+        fun estimate(line: String, log: List<Logged>) = suggest(log, ex = exercise(line))
+        val goblet = estimate("8 x goblet squat", on("8 x squat", 20)) as Suggestion.Weight
+        assertEquals(listOf(Load(30, 1), Change.EST), listOf(goblet.load, goblet.change))
+        assertEquals(listOf("an estimate: your squat stands at 2×20, and this takes about 1.5 of that"), goblet.reasons)
+        // 1.5 of 25 is 37.5: down to 35.
+        assertEquals(Load(35, 1), (estimate("8 x goblet squat", on("8 x squat", 25)) as Suggestion.Weight).load)
+        assertEquals(Load(30, 1), (estimate("8 x goblet reverse lunge", on("8 x reverse lunge", 20)) as Suggestion.Weight).load)
+        assertEquals(Load(40, 1), (estimate("8 x single dumbbell deadlift", on("8 x deadlift", 20)) as Suggestion.Weight).load)
+        // And back, to a row that says two dumbbells: 30 at the chest is 20 in each hand.
+        assertEquals(Load(20, 2), (estimate("8 x two dumbbell squat", on("8 x goblet squat", 30, count = 1)) as Suggestion.Weight).load)
+        assertEquals(Load(20, 2), (estimate("8 x two dumbbell deadlift", on("8 x single dumbbell deadlift", 40, count = 1)) as Suggestion.Weight).load)
+        // Only from a session that says how it was held, and only where a multiple was stated.
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x goblet squat", on("8 x squat", 20, count = null)))
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x goblet squat", on("8 x squat", 40, count = 1)))
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x single dumbbell chest press", on("8 x chest press", 20)))
+        // A bare row says nothing of how it is held: no estimate from the goblet one.
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x squat", on("8 x goblet squat", 30, count = 1)))
+        // "Two dumbbells" said of a lift already done with two is the same lift.
+        assertEquals(Load(20, 2), (estimate("8 x two dumbbell squat", on("8 x squat", 20)) as Suggestion.Weight).load)
     }
 
     // One side at a time is the same weight only with a dumbbell in each hand: one dumbbell may
