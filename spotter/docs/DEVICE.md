@@ -64,8 +64,12 @@ Android's file picker and your real file are only visible on a phone.
 4. **Replace the history** with the same file: the counts are the same. Turn the phone while
    it says "Reading the file…": the result still shows.
 5. **Remove the history** asks first. Removed, the sheet goes back to what your own log says.
-6. With the phone's font size at its largest, both buttons are whole and can be tapped.
+6. With the phone's font size at its largest, every button is whole and can be tapped.
 7. With TalkBack on, a refused file and "Reading the file…" are spoken without touching them.
+8. **Add your dumbbell counts** and pick your `dumbbell_counts.yaml`. A line reads "Your
+   dumbbell counts: N lifts; M rows took the count from them." and the button becomes
+   "Replace the dumbbell counts". Pick the history file there by mistake: it says that isn't
+   a dumbbell counts file, and the counts you had are unchanged.
 
 ## Adding an exercise
 

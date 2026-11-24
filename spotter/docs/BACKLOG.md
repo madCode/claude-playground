@@ -140,8 +140,8 @@ says otherwise.
 Still open:
 
 - **A history row that doesn't say how many dumbbells** takes its count from madCode's own
-  counts file (COUNTS-FORMAT.md), read by the import and the replay. Still to build: picking
-  the file on the phone; and the movement list's own usual numbers as a fallback after it,
+  counts file (COUNTS-FORMAT.md), read by the import and the replay and picked on the
+  phone's home screen. Still to build: the movement list's own usual numbers as a fallback after it,
   which madCode wants kept until one proves wrong.
 
 - **A step earned long ago.** Two clean sessions at 30, then nothing for five months: the

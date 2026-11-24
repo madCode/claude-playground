@@ -78,6 +78,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // The owner's dumbbell counts, picked the same way and read with the history.
+    private val pickCounts = registerForActivityResult(ActivityResultContracts.OpenDocument()) { file ->
+        val store = imported
+        val ticket = (if (file == null) null else store.begin()) ?: return@registerForActivityResult
+        val resolver = applicationContext.contentResolver
+        HistoryStore.scope.launch {
+            try {
+                val bytes = runCatching { resolver.openInputStream(file!!)?.use(HistoryPick::read) }.getOrNull()
+                // Four bytes a character at most: past this the parser would refuse it anyway.
+                val most = 4 * spotter.coach.DumbbellCounts.MAX_CHARS
+                HistoryPick.takeCounts(bytes?.takeIf { it.size <= most }, tooBig = bytes != null && bytes.size > most, store, identity, LocalDate.now(), wanted = { store.current(ticket) })
+            } finally {
+                store.end(ticket)
+            }
+        }
+    }
+
     private fun removeHistory() {
         val store = imported
         HistoryStore.scope.launch {
@@ -144,6 +161,7 @@ class MainActivity : ComponentActivity() {
                 onImportHistory = { pickHistory.launch(arrayOf("*/*")) },
                 onRemoveHistory = ::removeHistory,
                 onStopHistory = { imported.stop() },
+                onPickCounts = { pickCounts.launch(arrayOf("*/*")) },
             )
         }
     }
