@@ -199,6 +199,30 @@ All abstracts only, but for Rowe:
   doi:10.1111/j.1475-097X.2011.01031.x: no loss after two or three weeks.
 - Rowe et al. 2024, doi:10.1007/s00421-024-05509-z (full text): 1RM unchanged after four weeks.
 
+## 10. Sumo and wide stances
+
+- **Where the most a person could lift was measured in both stances, the wide one came out
+  equal or a little lower, never higher** (several agree; all with a barbell near maximum).
+  Deadlift: +0.7% in novices, -1.6% in trained women, -5% in a mixed group. Squat: equal in
+  rugby players, 6-7% lower in recreational lifters.
+- **The sumo deadlift moves the bar a shorter way**, so each rep is less work, but that did
+  not make the most lifted any heavier.
+- **Nothing is measured with dumbbells.** A dumbbell between the legs in a wide stance may
+  travel further, not less (reasoned).
+- **People differ**: the two stances track each other closely, with body proportions deciding
+  who gains a little from which.
+
+For Spotter: sumo takes the regular stance's weight as its first estimate, and no "try
+heavier": the measured differences are under 3 lb at these weights, less than a step on the
+rack either way. The person's own log moves it from there.
+
+- Cholewa et al. 2019, PMID 31427866 (full text): 47 novices, 1RM the same in both.
+- Valenzuela et al. 2021, doi:10.3390/sports9020027 (full text): sumo about 5% lower.
+- Gundersen et al. 2025, doi:10.1519/JSC.0000000000005011 (abstract): trained women, 3RM.
+- Lahti et al. 2019, doi:10.1111/sms.13305 (full text); Larsen et al. 2021,
+  doi:10.3389/fspor.2021.719013 (full text): squat stance width.
+- Escamilla et al. 2000, doi:10.1097/00005768-200007000-00013 (abstract): the shorter bar path.
+
 ## Leads, not conclusions
 
 - The NSCA textbook's exact 2-for-2 wording.

@@ -180,12 +180,32 @@ what is on the board, and nothing says so.
   - "floor" or "bench" on a press, fly or pullover: the floor only shortens the range. Not a
     triceps extension, which on a bench is another lift than one overhead.
   - "seated" or "standing" on a lift the legs don't move (not a thruster or push press).
+  - "overhead" on a tricep extension: on these boards the bare one is the overhead one.
   - "(heavy)" and "(light)" were never part of an exercise's name.
   Everything else keeps a history of its own until a factor is agreed: one arm, one leg, a
   split or sumo stance, a bosu, a tempo, an incline, one dumbbell against two. So does a grip
   word, though madCode's first set had it: boards set "close grip chest press" beside "chest
   press", lifted at different weights, and the latest session would speak for both. The replay tool
   can switch sharing off (`-PnoShared`) to grade the coach both ways.
+- **Tweaks that take an estimate.** madCode (2026-11-24): "if it's literally the same
+  exercise with minor tweaks", the sheet gives a number, not "new: go light". A lift never
+  logged in these words takes the weight its nearest logged version last held, shown as
+  "est.", with that version named in "Why this number". Never a step up that version has
+  earned, never more than it was ever lifted at, and nothing from one that twinged. Where two
+  versions are as near, the lighter estimate, and none if either has nothing sound to lend. Logged once in these words, judged or not, the
+  tweaked lift has a history of its own. The tweaks, each with its reason:
+  - one arm from two: the same dumbbell in the one hand as in each of two, when the session
+    it rests on was logged with two dumbbells. Two arms from one only on a lift the arm limits
+    (a press, row, curl, fly or raise, but not a push press or thruster): on a lunge it would
+    double what the legs move, and a swing or pullover is one dumbbell in both hands.
+  - "explosive": faster, not heavier.
+  - a band worn while holding a dumbbell: it pulls where the dumbbell doesn't (on a squat, the
+    hips sideways). A banded row with nothing held still has no weight, to give or to lend.
+  - sumo stance, on a squat or deadlift: with a barbell it lifts the same or a little less
+    (TRAINING.md, 10).
+  - incline, on a press or fly.
+  - one leg from two is the stated factor above, 0.6, and shows "est." too.
+  The replay tool can't yet switch estimates off on their own; `Rules.estimates` is there for it.
 - **New words go to a review list.** The list is built, read only (`ReviewList`): a card
   under Progress, "Words Spotter doesn't know yet", reads the boards kept on the phone (the
   last 7 fetched) and lists each line's unknown words together ("front foot"), the ones seen

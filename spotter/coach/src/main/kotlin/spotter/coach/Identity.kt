@@ -52,16 +52,62 @@ internal object SharedWeight {
     private val upper = lying + setOf("vertical_push", "horizontal_pull", "vertical_pull", "curl", "raise", "triceps")
 
     // Presses the legs drive, whatever their pattern says.
-    private val legDriven = setOf("thruster", "push press", "clean and press")
+    val legDriven = setOf("thruster", "push press", "clean and press")
 
     fun neutral(movement: Movement, axis: String, value: String): Boolean = when (axis) {
         // One side at a time, with the same dumbbell in each hand.
         "alternating" -> true
         // "Dumbbell" on a lift already done with dumbbells says nothing new.
         "implement" -> value == "dumbbell"
-        "position" -> value in setOf("floor", "bench") && movement.pattern in lying
+        // A bare "tricep extension" on these boards is the overhead one (madCode, 2026-11-24).
+        "position" -> (value in setOf("floor", "bench") && movement.pattern in lying) ||
+            (value == "overhead" && movement.name == "tricep extension")
         "legs" -> value in setOf("seated", "standing") && movement.pattern in upper && movement.name !in legDriven
         else -> false
+    }
+}
+
+/**
+ * Tweaks to a lift that leave the weight about as it is, as madCode ruled on 2026-11-24: "if
+ * it's the same exercise with minor tweaks", the sheet gives a number. Unlike [SharedWeight]
+ * these keep a history of their own once logged; before that, the nearest logged version lends
+ * its weight as an estimate.
+ */
+internal object Estimated {
+    private val pressed = setOf("horizontal_push", "fly")
+    private val legs = setOf("squat", "hinge")
+
+    private val arms = setOf("horizontal_push", "vertical_push", "horizontal_pull", "curl", "fly", "raise")
+
+    /** A lift an arm limits, so two arms take the dumbbell one arm held; not a press the legs drive. */
+    fun armLimited(movement: Movement) = movement.pattern in arms && movement.name !in SharedWeight.legDriven
+
+    fun sameWeight(movement: Movement, axis: String, value: String): Boolean = when (axis) {
+        // The same dumbbell in the one hand as in each of two.
+        "arms" -> value == "single"
+        // Faster, not heavier.
+        "tempo" -> value == "explosive"
+        // The band pulls somewhere the dumbbell doesn't: on a squat it works the hips sideways.
+        "band" -> true
+        // Measured with a barbell, a wide stance lifts the same or a little less (TRAINING.md, 10).
+        "legs" -> value == "sumo" && movement.pattern in legs
+        "position" -> value == "incline" && movement.pattern in pressed
+        else -> false
+    }
+
+    /** How a reason names the version an estimate came from: every word that tells it apart. */
+    fun name(exercise: Reading.Known): String = exercise.parts.joinToString(" to ") { p ->
+        (p.variations.toSortedMap().map { (axis, value) ->
+            when (axis) {
+                "alternating" -> "alternating"
+                "arms" -> if (value == "single") "single arm" else value
+                "legs" -> if (value == "single") "single leg" else value
+                "band" -> "banded"
+                "grip" -> "$value grip"
+                // A yes-or-no axis is said by its name: "lying".
+                else -> if (value == "yes") axis else value
+            }
+        } + p.movement.name).joinToString(" ")
     }
 }
 
