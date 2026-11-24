@@ -4,6 +4,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -68,10 +69,24 @@ class HistoryImportTest {
         // Which lets the plain lift lend to the one-armed one: the sheet has a number.
         val sheet = Sheet.make(listOf("8 x single arm chest fly"), read.logged, identity)
         assertEquals(Load(15, 1), (sheet.rows.single().suggestion as Suggestion.Weight).load)
+        // Only the plain lift: these are as often done the other way, so nobody knows.
+        val varied = read(
+            row("8 x sumo deadlift", "25", 8, 8, exercise = "deadlift"), row("8 x single leg deadlift", "20", 8, 8, exercise = "deadlift"),
+            row("8 x staggered deadlift", "30", 8, 8, exercise = "deadlift"), row("8 x lying on bench tricep extension", "15", 8, 8, exercise = "tricep extension"),
+            row("8 total x alt tricep extension", "15", 8, 8, exercise = "tricep extension"),
+            // The row's own marks for one arm or one leg, where the line doesn't say.
+            row("8 x high row", "20", 8, 8, exercise = "high row").replace("\"arms\": \"both\"", "\"arms\": \"single\""),
+            // Worded otherwise but the same plain lift.
+            row("8 x overhead tricep extension", "20", 8, 8, exercise = "tricep extension"), row("8 total x alt dumbbell chest fly", "15", 8, 8, exercise = "chest fly"),
+        )
+        assertEquals(listOf(null, null, null, null, null, null, 1, 2), varied.rows.map { it.logged.load.count })
         // The owner's file comes first, and its rows aren't counted as guesses.
         val counts = DumbbellCounts.parse("schema: dumbbell-counts/1\nmovements:\n  deadlift: 1\n")
         val ruled = HistoryImport.read(rows.joinToString("\n"), identity, today, counts = counts)
         assertEquals(listOf(1 to false, 2 to true), ruled.rows.take(2).map { it.logged.load.count to it.countAssumed })
+        // Where the owner's rule for the lift doesn't fit the line, their silence stands.
+        val silent = DumbbellCounts.parse("schema: dumbbell-counts/1\nmovements:\n  deadlift: {count: 1, when_line_has: sumo}\n")
+        assertNull(HistoryImport.read(rows.first(), identity, today, counts = silent).rows.single().logged.load.count)
     }
 
     // The owner's counts file fills the count only where neither the line nor the row says

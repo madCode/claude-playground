@@ -87,7 +87,8 @@ object Replay {
             appendLine("${replayed.size} classes, $sets rows, written to $out" + if (!rules.shared) " (shared weights off)" else "")
             if (countsFile != null) appendLine("dumbbell counts: ${counts.size} movements ruled on; ${history.rows.count { it.countRuled }} rows took their count from them")
             appendLine("$weighted rows with a weight lifted; $numbered of them had a number on the sheet")
-            appendLine("rows read into history: ${history.rows.size}; left out: " + history.left.entries.joinToString { "${it.key.name.lowercase().replace('_', ' ')} ${it.value}" }.ifEmpty { "none" })
+            appendLine("rows read into history: ${history.rows.size}; left out: " + history.left.entries.joinToString { "${it.key.name.lowercase().replace('_', ' ')} ${it.value}" }.ifEmpty { "none" } +
+                history.rows.count { it.countAssumed }.let { if (it > 0) "; $it of those read at the lift's usual number of dumbbells" else "" })
         }
     }
 

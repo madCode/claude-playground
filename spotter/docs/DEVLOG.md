@@ -30,6 +30,9 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   Romanian deadlift, chest fly, lateral raise, upright row, high row, tricep kickback; one
   for a tricep extension, good morning, halo). It is the last word, after the line, the row
   and the owner's counts file, and the home screen says how many rows rest on it.
+- **The review caught:** the guess was applied to every wording of the lift, so a sumo
+  deadlift read as two dumbbells and doubled its goblet version. Now only the plain lift, and
+  never where the owner's file has a rule for it.
 
 ### Lifts filed under different names lend each other a first number
 - **Why:** a reverse lunge after months of forward lunges said "new: go light". madCode had

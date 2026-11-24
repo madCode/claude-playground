@@ -9,6 +9,9 @@ package spotter.coach
 class DumbbellCounts private constructor(private val rules: Map<String, Rule>) {
     private data class Rule(val count: Int, val whenLineHas: String?, val unlessLineHas: Map<String, Int>)
 
+    /** Whether the file has a rule under [name], whatever it says of a given line. */
+    fun rulesOn(name: String): Boolean = name.trim().lowercase() in rules
+
     /** How many movements the file rules on. */
     val size: Int get() = rules.size
 
