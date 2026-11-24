@@ -214,6 +214,12 @@ what is on the board, and nothing says so.
     kettlebell or y-bell takes no estimate either way: they come in other weights.
   - one leg from two is the stated factor above, 0.6, and a staggered stance 0.8; both show
     "est." too.
+  - a lift filed under another name that is the same lift done another way (madCode,
+    2026-11-24): a lunge, forward lunge and reverse lunge lend each other their weight; a
+    lateral lunge starts at 0.8 of theirs and lends them its own as it stands; a split squat
+    starts at 0.6 of the squat, and the squat takes nothing back. Another movement is looked at
+    only when no wording of the lift itself is near. Curtsy, cross-back and walking lunges aren't linked: nobody
+    ruled on them.
   A tweak that makes the lift harder starts it lighter, by a factor rounded down to the rack
   (TRAINING.md, 11): standing on a bosu 0.8, lying on one for a press 0.9; a slow or
   "eccentric" lower, or a pulse, 0.85; a pause or "stick it" 0.9; a b-stance 0.8. Two such

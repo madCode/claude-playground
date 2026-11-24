@@ -376,20 +376,22 @@ object Progression {
 
     /**
      * An estimate for a lift never logged in these words, from a version of it that differs
-     * only by tweaks that leave the weight about as it is ([Estimated]): the weight that
-     * version last held, never a step up it has earned, and nothing from one that twinged.
+     * only by tweaks that leave the weight about as it is, or from a movement filed apart that
+     * is the same lift done another way ([Estimated]): the weight that version last held,
+     * never a step up it has earned, and nothing from one that twinged.
      */
     private fun similar(exercise: Reading.Known, part: Part, target: IntRange?, log: List<Logged>, rules: Rules): Suggestion? {
         // Logged in these words already, judged or not: what was held then stands, not an estimate.
         if (log.any { it.key == exercise.key || (rules.shared && it.exercise.weightKey == exercise.weightKey) }) return null
         val mine = weighing(part, rules).entries
         fun tweaks(p: Part) = weighing(p, rules).entries.let { theirs -> (mine - theirs) + (theirs - mine) }
+        fun own(p: Part) = p.movement == part.movement
         val oneArm = part.variations["arms"] == "single"
         val near = log.filter { logged ->
             val p = logged.exercise.parts.singleOrNull() ?: return@filter false
             val tweaks = tweaks(p)
             // A row the sheet gives no weight (pulses with nothing held) has none to lend.
-            logged.judged && Sheet.wantsWeight(logged.exercise) && p.movement == part.movement && tweaks.isNotEmpty() &&
+            logged.judged && Sheet.wantsWeight(logged.exercise) && Estimated.kin(part.movement, p.movement) != null && (tweaks.isNotEmpty() || !own(p)) &&
                 tweaks.all { Estimated.factor(part.movement, it.key, it.value) != null } &&
                 // A version held another way, with no stated multiple across, isn't near at all:
                 // it mustn't stand in the way of one that is. Nor a stronger grip the row lacks.
@@ -404,8 +406,12 @@ object Progression {
         // The nearest versions; where two are as near, the lighter estimate. One of them with
         // nothing sound to lend (it twinged, or nobody said how it was held) leaves no number:
         // the other's would be the heavier of the two.
-        val fewest = near.minOfOrNull { tweaks(it.exercise.parts.single()).size } ?: return null
-        val nearest = near.filter { tweaks(it.exercise.parts.single()).size == fewest }.map { it.exercise }.distinctBy { it.key }
+        // The lift's own versions first, however worded: another movement is looked at only
+        // when none of its own is near, so a kin can neither outweigh nor blank what the
+        // lifter's own log says.
+        val candidates = near.filter { own(it.exercise.parts.single()) }.ifEmpty { near }
+        val fewest = candidates.minOfOrNull { tweaks(it.exercise.parts.single()).size } ?: return null
+        val nearest = candidates.filter { tweaks(it.exercise.parts.single()).size == fewest }.map { it.exercise }.distinctBy { it.key }
             .map { from(it, part, target, log, rules) ?: return null }
         return nearest.minByOrNull { it.load.lb }
     }
@@ -446,7 +452,7 @@ object Progression {
         val last = sessions.lastOrNull { it.anchor == target?.last }?.load?.lb
         val most = sessions.maxOfOrNull { it.load.lb } ?: return null
         val stands = minOf(from.load.lb, last ?: from.load.lb, most)
-        val factor = added * hands
+        val factor = added * hands * (Estimated.kin(part.movement, theirs.movement) ?: return null)
         val lb = if (factor == 1.0) stands else Rack.atMost(stands * factor) ?: return null
         val said = "your ${Estimated.name(source)} stands at ${from.load.copy(lb = stands).label}"
         val why = if (factor == 1.0) "and this is a small change to it" else "and this starts at about ${"%.2f".format(java.util.Locale.ROOT, factor).trimEnd('0').trimEnd('.')} times that dumbbell"
