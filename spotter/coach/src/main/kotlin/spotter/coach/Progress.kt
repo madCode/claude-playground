@@ -59,7 +59,7 @@ data class Progress(val wentUp: List<WentUp> = emptyList(), val next: List<Next>
             // Only what was lifted lately: an exercise last seen in the spring is ready too, and
             // a list of those would bury the ones coming up. The most recent first.
             val next = byExercise.map { it.last() }.filter { !it.date.isBefore(today.minusWeeks(WEEKS)) }.sortedByDescending { it.date }.mapNotNull { last ->
-                val s = Progression.suggest(last.exercise, last.target, log) as? Suggestion.Weight
+                val s = Progression.suggest(last.exercise, last.target, log, Rules(today = today)) as? Suggestion.Weight
                     ?: return@mapNotNull null
                 when {
                     s.change == Change.UP && s.caution == null -> Next(Estimated.name(last.exercise), s.load, last.firstTarget, ready = true)

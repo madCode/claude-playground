@@ -22,6 +22,16 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Tuesday 24 November 2026
 
+### A step earned long ago is held once first
+- **Why:** two clean sessions at a weight, then months without the lift, and the sheet still
+  said to go up. madCode: hold.
+- **Shipped:** when the lift was last done more than eight weeks before the class, a step up
+  isn't taken or offered as a test; the sheet holds the weight last done and says how long
+  it has been. A typed-in row and the replay follow the same rule.
+- **The review caught:** the gap was measured from the session the number rests on, so
+  someone doing the lift weekly at other reps was held; the reason promised "then up" where
+  a twinge, a big jump or other reps decide otherwise; a typed-in row didn't get the date.
+
 ### Lifts filed under different names lend each other a first number
 - **Why:** a reverse lunge after months of forward lunges said "new: go light". madCode had
   agreed the set: forward and reverse the same, lateral at 0.8, a split squat at 0.6.

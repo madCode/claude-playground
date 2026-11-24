@@ -29,7 +29,7 @@ object Replay {
                 sheetId = "$date:$name",
                 date = date.toString(),
                 className = name,
-                sets = rows.mapIndexed { i, row -> set(i, row, before, identity, rules) },
+                sets = rows.mapIndexed { i, row -> set(i, row, before, identity, rules.copy(today = date)) },
             )
             Replayed(Export.sessionFile(date, name, sameDay), session)
         }
