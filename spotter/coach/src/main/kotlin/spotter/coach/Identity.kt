@@ -49,7 +49,7 @@ internal object SharedWeight {
     private val lying = setOf("horizontal_push", "fly", "pullover")
 
     // Lifts the legs don't move: sitting or standing changes the balance, not the load.
-    private val upper = lying + setOf("vertical_push", "horizontal_pull", "vertical_pull", "curl", "raise", "triceps")
+    val upper = lying + setOf("vertical_push", "horizontal_pull", "vertical_pull", "curl", "raise", "triceps")
 
     // Presses the legs drive, whatever their pattern says.
     val legDriven = setOf("thruster", "push press", "clean and press")
@@ -106,7 +106,8 @@ internal object Estimated {
             // Measured with a barbell, a wide stance lifts the same or a little less.
             "sumo" -> 1.0.takeIf { movement.pattern in legs }
             "b-stance" -> 0.8.takeIf { movement.pattern in legs }
-            "kneeling", "half kneeling" -> 1.0
+            // Off the feet, an arm lift is the same lift; a squat or a push press isn't.
+            "kneeling", "half kneeling" -> 1.0.takeIf { movement.pattern in SharedWeight.upper && movement.name !in SharedWeight.legDriven }
             else -> null
         }
         "position" -> 1.0.takeIf { value in setOf("incline", "decline") && movement.pattern in pressed }
@@ -117,10 +118,12 @@ internal object Estimated {
             else -> null
         }
         // How the handle is turned. Not a shared history: a board sets a grip beside the plain
-        // lift at its own weight. But the plain lift's weight is where a first go starts.
-        "grip" -> 1.0
-        // Another handle on the same marked weight; how many, and in how many hands, is [hold].
-        "implement" -> 1.0.takeIf { value in setOf("kettlebell", "y-bell", "one dumbbell, both hands", "two dumbbells") }
+        // lift at its own weight. But the plain lift's weight is where a first go starts. Not
+        // "reverse": nothing was found on it, and on a press it is another lift.
+        "grip" -> 1.0.takeIf { value in setOf("close", "neutral", "hammer", "wide") }
+        // How many dumbbells, and in how many hands, is [hold]. A kettlebell or y-bell isn't
+        // here: they come in other weights than the dumbbells do, usually one in both hands.
+        "implement" -> 1.0.takeIf { value in setOf("one dumbbell, both hands", "two dumbbells") }
         else -> null
     }
 
@@ -139,9 +142,20 @@ internal object Estimated {
      */
     fun inBothHands(movement: Movement): Double? = when {
         movement.pattern in setOf("squat", "lunge") || movement.name == "tricep extension" -> 1.5
-        movement.pattern == "hinge" -> 2.0
+        // Not every hinge: a good morning holds it at the chest, and a swing is one by nature.
+        movement.name in setOf("deadlift", "romanian deadlift") -> 2.0
         else -> null
     }
+
+    /** Whether a lift held as [mine] can take an estimate from one held as [theirs] at all. */
+    fun holds(movement: Movement, mine: Int?, theirs: Int?): Boolean = when {
+        mine == theirs -> true
+        mine == 1 || theirs == 1 -> mine != null && inBothHands(movement) != null
+        else -> true
+    }
+
+    /** The stronger grip on a curl: its weight says too much for the plain one (TRAINING.md, 11). */
+    fun stronger(movement: Movement, axis: String, value: String) = axis == "grip" && movement.pattern == "curl" && value in setOf("hammer", "neutral")
 
     /** How a reason names the version an estimate came from: every word that tells it apart. */
     fun name(exercise: Reading.Known): String = exercise.parts.joinToString(" to ") { p ->

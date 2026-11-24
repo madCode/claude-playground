@@ -203,8 +203,10 @@ what is on the board, and nothing says so.
     hips sideways). A banded row with nothing held still has no weight, to give or to lend.
   - sumo stance, on a squat or deadlift: with a barbell it lifts the same or a little less
     (TRAINING.md, 10).
-  - incline or decline, on a press or fly; kneeling or half kneeling; a grip word; a kettlebell
-    or y-bell in place of a dumbbell; feet on a bosu: the same weight (TRAINING.md, 11).
+  - incline or decline, on a press or fly; kneeling or half kneeling, on a lift the legs don't
+    move; a close, neutral, hammer or wide grip; feet on a bosu: the same weight (TRAINING.md,
+    11). A hammer curl lends nothing to the plain curl: it is the stronger of the two. A
+    kettlebell or y-bell takes no estimate either way: they come in other weights.
   - one leg from two is the stated factor above, 0.6, and a staggered stance 0.8; both show
     "est." too.
   A tweak that makes the lift harder starts it lighter, by a factor rounded down to the rack
@@ -213,8 +215,8 @@ what is on the board, and nothing says so.
   tweaks multiply. The other way round, the harder version's weight stands for the plain lift:
   dividing by a guess would make a heavier number.
   One dumbbell held in both hands, against one in each (TRAINING.md, 12): 1.5 of one of the
-  pair on a squat, a lunge or a tricep extension, where it is held up; 2 on a deadlift, where
-  it hangs. Only between rows whose words say how the weight is held ("goblet", "two
+  pair on a squat, a lunge or a tricep extension, where it is held up; 2 on a deadlift or a
+  Romanian deadlift, where it hangs; no estimate on any other lift. Only between rows whose words say how the weight is held ("goblet", "two
   dumbbells") or a session logged with two, never to a bare row from a goblet one.
   The replay tool can't yet switch estimates off on their own; `Rules.estimates` is there for it.
 - **New words go to a review list.** The list is built, read only (`ReviewList`): a card

@@ -240,9 +240,13 @@ Nearly all with a barbell, in trained young men. Read as abstracts unless marked
 
 For Spotter (madCode approved the set, 2026-11-24): a first go at a tweaked lift starts from
 the plain lift's weight, times 0.8 standing on a bosu, 0.9 lying on one, 0.85 for a slow lower
-or a pulse, 0.9 for a pause, 0.8 for a staggered or b-stance; and the same weight for a grip, a
-decline, kneeling, another handle or feet on a bosu. Where nothing was found and the tweak
-makes the lift harder, the lighter guess. The person's own log replaces it after one session.
+or a pulse, 0.9 for a pause, 0.8 for a staggered or b-stance; and the same weight for a
+close, neutral, hammer or wide grip, a decline, kneeling on an arm lift, or feet on a bosu.
+Where nothing was found and the tweak makes the lift harder, the lighter guess. The person's
+own log replaces it after one session. Left out after review: a kettlebell or y-bell (the
+muscles agree, but the weights on offer don't match the dumbbells'), a reverse grip (nothing
+found, and on a press another lift), and a hammer curl's weight for the plain curl (it is the
+stronger).
 
 - Saeterbakken & Fimland 2013, doi:10.1519/JSC.0b013e3182541d43: the bosu squat.
 - Saeterbakken & Fimland 2013, doi:10.1519/JSC.0b013e3182606d3d: the unstable press.
@@ -263,8 +267,9 @@ makes the lift harder, the lighter guess. The person's own log replaces it after
   hanging from straight arms asks no more of them than one in each hand (reasoned).
 
 For Spotter (madCode, 2026-11-24): one dumbbell in both hands starts at 1.5 of one of the pair
-on a squat, a lunge and a tricep extension, and at 2 on a deadlift. 1.8 would be above every
-ratio found.
+on a squat, a lunge and a tricep extension, and at 2 on a deadlift or Romanian deadlift. 1.8
+would be above every ratio found. Other hinges take no estimate: a good morning holds the
+dumbbell at the chest, and a swing is one dumbbell by nature.
 
 - Gullett et al. 2009, doi:10.1519/JSC.0b013e31818546bb (full text): 78%.
 - Coratella et al. 2021, PMID 33477561 (full text): 74 to 82%.

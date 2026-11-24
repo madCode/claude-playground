@@ -21,7 +21,7 @@ or the docs rather than guess: the order may change, nothing is built on a guess
   history, and a tweaked lift takes an estimate from its nearest logged version (DESIGN.md,
   "Words that share a weight" and "Tweaks that take an estimate"). On the yardstick (an
   invented lifter working through the board corpus): 110 rows of 361 with a number before,
-  128 with shared wordings, 140 with estimates, 159 with factors for the harder tweaks and
+  128 with shared wordings, 140 with estimates, 158 with factors for the harder tweaks and
   one dumbbell against two. Next: links between movements that are filed apart (a reverse and
   a forward lunge, a lateral lunge at 0.8, a split squat); what to do when a history doesn't
   say how many dumbbells, which holds up "alternating", one arm and the goblet link.

@@ -520,7 +520,14 @@ class ProgressionTest {
         // Two tweaks multiply: slow on a bosu is 0.85 of 0.9 of 30, which is under 25.
         assertEquals(Load(20, 2), estimate("8 x bosu chest press (slow)", press))
         // The same weight: a grip, a decline, kneeling, another handle.
-        for (line in listOf("8 x close grip chest press", "8 x decline chest press", "8 x kettlebell chest press")) assertEquals(line, Load(30, 2), estimate(line, press))
+        for (line in listOf("8 x close grip chest press", "8 x decline chest press")) assertEquals(line, Load(30, 2), estimate(line, press))
+        // Not a kettlebell, which comes in other weights; nor a reverse grip, another lift on a press.
+        for (line in listOf("8 x kettlebell chest press", "8 x reverse grip chest press")) assertNull(line, estimate(line, press))
+        // A hammer curl is the strong one: it says too much for the plain curl, but not the other way.
+        assertEquals(Load(20, 2), estimate("8 x hammer curl", on("8 x bicep curl", 20)))
+        assertNull(estimate("8 x bicep curl", on("8 x hammer curl", 20)))
+        // Kneeling is the same lift for the arms, not for a press the legs drive.
+        assertNull(estimate("8 x kneeling push press", on("8 x push press", 25)))
         assertEquals(Load(20, 2), estimate("8 x half kneeling shoulder press", on("8 x shoulder press", 20)))
         // The easier way round, the harder version's weight stands: never divided up.
         assertEquals(Load(25, 2), estimate("8 x chest press", on("8 x bosu chest press", 25)))
@@ -528,6 +535,9 @@ class ProgressionTest {
         // A staggered stance is 0.8 of two legs, where one leg is 0.6.
         val deadlift = on("8 x deadlift", 40)
         assertEquals(Load(30, 2), estimate("8 x staggered deadlift", deadlift))
+        assertEquals(Load(30, 2), estimate("8 x b-stance deadlift", deadlift))
+        // 0.85 is said as 0.85, not rounded into a pause's 0.9.
+        assertEquals("an estimate: your chest press stands at 2×30, and this takes about 0.85 of that", (suggest(press, ex = exercise("8 x chest press (slow)")) as Suggestion.Weight).reasons.single())
         assertEquals(Load(20, 2), estimate("8 x single leg deadlift", deadlift))
     }
 
@@ -553,6 +563,11 @@ class ProgressionTest {
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x single dumbbell chest press", on("8 x chest press", 20)))
         // A bare row says nothing of how it is held: no estimate from the goblet one.
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x squat", on("8 x goblet squat", 30, count = 1)))
+        // Twice one of the pair on a deadlift only: a good morning holds it at the chest.
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x single dumbbell good morning", on("8 x good morning", 15)))
+        // A goblet version in the log doesn't stand in the way of a nearer plain one.
+        val both = on("8 x squat", 30) + logged(2, 40, listOf(8, 8), ex = exercise("8 x sumo goblet squat"), count = 1)
+        assertEquals(Load(30, 2), (estimate("8 x sumo squat", both) as Suggestion.Weight).load)
         // "Two dumbbells" said of a lift already done with two is the same lift.
         assertEquals(Load(20, 2), (estimate("8 x two dumbbell squat", on("8 x squat", 20)) as Suggestion.Weight).load)
     }

@@ -29,7 +29,11 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   stance starts at 0.8 to 0.9 of the plain lift, rounded down. A grip, a decline, kneeling or
   a kettlebell start at the same weight. One dumbbell in both hands starts at 1.5 of one of
   the pair on a squat, lunge or tricep extension, and at 2 on a deadlift.
-- **On the yardstick:** 159 of 361 rows now have a number (140 before).
+- **On the yardstick:** 158 of 361 rows now have a number (140 before).
+- **The review ran every corpus pair again** and found twice-the-pair applied to every hinge
+  (a good morning, a swing), a goblet version in the log blocking a nearer plain one, a y-bell's
+  26 lb landing on a dumbbell row, a hammer curl's weight on the plain curl, and kneeling
+  carried onto a push press. All fixed; kettlebells and y-bells take no estimate for now.
 - **Research:** TRAINING.md, 11 and 12. About half the factors have a study behind them; the
   rest are reasoned, and lean light.
 - **Not built:** "reverse grip" on these boards means palms up, the ordinary curl, so the
