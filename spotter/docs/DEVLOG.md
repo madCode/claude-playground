@@ -22,6 +22,14 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Tuesday 24 November 2026
 
+### The dumbbell counts file is picked on the phone
+- **Why:** the import read the counts file only in the replay tool; the phone's history still
+  had rows with no count, which blocks the one-arm, alternating and goblet links.
+- **Shipped:** "Add your dumbbell counts" on the home screen, beside the history. The file is
+  kept with the history, the history is read with it, and the card says how many lifts it
+  rules on and how many rows took their count from it.
+- **Due by hand:** DEVICE.md, importing a history, step 8.
+
 ### A band doesn't decide whether a row takes a weight
 - **Why:** "mid band upright row" showed "no weight", read as a band with nothing held. madCode
   sent a picture of a banded row: the band is round the wrists, pulled apart, across the lift.

@@ -313,6 +313,11 @@ file. It isn't in Android backup; the file it came from is the copy to keep.
 
 - The home screen says how many rows were read and how many were left out, by reason, and
   offers "Replace the history" and "Remove the history" (which asks first; the log stays).
+- With a history imported, "Add your dumbbell counts" picks the owner's counts file
+  ([COUNTS-FORMAT.md](COUNTS-FORMAT.md)) the same way. It is kept beside the history and the
+  history is read with it; the screen says how many lifts it rules on and how many rows took
+  their count from it. A file that can't be read in full is refused with the reason and what
+  is kept stays. Removing the history removes the counts too.
 - The file is read apart from the screen, so turning the phone doesn't lose the pick. While it
   is read the screen says so and offers Stop, for a file on a drive that never answers.
 - A file that is too big (5 MB), can't be opened, or has nothing that reads as a history is
