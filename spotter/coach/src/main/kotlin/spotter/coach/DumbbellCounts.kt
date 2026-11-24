@@ -82,6 +82,8 @@ class DumbbellCounts private constructor(private val rules: Map<String, Rule>) {
         private fun name(raw: String): String {
             val t = raw.trim()
             val quote = t.firstOrNull()?.takeIf { (it == '"' || it == '\'') && t.length > 1 && t.last() == it }
+            // An opening quote that doesn't close at the colon: not a name.
+            if (quote == null && t.firstOrNull().let { it == '"' || it == '\'' }) return ""
             val bare = if (quote == null) t else t.substring(1, t.length - 1).let { if (quote == '\'') it.replace("''", "'") else it }
             return bare.replace(Regex("[\\s\u00a0]+"), " ").trim().lowercase()
         }
@@ -110,7 +112,7 @@ class DumbbellCounts private constructor(private val rules: Map<String, Rule>) {
             (value as? String)?.takeIf { it == "1" || it == "2" }?.toInt() ?: throw IllegalArgumentException("A count should be 1 or 2: ${shown(line)}")
 
         private fun word(value: Any?, line: String): String =
-            (value as? String)?.lowercase()?.takeIf { it.isNotBlank() } ?: throw IllegalArgumentException("Not a word to look for: ${shown(line)}")
+            (value as? String)?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: throw IllegalArgumentException("Not a word to look for: ${shown(line)}")
 
         // A "#" starts a comment at the line's start or after a space, as in YAML.
         private fun uncommented(line: String): String {

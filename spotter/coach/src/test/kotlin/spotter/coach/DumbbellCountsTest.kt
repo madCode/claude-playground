@@ -41,7 +41,7 @@ class DumbbellCountsTest {
     // A word is looked for at the start of a word, so a short one isn't found inside another.
     @Test
     fun aWordIsNotFoundInsideAnother() {
-        val counts = DumbbellCounts.parse("schema: dumbbell-counts/1\nmovements:\n  row: {count: 2, unless_line_has: {arm: 1}}\n  press: {count: 2, when_line_has: press}\n")
+        val counts = DumbbellCounts.parse("schema: dumbbell-counts/1\nmovements:\n  row: {count: 2, unless_line_has: {\" arm\": 1}}\n  press: {count: 2, when_line_has: press}\n")
         assertEquals(listOf(1, 1, 2, 2), listOf("8 x single arm row", "8 x one-arms row", "8 x farmer row", "8 x warm up row").map { counts.count(listOf("row"), it) })
         assertEquals(2, counts.count(listOf("press"), "8 x chest press"))
         assertNull(counts.count(listOf("press"), "8 x compression hold"))
@@ -72,6 +72,7 @@ class DumbbellCountsTest {
         assertTrue("one line" in refused(head + "  squat:\n    count: 2\n    unless_line_has:\n      goblet: 1"))
         assertTrue("one line" in refused(head + "  halo: 1\n      count: 2"))
         assertTrue("name" in refused(head + "  - squat: 2"))
+        assertTrue("name" in refused(head + "  \"squat\" x: 2"))
         assertTrue("name" in refused(head + "  sq\u202Euat: 2"))
         // A ruling given twice is no ruling.
         assertTrue("twice" in refused(head + "  squat: 2\n  Squat: 1"))

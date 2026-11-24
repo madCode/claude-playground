@@ -78,12 +78,13 @@ class HistoryImportTest {
                 row("8 x ybell squat", "20", 8, 8, exercise = "squat"),
                 row("8 x deadlift", "40", 8, 8, implement = "kettlebell", exercise = "deadlift"),
                 row("8 x goblet squat to two dumbbell shoulder press", "20", 8, 8).replace("\"components\": null", "\"components\": [\"squat\", \"shoulder press\"]"),
+                row("8 x single arm squat to reciprocating shoulder press", "20", 8, 8).replace("\"components\": null", "\"components\": [\"squat\", \"shoulder press\"]"),
                 row("8 x dumbbell deadlift", "40", 8, 8, exercise = "deadlift"),
                 row("8 x squat to shoulder press", "20", 8, 8).replace("\"components\": null", "\"components\": [\"squat\", \"shoulder press\"]"),
             ).joinToString("\n"), identity, today, counts = counts,
         )
-        assertEquals(listOf(null, null, null, null, 2, 2), read.rows.map { it.logged.load.count })
-        assertEquals(listOf(false, false, false, false, true, true), read.rows.map { it.countRuled })
+        assertEquals(listOf(null, null, null, null, null, 2, 2), read.rows.map { it.logged.load.count })
+        assertEquals(listOf(false, false, false, false, false, true, true), read.rows.map { it.countRuled })
     }
 
     @Test

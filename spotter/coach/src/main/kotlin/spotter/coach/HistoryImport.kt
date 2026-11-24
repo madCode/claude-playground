@@ -154,7 +154,7 @@ object HistoryImport {
         // The file rules on dumbbells nobody counted. Where the row or its words name something
         // else held (a kettlebell, a Y-bell, a TRX), or a combo's parts say different counts,
         // somebody did say, and it has no word.
-        val unsaid = implement in setOf(null, "dumbbell") && exercise.parts.all { it.implement in setOf(null, "dumbbell") }
+        val unsaid = implement in setOf(null, "dumbbell") && exercise.parts.all { it.implement in setOf(null, "dumbbell") && it.variations["arms"] != "single" }
         val count = said ?: if (unsaid) counts.count(filed(o), written) else null
         val reps = o.int("reps")
         val asked = o.int("prescribed_reps")
