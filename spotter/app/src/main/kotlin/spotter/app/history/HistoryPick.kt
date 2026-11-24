@@ -22,6 +22,8 @@ data class HistoryState(
     val counts: Int? = null,
     /** Rows that took their count from it. */
     val ruled: Int = 0,
+    /** A counts file is kept that this version can't read in full, so none of it is used. */
+    val countsUnread: Boolean = false,
 )
 
 /** Taking a picked file as the history, and joining it to the log. Plain, so it runs in JVM tests. */
@@ -67,14 +69,19 @@ object HistoryPick {
      * otherwise leaves what is kept and says why. The sentence may quote the start of the line
      * at fault: the owner's own file, on the owner's own screen.
      */
-    fun takeCounts(bytes: ByteArray?, tooBig: Boolean, store: HistoryStore, wanted: () -> Boolean = { true }) {
+    fun takeCounts(bytes: ByteArray?, tooBig: Boolean, store: HistoryStore, identity: Identity, today: LocalDate, wanted: () -> Boolean = { true }) {
         if (!wanted()) return
         store.refused = when {
+            // The history was removed while the picker was open: counts kept alone could be
+            // neither seen nor removed.
+            store.result(identity, today) == null -> "Import a history first: the counts are for its rows."
             tooBig -> "That file is too big to be a list of dumbbell counts."
             bytes == null -> "Couldn't open that file."
             else -> {
                 val text = bytes.toString(Charsets.UTF_8)
                 try {
+                    // Bytes that aren't UTF-8 become marks: a name with one would never match a row.
+                    require('\uFFFD' !in text) { "That file isn't saved as UTF-8 text." }
                     DumbbellCounts.parse(text)
                     if (!wanted()) return
                     store.saveCounts(text)
@@ -94,7 +101,7 @@ object HistoryPick {
         return state(result).copy(
             refused = store.refused, reading = store.reading,
             counts = store.counts()?.size, ruled = result?.rows.orEmpty().count { it.countRuled },
-        )
+        ).let { it.copy(countsUnread = it.counts == null && store.hasCounts()) }
     }
 
     /** Up to one byte past [MAX_BYTES]: enough to know a file is too big without holding all of it. */

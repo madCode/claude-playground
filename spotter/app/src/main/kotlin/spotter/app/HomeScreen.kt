@@ -81,6 +81,7 @@ private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: (
                     Text("Your dumbbell counts: $it ${if (it == 1) "lift" else "lifts"}; ${history.ruled} ${if (history.ruled == 1) "row" else "rows"} took the count from them.", fontSize = 14.sp, color = grey)
                 }
             }
+            if (history.countsUnread) Text("This version can't read the dumbbell counts you added, so none are used. Add them again.", fontSize = 14.sp, color = Color(0xFF8A4B00))
             history.refused?.let { Text(it, fontSize = 14.sp, color = Color(0xFF8A4B00)) }
             if (history.reading) Text("Reading the file…", fontSize = 14.sp, color = Color(0xFF16181D))
         }

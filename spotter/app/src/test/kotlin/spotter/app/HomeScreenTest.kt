@@ -168,7 +168,7 @@ class HomeScreenTest {
         assertEquals(1, stops)
     }
 
-    // At the largest text both history buttons are whole: the second wraps under the first, it
+    // At the largest text every history button is whole: each wraps under the one before, it
     // isn't squeezed to nothing beside it.
     @Test
     fun theHistoryButtonsStayWholeAtLargeText() {
@@ -181,8 +181,10 @@ class HomeScreenTest {
             }
         }
         val replace = compose.onNodeWithText("Replace the history").fetchSemanticsNode().boundsInRoot
+        val counts = compose.onNodeWithText("Add your dumbbell counts").fetchSemanticsNode().boundsInRoot
         val remove = compose.onNodeWithText("Remove the history").fetchSemanticsNode().boundsInRoot
-        assertTrue("$remove under $replace", remove.top >= replace.bottom && remove.width >= replace.width * 0.8f)
+        assertTrue("$counts under $replace", counts.top >= replace.bottom && counts.width >= replace.width * 0.8f)
+        assertTrue("$remove under $counts", remove.top >= counts.bottom && remove.width >= replace.width * 0.8f)
         shoot("home-history-large-text")
     }
 

@@ -17,7 +17,8 @@ import java.time.LocalDate
  * The imported history: a copy of the picked file, kept in the app's own storage beside the log,
  * never in it. The log is what was logged here; the import is another app's record, read again
  * by the rules as they are now, so a better reader later reads more of the same file. It is left
- * out of Android backup: the file it came from is the copy to keep.
+ * out of Android backup, as are the dumbbell counts kept with it: the files they came from are
+ * the copies to keep.
  *
  * One per process ([shared]): a pick outlives the screen that started it, so what it found, and
  * that it is still reading, are held here for whichever screen is showing when it ends.
@@ -130,6 +131,10 @@ class HistoryStore(dir: File) {
     @Synchronized
     fun counts(): DumbbellCounts? =
         if (!countsFile.isFile) null else runCatching { DumbbellCounts.parse(countsFile.readText()) }.getOrNull()
+
+    /** Whether a counts file is kept, readable or not. */
+    @Synchronized
+    fun hasCounts(): Boolean = countsFile.isFile
 
     /** The counts go with the history they were written for. */
     @Synchronized

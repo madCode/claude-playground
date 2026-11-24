@@ -58,7 +58,7 @@ class HistoryPickTest {
         take(unsaid.toByteArray())
         assertEquals(listOf<Int?>(null), store.result(identity, today)!!.logged.map { it.load.count })
         fun counts(text: String?, tooBig: Boolean = false): HistoryState {
-            HistoryPick.takeCounts(text?.toByteArray(), tooBig, store)
+            HistoryPick.takeCounts(text?.toByteArray(), tooBig, store, identity, today)
             return HistoryPick.state(store, identity, today)
         }
         val good = "schema: dumbbell-counts/1\nmovements:\n  deadlift: 2\n  halo: 1\n"
@@ -75,8 +75,17 @@ class HistoryPickTest {
         assertEquals("Couldn't open that file.", counts(null).refused)
         // The history file picked by mistake.
         assertTrue(counts(unsaid).refused!!.startsWith("That isn't a dumbbell counts file"))
+        // Not UTF-8: a name with a mark in it would be a rule that never applies.
+        HistoryPick.takeCounts("schema: dumbbell-counts/1\nmovements:\n  d\u00e9adlift: 2\n".toByteArray(Charsets.ISO_8859_1), false, store, identity, today)
+        assertEquals("That file isn't saved as UTF-8 text. The counts you have are unchanged.", store.refused)
+        // A kept file this version can't read is said, not silently dropped.
+        java.io.File(tmp.root, "dumbbell_counts.yaml").writeText("schema: dumbbell-counts/9\n")
+        assertEquals(Triple(null, 0, true), HistoryPick.state(HistoryStore(tmp.root), identity, today).let { Triple(it.counts, it.ruled, it.countsUnread) })
         store.clear()
         assertEquals(null, store.counts())
+        // With no history there is nothing for the counts to be for.
+        assertEquals("Import a history first: the counts are for its rows.", counts(good).refused)
+        assertEquals(false, store.hasCounts())
         take(unsaid.toByteArray())
         assertEquals(listOf<Int?>(null), store.result(identity, today)!!.logged.map { it.load.count })
     }

@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
                 val bytes = runCatching { resolver.openInputStream(file!!)?.use(HistoryPick::read) }.getOrNull()
                 // Four bytes a character at most: past this the parser would refuse it anyway.
                 val most = 4 * spotter.coach.DumbbellCounts.MAX_CHARS
-                HistoryPick.takeCounts(bytes?.takeIf { it.size <= most }, tooBig = bytes != null && bytes.size > most, store, wanted = { store.current(ticket) })
+                HistoryPick.takeCounts(bytes?.takeIf { it.size <= most }, tooBig = bytes != null && bytes.size > most, store, identity, LocalDate.now(), wanted = { store.current(ticket) })
             } finally {
                 store.end(ticket)
             }
