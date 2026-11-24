@@ -75,6 +75,10 @@ internal object SharedWeight {
  */
 internal object Estimated {
     private val pressed = setOf("horizontal_push", "fly")
+    private val legs = setOf("squat", "hinge")
+
+    /** Lifts an arm limits, so two arms take the dumbbell one arm held. */
+    val armLimited = setOf("horizontal_push", "vertical_push", "horizontal_pull", "curl", "fly", "raise")
 
     fun sameWeight(movement: Movement, axis: String, value: String): Boolean = when (axis) {
         // The same dumbbell in the one hand as in each of two.
@@ -84,17 +88,20 @@ internal object Estimated {
         // The band pulls somewhere the dumbbell doesn't: on a squat it works the hips sideways.
         "band" -> true
         // Measured with a barbell, a wide stance lifts the same or a little less (TRAINING.md, 10).
-        "legs" -> value == "sumo"
+        "legs" -> value == "sumo" && movement.pattern in legs
         "position" -> value == "incline" && movement.pattern in pressed
         else -> false
     }
 
-    /** How a reason names the version an estimate came from: its movement, with what was said of it. */
+    /** How a reason names the version an estimate came from: every word that tells it apart. */
     fun name(exercise: Reading.Known): String = exercise.parts.joinToString(" to ") { p ->
-        (p.variations.toSortedMap().filter { (axis, value) -> sameWeight(p.movement, axis, value) }.map { (axis, value) ->
+        (p.variations.toSortedMap().map { (axis, value) ->
             when (axis) {
-                "arms" -> "single arm"
+                "alternating" -> "alternating"
+                "arms" -> if (value == "single") "single arm" else value
+                "legs" -> if (value == "single") "single leg" else value
                 "band" -> "banded"
+                "grip" -> "$value grip"
                 else -> value
             }
         } + p.movement.name).joinToString(" ")

@@ -379,31 +379,46 @@ object Progression {
      * version last held, never a step up it has earned, and nothing from one that twinged.
      */
     private fun similar(exercise: Reading.Known, part: Part, target: IntRange?, log: List<Logged>, rules: Rules): Suggestion? {
+        // Logged in these words already, judged or not: what was held then stands, not an estimate.
+        if (log.any { it.key == exercise.key || (rules.shared && it.exercise.weightKey == exercise.weightKey) }) return null
         val mine = weighing(part, rules).entries
         fun tweaks(p: Part) = weighing(p, rules).entries.let { theirs -> (mine - theirs) + (theirs - mine) }
+        val oneArm = part.variations["arms"] == "single"
         val near = log.filter { logged ->
             val p = logged.exercise.parts.singleOrNull() ?: return@filter false
             val tweaks = tweaks(p)
-            logged.judged && p.movement == part.movement && tweaks.isNotEmpty() &&
+            // A row the sheet gives no weight (a band with nothing held) has none to lend.
+            logged.judged && Sheet.wantsWeight(logged.exercise) && p.movement == part.movement && tweaks.isNotEmpty() &&
                 tweaks.all { Estimated.sameWeight(part.movement, it.key, it.value) } &&
+                // Two arms from one only where the arm is the limit: on a lunge it would double
+                // what the legs move, and a swing or pullover is one dumbbell in both hands.
+                (oneArm || p.variations["arms"] != "single" || part.movement.pattern in Estimated.armLimited) &&
                 // As between shared wordings: a side at a time only where the count is known.
                 (p.variations["alternating"] == part.variations["alternating"] || logged.load.count == 2 || Sheet.rowCount(logged.exercise) != null)
         }
-        // The nearest version, then the latest.
-        val source = near.sortedWith(compareBy<Logged>({ -tweaks(it.exercise.parts.single()).size }, { it.date })).lastOrNull() ?: return null
-        val from = suggest(source.exercise, target, log, rules) as? Suggestion.Weight ?: return null
+        // The nearest versions; where two are as near, the lighter estimate.
+        val fewest = near.minOfOrNull { tweaks(it.exercise.parts.single()).size } ?: return null
+        return near.filter { tweaks(it.exercise.parts.single()).size == fewest }.map { it.exercise }.distinctBy { it.key }
+            .mapNotNull { from(it, oneArm, target, log, rules) }.minByOrNull { it.load.lb }
+    }
+
+    private fun from(source: Reading.Known, oneArm: Boolean, target: IntRange?, log: List<Logged>, rules: Rules): Suggestion.Weight? {
+        val from = suggest(source, target, log, rules) as? Suggestion.Weight ?: return null
         if (from.caution != null) return null
+        val sessions = own(source, log, rules).filter { it.outcome != Outcome.HURT }
         // One arm from two, or two from one: the dumbbell in each hand is the same one, which
-        // is only known when the two-armed lift was two dumbbells and the one-armed lift one.
-        val oneArm = part.variations["arms"] == "single"
+        // is only known when every session it rests on was two dumbbells, or one.
         val count = when {
-            oneArm == (source.exercise.parts.single().variations["arms"] == "single") -> from.load.count
-            oneArm -> if (source.load.count == 2) 1 else return null
-            else -> if (source.load.count == 1) 2 else return null
+            oneArm == (source.parts.single().variations["arms"] == "single") -> from.load.count
+            oneArm -> if (from.load.count == 2 && sessions.all { it.load.count == 2 }) 1 else return null
+            else -> if (from.load.count == 1 && sessions.all { it.load.count == 1 }) 2 else return null
         }
-        val held = own(source.exercise, log, rules).lastOrNull { it.outcome != Outcome.HURT && it.anchor == target?.last }?.load?.lb
-        val load = Load(minOf(from.load.lb, held ?: from.load.lb), count)
-        return Suggestion.Weight(load, Change.EST, listOf("an estimate: your ${Estimated.name(source.exercise)} stands at ${from.load.copy(lb = load.lb).label}, and this is a small change to it"))
+        // What was held at these reps, or the conversion from other reps: never a step up, and
+        // never more than that version was ever lifted at.
+        val held = sessions.lastOrNull { it.anchor == target?.last }?.load?.lb
+        val most = sessions.maxOfOrNull { it.load.lb } ?: return null
+        val load = Load(minOf(from.load.lb, held ?: from.load.lb, most), count)
+        return Suggestion.Weight(load, Change.EST, listOf("an estimate: your ${Estimated.name(source)} was done at ${from.load.copy(lb = load.lb).label}, and this is a small change to it"))
     }
 
     // The variations that bear on the weight: all of them, or without the shared wordings.

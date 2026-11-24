@@ -435,13 +435,13 @@ class ProgressionTest {
         assertEquals(Load(30, 2), weight(pressed).load)
         val incline = estimate("8 x incline chest press") as Suggestion.Weight
         assertEquals(listOf(Load(25, 2), Change.EST, null), listOf(incline.load, incline.change, incline.test))
-        assertEquals(listOf("an estimate: your chest press stands at 2×25, and this is a small change to it"), incline.reasons)
+        assertEquals(listOf("an estimate: your chest press was done at 2×25, and this is a small change to it"), incline.reasons)
         // One arm takes the dumbbell each of two arms held, and two arms the one arm's.
         assertEquals(Load(25, 1), (estimate("8 x single arm chest press") as Suggestion.Weight).load)
         val oneArm = listOf(logged(1, 20, listOf(8, 8), ex = exercise("8 x single arm chest press"), count = 1))
         val both = estimate("8 x chest press", oneArm) as Suggestion.Weight
         assertEquals(Load(20, 2), both.load)
-        assertEquals("an estimate: your single arm chest press stands at 1×20, and this is a small change to it", both.reasons.single())
+        assertEquals("an estimate: your single arm chest press was done at 1×20, and this is a small change to it", both.reasons.single())
         // But not when nobody said how many dumbbells the two-armed lift was: it could be one in both hands.
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x single arm chest press", listOf(logged(1, 25, listOf(8, 8), count = null))))
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x single arm chest press", listOf(logged(1, 25, listOf(8, 8), count = 1))))
@@ -454,6 +454,30 @@ class ProgressionTest {
         // The nearest version lends: one tweak away before two.
         val nearer = row + logged(2, 15, listOf(8, 8), ex = exercise("8 x single arm low row"), count = 1)
         assertEquals(Load(15, 1), (estimate("8 x single arm low row (explosive)", nearer) as Suggestion.Weight).load)
+        // Two as near: the lighter of the two estimates, whichever was logged last.
+        val two = listOf(logged(1, 20, listOf(8, 8), ex = exercise("8 x incline chest press")), logged(5, 30, listOf(8, 8), ex = exercise("8 x single arm chest press"), count = 1))
+        assertEquals(Load(20, 1), (estimate("8 x single arm incline chest press", two) as Suggestion.Weight).load)
+        // Two arms take one arm's dumbbell only where the arm is the limit: not on a lunge,
+        // where it would double what the legs move, nor a swing, held in both hands.
+        for (line in listOf("8 x reverse lunge", "8 x hip hinge swing", "8 x pullover")) {
+            val single = listOf(logged(1, 25, listOf(8, 8), ex = exercise(line.replace("8 x ", "8 x single arm ")), count = 1))
+            assertEquals(line, Suggestion.NoNumber.NEW, estimate(line, single))
+        }
+        // Every session the number rests on must say two dumbbells: an older one in both hands,
+        // which Epley can't set beside the latest, would land in one arm.
+        val mixed = listOf(logged(1, 40, listOf(15, 15), 15..15, ex = exercise("15 x deadlift"), count = 1), logged(2, 20, listOf(8, 8), ex = exercise("8 x deadlift")))
+        assertEquals(Suggestion.NoNumber.NEW, suggest(mixed, ex = exercise("15 x single arm deadlift"), target = 15..15))
+        // Converted from other reps, it is never more than that version was lifted at.
+        val twelve = listOf(logged(1, 20, listOf(12, 12), 12..12))
+        assertEquals(Load(20, 2), (suggest(twelve, ex = exercise("3 x chest press (explosive)"), target = 3..3) as Suggestion.Weight).load)
+        // Logged in these words with nothing to judge, as an import can be: no estimate over it.
+        val unjudged = pressed + Logged(day(3), exercise("8 x incline chest press"), Load(15, 2), 8..8, emptyList())
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x incline chest press", unjudged))
+        // A banded row with nothing held has no weight to lend.
+        val banded = listOf(logged(1, 15, listOf(8, 8), ex = exercise("8 x mid band upright row")))
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x upright row", banded))
+        // Sumo is a stance for a squat or a deadlift.
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x sumo calf raise", listOf(logged(1, 30, listOf(8, 8), ex = exercise("8 x calf raise")))))
         // A version that twinged lends nothing, nor a tweak nobody ruled on, nor another lift.
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x incline chest press", pressed + logged(3, 25, listOf(8, 8), hurt = true)))
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x bosu chest press"))

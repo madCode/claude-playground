@@ -28,7 +28,11 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 - **Shipped:** a lift never logged in these words takes the weight its nearest logged version
   last held, shown as "est.": one arm, "explosive", a band, sumo, incline. One leg's 0.6 shows
   "est." too. "Overhead tricep extension" shares a history with the bare one outright.
-- **On the yardstick:** 146 of 361 rows now have a number (128 before).
+- **On the yardstick:** 140 of 361 rows now have a number (128 before).
+- **The review ran every corpus pair through it** and found a weight held in both hands could
+  land in one arm, one arm's weight doubled onto a lunge, the later of two near versions winning
+  over the lighter, and a conversion lending more than was ever lifted. All fixed, at the cost
+  of six rows.
 - **Research:** sumo against a regular stance is in TRAINING.md, 10: the same weight, and no
   reason to try heavier.
 
