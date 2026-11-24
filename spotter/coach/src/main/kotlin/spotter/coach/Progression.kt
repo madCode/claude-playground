@@ -263,10 +263,10 @@ object Progression {
         }
 
         // A step earned before a long gap waits (madCode, 2026-11-24): the weight is held first.
-        // The gap is since the lift was last done at any reps: someone who kept at it at 10s
-        // hasn't been away from it. No promise of what comes next: a twinge, a big jump or
+        // The gap is since the lift was last done, at any reps and however it went: someone who
+        // kept at it at 10s, or tried it last week and felt a twinge, hasn't been away from it. No promise of what comes next: a twinge, a big jump or
         // other reps may each decide otherwise.
-        val lastDone = (latest ?: last).date
+        val lastDone = last.date
         if (rules.today != null && lastDone.isBefore(rules.today.minusWeeks(COMEBACK_WEEKS)) && (lb > held || test != null)) {
             lb = held
             test = null

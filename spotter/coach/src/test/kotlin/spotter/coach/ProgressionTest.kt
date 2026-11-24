@@ -454,6 +454,9 @@ class ProgressionTest {
         // Kept at it at other reps since: not away from the lift, so the step stands.
         val tens = earned + Logged(day(3).plusWeeks(19), press, Load(25, 2), 10..10, listOf(10, 10))
         assertEquals(Load(30, 2), on(day(3).plusWeeks(20), tens).load)
+        // Nor is a twinge last week time away: the twinge's own cap decides, as it did.
+        val twinge = earned + Logged(day(3).plusWeeks(19), press, Load(30, 2), 8..8, clean, hurt = true)
+        assertEquals(weight(twinge).let { it.load to it.reasons }, on(day(3).plusWeeks(20), twinge).let { it.load to it.reasons })
         // "Felt easy" long ago is a step earned long ago too.
         assertEquals(Load(25, 2), on(day(1).plusWeeks(20), listOf(logged(1, 25, clean, easy = true))).load)
         // A weight that was only held is as it was: nothing to wait for.
