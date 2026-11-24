@@ -425,10 +425,11 @@ object Progression {
         // The nearest versions; where two are as near, the lighter estimate. One of them with
         // nothing sound to lend (it twinged, or nobody said how it was held) leaves no number:
         // the other's would be the heavier of the two.
-        // The lift's own versions first, however worded: another movement is looked at only
-        // when none of its own is near, so a kin can neither outweigh nor blank what the
-        // lifter's own log says.
-        val candidates = near.filter { own(it.exercise.parts.single()) }.ifEmpty { near }
+        // The lift's own versions first, however worded, then the same lift under another
+        // name, then a lift it only starts from: a farther one is looked at only when no
+        // nearer one is logged, so it can neither outweigh nor blank what a nearer one says.
+        val closest = near.minOfOrNull { Estimated.kinship(part.movement, it.exercise.parts.single().movement) } ?: return null
+        val candidates = near.filter { Estimated.kinship(part.movement, it.exercise.parts.single().movement) == closest }
         val fewest = candidates.minOfOrNull { tweaks(it.exercise.parts.single()).size } ?: return null
         val nearest = candidates.filter { tweaks(it.exercise.parts.single()).size == fewest }.map { it.exercise }.distinctBy { it.key }
             .map { from(it, part, target, log, rules) ?: return null }
