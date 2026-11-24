@@ -54,6 +54,16 @@ no reading that existed changed.
   weightless (madCode doesn't recall holding anything for one).
 - **On the yardstick:** 165 of 361 rows with a number (158 before).
 
+### The owner's dumbbell counts file
+- **Why:** the private grading found the rows still blank or low mostly carried "(count?)": the
+  history says how many dumbbells only for some movements, and "alternating", one arm and the
+  goblet link all need it. madCode ruled on their own lifts with the gym-coach session, in a
+  private file beside the history.
+- **Shipped:** the import and the replay tool read that file (`-Pcounts=…`), filling a count
+  only where neither the line nor the row says one. Tested on invented values; the format is
+  in COUNTS-FORMAT.md.
+- **Next:** picking the file on the phone, beside the history.
+
 ### The Progress card names exercises in words
 - **Why:** madCode's phone showed "chest fly [position=floor]" and "lateral shift
   [implement=one dumbbell, both hands]": the key an exercise is filed under, not its name.

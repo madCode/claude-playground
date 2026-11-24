@@ -20,7 +20,7 @@ tasks.test {
 }
 
 // Replays a history file through the coach, for grading it in private (docs/REPLAY.md):
-//   ./gradlew :coach:replay -Phistory=/path/history.jsonl -Pout=/path/outside/any/repo [-PnoShared]
+//   ./gradlew :coach:replay -Phistory=/path/history.jsonl -Pout=/path/outside/any/repo [-PnoShared] [-Pcounts=/path/dumbbell_counts.yaml]
 tasks.register<JavaExec>("replay") {
     group = "verification"
     description = "Replays a history.jsonl through the coach and writes a scorecard session per class."
@@ -35,5 +35,8 @@ tasks.register<JavaExec>("replay") {
     // "true" turns it on, so "-PnoShared=false" is the plain run it says it is; and only with
     // both paths, so the flag can't be taken for one of them.
     val noShared = (project.findProperty("noShared") as String?).let { it == "" || it == "true" }
-    args(paths + listOfNotNull("no-shared".takeIf { noShared && paths.size == 2 }))
+    // The owner's dumbbell counts, a private file like the history: its path as typed.
+    // An empty one (an unset shell variable) fails rather than run without the counts unnoticed.
+    val counts = (findProperty("counts") as String?)?.let { if (it.isEmpty()) "counts=" else "counts=" + from.resolve(it).path }
+    args(paths + listOfNotNull("no-shared".takeIf { noShared && paths.size == 2 }, counts.takeIf { paths.size == 2 }))
 }

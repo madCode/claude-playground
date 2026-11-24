@@ -72,6 +72,23 @@ class ReplayTest {
         assertTrue("1 of them had a number" in Replay.write(file, File(tmp.root, "on"), today))
     }
 
+    // The owner's counts file can be given to a replay; without it the run is as it was, and
+    // with it the report says how many rows it filled.
+    @Test
+    fun aReplayCanTakeTheCountsFile() {
+        // Rows that don't say how many dumbbells, filed under the name the counts file rules on.
+        fun lift(date: String, line: String, weight: Int) =
+            """{"date": "$date", "class": "2G", "exercise": "deadlift", "line": "$line", "variant": {"implement": null}, "weight": $weight, "reps": 8, "prescribed_reps": 8}"""
+        val rows = listOf(lift("2026-03-02", "8 x deadlift", 40), lift("2026-03-05", "8 x single arm deadlift", 20)).joinToString("\n")
+        val file = tmp.newFile("lifts.jsonl").apply { writeText(rows) }
+        val counts = tmp.newFile("counts.yaml").apply { writeText("schema: dumbbell-counts/1\nmovements:\n  deadlift: 2\n") }
+        val plain = Replay.write(file, File(tmp.root, "plain"), today)
+        assertTrue("0 of them had a number" in plain && "dumbbell counts" !in plain)
+        val ruled = Replay.write(file, File(tmp.root, "ruled"), today, countsFile = counts)
+        assertTrue(ruled, "1 of them had a number" in ruled)
+        assertTrue("dumbbell counts: 1 movements ruled on; 1 rows took their count from them" in ruled)
+    }
+
     // Rows the coach couldn't read are in the session with what was lifted and no suggestion: a
     // blank row counts against the coach. A skipped row has no weight; a weight is as written.
     @Test
