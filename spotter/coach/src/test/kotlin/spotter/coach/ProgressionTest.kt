@@ -463,7 +463,7 @@ class ProgressionTest {
             val single = listOf(logged(1, 25, listOf(8, 8), ex = exercise(line.replace("8 x ", "8 x single arm ")), count = 1))
             assertEquals(line, Suggestion.NoNumber.NEW, estimate(line, single))
         }
-        // Every session the number rests on must say two dumbbells: an older one in both hands,
+        // The session the number rests on must say two dumbbells: an older one in both hands,
         // which Epley can't set beside the latest, would land in one arm.
         val mixed = listOf(logged(1, 40, listOf(15, 15), 15..15, ex = exercise("15 x deadlift"), count = 1), logged(2, 20, listOf(8, 8), ex = exercise("8 x deadlift")))
         assertEquals(Suggestion.NoNumber.NEW, suggest(mixed, ex = exercise("15 x single arm deadlift"), target = 15..15))

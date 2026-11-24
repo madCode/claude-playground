@@ -194,7 +194,7 @@ what is on the board, and nothing says so.
   earned, never more than it was ever lifted at, and nothing from one that twinged. Where two
   versions are as near, the lighter estimate. Logged once in these words, judged or not, the
   tweaked lift has a history of its own. The tweaks, each with its reason:
-  - one arm from two: the same dumbbell in the one hand as in each of two, when every session
+  - one arm from two: the same dumbbell in the one hand as in each of two, when the session
     it rests on was logged with two dumbbells. Two arms from one only on a lift the arm limits
     (a press, row, curl, fly or raise): on a lunge it would double what the legs move, and a
     swing or pullover is one dumbbell in both hands.

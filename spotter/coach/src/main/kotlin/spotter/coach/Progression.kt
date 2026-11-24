@@ -407,11 +407,11 @@ object Progression {
         if (from.caution != null) return null
         val sessions = own(source, log, rules).filter { it.outcome != Outcome.HURT }
         // One arm from two, or two from one: the dumbbell in each hand is the same one, which
-        // is only known when every session it rests on was two dumbbells, or one.
+        // is only known when the session the number rests on was two dumbbells, or one.
         val count = when {
             oneArm == (source.parts.single().variations["arms"] == "single") -> from.load.count
-            oneArm -> if (from.load.count == 2 && sessions.all { it.load.count == 2 }) 1 else return null
-            else -> if (from.load.count == 1 && sessions.all { it.load.count == 1 }) 2 else return null
+            oneArm -> if (from.load.count == 2) 1 else return null
+            else -> if (from.load.count == 1) 2 else return null
         }
         // What was held at these reps, or the conversion from other reps: never a step up, and
         // never more than that version was ever lifted at.
