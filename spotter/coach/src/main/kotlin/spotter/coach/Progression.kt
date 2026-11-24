@@ -392,14 +392,17 @@ object Progression {
                 tweaks.all { Estimated.sameWeight(part.movement, it.key, it.value) } &&
                 // Two arms from one only where the arm is the limit: on a lunge it would double
                 // what the legs move, and a swing or pullover is one dumbbell in both hands.
-                (oneArm || p.variations["arms"] != "single" || part.movement.pattern in Estimated.armLimited) &&
+                (oneArm || p.variations["arms"] != "single" || Estimated.armLimited(part.movement)) &&
                 // As between shared wordings: a side at a time only where the count is known.
                 (p.variations["alternating"] == part.variations["alternating"] || logged.load.count == 2 || Sheet.rowCount(logged.exercise) != null)
         }
-        // The nearest versions; where two are as near, the lighter estimate.
+        // The nearest versions; where two are as near, the lighter estimate. One of them with
+        // nothing sound to lend (it twinged, or nobody said how it was held) leaves no number:
+        // the other's would be the heavier of the two.
         val fewest = near.minOfOrNull { tweaks(it.exercise.parts.single()).size } ?: return null
-        return near.filter { tweaks(it.exercise.parts.single()).size == fewest }.map { it.exercise }.distinctBy { it.key }
-            .mapNotNull { from(it, oneArm, target, log, rules) }.minByOrNull { it.load.lb }
+        val nearest = near.filter { tweaks(it.exercise.parts.single()).size == fewest }.map { it.exercise }.distinctBy { it.key }
+            .map { from(it, oneArm, target, log, rules) ?: return null }
+        return nearest.minByOrNull { it.load.lb }
     }
 
     private fun from(source: Reading.Known, oneArm: Boolean, target: IntRange?, log: List<Logged>, rules: Rules): Suggestion.Weight? {
@@ -418,7 +421,7 @@ object Progression {
         val held = sessions.lastOrNull { it.anchor == target?.last }?.load?.lb
         val most = sessions.maxOfOrNull { it.load.lb } ?: return null
         val load = Load(minOf(from.load.lb, held ?: from.load.lb, most), count)
-        return Suggestion.Weight(load, Change.EST, listOf("an estimate: your ${Estimated.name(source)} was done at ${from.load.copy(lb = load.lb).label}, and this is a small change to it"))
+        return Suggestion.Weight(load, Change.EST, listOf("an estimate: your ${Estimated.name(source)} stands at ${from.load.copy(lb = load.lb).label}, and this is a small change to it"))
     }
 
     // The variations that bear on the weight: all of them, or without the shared wordings.

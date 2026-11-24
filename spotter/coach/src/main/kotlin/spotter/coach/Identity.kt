@@ -52,7 +52,7 @@ internal object SharedWeight {
     private val upper = lying + setOf("vertical_push", "horizontal_pull", "vertical_pull", "curl", "raise", "triceps")
 
     // Presses the legs drive, whatever their pattern says.
-    private val legDriven = setOf("thruster", "push press", "clean and press")
+    val legDriven = setOf("thruster", "push press", "clean and press")
 
     fun neutral(movement: Movement, axis: String, value: String): Boolean = when (axis) {
         // One side at a time, with the same dumbbell in each hand.
@@ -77,8 +77,10 @@ internal object Estimated {
     private val pressed = setOf("horizontal_push", "fly")
     private val legs = setOf("squat", "hinge")
 
-    /** Lifts an arm limits, so two arms take the dumbbell one arm held. */
-    val armLimited = setOf("horizontal_push", "vertical_push", "horizontal_pull", "curl", "fly", "raise")
+    private val arms = setOf("horizontal_push", "vertical_push", "horizontal_pull", "curl", "fly", "raise")
+
+    /** A lift an arm limits, so two arms take the dumbbell one arm held; not a press the legs drive. */
+    fun armLimited(movement: Movement) = movement.pattern in arms && movement.name !in SharedWeight.legDriven
 
     fun sameWeight(movement: Movement, axis: String, value: String): Boolean = when (axis) {
         // The same dumbbell in the one hand as in each of two.
@@ -102,7 +104,8 @@ internal object Estimated {
                 "legs" -> if (value == "single") "single leg" else value
                 "band" -> "banded"
                 "grip" -> "$value grip"
-                else -> value
+                // A yes-or-no axis is said by its name: "lying".
+                else -> if (value == "yes") axis else value
             }
         } + p.movement.name).joinToString(" ")
     }

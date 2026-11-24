@@ -192,12 +192,12 @@ what is on the board, and nothing says so.
   logged in these words takes the weight its nearest logged version last held, shown as
   "est.", with that version named in "Why this number". Never a step up that version has
   earned, never more than it was ever lifted at, and nothing from one that twinged. Where two
-  versions are as near, the lighter estimate. Logged once in these words, judged or not, the
+  versions are as near, the lighter estimate, and none if either has nothing sound to lend. Logged once in these words, judged or not, the
   tweaked lift has a history of its own. The tweaks, each with its reason:
   - one arm from two: the same dumbbell in the one hand as in each of two, when the session
     it rests on was logged with two dumbbells. Two arms from one only on a lift the arm limits
-    (a press, row, curl, fly or raise): on a lunge it would double what the legs move, and a
-    swing or pullover is one dumbbell in both hands.
+    (a press, row, curl, fly or raise, but not a push press or thruster): on a lunge it would
+    double what the legs move, and a swing or pullover is one dumbbell in both hands.
   - "explosive": faster, not heavier.
   - a band worn while holding a dumbbell: it pulls where the dumbbell doesn't (on a squat, the
     hips sideways). A banded row with nothing held still has no weight, to give or to lend.

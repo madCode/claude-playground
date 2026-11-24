@@ -435,13 +435,13 @@ class ProgressionTest {
         assertEquals(Load(30, 2), weight(pressed).load)
         val incline = estimate("8 x incline chest press") as Suggestion.Weight
         assertEquals(listOf(Load(25, 2), Change.EST, null), listOf(incline.load, incline.change, incline.test))
-        assertEquals(listOf("an estimate: your chest press was done at 2×25, and this is a small change to it"), incline.reasons)
+        assertEquals(listOf("an estimate: your chest press stands at 2×25, and this is a small change to it"), incline.reasons)
         // One arm takes the dumbbell each of two arms held, and two arms the one arm's.
         assertEquals(Load(25, 1), (estimate("8 x single arm chest press") as Suggestion.Weight).load)
         val oneArm = listOf(logged(1, 20, listOf(8, 8), ex = exercise("8 x single arm chest press"), count = 1))
         val both = estimate("8 x chest press", oneArm) as Suggestion.Weight
         assertEquals(Load(20, 2), both.load)
-        assertEquals("an estimate: your single arm chest press was done at 1×20, and this is a small change to it", both.reasons.single())
+        assertEquals("an estimate: your single arm chest press stands at 1×20, and this is a small change to it", both.reasons.single())
         // But not when nobody said how many dumbbells the two-armed lift was: it could be one in both hands.
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x single arm chest press", listOf(logged(1, 25, listOf(8, 8), count = null))))
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x single arm chest press", listOf(logged(1, 25, listOf(8, 8), count = 1))))
@@ -457,9 +457,16 @@ class ProgressionTest {
         // Two as near: the lighter of the two estimates, whichever was logged last.
         val two = listOf(logged(1, 20, listOf(8, 8), ex = exercise("8 x incline chest press")), logged(5, 30, listOf(8, 8), ex = exercise("8 x single arm chest press"), count = 1))
         assertEquals(Load(20, 1), (estimate("8 x single arm incline chest press", two) as Suggestion.Weight).load)
+        // If one of them has nothing sound to lend, the other's would be the heavier: no number.
+        val twinged = two + logged(6, 20, listOf(8, 8), ex = exercise("8 x incline chest press"), hurt = true)
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x single arm incline chest press", twinged))
+        // A reason says a yes-or-no word by its name.
+        val lying = estimate("8 x lying chest fly (explosive)", listOf(logged(1, 15, listOf(8, 8), ex = exercise("8 x lying chest fly")))) as Suggestion.Weight
+        assertEquals("an estimate: your lying chest fly stands at 2×15, and this is a small change to it", lying.reasons.single())
         // Two arms take one arm's dumbbell only where the arm is the limit: not on a lunge,
-        // where it would double what the legs move, nor a swing, held in both hands.
-        for (line in listOf("8 x reverse lunge", "8 x hip hinge swing", "8 x pullover")) {
+        // where it would double what the legs move, nor a swing, held in both hands, nor a
+        // press the legs drive.
+        for (line in listOf("8 x reverse lunge", "8 x hip hinge swing", "8 x pullover", "8 x push press")) {
             val single = listOf(logged(1, 25, listOf(8, 8), ex = exercise(line.replace("8 x ", "8 x single arm ")), count = 1))
             assertEquals(line, Suggestion.NoNumber.NEW, estimate(line, single))
         }
