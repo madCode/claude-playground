@@ -168,7 +168,7 @@ what is on the board, and nothing says so.
   "finisher", "count & remember reps"). A word that is none of these leaves the row unsure: it
   is shown, it can be logged, but it borrows no number.
 - **A full read can still be wrong**, so the reader also refuses these, found on the corpus:
-  - two movements side by side with no connector ("bench bird dog low row", "TRX bridge row");
+  - two movements side by side with no connector ("bench bird dog low row");
   - a word that means one thing on one movement and another elsewhere ("wide" is a stance on
     a squat and a grip on a curl; so are "close" and "narrow"), so such words are only listed with the word that settles
     them ("wide stance", "wide grip");
