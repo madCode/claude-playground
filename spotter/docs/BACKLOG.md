@@ -139,8 +139,10 @@ says otherwise.
 
 Still open:
 
-- **A history row that doesn't say how many dumbbells.** "Alternating" and one arm only link
-  when the count is known. Assume two on lifts normally done with two?
+- **A history row that doesn't say how many dumbbells** takes its count from madCode's own
+  counts file (COUNTS-FORMAT.md), read by the import and the replay. Still to build: picking
+  the file on the phone; and the movement list's own usual numbers as a fallback after it,
+  which madCode wants kept until one proves wrong.
 
 - **A step earned long ago.** Two clean sessions at 30, then nothing for five months: the
   sheet still says 35. The eight-week limit only covers a heavier weight vouching for a lighter

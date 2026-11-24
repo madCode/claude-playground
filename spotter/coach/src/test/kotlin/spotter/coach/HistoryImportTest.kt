@@ -48,6 +48,45 @@ class HistoryImportTest {
 
     // Reported and asked reps are in the same terms, so the shortfall is what carries over, onto
     // the line's own reps a side: 12 of "12 total" is 6 a side done, not 12 (trap 7).
+    // The owner's counts file fills the count only where neither the line nor the row says
+    // one, by the name the row is filed under; then the plain lift can lend to the one-armed.
+    @Test
+    fun theCountsFileFillsOnlyWhatNobodySaid() {
+        val rows = arrayOf(
+            row("8 x deadlift", "40", 8, 8, exercise = "deadlift"),
+            row("8 x chest fly", "15", 8, 8, exercise = "chest fly"),
+            row("8 x deadlift", "40", 8, 8, implement = "single_dumbbell", exercise = "deadlift", date = "2026-03-04"),
+            row("8 x single arm deadlift", "20", 8, 8, exercise = "deadlift", date = "2026-03-05"),
+            row("8 x sumo deadlift", "45", 8, 8, exercise = "deadlift", date = "2026-03-06"),
+        )
+        val counts = DumbbellCounts.parse("schema: dumbbell-counts/1\nmovements:\n  deadlift: {count: 2, unless_line_has: {sumo: 1}}\n")
+        val read = HistoryImport.read(rows.joinToString("\n"), identity, today, counts = counts)
+        assertEquals(listOf(2, null, 1, 1, 1), read.rows.map { it.logged.load.count })
+        assertEquals(listOf(true, false, false, false, true), read.rows.map { it.countRuled })
+        // Without the file every one of those stays as it was.
+        assertEquals(listOf(null, null, 1, 1, null), read(*rows).rows.map { it.logged.load.count })
+    }
+
+    // The file counts dumbbells: a row that names something else held, in its words or its
+    // variant, or a combo whose parts say different counts, has been spoken for.
+    @Test
+    fun theCountsFileHasNoWordOnWhatIsNotADumbbell() {
+        val counts = DumbbellCounts.parse("schema: dumbbell-counts/1\nmovements:\n  deadlift: 2\n  squat: 2\n  shoulder press: 2\n")
+        val read = HistoryImport.read(
+            listOf(
+                row("8 x kettlebell deadlift", "40", 8, 8, exercise = "deadlift"),
+                row("8 x ybell squat", "20", 8, 8, exercise = "squat"),
+                row("8 x deadlift", "40", 8, 8, implement = "kettlebell", exercise = "deadlift"),
+                row("8 x goblet squat to two dumbbell shoulder press", "20", 8, 8).replace("\"components\": null", "\"components\": [\"squat\", \"shoulder press\"]"),
+                row("8 x single arm squat to reciprocating shoulder press", "20", 8, 8).replace("\"components\": null", "\"components\": [\"squat\", \"shoulder press\"]"),
+                row("8 x dumbbell deadlift", "40", 8, 8, exercise = "deadlift"),
+                row("8 x squat to shoulder press", "20", 8, 8).replace("\"components\": null", "\"components\": [\"squat\", \"shoulder press\"]"),
+            ).joinToString("\n"), identity, today, counts = counts,
+        )
+        assertEquals(listOf(null, null, null, null, null, 2, 2), read.rows.map { it.logged.load.count })
+        assertEquals(listOf(false, false, false, false, false, true, true), read.rows.map { it.countRuled })
+    }
+
     @Test
     fun repsAreSetAgainstTheLine() {
         val result = read(
