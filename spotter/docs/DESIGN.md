@@ -62,7 +62,9 @@ both are installed side by side.
     dumbbell and two aren't the same weight. Coming back to a weight done clean before isn't
     new: a clean session at the same weight counts however old, and one at a heavier weight if
     it was within the eight weeks before (TRAINING.md, 9). After longer the lighter weight
-    earns its step with two sessions of its own. A weight lifted above the sheet's number becomes the number and waits its own two;
+    earns its step with two sessions of its own. A step up earned more than eight weeks before
+    the class is held once first (madCode, 2026-11-24): the sheet says the weight last done
+    and why, offers no test, and one clean session at it then takes the step. A weight lifted above the sheet's number becomes the number and waits its own two;
     one that twinged isn't taken up. A big jump's test weight is offered once the weight has settled.
     A clean set that "felt hard" waits a session before stepping up (TRAINING.md, 3).
     Each rep count keeps its own history: the last time these reps were asked is the basis,

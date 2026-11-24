@@ -5,6 +5,7 @@ import spotter.coach.Journal
 import spotter.coach.JournalEntry
 import spotter.coach.Logged
 import spotter.coach.Logging
+import spotter.coach.Rules
 import spotter.coach.Sheet
 import spotter.coach.SheetRow
 import spotter.coach.TodaysBoard
@@ -120,7 +121,7 @@ sealed interface Today {
                     chosen.staleFrom?.let { "This is the board from ${it.format(day)}: the one for ${booked.date.format(day)} couldn't be fetched." },
                     chosen.borrowedFrom?.let { "No ${booked.tag} board yet, so this is the $it board. Leave rows that aren't in your class." },
                 )
-                val board = Sheet.make(chosen.lines, log, identity, chosen.borrowedFrom)
+                val board = Sheet.make(chosen.lines, log, identity, chosen.borrowedFrom, Rules(today = booked.date))
                 val name = className(chosen)
                 // What the person added and logged is a row again, built from its own entry.
                 val added = Journal.live(entries)

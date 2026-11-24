@@ -427,6 +427,35 @@ class ProgressionTest {
 
     // "If it's the same exercise with minor tweaks", the sheet gives a number (madCode,
     // 2026-11-24): a lift never logged in these words takes an estimate from a near version.
+    // madCode, 2026-11-24: a step earned long ago is held once before it is taken.
+    @Test
+    fun aStepEarnedLongAgoWaitsASession() {
+        val clean = listOf(8, 8, 8)
+        val earned = listOf(logged(1, 25, clean), logged(3, 25, clean))
+        fun on(date: LocalDate, log: List<Logged> = earned, target: IntRange? = 8..8) =
+            Progression.suggest(press, target, log, Rules(today = date)) as Suggestion.Weight
+        // Within eight weeks the step is taken; with no day known, as before.
+        assertEquals(Load(30, 2), on(day(3).plusWeeks(8)).load)
+        assertEquals(Load(30, 2), weight(earned).load)
+        // After longer it is held, and says why.
+        val late = on(day(3).plusWeeks(20))
+        assertEquals(listOf(Load(25, 2), Change.SAME, null), listOf(late.load, late.change, late.test))
+        assertEquals(listOf("clean at 2×25, but that was 20 weeks ago: same again first, then up"), late.reasons)
+        // One clean session at it on coming back, and the step is taken.
+        val back = earned + Logged(day(3).plusWeeks(20), press, Load(25, 2), 8..8, clean)
+        assertEquals(Load(30, 2), on(day(3).plusWeeks(21), back).load)
+        // Neither a big jump's test nor a step earned at other reps is offered after that long.
+        val big = listOf(logged(1, 20, clean), logged(3, 20, clean))
+        assertEquals(Load(25, 2), on(day(4), big).test)
+        assertNull(on(day(3).plusWeeks(20), big).test)
+        assertNull(on(day(3).plusWeeks(20), target = 6..6).test)
+        // "Felt easy" long ago is a step earned long ago too.
+        assertEquals(Load(25, 2), on(day(1).plusWeeks(20), listOf(logged(1, 25, clean, easy = true))).load)
+        // A weight that was only held is as it was: nothing to wait for.
+        val once = on(day(1).plusWeeks(20), listOf(logged(1, 25, clean)))
+        assertTrue(once.reasons.single().contains("up after one more clean session"))
+    }
+
     // madCode, 2026-11-24: lifts filed under different names that are one lift done another
     // way lend each other a first number, never a heavier one.
     @Test
