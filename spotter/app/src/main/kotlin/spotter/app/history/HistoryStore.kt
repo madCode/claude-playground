@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import spotter.coach.DumbbellCounts
 import spotter.coach.HistoryImport
 import spotter.coach.Identity
 import java.io.File
@@ -24,6 +25,9 @@ import java.time.LocalDate
 class HistoryStore(dir: File) {
     private val file = File(dir, "history.jsonl")
     private val tmp = File(dir, "history.jsonl.tmp")
+    // The owner's dumbbell counts (docs/COUNTS-FORMAT.md), kept the same way: the history is
+    // read with them, so a count the rows don't give comes from the owner and not a guess.
+    private val countsFile = File(dir, "dumbbell_counts.yaml")
     private var read: Pair<LocalDate, HistoryImport.Result>? = null
 
     /** Why the last pick wasn't taken; null once one is. Gone with the process, like any toast. */
@@ -103,9 +107,35 @@ class HistoryStore(dir: File) {
         }
     }
 
+    /** Replaces the kept dumbbell counts with [text], which the caller has read in full. */
+    @Synchronized
+    fun saveCounts(text: String) {
+        try {
+            FileOutputStream(tmp).use {
+                it.write(text.toByteArray())
+                it.fd.sync()
+            }
+            if (!tmp.renameTo(countsFile)) throw IOException("couldn't keep the counts")
+            // The history reads differently with them.
+            read = null
+        } finally {
+            tmp.delete()
+        }
+    }
+
+    /**
+     * The kept counts, or null when none are. A file this version can no longer read in full
+     * counts as none: half a ruling is a count nobody gave.
+     */
+    @Synchronized
+    fun counts(): DumbbellCounts? =
+        if (!countsFile.isFile) null else runCatching { DumbbellCounts.parse(countsFile.readText()) }.getOrNull()
+
+    /** The counts go with the history they were written for. */
     @Synchronized
     fun clear() {
         file.delete()
+        countsFile.delete()
         tmp.delete()
         read = null
     }
@@ -117,7 +147,7 @@ class HistoryStore(dir: File) {
         tmp.delete()
         if (!file.isFile) return null
         read?.takeIf { it.first == today }?.let { return it.second }
-        return HistoryImport.read(file.readText(), identity, today, everyRow = false).also { read = today to it }
+        return HistoryImport.read(file.readText(), identity, today, everyRow = false, counts = counts() ?: DumbbellCounts.NONE).also { read = today to it }
     }
 
     companion object {
