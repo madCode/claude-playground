@@ -145,12 +145,17 @@ object HistoryImport {
         // one): the row's own hint is filled in by default and says "two" on single-arm lines.
         // Where the name says nothing the hint is the next word. Where neither says, the
         // owner's counts file, by the name the row is filed under; else the count stays unknown.
-        val said = Sheet.rowCount(exercise) ?: when (variant?.string("implement")) {
+        val implement = variant?.string("implement")
+        val said = Sheet.rowCount(exercise) ?: when (implement) {
             "double_dumbbell" -> 2
             "single_dumbbell", "ybell" -> 1
             else -> null
         }
-        val count = said ?: counts.count(filed(o), written)
+        // The file rules on dumbbells nobody counted. Where the row or its words name something
+        // else held (a kettlebell, a Y-bell, a TRX), or a combo's parts say different counts,
+        // somebody did say, and it has no word.
+        val unsaid = implement in setOf(null, "dumbbell") && exercise.parts.all { it.implement in setOf(null, "dumbbell") }
+        val count = said ?: if (unsaid) counts.count(filed(o), written) else null
         val reps = o.int("reps")
         val asked = o.int("prescribed_reps")
         // Not finished, though the reps may not show it: read as "felt hard", which delays a step.

@@ -36,6 +36,7 @@ tasks.register<JavaExec>("replay") {
     // both paths, so the flag can't be taken for one of them.
     val noShared = (project.findProperty("noShared") as String?).let { it == "" || it == "true" }
     // The owner's dumbbell counts, a private file like the history: its path as typed.
-    val counts = (findProperty("counts") as String?)?.takeIf { it.isNotEmpty() }?.let { "counts=" + from.resolve(it).path }
+    // An empty one (an unset shell variable) fails rather than run without the counts unnoticed.
+    val counts = (findProperty("counts") as String?)?.let { if (it.isEmpty()) "counts=" else "counts=" + from.resolve(it).path }
     args(paths + listOfNotNull("no-shared".takeIf { noShared && paths.size == 2 }, counts.takeIf { paths.size == 2 }))
 }

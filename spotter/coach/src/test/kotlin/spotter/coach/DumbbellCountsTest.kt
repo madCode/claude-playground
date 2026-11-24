@@ -38,6 +38,22 @@ class DumbbellCountsTest {
         assertNull(DumbbellCounts.NONE.count(listOf("squat"), "8 x squat"))
     }
 
+    // A word is looked for at the start of a word, so a short one isn't found inside another.
+    @Test
+    fun aWordIsNotFoundInsideAnother() {
+        val counts = DumbbellCounts.parse("schema: dumbbell-counts/1\nmovements:\n  row: {count: 2, unless_line_has: {arm: 1}}\n  press: {count: 2, when_line_has: press}\n")
+        assertEquals(listOf(1, 1, 2, 2), listOf("8 x single arm row", "8 x one-arms row", "8 x farmer row", "8 x warm up row").map { counts.count(listOf("row"), it) })
+        assertEquals(2, counts.count(listOf("press"), "8 x chest press"))
+        assertNull(counts.count(listOf("press"), "8 x compression hold"))
+    }
+
+    // Other ways of writing the same file that a YAML writer or an editor may produce.
+    @Test
+    fun namesAreReadHoweverTheyAreQuoted() {
+        val counts = DumbbellCounts.parse("\uFEFFschema: \"dumbbell-counts/1\"\r\nmovements:\r\n  'farmer''s carry': 2\r\n  \" Chest  Press \": 2\r\n  \"clean: press\": 1\r\n")
+        assertEquals(listOf(2, 2, 1), listOf("farmer's carry", "chest press", "clean: press").map { counts.count(listOf(it), null) })
+    }
+
     // A file that isn't one is refused whole, with a sentence that quotes no more than a line's start.
     @Test
     fun aFileThatIsNotOneIsRefused() {
@@ -52,6 +68,18 @@ class DumbbellCountsTest {
         assertTrue("indented" in refused(head + "squat: 2"))
         assertTrue("too big" in refused(head + "  squat: 2\n".repeat(20_000)))
         assertTrue("nested" in refused(head + "  squat: " + "{a: ".repeat(40)))
+        // A rule laid out over several lines or as a list would read as movements nobody named.
+        assertTrue("one line" in refused(head + "  squat:\n    count: 2\n    unless_line_has:\n      goblet: 1"))
+        assertTrue("one line" in refused(head + "  halo: 1\n      count: 2"))
+        assertTrue("name" in refused(head + "  - squat: 2"))
+        assertTrue("name" in refused(head + "  sq\u202Euat: 2"))
+        // A ruling given twice is no ruling.
+        assertTrue("twice" in refused(head + "  squat: 2\n  Squat: 1"))
+        assertTrue("twice" in refused(head + "  squat: {count: 2, count: 1}"))
+        assertTrue("twice" in refused(head + "  squat: {count: 2, unless_line_has: {a: 1, A: 2}}"))
+        assertTrue("1 or 2" in refused(head + "  squat: 02"))
+        // What is quoted back is short and printable.
+        assertTrue(refused(head + "  squat: " + "\u202E".repeat(500) + "x".repeat(500)).length < 120)
         // A history file picked by mistake.
         assertTrue("first line" in refused("""{"date": "2026-03-03", "exercise": "squat"}"""))
         assertEquals(0, DumbbellCounts.parse(head).size)

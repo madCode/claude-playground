@@ -66,7 +66,11 @@ object Replay {
         require(!folder.exists() || (folder.isDirectory && folder.list()?.isEmpty() == true)) { "$out isn't an empty folder. Choose a new or empty one." }
         val identity = Identity(Vocabulary.starting())
         // The owner's rulings on how many dumbbells, when given: without them the run is as it was.
-        val counts = countsFile?.let { DumbbellCounts.parse(it.readText()) } ?: DumbbellCounts.NONE
+        val counts = countsFile?.let {
+            // Before reading it: a huge file would fill memory ahead of the parser's own limit.
+            require(it.length() <= 4L * DumbbellCounts.MAX_CHARS) { "That file is too big to be a list of dumbbell counts." }
+            DumbbellCounts.parse(it.readText())
+        } ?: DumbbellCounts.NONE
         val history = HistoryImport.read(historyFile.readText(), identity, today, counts = counts)
         val replayed = run(history, identity, rules)
         try {
@@ -94,7 +98,7 @@ object Replay {
 fun main(args: Array<String>) {
     val flags = args.drop(2)
     val counts = flags.filter { it.startsWith("counts=") }
-    if (args.size < 2 || counts.size > 1 || (flags - counts.toSet()).any { it != "no-shared" } || flags.count { it == "no-shared" } > 1) {
+    if (args.size < 2 || counts.size > 1 || counts.any { it == "counts=" } || args.take(2).any { it == "no-shared" || it.startsWith("counts=") } || (flags - counts.toSet()).any { it != "no-shared" } || flags.count { it == "no-shared" } > 1) {
         System.err.println("usage: replay <history.jsonl> <out-folder> [no-shared] [counts=<dumbbell_counts.yaml>]")
         exitProcess(2)
     }

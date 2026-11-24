@@ -67,6 +67,25 @@ class HistoryImportTest {
         assertEquals(listOf(null, null, 1, 1, null), read(*rows).rows.map { it.logged.load.count })
     }
 
+    // The file counts dumbbells: a row that names something else held, in its words or its
+    // variant, or a combo whose parts say different counts, has been spoken for.
+    @Test
+    fun theCountsFileHasNoWordOnWhatIsNotADumbbell() {
+        val counts = DumbbellCounts.parse("schema: dumbbell-counts/1\nmovements:\n  deadlift: 2\n  squat: 2\n  shoulder press: 2\n")
+        val read = HistoryImport.read(
+            listOf(
+                row("8 x kettlebell deadlift", "40", 8, 8, exercise = "deadlift"),
+                row("8 x ybell squat", "20", 8, 8, exercise = "squat"),
+                row("8 x deadlift", "40", 8, 8, implement = "kettlebell", exercise = "deadlift"),
+                row("8 x goblet squat to two dumbbell shoulder press", "20", 8, 8).replace("\"components\": null", "\"components\": [\"squat\", \"shoulder press\"]"),
+                row("8 x dumbbell deadlift", "40", 8, 8, exercise = "deadlift"),
+                row("8 x squat to shoulder press", "20", 8, 8).replace("\"components\": null", "\"components\": [\"squat\", \"shoulder press\"]"),
+            ).joinToString("\n"), identity, today, counts = counts,
+        )
+        assertEquals(listOf(null, null, null, null, 2, 2), read.rows.map { it.logged.load.count })
+        assertEquals(listOf(false, false, false, false, true, true), read.rows.map { it.countRuled })
+    }
+
     @Test
     fun repsAreSetAgainstTheLine() {
         val result = read(
