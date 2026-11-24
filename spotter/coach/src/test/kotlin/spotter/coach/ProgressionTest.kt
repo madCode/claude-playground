@@ -484,9 +484,17 @@ class ProgressionTest {
         // A split squat from the squat, and nothing the other way.
         assertEquals(Load(15, 2), (estimate("8 x split squat", listOf(of("8 x squat", 30))) as Suggestion.Weight).load)
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x squat", listOf(of("8 x split squat", 20))))
-        // Lunges that weren't ruled on stay apart.
-        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x curtsy lunge", forward))
-        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x walking lunge", forward))
+        // Walking is the same lunge; a curtsy or cross-back lunge starts lighter, the two are
+        // one move, and neither says anything of a lateral lunge.
+        assertEquals(Load(25, 2), (estimate("8 x walking lunge", forward) as Suggestion.Weight).load)
+        assertEquals(Load(20, 2), (estimate("8 x curtsy lunge", forward) as Suggestion.Weight).load)
+        assertEquals(Load(20, 2), (estimate("8 x cross-back lunge", forward) as Suggestion.Weight).load)
+        assertEquals(Load(15, 2), (estimate("8 x cross-back lunge", listOf(of("8 x curtsy lunge", 15))) as Suggestion.Weight).load)
+        assertEquals(Load(15, 2), (estimate("8 x walking lunge", listOf(of("8 x curtsy lunge", 15))) as Suggestion.Weight).load)
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x curtsy lunge", listOf(of("8 x lateral lunge", 15))))
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x lateral lunge", listOf(of("8 x curtsy lunge", 15))))
+        // Other lunge-like moves stay apart.
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x step-up", forward))
         // The lift's own wording is nearer than its kin: the goblet reverse lunge's own plain
         // version decides, not the heavier forward lunge.
         val both = forward + of("8 x reverse lunge", 15)

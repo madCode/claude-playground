@@ -24,7 +24,7 @@ or the docs rather than guess: the order may change, nothing is built on a guess
   128 with shared wordings, 140 with estimates, 158 with factors for the harder tweaks, 165 with a band no longer deciding and
   one dumbbell against two, 167 with more board lines read, 170 with lifts filed apart linked (a reverse and
   a forward lunge, a lateral lunge at 0.8, a split squat at 0.6 of the squat). Next: which
-  other movements are one lift under two names (curtsy, cross-back and walking lunges; rows).
+  other movements are one lift under two names (rows; the lunges are linked, walking at the same weight and curtsy or cross-back at 0.8).
   Then the person's own measured ratio replacing a stated factor.
   The measured ratio waits (cycle 28): a ratio measured on one movement is only sound for
   that movement, and there its one-leg version then has a log of its own, which already

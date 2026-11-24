@@ -127,19 +127,27 @@ internal object Estimated {
         else -> null
     }
 
-    private val lunges = setOf("lunge", "forward lunge", "reverse lunge")
+    private val lunges = setOf("lunge", "forward lunge", "reverse lunge", "walking lunge")
+
+    // Lunges out of the straight line: the knee and hip are loaded at an angle, so they start
+    // lighter (TRAINING.md has nothing measured; the lighter guess). A curtsy and a cross-back
+    // lunge are one move under two names.
+    private val angled = setOf("lateral lunge", "curtsy lunge", "cross-back lunge")
+    private val crossed = setOf("curtsy lunge", "cross-back lunge")
 
     /**
      * Movements filed apart that are one lift done another way, as madCode ruled on 2026-11-24:
      * what [mine] starts at against a logged [theirs], or null where they aren't linked. A step
-     * forward or back is the same lunge; a lateral lunge starts lighter; a split squat is the
+     * forward or back, or walking, is the same lunge; a lateral, curtsy or cross-back lunge
+     * starts lighter, and a lateral one says nothing of a crossed one; a split squat is the
      * squat mostly on one leg (TRAINING.md, 7). Never upwards: a squat takes nothing from a
      * split squat, and a lunge takes a lateral lunge's weight as it stands.
      */
     fun kin(mine: Movement, theirs: Movement): Double? = when {
         mine == theirs -> 1.0
-        mine.name in lunges && (theirs.name in lunges || theirs.name == "lateral lunge") -> 1.0
-        mine.name == "lateral lunge" && theirs.name in lunges -> 0.8
+        mine.name in lunges && (theirs.name in lunges || theirs.name in angled) -> 1.0
+        mine.name in angled && theirs.name in lunges -> 0.8
+        mine.name in crossed && theirs.name in crossed -> 1.0
         mine.name == "split squat" && theirs.name == "squat" -> 0.6
         else -> null
     }

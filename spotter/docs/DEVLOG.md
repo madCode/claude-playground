@@ -22,6 +22,12 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Tuesday 24 November 2026
 
+### Walking, curtsy and cross-back lunges join the linked lunges
+- **Why:** madCode: yes, link them.
+- **Shipped:** a walking lunge takes a straight lunge's weight; a curtsy or cross-back lunge
+  (one move, two names) starts at 0.8 of it, like the lateral lunge. A lateral lunge and a
+  crossed one say nothing of each other.
+
 ### A lift nobody counted takes its usual number
 - **Why:** someone importing a history with no counts file of their own had every unsaid
   count left unknown, which blocks the one-arm and alternating links. madCode: the app
