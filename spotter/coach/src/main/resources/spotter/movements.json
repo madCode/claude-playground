@@ -1231,7 +1231,8 @@
    "pattern": "core",
    "muscles": [
     "core"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "tap squat",

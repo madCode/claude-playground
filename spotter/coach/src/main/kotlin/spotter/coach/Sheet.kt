@@ -175,7 +175,11 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
         // nothing held, nor a bare push-up or plank, done without one unless the line names it.
         // A band doesn't decide it (madCode, 2026-11-24): it pulls across the lift, round the
         // wrists on a row or the knees on a squat, and says nothing of what is held.
-        internal fun wantsWeight(reading: Reading.Known): Boolean = reading.parts.any { wantsWeight(it) }
+        // In a combo the band keeps its old reading: "low band squat to lateral leg lift" is
+        // the band's own exercise, and the squat's dumbbells would be a guess.
+        internal fun wantsWeight(reading: Reading.Known): Boolean = reading.parts.any {
+            wantsWeight(it) && (reading.parts.size == 1 || it.implement != null || it.variations["band"] == null || it.variations["arms"] == "single")
+        }
 
         private fun wantsWeight(p: Part): Boolean = when (p.implement) {
             "bodyweight", "trx" -> false

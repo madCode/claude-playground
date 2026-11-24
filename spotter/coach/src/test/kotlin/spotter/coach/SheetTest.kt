@@ -104,8 +104,9 @@ class SheetTest {
     // Trap 6: bodyweight rows want no weight; a bare line does, banded or not, since a band
     // pulls across the lift and says nothing of what is held. A walk in a band is the band's.
     @Test
-    fun bodyweightAndBandedRowsWantNoWeight() {
-        val none = listOf("8 x bodyweight squat", "8 x low band lateral walk", "8 x mid band TRX low row", "8 x push-up", "8 x TRX low row", "30 sec of squat hold", "8 x squat pulses", "8 x v-up")
+    fun bodyweightRowsWantNoWeightAndABandDoesNotDecide() {
+        val none = listOf("8 x bodyweight squat", "8 x low band lateral walk", "8 x mid band TRX low row", "8 x low band high plank alt toe tap",
+            "6 x low band squat to lateral leg lift", "8 x push-up", "8 x TRX low row", "30 sec of squat hold", "8 x squat pulses", "8 x v-up")
         Sheet.make(none, emptyList(), identity).rows.forEach { assertNull(it.shown, it.suggestion) }
         val some = listOf("5 x squat", "8 x banded squat", "8 x mid band upright row", "8 x dumbbell burpee", "8 each x low band single leg hold with single arm shoulder press", "30 sec of goblet squat hold")
         Sheet.make(some, emptyList(), identity).rows.forEach { assertEquals(it.shown, Suggestion.NoNumber.NEW, it.suggestion) }

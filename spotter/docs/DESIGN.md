@@ -98,7 +98,8 @@ both are installed side by side.
     it says bodyweight or TRX; when it holds or pulses with nothing held; or when it is a
     movement done without one (push-up, plank, burpee, a walk in a band) and names nothing to
     hold. A band doesn't decide it: it pulls across the lift, and a banded row takes a weight
-    exactly when the same row without the band would. ▲ ▼ =
+    exactly when the same row without the band would. But for a combo: a banded part with
+    nothing held is the band's own exercise there ("low band squat to lateral leg lift"). ▲ ▼ =
     say what the rules decided; a change of reps alone is not a drop. An imported
     load with no count takes the row's when the row's words fix it (goblet, two dumbbells,
     single arm).

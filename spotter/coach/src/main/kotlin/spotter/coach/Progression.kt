@@ -388,7 +388,7 @@ object Progression {
         val near = log.filter { logged ->
             val p = logged.exercise.parts.singleOrNull() ?: return@filter false
             val tweaks = tweaks(p)
-            // A row the sheet gives no weight (a band with nothing held) has none to lend.
+            // A row the sheet gives no weight (pulses with nothing held) has none to lend.
             logged.judged && Sheet.wantsWeight(logged.exercise) && p.movement == part.movement && tweaks.isNotEmpty() &&
                 tweaks.all { Estimated.factor(part.movement, it.key, it.value) != null } &&
                 // A version held another way, with no stated multiple across, isn't near at all:
