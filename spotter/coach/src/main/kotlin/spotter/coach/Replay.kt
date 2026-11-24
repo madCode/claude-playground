@@ -54,7 +54,7 @@ object Replay {
     }
 
     /** Writes each class's session into [out] and says what it did in counts. */
-    fun write(historyFile: File, out: File, today: LocalDate = LocalDate.now(), rules: Rules = Rules()): String {
+    fun write(historyFile: File, out: File, today: LocalDate = LocalDate.now(), rules: Rules = Rules(), countsFile: File? = null): String {
         // Sessions are someone's training data: never into a folder git would offer to commit.
         // The folder as it really is: a link into a checkout is in it, "../.." out of one is not.
         val folder = out.canonicalFile
@@ -65,7 +65,9 @@ object Replay {
         // listed may hold one.
         require(!folder.exists() || (folder.isDirectory && folder.list()?.isEmpty() == true)) { "$out isn't an empty folder. Choose a new or empty one." }
         val identity = Identity(Vocabulary.starting())
-        val history = HistoryImport.read(historyFile.readText(), identity, today)
+        // The owner's rulings on how many dumbbells, when given: without them the run is as it was.
+        val counts = countsFile?.let { DumbbellCounts.parse(it.readText()) } ?: DumbbellCounts.NONE
+        val history = HistoryImport.read(historyFile.readText(), identity, today, counts = counts)
         val replayed = run(history, identity, rules)
         try {
             folder.mkdirs()
@@ -79,6 +81,7 @@ object Replay {
         val weighted = replayed.sumOf { r -> r.session.sets.count { it.weight != null } }
         return buildString {
             appendLine("${replayed.size} classes, $sets rows, written to $out" + if (!rules.shared) " (shared weights off)" else "")
+            if (countsFile != null) appendLine("dumbbell counts: ${counts.size} movements ruled on; ${history.rows.count { it.countRuled }} rows took their count from them")
             appendLine("$weighted rows with a weight lifted; $numbered of them had a number on the sheet")
             appendLine("rows read into history: ${history.rows.size}; left out: " + history.left.entries.joinToString { "${it.key.name.lowercase().replace('_', ' ')} ${it.value}" }.ifEmpty { "none" })
         }
@@ -87,14 +90,17 @@ object Replay {
     const val NO_CLASS = "class"
 }
 
-/** `replay <history.jsonl> <out-folder> [no-shared]`: see docs/REPLAY.md. */
+/** `replay <history.jsonl> <out-folder> [no-shared] [counts=<dumbbell_counts.yaml>]`: see docs/REPLAY.md. */
 fun main(args: Array<String>) {
-    if (args.size !in 2..3 || (args.size == 3 && args[2] != "no-shared")) {
-        System.err.println("usage: replay <history.jsonl> <out-folder> [no-shared]")
+    val flags = args.drop(2)
+    val counts = flags.filter { it.startsWith("counts=") }
+    if (args.size < 2 || counts.size > 1 || (flags - counts.toSet()).any { it != "no-shared" } || flags.count { it == "no-shared" } > 1) {
+        System.err.println("usage: replay <history.jsonl> <out-folder> [no-shared] [counts=<dumbbell_counts.yaml>]")
         exitProcess(2)
     }
     try {
-        print(Replay.write(File(args[0]), File(args[1]), rules = Rules(shared = args.size == 2)))
+        val countsFile = counts.singleOrNull()?.removePrefix("counts=")?.let(::File)
+        print(Replay.write(File(args[0]), File(args[1]), rules = Rules(shared = "no-shared" !in flags), countsFile = countsFile))
     } catch (e: Exception) {
         // The message only: a stack trace could carry a line of the file.
         System.err.println("replay failed: ${e.message}")

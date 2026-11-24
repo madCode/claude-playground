@@ -11,7 +11,11 @@ import kotlinx.serialization.json.intOrNull
 import java.time.LocalDate
 
 /** One history row as the coach reads it, with the class it was logged in. */
-data class Imported(val logged: Logged, val className: String?, val line: String?)
+data class Imported(
+    val logged: Logged, val className: String?, val line: String?,
+    /** Neither the line nor the row said how many dumbbells: the owner's counts file did. */
+    val countRuled: Boolean = false,
+)
 
 /**
  * Reads gym-coach's `history.jsonl` (docs/HISTORY-FORMAT.md) into the coach's own history.
@@ -81,8 +85,9 @@ object HistoryImport {
      * [today] bounds the dates: a row dated after it was never logged, and would outrank every
      * real one. [everyRow] also keeps each row as the file has it ([Result.all]), which only the
      * replay wants: on a phone it would hold a second copy of a history in memory for nothing.
+     * [counts] is the owner's own rulings on how many dumbbells, for the rows that don't say.
      */
-    fun read(text: String, identity: Identity, today: LocalDate, everyRow: Boolean = true): Result {
+    fun read(text: String, identity: Identity, today: LocalDate, everyRow: Boolean = true, counts: DumbbellCounts = DumbbellCounts.NONE): Result {
         val rows = mutableListOf<Imported>()
         val all = mutableListOf<Row>()
         val left = sortedMapOf<Left, Int>()
@@ -93,7 +98,7 @@ object HistoryImport {
         lines.takeLast(MAX_LINES).forEach { line ->
             val o = line.takeIf { it.length <= MAX_ROW }?.let { runCatching { json.parseToJsonElement(it) as? JsonObject }.getOrNull() }
             val date = o?.let { date(it, today) }
-            val row = if (o == null || date == null) Left.UNREADABLE else row(o, date, identity)
+            val row = if (o == null || date == null) Left.UNREADABLE else row(o, date, identity, counts)
             when (row) {
                 is Left -> left.merge(row, 1, Int::plus)
                 is Imported -> rows += row
@@ -114,11 +119,13 @@ object HistoryImport {
         o.string("date")?.let { runCatching { LocalDate.parse(it) }.getOrNull() }?.takeIf { it <= today && it.year >= 2000 }
 
     // The name an old row was filed under: its exercise, or a combo's parts.
-    private fun filedAs(o: JsonObject): String? =
-        o.string("exercise") ?: (o["components"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }?.takeIf { it.isNotEmpty() }?.joinToString(" to ")
+    private fun filedAs(o: JsonObject): String? = filed(o).takeIf { it.isNotEmpty() }?.joinToString(" to ")
+
+    private fun filed(o: JsonObject): List<String> =
+        o.string("exercise")?.let(::listOf) ?: (o["components"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }.orEmpty()
 
     // An Imported, or the reason there isn't one.
-    private fun row(o: JsonObject, date: LocalDate, identity: Identity): Any {
+    private fun row(o: JsonObject, date: LocalDate, identity: Identity, counts: DumbbellCounts): Any {
         if (o.flag("skipped")) return Left.SKIPPED
         val weight = o.number("weight")?.takeIf { it > 0 } ?: return Left.NO_WEIGHT
         // Down to a dumbbell that exists, never up: 22.5 is read as 20. The sheet can then say
@@ -136,13 +143,14 @@ object HistoryImport {
         val variant = o["variant"] as? JsonObject
         // A name that fixes the count wins (a goblet squat is one dumbbell, a single-arm press
         // one): the row's own hint is filled in by default and says "two" on single-arm lines.
-        // Where the name says nothing the hint is the only word, and without it the count
-        // stays unknown.
-        val count = Sheet.rowCount(exercise) ?: when (variant?.string("implement")) {
+        // Where the name says nothing the hint is the next word. Where neither says, the
+        // owner's counts file, by the name the row is filed under; else the count stays unknown.
+        val said = Sheet.rowCount(exercise) ?: when (variant?.string("implement")) {
             "double_dumbbell" -> 2
             "single_dumbbell", "ybell" -> 1
             else -> null
         }
+        val count = said ?: counts.count(filed(o), written)
         val reps = o.int("reps")
         val asked = o.int("prescribed_reps")
         // Not finished, though the reps may not show it: read as "felt hard", which delays a step.
@@ -176,7 +184,7 @@ object HistoryImport {
                 Logged(date, exercise, load, asked..asked, listOf(reps), hurt = flags.hurt, hard = flags.hard, easy = flags.easy)
             }
         }
-        return Imported(logged, o.string("class"), written)
+        return Imported(logged, o.string("class"), written, countRuled = said == null && count != null)
     }
 
     /**
