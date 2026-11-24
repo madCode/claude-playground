@@ -22,6 +22,17 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Tuesday 24 November 2026
 
+### A lift nobody counted takes its usual number
+- **Why:** someone importing a history with no counts file of their own had every unsaid
+  count left unknown, which blocks the one-arm and alternating links. madCode: the app
+  should start from a guess.
+- **Shipped:** ten movements carry the number they are usually done with (two for a deadlift,
+  Romanian deadlift, chest fly, lateral raise, upright row, high row, tricep kickback; one
+  for a tricep extension, good morning, halo). It is the last word, after the line, the row
+  and the owner's counts file, and the home screen says how many rows rest on it.
+- **The review caught:** the guess was applied to every wording of the lift, so a sumo
+  deadlift read as two dumbbells and doubled its goblet version. Now only the plain lift, and
+  never where the owner's file has a rule for it.
 ### Three moves named from coaches' videos
 - **Why:** "TRX bridge row" and "side plank pendulum with kickstand" read as "not sure".
   madCode: look them up as Orangetheory coaches show them.

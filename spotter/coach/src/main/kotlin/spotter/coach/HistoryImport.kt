@@ -15,6 +15,8 @@ data class Imported(
     val logged: Logged, val className: String?, val line: String?,
     /** Neither the line nor the row said how many dumbbells: the owner's counts file did. */
     val countRuled: Boolean = false,
+    /** Nobody said, the counts file included: the lift's usual number was taken ([Movement.usual]). */
+    val countAssumed: Boolean = false,
 )
 
 /**
@@ -155,7 +157,12 @@ object HistoryImport {
         // else held (a kettlebell, a Y-bell, a TRX), or a combo's parts say different counts,
         // somebody did say, and it has no word.
         val unsaid = implement in setOf(null, "dumbbell") && exercise.parts.all { it.implement in setOf(null, "dumbbell") && it.variations["arms"] != "single" }
-        val count = said ?: if (unsaid) counts.count(filed(o), written) else null
+        val ruled = if (unsaid) counts.count(filed(o), written) else null
+        // Last, the number the lift is usually done with, where the list gives one: a guess,
+        // counted apart so the screen can say how many rows rest on it. One lift only: a
+        // combo's parts needn't be held alike.
+        val usual = if (unsaid && said == null && ruled == null) usual(exercise, variant, filed(o), counts) else null
+        val count = said ?: ruled ?: usual
         val reps = o.int("reps")
         val asked = o.int("prescribed_reps")
         // Not finished, though the reps may not show it: read as "felt hard", which delays a step.
@@ -189,7 +196,25 @@ object HistoryImport {
                 Logged(date, exercise, load, asked..asked, listOf(reps), hurt = flags.hurt, hard = flags.hard, easy = flags.easy)
             }
         }
-        return Imported(logged, o.string("class"), written, countRuled = said == null && count != null)
+        return Imported(logged, o.string("class"), written, countRuled = said == null && ruled != null, countAssumed = usual != null)
+    }
+
+    /**
+     * The number of dumbbells the plain lift is usually done with, for a row nobody counted.
+     * Only the plain lift: a sumo or one-legged deadlift is as often one dumbbell, a triceps
+     * extension lying on a bench is two, and a row the file marks one-armed or one-legged isn't
+     * the usual way either. And never where the owner's file has a rule for the lift that
+     * didn't fit this line: their silence there is deliberate.
+     */
+    private fun usual(exercise: Reading.Known, variant: JsonObject?, filed: List<String>, counts: DumbbellCounts): Int? {
+        val part = exercise.parts.singleOrNull() ?: return null
+        val usual = part.movement.usual ?: return null
+        val plain = part.variations.all { SharedWeight.neutral(part.movement, it.key, it.value) }
+        val bothSides = variant?.string("arms") in setOf(null, "both") && variant?.string("stance") in setOf(null, "both", "none")
+        val owners = (filed + part.movement.name).any(counts::rulesOn)
+        // One dumbbell in both hands can't be done a side at a time.
+        val turns = usual == 1 && part.variations["alternating"] != null
+        return usual.takeIf { plain && bothSides && !owners && !turns }
     }
 
     /**

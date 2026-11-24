@@ -37,8 +37,11 @@ movements:
 - **It counts dumbbells only.** A row whose words or `variant.implement` name something else
   held (a kettlebell, a Y-bell, a TRX, bodyweight) is left as it is. So is a combo whose own
   words give its parts different counts.
-- **A movement the file leaves out stays unknown.** So does a combo whose parts get different
-  counts.
+- **A movement the file leaves out** takes the app's own usual number where it has one (a
+  plain deadlift two, a halo one), and otherwise stays unknown. A movement the file has a
+  rule for never takes that guess, even on a line the rule doesn't fit.
+- **A combo whose parts get different counts stays unknown**, and a combo never takes the
+  app's guess.
 - **All or nothing.** A file that can't be read in full is refused with a sentence saying why;
   none of it is used.
 - It is read when a history is imported (`HistoryImport`) and by the replay tool

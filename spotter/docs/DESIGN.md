@@ -346,8 +346,12 @@ reason, so the import can say what it didn't take:
   Heavier or lighter than the rack: left out, something else was held.
 - **The count** is fixed by the name where it can be (a goblet squat, a single-arm press: one),
   then by the row's own hint (two dumbbells, one, a Ybell), then by the owner's counts file
-  where one is given ([COUNTS-FORMAT.md](COUNTS-FORMAT.md): private, like the history), else
-  unknown.
+  where one is given ([COUNTS-FORMAT.md](COUNTS-FORMAT.md): private, like the history). Last,
+  the number the lift is usually done with, where the movement list gives one (a deadlift
+  two, a halo one): a starting guess for anyone's import, and the home screen says how many
+  rows rest on it. Only the plain lift: a sumo or one-legged deadlift, or a triceps extension lying on a bench,
+  is as often done the other way. And not where the owner's file has a rule for the lift that
+  didn't fit the line. A lift that goes either way (a squat, a lunge) stays unknown.
 - **The reps** are a side. The row doesn't say whether its numbers count a side or both, so the
   asked number is matched to the line: against "12 total", asked 12 is both sides (8 done is 4
   a side) and asked 6 is a side. Where it can't be told (10 against "12 total", 8 against

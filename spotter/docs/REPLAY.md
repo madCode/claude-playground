@@ -28,7 +28,9 @@ From `spotter/`:
   owner's training data. It must also be new or empty, so no session from an earlier run is
   graded with this one's.
 
-It prints three lines of counts (four with `-Pcounts`) and nothing from the history file: classes and rows written, how many
+It prints three lines of counts (four with `-Pcounts`) and nothing from the history file.
+The last line also says how many rows were read at the lift's usual number of dumbbells, a
+built-in guess for rows nobody counted (DESIGN.md, "The count"). The lines: classes and rows written, how many
 lifted rows had a number on the sheet, and how many rows were read into history or left out, by
 reason.
 

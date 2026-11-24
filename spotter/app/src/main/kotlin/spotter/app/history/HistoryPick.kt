@@ -22,6 +22,8 @@ data class HistoryState(
     val counts: Int? = null,
     /** Rows that took their count from it. */
     val ruled: Int = 0,
+    /** Rows whose count nobody said, read at the lift's usual number. */
+    val countAssumed: Int = 0,
     /** A counts file is kept that this version can't read in full, so none of it is used. */
     val countsUnread: Boolean = false,
 )
@@ -119,6 +121,7 @@ object HistoryPick {
     fun state(result: HistoryImport.Result?): HistoryState = if (result == null) HistoryState() else HistoryState(
         read = result.rows.size,
         left = result.left.entries.sortedByDescending { it.value }.map { "${it.value} ${words(it.key)}" },
+        countAssumed = result.rows.count { it.countAssumed },
     )
 
     private fun words(left: HistoryImport.Left) = when (left) {

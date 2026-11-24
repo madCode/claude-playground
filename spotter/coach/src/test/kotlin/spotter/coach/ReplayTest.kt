@@ -78,10 +78,10 @@ class ReplayTest {
     fun aReplayCanTakeTheCountsFile() {
         // Rows that don't say how many dumbbells, filed under the name the counts file rules on.
         fun lift(date: String, line: String, weight: Int) =
-            """{"date": "$date", "class": "2G", "exercise": "deadlift", "line": "$line", "variant": {"implement": null}, "weight": $weight, "reps": 8, "prescribed_reps": 8}"""
-        val rows = listOf(lift("2026-03-02", "8 x deadlift", 40), lift("2026-03-05", "8 x single arm deadlift", 20)).joinToString("\n")
+            """{"date": "$date", "class": "2G", "exercise": "squat", "line": "$line", "variant": {"implement": null}, "weight": $weight, "reps": 8, "prescribed_reps": 8}"""
+        val rows = listOf(lift("2026-03-02", "8 x squat", 40), lift("2026-03-05", "8 x single arm squat", 20)).joinToString("\n")
         val file = tmp.newFile("lifts.jsonl").apply { writeText(rows) }
-        val counts = tmp.newFile("counts.yaml").apply { writeText("schema: dumbbell-counts/1\nmovements:\n  deadlift: 2\n") }
+        val counts = tmp.newFile("counts.yaml").apply { writeText("schema: dumbbell-counts/1\nmovements:\n  squat: 2\n") }
         val plain = Replay.write(file, File(tmp.root, "plain"), today)
         assertTrue("0 of them had a number" in plain && "dumbbell counts" !in plain)
         val ruled = Replay.write(file, File(tmp.root, "ruled"), today, countsFile = counts)

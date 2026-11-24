@@ -54,22 +54,22 @@ class HistoryPickTest {
     // takes its count from them, the card says so, and both go when the history is removed.
     @Test
     fun pickedCountsFillWhatTheHistoryDidNotSay() {
-        val unsaid = """{"date": "2026-11-10", "class": "2G", "exercise": "deadlift", "line": "8 x deadlift", "variant": {"implement": null}, "weight": 40, "reps": 8, "prescribed_reps": 8}"""
+        val unsaid = """{"date": "2026-11-10", "class": "2G", "exercise": "squat", "line": "8 x squat", "variant": {"implement": null}, "weight": 40, "reps": 8, "prescribed_reps": 8}"""
         take(unsaid.toByteArray())
         assertEquals(listOf<Int?>(null), store.result(identity, today)!!.logged.map { it.load.count })
         fun counts(text: String?, tooBig: Boolean = false): HistoryState {
             HistoryPick.takeCounts(text?.toByteArray(), tooBig, store, identity, today)
             return HistoryPick.state(store, identity, today)
         }
-        val good = "schema: dumbbell-counts/1\nmovements:\n  deadlift: 2\n  halo: 1\n"
+        val good = "schema: dumbbell-counts/1\nmovements:\n  squat: 2\n  halo: 1\n"
         assertEquals(HistoryState(read = 1, counts = 2, ruled = 1), counts(good))
         assertEquals(listOf<Int?>(2), store.result(identity, today)!!.logged.map { it.load.count })
         // Kept across a restart, and a history picked afterwards is read with them too.
         assertEquals(2, HistoryStore(tmp.root).counts()?.size)
         assertEquals(1, take(unsaid.toByteArray()).ruled)
         // A file that isn't one says why and changes nothing.
-        val refused = counts("schema: dumbbell-counts/1\nmovements:\n  deadlift: 3\n")
-        assertEquals("A count should be 1 or 2: \"deadlift: 3\" The counts you have are unchanged.", refused.refused)
+        val refused = counts("schema: dumbbell-counts/1\nmovements:\n  squat: 3\n")
+        assertEquals("A count should be 1 or 2: \"squat: 3\" The counts you have are unchanged.", refused.refused)
         assertEquals(2 to 1, refused.counts to refused.ruled)
         assertEquals("That file is too big to be a list of dumbbell counts.", counts(null, tooBig = true).refused)
         assertEquals("Couldn't open that file.", counts(null).refused)

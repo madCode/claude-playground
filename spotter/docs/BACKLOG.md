@@ -141,8 +141,8 @@ Still open:
 
 - **A history row that doesn't say how many dumbbells** takes its count from madCode's own
   counts file (COUNTS-FORMAT.md), read by the import and the replay and picked on the
-  phone's home screen. Still to build: the movement list's own usual numbers as a fallback after it,
-  which madCode wants kept until one proves wrong.
+  phone's home screen. Behind it, the movement list's own usual numbers fill what is left, counted on the home
+  screen. Watch for one that proves wrong.
 
 - **Sorting a word on the review list.** How should the phone ask? Proposed first step: two
   answers only, "ignore this word" (filler) and "it's another name for …" with a movement
