@@ -22,6 +22,15 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Tuesday 24 November 2026
 
+### A lift nobody counted takes its usual number
+- **Why:** someone importing a history with no counts file of their own had every unsaid
+  count left unknown, which blocks the one-arm and alternating links. madCode: the app
+  should start from a guess.
+- **Shipped:** ten movements carry the number they are usually done with (two for a deadlift,
+  Romanian deadlift, chest fly, lateral raise, upright row, high row, tricep kickback; one
+  for a tricep extension, good morning, halo). It is the last word, after the line, the row
+  and the owner's counts file, and the home screen says how many rows rest on it.
+
 ### Lifts filed under different names lend each other a first number
 - **Why:** a reverse lunge after months of forward lunges said "new: go light". madCode had
   agreed the set: forward and reverse the same, lateral at 0.8, a split squat at 0.6.

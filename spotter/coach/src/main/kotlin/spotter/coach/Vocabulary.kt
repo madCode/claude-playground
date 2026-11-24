@@ -16,6 +16,12 @@ data class Movement(
     val oneLeg: Boolean = false,
     /** Done without a weight unless the line names one: a bare "push-up" wants none (trap 6). */
     val bodyweight: Boolean = false,
+    /**
+     * How many dumbbells it is usually done with on these boards when nobody says: 2, or 1 held
+     * in both hands. A starting guess for an imported history, behind the row's own words and
+     * the owner's counts file. Null where it goes either way (a squat, a lunge).
+     */
+    val usual: Int? = null,
 )
 
 /** What a phrase on a board line means. Every phrase means exactly one thing. */

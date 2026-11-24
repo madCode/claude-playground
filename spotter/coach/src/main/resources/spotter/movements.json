@@ -113,7 +113,8 @@
     "back",
     "glutes",
     "hamstrings"
-   ]
+   ],
+   "usual": 2
   },
   {
    "name": "romanian deadlift",
@@ -127,7 +128,8 @@
     "hamstrings",
     "glutes",
     "posterior chain"
-   ]
+   ],
+   "usual": 2
   },
   {
    "name": "good morning",
@@ -138,7 +140,8 @@
    "muscles": [
     "hamstrings",
     "posterior chain"
-   ]
+   ],
+   "usual": 1
   },
   {
    "name": "hip thrust",
@@ -488,7 +491,8 @@
    "pattern": "fly",
    "muscles": [
     "chest"
-   ]
+   ],
+   "usual": 2
   },
   {
    "name": "push-up",
@@ -549,7 +553,8 @@
    "muscles": [
     "back",
     "shoulders"
-   ]
+   ],
+   "usual": 2
   },
   {
    "name": "renegade row",
@@ -586,7 +591,8 @@
    "muscles": [
     "shoulders",
     "back"
-   ]
+   ],
+   "usual": 2
   },
   {
    "name": "high pull",
@@ -699,7 +705,8 @@
    "pattern": "triceps",
    "muscles": [
     "triceps"
-   ]
+   ],
+   "usual": 1
   },
   {
    "name": "skull crusher",
@@ -721,7 +728,8 @@
    "pattern": "triceps",
    "muscles": [
     "triceps"
-   ]
+   ],
+   "usual": 2
   },
   {
    "name": "lateral raise",
@@ -733,7 +741,8 @@
    "pattern": "raise",
    "muscles": [
     "shoulders"
-   ]
+   ],
+   "usual": 2
   },
   {
    "name": "front raise",
@@ -811,7 +820,8 @@
    "muscles": [
     "core",
     "shoulders"
-   ]
+   ],
+   "usual": 1
   },
   {
    "name": "woodchopper",

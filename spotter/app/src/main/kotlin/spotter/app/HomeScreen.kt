@@ -77,6 +77,9 @@ private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: (
             } else {
                 Text("History imported: ${history.read} rows read.", fontSize = 14.sp, color = grey)
                 if (history.left.isNotEmpty()) Text("Left out: ${history.left.joinToString(", ")}.", fontSize = 14.sp, color = grey)
+                if (history.countAssumed > 0) {
+                    Text("${history.countAssumed} ${if (history.countAssumed == 1) "row" else "rows"} didn't say how many dumbbells: read as the lift's usual number.", fontSize = 14.sp, color = grey)
+                }
                 history.counts?.let {
                     Text("Your dumbbell counts: $it ${if (it == 1) "lift" else "lifts"}; ${history.ruled} ${if (history.ruled == 1) "row" else "rows"} took the count from them.", fontSize = 14.sp, color = grey)
                 }

@@ -33,7 +33,8 @@ class HistoryImportTest {
         val result = read(
             row("8 x chest press", "25.0", 8, 8, "double_dumbbell"),
             row("8 x goblet squat", "40", 8, 8),
-            row("8 x deadlift", "22.5", 8, 8),
+            // A squat is done with one dumbbell or two: nobody said, so nobody knows.
+            row("8 x squat", "22.5", 8, 8),
             row("8 x deadlift", "30", 8, 8, "ybell"),
             // The name fixes the count: the hint says "two" by default on single-arm lines.
             row("8 each x single arm shoulder press", "15", 8, 8, "double_dumbbell"),
@@ -48,18 +49,43 @@ class HistoryImportTest {
 
     // Reported and asked reps are in the same terms, so the shortfall is what carries over, onto
     // the line's own reps a side: 12 of "12 total" is 6 a side done, not 12 (trap 7).
+    // Last of all, the number the lift is usually done with, and the row is counted as a
+    // guess. A lift that goes either way stays unknown, and anyone's word comes first: the
+    // line's, the row's, the owner's counts file, even where the file says otherwise.
+    @Test
+    fun aLiftNobodyCountedTakesItsUsualNumber() {
+        val rows = arrayOf(
+            row("8 x deadlift", "40", 8, 8, exercise = "deadlift"), row("8 x chest fly", "15", 8, 8, exercise = "chest fly"),
+            row("8 x tricep extension", "20", 8, 8, exercise = "tricep extension"), row("8 x reverse lunge", "20", 8, 8, exercise = "reverse lunge"),
+            row("8 x deadlift", "40", 8, 8, implement = "single_dumbbell", exercise = "deadlift", date = "2026-03-04"),
+            row("8 x single arm deadlift", "20", 8, 8, exercise = "deadlift", date = "2026-03-05"),
+            row("8 x kettlebell deadlift", "40", 8, 8, exercise = "deadlift", date = "2026-03-06"),
+            row("8 x deadlift to chest fly", "15", 8, 8, date = "2026-03-07"),
+        )
+        val read = read(*rows)
+        assertEquals(listOf(2, 2, 1, null, 1, 1, null, null), read.rows.map { it.logged.load.count })
+        assertEquals(listOf(true, true, true, false, false, false, false, false), read.rows.map { it.countAssumed })
+        // Which lets the plain lift lend to the one-armed one: the sheet has a number.
+        val sheet = Sheet.make(listOf("8 x single arm chest fly"), read.logged, identity)
+        assertEquals(Load(15, 1), (sheet.rows.single().suggestion as Suggestion.Weight).load)
+        // The owner's file comes first, and its rows aren't counted as guesses.
+        val counts = DumbbellCounts.parse("schema: dumbbell-counts/1\nmovements:\n  deadlift: 1\n")
+        val ruled = HistoryImport.read(rows.joinToString("\n"), identity, today, counts = counts)
+        assertEquals(listOf(1 to false, 2 to true), ruled.rows.take(2).map { it.logged.load.count to it.countAssumed })
+    }
+
     // The owner's counts file fills the count only where neither the line nor the row says
     // one, by the name the row is filed under; then the plain lift can lend to the one-armed.
     @Test
     fun theCountsFileFillsOnlyWhatNobodySaid() {
         val rows = arrayOf(
-            row("8 x deadlift", "40", 8, 8, exercise = "deadlift"),
-            row("8 x chest fly", "15", 8, 8, exercise = "chest fly"),
-            row("8 x deadlift", "40", 8, 8, implement = "single_dumbbell", exercise = "deadlift", date = "2026-03-04"),
-            row("8 x single arm deadlift", "20", 8, 8, exercise = "deadlift", date = "2026-03-05"),
-            row("8 x sumo deadlift", "45", 8, 8, exercise = "deadlift", date = "2026-03-06"),
+            row("8 x squat", "40", 8, 8, exercise = "squat"),
+            row("8 x bicep curl", "15", 8, 8, exercise = "bicep curl"),
+            row("8 x squat", "40", 8, 8, implement = "single_dumbbell", exercise = "squat", date = "2026-03-04"),
+            row("8 x single arm squat", "20", 8, 8, exercise = "squat", date = "2026-03-05"),
+            row("8 x sumo squat", "45", 8, 8, exercise = "squat", date = "2026-03-06"),
         )
-        val counts = DumbbellCounts.parse("schema: dumbbell-counts/1\nmovements:\n  deadlift: {count: 2, unless_line_has: {sumo: 1}}\n")
+        val counts = DumbbellCounts.parse("schema: dumbbell-counts/1\nmovements:\n  squat: {count: 2, unless_line_has: {sumo: 1}}\n")
         val read = HistoryImport.read(rows.joinToString("\n"), identity, today, counts = counts)
         assertEquals(listOf(2, null, 1, 1, 1), read.rows.map { it.logged.load.count })
         assertEquals(listOf(true, false, false, false, true), read.rows.map { it.countRuled })
