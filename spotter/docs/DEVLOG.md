@@ -33,6 +33,25 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 - **The review caught:** the guess was applied to every wording of the lift, so a sumo
   deadlift read as two dumbbells and doubled its goblet version. Now only the plain lift, and
   never where the owner's file has a rule for it.
+### Three moves named from coaches' videos
+- **Why:** "TRX bridge row" and "side plank pendulum with kickstand" read as "not sure".
+  madCode: look them up as Orangetheory coaches show them.
+- **Shipped:** "TRX bridge row" (a row on the straps with the hips held up: one move; a bare "bridge row" stays unread) and "side
+  plank pendulum" (a side plank with the top leg swinging; "with kickstand" is the easier
+  support). Both are done with nothing held, so the sheet says "no weight".
+- **Also:** "cross carry to halo" reads as the coaches' "cross catch halo" (one weight brought
+  up with one hand, caught at the chest with the other, circled round the head). No coach
+  source uses the board's name; madCode recognised the move from its description. It is its
+  own exercise and borrows nothing from a plain halo.
+### A step earned long ago is held once first
+- **Why:** two clean sessions at a weight, then months without the lift, and the sheet still
+  said to go up. madCode: hold.
+- **Shipped:** when the lift was last done more than eight weeks before the class, a step up
+  isn't taken or offered as a test; the sheet holds the weight last done and says how long
+  it has been. A typed-in row and the replay follow the same rule.
+- **The review caught:** the gap was measured from the session the number rests on, so
+  someone doing the lift weekly at other reps was held; the reason promised "then up" where
+  a twinge, a big jump or other reps decide otherwise; a typed-in row didn't get the date.
 
 ### Lifts filed under different names lend each other a first number
 - **Why:** a reverse lunge after months of forward lunges said "new: go light". madCode had

@@ -144,12 +144,6 @@ Still open:
   phone's home screen. Behind it, the movement list's own usual numbers fill what is left, counted on the home
   screen. Watch for one that proves wrong.
 
-- **A step earned long ago.** Two clean sessions at 30, then nothing for five months: the
-  sheet still says 35. The eight-week limit only covers a heavier weight vouching for a lighter
-  one. Should an earned step, or any number, go stale after a long gap, and to what: hold, or
-  "new: go light"? The research (TRAINING.md, 9) says strength falls after about a month of no
-  training at all, and comes back fast.
-
 - **Sorting a word on the review list.** How should the phone ask? Proposed first step: two
   answers only, "ignore this word" (filler) and "it's another name for …" with a movement
   picked from a search box. An answer changes how every later board reads, so it shouldn't be

@@ -583,6 +583,20 @@
    ]
   },
   {
+   "name": "trx bridge row",
+   "aliases": [
+    "strap bridge row",
+    "trx bridge rows"
+   ],
+   "pattern": "horizontal_pull",
+   "muscles": [
+    "back",
+    "biceps",
+    "glutes"
+   ],
+   "bodyweight": true
+  },
+  {
    "name": "upright row",
    "aliases": [
     "upright rows"
@@ -822,6 +836,19 @@
     "shoulders"
    ],
    "usual": 1
+  },
+  {
+   "name": "cross catch halo",
+   "aliases": [
+    "cross catch to halo",
+    "cross carry halo",
+    "cross carry to halo"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "shoulders"
+   ]
   },
   {
    "name": "woodchopper",
@@ -1554,6 +1581,20 @@
    "pattern": "core",
    "muscles": [
     "core"
+   ],
+   "bodyweight": true
+  },
+  {
+   "name": "side plank pendulum",
+   "aliases": [
+    "low side plank pendulum",
+    "high side plank pendulum",
+    "side plank pendulums"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "glutes"
    ],
    "bodyweight": true
   },

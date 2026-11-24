@@ -135,6 +135,8 @@ data class Rules(
     val shared: Boolean = true,
     /** A lift never logged in these words takes an estimate from a near version of it ([Estimated]). */
     val estimates: Boolean = true,
+    /** The day the sheet is for, so a step earned long before it can wait; null where no day is known. */
+    val today: java.time.LocalDate? = null,
 )
 
 object Progression {
@@ -158,7 +160,10 @@ object Progression {
             between.all { it.outcome == Outcome.CLEAN || it.outcome == Outcome.IN_RANGE }
     }
 
-    /** How long a heavier weight done clean still vouches for a lighter one (madCode, 2026-11-23). */
+    /**
+     * How long a heavier weight done clean still vouches for a lighter one (madCode, 2026-11-23),
+     * and how long an earned step up stays good to take.
+     */
     private const val COMEBACK_WEEKS = 8L
 
     /** A step more than this much heavier is a big jump: the sheet holds and offers a test. */
@@ -255,6 +260,20 @@ object Progression {
             basis.outcome == Outcome.NEAR_MISS -> held.also { reasons += "a near miss at ${basis.load.label}: same again" }
             else -> Rack.down(held)?.also { reasons += "missed at ${basis.load.label}: down a step" }
                 ?: held.also { reasons += "missed at ${basis.load.label}, the lightest there is: same again" }
+        }
+
+        // A step earned before a long gap waits (madCode, 2026-11-24): the weight is held first.
+        // The gap is since the lift was last done, at any reps and however it went: someone who
+        // kept at it at 10s, or tried it last week and felt a twinge, hasn't been away from it. No promise of what comes next: a twinge, a big jump or
+        // other reps may each decide otherwise.
+        val lastDone = last.date
+        if (rules.today != null && lastDone.isBefore(rules.today.minusWeeks(COMEBACK_WEEKS)) && (lb > held || test != null)) {
+            lb = held
+            test = null
+            val weeks = java.time.temporal.ChronoUnit.WEEKS.between(lastDone, rules.today)
+            reasons.clear()
+            reasons += if (basis.anchor == to) "clean at ${basis.load.label}, but it's $weeks weeks since you did this: same again first"
+            else "done at ${basis.load.label}, $weeks weeks ago"
         }
 
         // ▲ ▼ = say what the rules decided, not what a change of reps converted to.

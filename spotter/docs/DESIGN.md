@@ -62,7 +62,10 @@ both are installed side by side.
     dumbbell and two aren't the same weight. Coming back to a weight done clean before isn't
     new: a clean session at the same weight counts however old, and one at a heavier weight if
     it was within the eight weeks before (TRAINING.md, 9). After longer the lighter weight
-    earns its step with two sessions of its own. A weight lifted above the sheet's number becomes the number and waits its own two;
+    earns its step with two sessions of its own. A step up isn't taken when the lift was last
+    done, at any reps, more than eight weeks before the class (madCode, 2026-11-24): the sheet
+    holds the weight last done, says how long it has been, and offers no test. At the same
+    reps one clean session at it then takes the step. A weight lifted above the sheet's number becomes the number and waits its own two;
     one that twinged isn't taken up. A big jump's test weight is offered once the weight has settled.
     A clean set that "felt hard" waits a session before stepping up (TRAINING.md, 3).
     Each rep count keeps its own history: the last time these reps were asked is the basis,
@@ -165,7 +168,7 @@ what is on the board, and nothing says so.
   "finisher", "count & remember reps"). A word that is none of these leaves the row unsure: it
   is shown, it can be logged, but it borrows no number.
 - **A full read can still be wrong**, so the reader also refuses these, found on the corpus:
-  - two movements side by side with no connector ("bench bird dog low row", "TRX bridge row");
+  - two movements side by side with no connector ("bench bird dog low row");
   - a word that means one thing on one movement and another elsewhere ("wide" is a stance on
     a squat and a grip on a curl; so are "close" and "narrow"), so such words are only listed with the word that settles
     them ("wide stance", "wide grip");
