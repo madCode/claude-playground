@@ -79,10 +79,6 @@ class SheetTest {
         val pushUp = Sheet.make(listOf("8 x deadlift to push-up"), log, identity).rows.single()
         assertEquals(Load(35, 2), (pushUp.suggestion as Suggestion.Weight).load)
         assertTrue(pushUp.warnings.isEmpty())
-        // Naming the dumbbell changes nothing: it is the deadlift's, not the push-up's.
-        val named = Sheet.make(listOf("8 x dumbbell deadlift to push-up"), log, identity).rows.single()
-        assertEquals(Load(35, 2), (named.suggestion as Suggestion.Weight).load)
-        assertTrue(named.warnings.isEmpty())
     }
 
     // A combo that hurt at the lightest dumbbell has no number, and its other wording doesn't

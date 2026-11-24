@@ -137,8 +137,8 @@ what is on the board, and nothing says so.
     round (trap 8).
   - A number that belongs to the exercise stays in it: "12 x 2 dumbbell bench bridge" is 12
     reps of a two-dumbbell bridge.
-  - A count after "to" ("deadlift to 2 x calf raise") says how often the second part is done
-    and is passed over. A count anywhere else in the words leaves the line "not sure".
+  - A small count right after "to" ("deadlift to 2 x calf raise") says how often the second
+    part is done and is passed over. A count anywhere else in the words leaves the line "not sure".
   - Labels ("Finisher:", "Bonus:", "Buy-in:"), a side ("(R)", "on left") and a trailing "rest"
     come off.
   - Lines that tell the class something ("Goal: match or beat…", "Repeat until time is

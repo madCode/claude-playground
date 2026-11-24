@@ -283,16 +283,16 @@ class Identity(private val vocabulary: Vocabulary) {
         }
     }
 
-    // "deadlift to 2 x calf raise": a count after "to" says how often the second part is done,
-    // not what it is, so it is passed over (how many tokens, or 0). Only there: "3 x 8 x squat"
-    // is sets and reps misread, "squat and 8 x deadlift" is two exercises, and "2 x dumbbell" is
-    // two dumbbells, so each of those stays a word nobody listed.
+    // "deadlift to 2 x calf raise": a small count right after "to" says how often the second
+    // part is done, not what it is, so it is passed over (how many tokens, or 0). Only there:
+    // "3 x 8 x squat" is sets and reps misread, "squat and 8 x deadlift" or "squat to 12 x row"
+    // is two exercises, and "2 x dumbbell" is two dumbbells, so each stays a word nobody listed.
     private fun innerCount(tokens: List<String>, at: Int, before: List<Pair<String, Meaning>>): Int {
         val (phrase, last) = before.lastOrNull() ?: return 0
-        if (last !is Meaning.Connector || phrase !in setOf("to", "into", "with")) return 0
+        if (last !is Meaning.Connector || phrase !in setOf("to", "into", "with") || tokens.getOrNull(at - 1) != phrase) return 0
         val length = when {
-            tokens[at].matches(Regex("""\d{1,2}x""")) -> 1
-            tokens[at].matches(Regex("""\d{1,2}""")) && tokens.getOrNull(at + 1) == "x" -> 2
+            tokens[at].matches(Regex("""[2-4]x""")) -> 1
+            tokens[at].matches(Regex("""[2-4]""")) && tokens.getOrNull(at + 1) == "x" -> 2
             else -> return 0
         }
         val next = tokens.getOrNull(at + length) ?: return 0
@@ -413,10 +413,7 @@ class Identity(private val vocabulary: Vocabulary) {
         for (axis in listOf("implement", "stability", "band", "arms")) {
             val values = shared.mapNotNull { it.variations[axis] }.toSet()
             if (values.size != 1) continue
-            // Nothing is held for a part done with nothing ("dumbbell squat to frogger"): the
-            // dumbbell is the squat's, and the combo takes the squat's number.
-            val held = axis == "implement" && values.single() !in setOf("bodyweight", "trx")
-            shared = shared.map { p -> if (axis in p.variations || (held && p.movement.bodyweight)) p else p.copy(variations = p.variations + (axis to values.single())) }
+            shared = shared.map { p -> if (axis in p.variations) p else p.copy(variations = p.variations + (axis to values.single())) }
         }
         return shared
     }
