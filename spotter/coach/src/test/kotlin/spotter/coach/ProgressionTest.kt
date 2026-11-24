@@ -480,9 +480,13 @@ class ProgressionTest {
         // Logged in these words with nothing to judge, as an import can be: no estimate over it.
         val unjudged = pressed + Logged(day(3), exercise("8 x incline chest press"), Load(15, 2), 8..8, emptyList())
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x incline chest press", unjudged))
-        // A banded row with nothing held has no weight to lend.
+        // A band pulls across the lift: the banded row and the plain one take the same dumbbell.
         val banded = listOf(logged(1, 15, listOf(8, 8), ex = exercise("8 x mid band upright row")))
-        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x upright row", banded))
+        assertEquals(Load(15, 2), (estimate("8 x upright row", banded) as Suggestion.Weight).load)
+        assertEquals(Load(15, 2), (estimate("8 x mid band upright row", listOf(logged(1, 15, listOf(8, 8), ex = exercise("8 x upright row")))) as Suggestion.Weight).load)
+        // A row the sheet gives no weight (pulses with nothing held, which an import can still
+        // have a number for) has none to lend.
+        assertEquals(Suggestion.NoNumber.NEW, estimate("8 x squat", listOf(logged(1, 15, listOf(8, 8), ex = exercise("8 x squat pulses")))))
         // Sumo is a stance for a squat or a deadlift.
         assertEquals(Suggestion.NoNumber.NEW, estimate("8 x sumo calf raise", listOf(logged(1, 30, listOf(8, 8), ex = exercise("8 x calf raise")))))
         // A version that twinged lends nothing, nor a tweak nobody ruled on, nor another lift.

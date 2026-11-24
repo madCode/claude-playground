@@ -95,8 +95,10 @@ both are installed side by side.
     complex:") names part of that block. A combo with no history of its own takes the lightest
     of its weighted parts, but only when every one has a number of its own and all are held the
     same way; otherwise it has none, and says which part is missing. A row wants no weight when
-    it says bodyweight or TRX; when it wears a band, holds or pulses with nothing held; or when
-    it is a movement done without one (push-up, plank, burpee) and names nothing to hold. ▲ ▼ =
+    it says bodyweight or TRX; when it holds or pulses with nothing held; or when it is a
+    movement done without one (push-up, plank, burpee, a walk in a band) and names nothing to
+    hold. A band doesn't decide it: it pulls across the lift, and a banded row takes a weight
+    exactly when the same row without the band would. ▲ ▼ =
     say what the rules decided; a change of reps alone is not a drop. An imported
     load with no count takes the row's when the row's words fix it (goblet, two dumbbells,
     single arm).
@@ -200,7 +202,7 @@ what is on the board, and nothing says so.
     double what the legs move, and a swing or pullover is one dumbbell in both hands.
   - "explosive": faster, not heavier.
   - a band worn while holding a dumbbell: it pulls where the dumbbell doesn't (on a squat, the
-    hips sideways). A banded row with nothing held still has no weight, to give or to lend.
+    hips sideways; on a row, the wrists apart).
   - sumo stance, on a squat or deadlift: with a barbell it lifts the same or a little less
     (TRAINING.md, 10).
   - incline or decline, on a press or fly; kneeling or half kneeling, on a lift the legs don't

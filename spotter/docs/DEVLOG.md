@@ -22,6 +22,14 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Tuesday 24 November 2026
 
+### A band doesn't decide whether a row takes a weight
+- **Why:** "mid band upright row" showed "no weight", read as a band with nothing held. madCode
+  sent a picture of a banded row: the band is round the wrists, pulled apart, across the lift.
+- **Shipped:** a banded row takes a weight exactly when the same row without the band would,
+  and the two lend each other their number as an estimate. A lateral walk in a band stays
+  weightless (madCode doesn't recall holding anything for one).
+- **On the yardstick:** 165 of 361 rows with a number (158 before).
+
 ### Harder tweaks start lighter, and one dumbbell against two
 - **Why:** madCode approved the rest of the tweaks after a research round on which of them
   "the same weight" would be clearly wrong for.

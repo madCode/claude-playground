@@ -1408,7 +1408,8 @@
    "pattern": null,
    "muscles": [
     "glutes"
-   ]
+   ],
+   "bodyweight": true
   },
   {
    "name": "t-spine rotation",

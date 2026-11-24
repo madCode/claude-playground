@@ -13,7 +13,7 @@ data class SheetRow(
     val reading: Reading,
     /** Reps a side the row asks for (the first round of a ladder); null when timed. */
     val target: IntRange?,
-    /** Null when the row wants no weight: bodyweight, or banded with nothing held. */
+    /** Null when the row wants no weight: bodyweight, or a movement done without one. */
     val suggestion: Suggestion?,
     /** Said before the number: "not sure what this is", a part with no number. */
     val warnings: List<String>,
@@ -171,15 +171,15 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
             return SheetRow(id, block, line, reading, target, suggestion, warnings, lastHeld)
         }
 
-        // Trap 6: a bare squat wants a weight. Bodyweight and TRX don't, nor a band, hold or pulse
-        // with nothing held, nor a bare push-up or plank, done without one unless the line names it.
+        // Trap 6: a bare squat wants a weight. Bodyweight and TRX don't, nor a hold or pulse with
+        // nothing held, nor a bare push-up or plank, done without one unless the line names it.
+        // A band doesn't decide it (madCode, 2026-11-24): it pulls across the lift, round the
+        // wrists on a row or the knees on a squat, and says nothing of what is held.
         internal fun wantsWeight(reading: Reading.Known): Boolean = reading.parts.any { wantsWeight(it) }
 
         private fun wantsWeight(p: Part): Boolean = when (p.implement) {
             "bodyweight", "trx" -> false
-            null -> !p.movement.bodyweight && p.variations["mode"] != "hold" && p.variations["tempo"] != "pulse" &&
-                // A band with nothing held, unless one arm says a dumbbell is in it.
-                (p.variations["band"] == null || p.variations["arms"] == "single")
+            null -> !p.movement.bodyweight && p.variations["mode"] != "hold" && p.variations["tempo"] != "pulse"
             else -> true
         }
 
