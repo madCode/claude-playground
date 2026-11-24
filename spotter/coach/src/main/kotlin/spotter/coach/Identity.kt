@@ -160,24 +160,67 @@ internal object Estimated {
     /** The stronger grip on a curl: its weight says too much for the plain one (TRAINING.md, 11). */
     fun stronger(movement: Movement, axis: String, value: String) = axis == "grip" && movement.pattern == "curl" && value in setOf("hammer", "neutral")
 
-    /** How a reason names the version an estimate came from: every word that tells it apart. */
-    fun name(exercise: Reading.Known): String = exercise.parts.joinToString(" to ") { p ->
-        (p.variations.toSortedMap().map { (axis, value) ->
+    // The order a person says them in: how the sides take turns, what is held and worn, how
+    // one stands or lies, then how it is moved, nearest the movement's name.
+    private val order = listOf("alternating", "arms", "band", "implement", "legs", "lying", "torso", "position", "grip", "tempo", "range", "direction")
+
+    /**
+     * How the card and a reason name an exercise: its movement with every word that tells it
+     * apart, as a person would say it, not the key it is filed under. What a combo's parts all
+     * share is said once, in front.
+     */
+    fun name(exercise: Reading.Known): String {
+        val shared = if (exercise.parts.size == 1) emptySet() else exercise.parts.map { it.variations.entries }.reduce { a, b -> a intersect b }
+        val parts = exercise.parts.joinToString(" to ") { p -> words(p, p.variations.entries - shared) }
+        return (said(exercise.parts.first(), shared).first + parts).joinToString(" ")
+    }
+
+    private fun words(p: Part, entries: Set<Map.Entry<String, String>>): String {
+        val (before, after) = said(p, entries)
+        return (before + p.movement.name + after).joinToString(" ")
+    }
+
+    // The words that go before the movement's name, and the ones that follow it.
+    private fun said(p: Part, entries: Set<Map.Entry<String, String>>): Pair<List<String>, List<String>> {
+        val sorted = entries.sortedBy { order.indexOf(it.key).let { i -> if (i < 0) order.size else i } }
+        val before = sorted.mapNotNull { (axis, value) ->
             when (axis) {
                 "alternating" -> "alternating"
                 "arms" -> if (value == "single") "single arm" else value
-                "legs" -> if (value == "single") "single leg" else value
-                "band" -> "banded"
+                "legs" -> when (value) {
+                    "single" -> "single leg"
+                    "split", "wide", "staggered" -> "$value stance"
+                    else -> value
+                }
+                "band" -> if (value == "on") "banded" else "$value band"
                 "grip" -> "$value grip"
                 "implement" -> when (value) {
-                    "one dumbbell, both hands" -> "one-dumbbell"
+                    "one dumbbell, both hands" -> if (p.movement.pattern in setOf("squat", "lunge")) "goblet" else "one-dumbbell"
                     "two dumbbells" -> "two-dumbbell"
                     else -> value
                 }
+                "tempo" -> when (value) {
+                    "pulse" -> "pulsing"
+                    "stick" -> null
+                    else -> value
+                }
+                // Said after the name, below; and a position the movement is named for ("high
+                // plank" on a plank) isn't said twice.
+                "mode", "stability" -> null
+                "position" -> value.takeUnless { p.movement.name in it }
                 // A yes-or-no axis is said by its name: "lying".
                 else -> if (value == "yes") axis else value
             }
-        } + p.movement.name).joinToString(" ")
+        }
+        val after = sorted.mapNotNull { (axis, value) ->
+            when {
+                axis == "mode" -> value
+                axis == "tempo" && value == "stick" -> "(stick it)"
+                axis == "stability" -> if (value == "bosu") "on a bosu" else "($value)"
+                else -> null
+            }
+        }
+        return before to after
     }
 }
 

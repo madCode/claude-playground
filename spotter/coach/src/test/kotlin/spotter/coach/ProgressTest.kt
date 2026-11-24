@@ -90,7 +90,7 @@ class ProgressTest {
         // Named as a person would say it, not by the key it is filed under.
         assertEquals(listOf("alternating chest press" to true, "chest press" to false), apart.next.map { it.exercise to it.ready }.sortedBy { it.first })
         val said = Progress.of(listOf(logged(20, exercise("8 x floor chest fly"), 25), logged(22, exercise("8 x floor chest fly"), 25), logged(22, exercise("8 x goblet lateral shift"), 30, count = 1)), today)
-        assertEquals(listOf("floor chest fly", "one-dumbbell lateral shift"), said.next.map { it.exercise }.sorted())
+        assertEquals(listOf("floor chest fly", "goblet lateral shift"), said.next.map { it.exercise }.sorted())
     }
 
     @Test
