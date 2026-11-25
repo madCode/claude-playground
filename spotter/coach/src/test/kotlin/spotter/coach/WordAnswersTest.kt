@@ -35,6 +35,38 @@ class WordAnswersTest {
         assertEquals(lists.longestPhrase, lists.with(over).longestPhrase)
     }
 
+    // A word the reader settles by its neighbours takes no answer, even one already on file:
+    // "press" after a squat is a shoulder press, and one answer would undo that everywhere.
+    @Test
+    fun aWordReadByItsNeighboursTakesNoAnswer() {
+        val plain = (read("8 x squat to press", emptyList()) as Reading.Known).key
+        assertEquals("squat + shoulder press", plain)
+        for (bad in listOf(WordAnswer("press"), WordAnswer("press", "chest press"), WordAnswer("rotation"), WordAnswer("reach"), WordAnswer("2 x"))) {
+            assertEquals(bad.toString(), false, WordAnswers.sortable(bad.word))
+            assertEquals(plain, (read("8 x squat to press", listOf(bad)) as Reading.Known).key)
+        }
+        assertEquals("squat [implement=two dumbbells]", (read("8 x 2 dumbbell squat", listOf(WordAnswer("2 x"))) as Reading.Known).key)
+        assertTrue(WordAnswers.sortable("head smasher"))
+        assertEquals(false, WordAnswers.sortable("y".repeat(WordAnswers.MAX_CHARS + 1)))
+    }
+
+    // What is said back is what will happen, and an answer that would do nothing isn't kept.
+    @Test
+    fun theSayBackIsWhatTheAnswerDoes() {
+        fun say(line: String, answer: WordAnswer) = WordAnswers.sayBack(line, answer, emptyList(), lists)
+        assertEquals(
+            WordAnswers.SayBack("\"head smasher\" will be read as tricep extension on every board, with its history and weight. This line will read as tricep extension.", true),
+            say("12 x head smasher", WordAnswer("head smasher", "tricep extension")),
+        )
+        val other = say("12 x frobnicated head smasher", WordAnswer("head smasher", "tricep extension"))
+        assertEquals(true to true, other.keep to other.text.endsWith("This line stays \"not sure\" until frobnicated is known too."))
+        assertEquals("\"zorbed\" will be passed over on every board. This line will read as shoulder press.", say("10 x zorbed shoulder press", WordAnswer("zorbed")).text)
+        // The words aren't side by side on the line, so the phrase never matches it.
+        assertEquals(false, say("8 x zorbed squat frobnicated", WordAnswer("zorbed frobnicated")).keep)
+        // Another name that makes two exercises side by side.
+        assertEquals(false, say("8 x zottman curl", WordAnswer("zottman", "bicep curl")).keep)
+    }
+
     // Answers are replaced by word, undone by word, and survive being written and read.
     @Test
     fun answersAreKeptByWord() {

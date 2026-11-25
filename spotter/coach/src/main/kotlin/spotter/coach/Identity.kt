@@ -298,6 +298,15 @@ class Identity(private val vocabulary: Vocabulary) {
     // "dumbbell goblet …" is one dumbbell in both hands: goblet says how the dumbbell is held.
     private val refines = mapOf("hands on bosu" to "bosu", "feet on bosu" to "bosu", "one dumbbell, both hands" to "dumbbell")
 
+    companion object {
+        /**
+         * Words in no list that are read by what stands beside them ([fromNeighbours]). One
+         * answer for such a word would be read first on every line, and change the lines its
+         * neighbours settle today ("squat to press" is a shoulder press), so it takes none.
+         */
+        val byNeighbours = setOf("rotation", "reach", "press")
+    }
+
     // Words that name a movement only next to certain others, as madCode read the boards
     // (2026-11-22): "with rotation" is a torso rotation, while "trx rotation chest press" isn't;
     // a bare "press" after a squat or lunge is a shoulder press, while "deadbug with press" lies

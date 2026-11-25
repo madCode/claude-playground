@@ -126,23 +126,27 @@ class HomeScreenTest {
     @Test
     fun anUnknownWordIsSortedInTwoTaps() {
         val day = java.time.LocalDate.of(2026, 11, 20)
-        val words = listOf(spotter.coach.UnknownWord("zorbed", "10 x zorbed shoulder press", day, 2), spotter.coach.UnknownWord("head smasher", "12 x head smasher", day, 1))
+        val words = listOf(
+            spotter.coach.UnknownWord("zorbed", "10 x zorbed shoulder press", day, 2), spotter.coach.UnknownWord("head smasher", "12 x head smasher", day, 1),
+            spotter.coach.UnknownWord("press", "8 x alt deadbug with press", day, 1), spotter.coach.UnknownWord("zorbed frobnicated", "8 x zorbed squat frobnicated", day, 1),
+        )
+        val lists = spotter.coach.Vocabulary.starting()
         var answers by mutableStateOf(emptyList<spotter.coach.WordAnswer>())
         val undone = mutableListOf<String>()
         compose.setContent {
             HomeScreen(
                 "v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words, wordAnswers = answers,
-                movements = listOf("squat", "tricep extension", "lying tricep extension", "tricep kickback"),
-                lineReads = { line, a -> if (a.movement != null) line.substringAfter(" x ").replace(a.word, a.movement!!) else null },
+                movements = lists.movements,
+                lineReads = { line, a -> spotter.coach.WordAnswers.sayBack(line, a, answers, lists) },
                 onAnswerWord = { answers = answers + it }, onUndoWord = { undone += it },
             )
         }
         // Passing a word over: said back first, and nothing kept until the yes.
         compose.onNodeWithContentDescription("zorbed: on 2 days, as in 10 x zorbed shoulder press").performScrollTo().performClick()
         compose.onNodeWithContentDescription("zorbed: ignore this word").performScrollTo().performClick()
-        compose.onNodeWithText("\"zorbed\" will be passed over on every board. This line stays \"not sure\": another word on it isn't known yet.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("\"zorbed\" will be passed over on every board. This line will read as shoulder press.").performScrollTo().assertIsDisplayed()
         assertTrue(answers.isEmpty())
-        compose.onNodeWithText("Back").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("zorbed: back").performScrollTo().performClick()
         compose.onNodeWithContentDescription("zorbed: ignore this word").performScrollTo().performClick()
         compose.onNodeWithContentDescription("zorbed: yes, read it that way").performScrollTo().performClick()
         assertEquals(listOf(spotter.coach.WordAnswer("zorbed")), answers)
@@ -153,7 +157,11 @@ class HomeScreenTest {
         compose.onNodeWithText("Which exercise? Type part of its name").performScrollTo().performTextInput("zzz")
         compose.onNodeWithText("No exercise by that name.").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("zzz").performTextReplacement("tricep")
-        compose.onNodeWithContentDescription("head smasher is another name for lying tricep extension").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("head smasher is another name for tricep kickback").performScrollTo().assertIsDisplayed()
+        // By another of its names too.
+        compose.onNodeWithText("tricep").performTextReplacement("rdl")
+        compose.onNodeWithContentDescription("head smasher is another name for romanian deadlift").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("rdl").performTextReplacement("tricep")
         shoot("home-word-search")
         compose.onNodeWithContentDescription("head smasher is another name for tricep extension").performScrollTo().performClick()
         compose.onNodeWithText("\"head smasher\" will be read as tricep extension on every board, with its history and weight. This line will read as tricep extension.").performScrollTo().assertIsDisplayed()
@@ -161,6 +169,18 @@ class HomeScreenTest {
         compose.onNodeWithContentDescription("head smasher: yes, read it that way").performScrollTo().performClick()
         assertEquals(spotter.coach.WordAnswer("head smasher", "tricep extension"), answers.last())
         compose.onNodeWithText("head smasher: another name for tricep extension").performScrollTo().assertIsDisplayed()
+        // A word the reader settles by its neighbours can't be answered, and an answer that
+        // would change nothing isn't offered a yes.
+        compose.onNodeWithContentDescription("press: on 1 day, as in 8 x alt deadbug with press").performScrollTo().performClick()
+        compose.onNodeWithText("This one can't be sorted here: it is a count, or a word that means different things on different lines.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("press: ignore this word").assertDoesNotExist()
+        compose.onNodeWithContentDescription("press: close").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("zorbed frobnicated: on 1 day, as in 8 x zorbed squat frobnicated").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("zorbed frobnicated: ignore this word").performScrollTo().performClick()
+        compose.onNodeWithText("That wouldn't change this line: its words aren't side by side here, or mean something else. Nothing to keep.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("zorbed frobnicated: yes, read it that way").assertDoesNotExist()
+        compose.onNodeWithContentDescription("zorbed frobnicated: back").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("zorbed frobnicated: neither, leave it").performScrollTo().performClick()
         // Leaving a word alone closes it and answers nothing.
         compose.onNodeWithContentDescription("zorbed: on 2 days, as in 10 x zorbed shoulder press").performScrollTo().performClick()
         compose.onNodeWithContentDescription("zorbed: neither, leave it").performScrollTo().performClick()
@@ -177,7 +197,7 @@ class HomeScreenTest {
         val restore = androidx.compose.ui.test.junit4.StateRestorationTester(compose)
         val words = listOf(spotter.coach.UnknownWord("head smasher", "12 x head smasher", java.time.LocalDate.of(2026, 11, 20), 1))
         restore.setContent {
-            HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words, movements = listOf("tricep extension"))
+            HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words, movements = spotter.coach.Vocabulary.starting().movements)
         }
         compose.onNodeWithContentDescription("head smasher: on 1 day, as in 12 x head smasher").performScrollTo().performClick()
         compose.onNodeWithContentDescription("head smasher: it's another name for an exercise").performScrollTo().performClick()

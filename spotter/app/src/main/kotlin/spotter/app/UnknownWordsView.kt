@@ -5,22 +5,23 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -29,11 +30,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import spotter.app.today.Boards
+import spotter.coach.Movement
 import spotter.coach.UnknownWord
 import spotter.coach.WordAnswer
 import spotter.coach.WordAnswers
@@ -57,15 +60,15 @@ private const val SPOKEN = 80
  * from the list. A word that is neither is left: it needs the lists themselves. Hidden when
  * every word was known and nothing has been answered.
  *
- * [reads] says how a line would read with an answer added, or null while it still wouldn't.
+ * [reads] says what an answer would do to the line it was seen on, and whether to keep it.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun UnknownWordsView(
     words: List<UnknownWord>,
     answers: List<WordAnswer> = emptyList(),
-    movements: List<String> = emptyList(),
-    reads: (line: String, answer: WordAnswer) -> String? = { _, _ -> null },
+    movements: List<Movement> = emptyList(),
+    reads: (line: String, answer: WordAnswer) -> WordAnswers.SayBack = { _, _ -> WordAnswers.SayBack("", true) },
     onAnswer: (WordAnswer) -> Unit = {},
     onUndo: (String) -> Unit = {},
 ) {
@@ -77,20 +80,25 @@ fun UnknownWordsView(
     // The answer waiting for a yes: "" passes the word over, else the exercise it names.
     var picked by rememberSaveable { mutableStateOf<String?>(null) }
     fun close() { open = null; searching = false; typed = ""; picked = null }
+    // The list is read again as boards arrive: a word no longer on it can't be half-answered.
+    if (open != null && words.take(MOST_WORDS).none { it.word == open }) close()
     Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (words.isNotEmpty()) {
                 Text("Words Spotter doesn't know yet", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = ink, modifier = Modifier.semantics { heading() })
                 Text("From the last ${Boards.KEEP} boards on this phone. A row with these says \"not sure\" and gets no number. Tap one to say what it is.", fontSize = 15.sp, color = muted)
             }
-            words.take(MOST_WORDS).forEach { w ->
+            words.take(MOST_WORDS).forEach { w -> key(w.word) {
                 val days = if (w.days == 1) "1 day" else "${w.days} days"
                 // One thing to hear per entry: the words, how often, and where. Two lines at
                 // most: the text is a stranger's, and a long one mustn't push the rest away.
                 Column(
                     Modifier.fillMaxWidth().heightIn(min = 48.dp)
                         .clickable(role = Role.Button, onClickLabel = "say what this word is") { if (open == w.word) close() else { close(); open = w.word } }
-                        .semantics(mergeDescendants = true) { contentDescription = "${w.word.take(SPOKEN)}: on $days, as in ${w.line.take(SPOKEN)}" },
+                        .semantics(mergeDescendants = true) {
+                            contentDescription = "${w.word.take(SPOKEN)}: on $days, as in ${w.line.take(SPOKEN)}"
+                            stateDescription = if (open == w.word) "open" else "closed"
+                        },
                 ) {
                     Text("${w.word} · $days", fontSize = 16.sp, color = ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(w.line, fontSize = 15.sp, color = muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -100,16 +108,26 @@ fun UnknownWordsView(
                     val choice = picked
                     Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         when {
+                            !WordAnswers.sortable(w.word) -> {
+                                Text(
+                                    "This one can't be sorted here: it is a count, or a word that means different things on different lines.",
+                                    fontSize = 15.sp, color = ink, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                                )
+                                OutlinedButton(onClick = { close() }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "$spoken: close" }) { Text("Close") }
+                            }
                             choice != null -> {
                                 val answer = WordAnswer(w.word, choice.ifEmpty { null })
-                                val line = reads(w.line, answer)
-                                val what = if (answer.movement == null) "\"${w.word}\" will be passed over on every board."
-                                else "\"${w.word}\" will be read as ${answer.movement} on every board, with its history and weight."
-                                val then = if (line != null) " This line will read as $line." else " This line stays \"not sure\": another word on it isn't known yet."
-                                Text(what + then, fontSize = 15.sp, color = ink, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                                val said = remember(w.line, answer) { reads(w.line, answer) }
+                                Text(said.text, fontSize = 15.sp, color = ink, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Button(onClick = { onAnswer(answer); close() }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "$spoken: yes, read it that way" }) { Text("Yes, read it that way") }
-                                    OutlinedButton(onClick = { picked = null }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Back") }
+                                    if (said.keep) {
+                                        Button(
+                                            onClick = { onAnswer(answer); close() },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
+                                            modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "$spoken: yes, read it that way" },
+                                        ) { Text("Yes, read it that way") }
+                                    }
+                                    OutlinedButton(onClick = { picked = null }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "$spoken: back" }) { Text("Back") }
                                 }
                             }
                             searching -> {
@@ -121,7 +139,9 @@ fun UnknownWordsView(
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                                 val wanted = typed.trim().lowercase()
-                                val hits = if (wanted.isEmpty()) emptyList() else movements.filter { wanted in it }.sortedBy { !it.startsWith(wanted) }.take(MOST_HITS)
+                                // By any of its names ("rdl"), shown under its own.
+                                val hits = if (wanted.isEmpty()) emptyList()
+                                else movements.filter { m -> wanted in m.name || m.aliases.any { wanted in it.lowercase() } }.map { it.name }.sortedBy { !it.startsWith(wanted) }.take(MOST_HITS)
                                 if (wanted.isNotEmpty() && hits.isEmpty()) {
                                     Text("No exercise by that name.", fontSize = 15.sp, color = muted, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                                 }
@@ -129,7 +149,7 @@ fun UnknownWordsView(
                                     hits.forEach { name ->
                                         OutlinedButton(onClick = { picked = name }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "$spoken is another name for $name" }) { Text(name) }
                                     }
-                                    OutlinedButton(onClick = { searching = false; typed = "" }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Back") }
+                                    OutlinedButton(onClick = { searching = false; typed = "" }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "$spoken: back" }) { Text("Back") }
                                 }
                             }
                             else -> FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -140,17 +160,15 @@ fun UnknownWordsView(
                         }
                     }
                 }
-            }
+            } }
             if (words.size > MOST_WORDS) Text("and ${words.size - MOST_WORDS} more", fontSize = 15.sp, color = muted)
             if (answers.isNotEmpty()) {
                 Text("Your answers", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = ink, modifier = Modifier.semantics { heading() })
                 // The newest first: the one most likely to be undone.
                 answers.asReversed().forEach { a ->
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            "${a.word}: " + (a.movement?.let { "another name for $it" } ?: "ignored"),
-                            fontSize = 15.sp, color = ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                        )
+                    // The button under the text, not beside it: at large text the answer is whole.
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("${a.word}: " + (a.movement?.let { "another name for $it" } ?: "ignored"), fontSize = 15.sp, color = ink)
                         OutlinedButton(onClick = { onUndo(a.word) }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Undo the answer for ${a.word.take(SPOKEN)}" }) { Text("Undo") }
                     }
                 }

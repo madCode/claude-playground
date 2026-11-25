@@ -62,7 +62,7 @@ class Vocabulary private constructor(val movements: List<Movement>, private val 
         val all = phrases.toMutableMap()
         for (answer in answers) {
             val key = normalise(answer.word)
-            if (key.isEmpty() || key in all) continue
+            if (key.isEmpty() || key in all || !WordAnswers.sortable(answer.word)) continue
             all[key] = if (answer.movement == null) Meaning.Filler
             else movements.firstOrNull { it.name == answer.movement }?.let { Meaning.OfMovement(it) } ?: continue
         }

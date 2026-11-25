@@ -29,6 +29,11 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   over the exercise list. The card says what the answer will do before the yes, and lists the
   answers with an Undo each. An answer is laid over the lists, so every board, and an
   imported history, is read again by it.
+- **The review caught:** an answer for "press", "rotation" or "reach" was read before the
+  neighbours that settle those words, so ignoring "press" turned "squat to press" into a
+  plain squat on every board; such words, and counts, now take no answer. The say-back gave
+  the wrong reason, and offered a yes, when an answer would change nothing. Two quick answers
+  could be saved out of order, and a rotation before a save landed lost the newer one.
 - **Due by hand:** DEVICE.md, "Sorting a word".
 
 ## Tuesday 24 November 2026

@@ -42,7 +42,9 @@ import spotter.app.today.Today
 import spotter.coach.LogDraft
 import spotter.coach.Progress
 import spotter.coach.UnknownWord
+import spotter.coach.Movement
 import spotter.coach.WordAnswer
+import spotter.coach.WordAnswers
 
 /** Where the log is copied to, and how the last copy went. [at] is ready to show ("22 Nov, 14:30"). */
 data class BackupState(val folder: String? = null, val at: String? = null, val ok: Boolean = true)
@@ -151,8 +153,8 @@ fun HomeScreen(
     progress: Progress = Progress(),
     unknownWords: List<UnknownWord> = emptyList(),
     wordAnswers: List<WordAnswer> = emptyList(),
-    movements: List<String> = emptyList(),
-    lineReads: (String, WordAnswer) -> String? = { _, _ -> null },
+    movements: List<Movement> = emptyList(),
+    lineReads: (String, WordAnswer) -> WordAnswers.SayBack = { _, _ -> WordAnswers.SayBack("", true) },
     onAnswerWord: (WordAnswer) -> Unit = {},
     onUndoWord: (String) -> Unit = {},
 ) {

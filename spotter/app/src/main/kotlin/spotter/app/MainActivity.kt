@@ -108,7 +108,8 @@ class MainActivity : ComponentActivity() {
         val store = words
         val history = imported
         HistoryStore.scope.launch {
-            runCatching { store.save(answers) }
+            // Whatever is latest now, not what was latest when this was asked for.
+            runCatching { synchronized(store) { store.save(MainActivity.answers.orEmpty()) } }
             history.forget()
             history.touch()
         }
@@ -159,7 +160,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Before anything is read: a few lines of the app's own file.
-        wordAnswers.value = words.load().also(::readWith)
+        wordAnswers.value = answers ?: words.load().also(::readWith)
         UpdateWorker.schedule(this)
         ExportWorker.schedule(this)
         val version = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
@@ -176,8 +177,8 @@ class MainActivity : ComponentActivity() {
                 progress = progress.value,
                 unknownWords = unknownWords.value,
                 wordAnswers = wordAnswers.value,
-                movements = lists.movements.map { it.name },
-                lineReads = { line, answer -> WordAnswers.preview(line, WordAnswers.adding(wordAnswers.value, answer), lists) },
+                movements = lists.movements,
+                lineReads = { line, answer -> WordAnswers.sayBack(line, answer, wordAnswers.value, lists) },
                 onAnswerWord = { setWords(WordAnswers.adding(wordAnswers.value, it)) },
                 onUndoWord = { setWords(WordAnswers.removing(wordAnswers.value, it)) },
                 backup = backup.value,
@@ -328,14 +329,24 @@ class MainActivity : ComponentActivity() {
 
         // The lists with the person's answers about new words laid over them (WordAnswerStore).
         // One for the process: a pick or a save that outlives a rotation reads by the same.
-        @Volatile private var answered: Vocabulary? = null
-        @Volatile private var reader: Identity? = null
-        val vocabulary: Vocabulary get() = answered ?: lists
-        val identity: Identity get() = reader ?: Identity(vocabulary).also { reader = it }
+        // The two change together, in one write: a reader of the old lists must never be left
+        // beside the new ones.
+        @Volatile private var reading: Pair<Vocabulary, Identity>? = null
+        private fun reading(): Pair<Vocabulary, Identity> =
+            reading ?: synchronized(this) { reading ?: (lists to Identity(lists)).also { reading = it } }
+        val vocabulary: Vocabulary get() = reading().first
+        val identity: Identity get() = reading().second
 
-        fun readWith(answers: List<WordAnswer>) {
-            answered = lists.with(answers)
-            reader = null
+        // The answers as last given, ahead of the disk: a screen recreated before a save lands
+        // starts from these, and a save writes whatever is latest when it runs, so two saves
+        // can't leave the older answers on disk.
+        @Volatile var answers: List<WordAnswer>? = null
+            private set
+
+        fun readWith(given: List<WordAnswer>) {
+            answers = given
+            // With none, the lists as they are: nothing is read from them until a line is.
+            reading = if (given.isEmpty()) null else lists.with(given).let { it to Identity(it) }
         }
 
         // One save at a time, across activities recreated by a rotation.

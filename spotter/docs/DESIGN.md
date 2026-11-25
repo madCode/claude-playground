@@ -251,7 +251,13 @@ what is on the board, and nothing says so.
     it changes today's sheet, later boards and an imported history at once, and undoing it
     changes them back. The lists' own words win: an answer for a word a list later learns is
     spent.
-  - A row already logged was read in full when it was logged, so an answer doesn't relabel it.
+  - Not every word takes an answer: a count ("2 x"), or a word the reader settles by its
+    neighbours ("press", "rotation", "reach"), would be read by the answer on every line and
+    change lines that read today. And an answer is only kept when it changes the line it was
+    seen on: words that aren't side by side there, or a name that makes two exercises of the
+    line, are said back as "nothing to keep".
+  - A row already logged keeps the exercise it was logged as, whatever is answered or undone
+    afterwards.
   - Answers are kept in the app's own storage (`word_answers.json`), not in the log and not
     in Android backup: on a new phone they are answered again. A useful one can be proposed
     back to the starting list in a PR.

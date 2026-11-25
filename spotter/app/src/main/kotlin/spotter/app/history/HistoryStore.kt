@@ -47,6 +47,11 @@ class HistoryStore(dir: File) {
     // and what it read is dropped.
     private var ticket = 0
 
+    // How often the lists changed, and how often they had when the pick under way began: a
+    // pick that read its file by the old lists mustn't leave that reading as the day's.
+    private var forgets = 0
+    private var forgetsAtBegin = 0
+
     /**
      * Marks a pick under way and gives its ticket, or null when one already is: two at once would
      * race to be the history.
@@ -55,6 +60,7 @@ class HistoryStore(dir: File) {
     fun begin(): Int? {
         if (reading) return null
         reading = true
+        forgetsAtBegin = forgets
         changes.value++
         return ++ticket
     }
@@ -86,6 +92,7 @@ class HistoryStore(dir: File) {
     @Synchronized
     fun forget() {
         read = null
+        forgets++
     }
 
     /** Says something changed that a screen should show. */
@@ -107,7 +114,7 @@ class HistoryStore(dir: File) {
                 it.fd.sync()
             }
             if (!tmp.renameTo(file)) throw IOException("couldn't keep the history")
-            read = today to result
+            read = if (forgets == forgetsAtBegin) today to result else null
         } finally {
             // Never a stray copy of someone's training log, whatever went wrong.
             tmp.delete()
