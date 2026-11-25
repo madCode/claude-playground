@@ -42,6 +42,7 @@ import spotter.app.today.Today
 import spotter.coach.LogDraft
 import spotter.coach.Progress
 import spotter.coach.UnknownWord
+import spotter.coach.WordAnswer
 
 /** Where the log is copied to, and how the last copy went. [at] is ready to show ("22 Nov, 14:30"). */
 data class BackupState(val folder: String? = null, val at: String? = null, val ok: Boolean = true)
@@ -149,6 +150,11 @@ fun HomeScreen(
     onPickCounts: () -> Unit = {},
     progress: Progress = Progress(),
     unknownWords: List<UnknownWord> = emptyList(),
+    wordAnswers: List<WordAnswer> = emptyList(),
+    movements: List<String> = emptyList(),
+    lineReads: (String, WordAnswer) -> String? = { _, _ -> null },
+    onAnswerWord: (WordAnswer) -> Unit = {},
+    onUndoWord: (String) -> Unit = {},
 ) {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
@@ -186,7 +192,7 @@ fun HomeScreen(
                 }
                 TodayView(today, onAllowCalendar, onSaveLog, earlier)
                 ProgressView(progress)
-                UnknownWordsView(unknownWords)
+                UnknownWordsView(unknownWords, wordAnswers, movements, lineReads, onAnswerWord, onUndoWord)
                 Spacer(Modifier.heightIn(min = 8.dp))
                 HistoryView(history, onImportHistory, onRemoveHistory, onStopHistory, onPickCounts)
                 BackupView(backup, onChooseFolder)

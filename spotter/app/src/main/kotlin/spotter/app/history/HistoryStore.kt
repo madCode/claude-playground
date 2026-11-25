@@ -82,6 +82,12 @@ class HistoryStore(dir: File) {
         changes.value++
     }
 
+    /** The lists changed how a line reads: the kept file is read again by them. */
+    @Synchronized
+    fun forget() {
+        read = null
+    }
+
     /** Says something changed that a screen should show. */
     @Synchronized
     fun touch() {

@@ -32,6 +32,9 @@ import spotter.coach.LogDraft
 import spotter.coach.Progress
 import spotter.coach.ReviewList
 import spotter.coach.UnknownWord
+import spotter.coach.WordAnswer
+import spotter.coach.WordAnswers
+import spotter.app.words.WordAnswerStore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import spotter.app.today.Boards
@@ -53,6 +56,8 @@ class MainActivity : ComponentActivity() {
     private val earlier = mutableStateOf<Today.Showing?>(null)
     private val progress = mutableStateOf(Progress())
     private val unknownWords = mutableStateOf(emptyList<UnknownWord>())
+    private val wordAnswers = mutableStateOf(emptyList<WordAnswer>())
+    private val words by lazy { WordAnswerStore(filesDir) }
     private val backup = mutableStateOf(BackupState())
     private val history = mutableStateOf(HistoryState())
     private val imported by lazy { HistoryStore.shared(filesDir) }
@@ -92,6 +97,20 @@ class MainActivity : ComponentActivity() {
             } finally {
                 store.end(ticket)
             }
+        }
+    }
+
+    // An answer changes how every line reads: the sheet, the log's rows and the imported
+    // history are all read again by it.
+    private fun setWords(answers: List<WordAnswer>) {
+        wordAnswers.value = answers
+        readWith(answers)
+        val store = words
+        val history = imported
+        HistoryStore.scope.launch {
+            runCatching { store.save(answers) }
+            history.forget()
+            history.touch()
         }
     }
 
@@ -139,6 +158,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Before anything is read: a few lines of the app's own file.
+        wordAnswers.value = words.load().also(::readWith)
         UpdateWorker.schedule(this)
         ExportWorker.schedule(this)
         val version = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
@@ -154,6 +175,11 @@ class MainActivity : ComponentActivity() {
                 earlier = earlier.value,
                 progress = progress.value,
                 unknownWords = unknownWords.value,
+                wordAnswers = wordAnswers.value,
+                movements = lists.movements.map { it.name },
+                lineReads = { line, answer -> WordAnswers.preview(line, WordAnswers.adding(wordAnswers.value, answer), lists) },
+                onAnswerWord = { setWords(WordAnswers.adding(wordAnswers.value, it)) },
+                onUndoWord = { setWords(WordAnswers.removing(wordAnswers.value, it)) },
                 backup = backup.value,
                 onChooseFolder = { pickFolder.launch(null) },
                 history = history.value,
@@ -298,8 +324,19 @@ class MainActivity : ComponentActivity() {
 
         // Faster than any person can read a dialog and tap.
         const val NO_DIALOG_MS = 300L
-        val vocabulary by lazy { Vocabulary.starting() }
-        val identity by lazy { Identity(vocabulary) }
+        val lists by lazy { Vocabulary.starting() }
+
+        // The lists with the person's answers about new words laid over them (WordAnswerStore).
+        // One for the process: a pick or a save that outlives a rotation reads by the same.
+        @Volatile private var answered: Vocabulary? = null
+        @Volatile private var reader: Identity? = null
+        val vocabulary: Vocabulary get() = answered ?: lists
+        val identity: Identity get() = reader ?: Identity(vocabulary).also { reader = it }
+
+        fun readWith(answers: List<WordAnswer>) {
+            answered = lists.with(answers)
+            reader = null
+        }
 
         // One save at a time, across activities recreated by a rotation.
         val saving = Mutex()
