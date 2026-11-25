@@ -136,7 +136,7 @@ internal object Estimated {
         val told = part.variations.filterNot { SharedWeight.neutral(part.movement, it.key, it.value) }
         val usual = when (told.size) {
             0 -> part.movement.usual
-            1 -> part.movement.usualWith[told.values.single()]
+            1 -> told.entries.single().let { part.movement.usualWith["${it.key}=${it.value}"] }
             else -> null
         }
         // One dumbbell in both hands can't be done a side at a time.

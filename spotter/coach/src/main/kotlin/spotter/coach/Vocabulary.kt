@@ -24,7 +24,7 @@ data class Movement(
      * (a squat, a lunge).
      */
     val usual: Int? = null,
-    /** The same for one way of doing it, by the variation's word: a sumo squat is one dumbbell. */
+    /** The same for one way of doing it, by "axis=value": a sumo squat ("legs=sumo") is one dumbbell. */
     val usualWith: Map<String, Int> = emptyMap(),
 )
 

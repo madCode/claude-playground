@@ -142,6 +142,9 @@ data class LogDraft(
          */
         fun asks(row: SheetRow): Boolean = known(row) == null
 
+        /** Whether the count the row starts at is the lift's usual number: shown, to be changed in a tap. */
+        fun guessed(row: SheetRow): Boolean = asks(row) && usual(row) != null
+
         private fun reps(row: SheetRow): Int? = if (row.line.scheme is Scheme.Ladder) null else row.target?.first
 
         /** The draft for a class already logged, or partly: what is in the log for its rows. */
