@@ -150,8 +150,10 @@ class LoggingTest {
         val deadlift = row(sheet, "8-10 x deadlift")
         val squat = row(sheet, "10 / 8 / 6 x squat")
         val hold = row(sheet, "30 sec of goblet squat hold")
-        // A bare line on a new row: the count isn't known until the person says.
-        assertEquals(RowLog(40, null, 8), LogDraft.picked(deadlift, 40))
+        // A bare line on a new row: the deadlift starts at its usual two, and a squat, which
+        // goes either way, at nothing until the person says.
+        assertEquals(RowLog(40, 2, 8), LogDraft.picked(deadlift, 40))
+        assertEquals(null, LogDraft.picked(squat, 30).count)
         // A goblet hold is one dumbbell in both hands: the row's own count.
         assertEquals(RowLog(35, 1, null), LogDraft.picked(hold, 35))
         val events = save(
@@ -405,15 +407,26 @@ class LoggingTest {
     // A count nobody has said stays unknown, for the screen to ask; it is never guessed.
     @Test
     fun anUnknownCountStaysUnknown() {
-        val imported = Logged(monday, identity.read(BoardLine.read("8 x deadlift").words) as Reading.Known, Load(40, null), 8..8, listOf(8))
-        val deadlift = Sheet.make(listOf("8 x deadlift"), listOf(imported), identity).rows.single()
-        assertEquals(null, LogDraft.asListed(deadlift)!!.count)
-        assertEquals(RowLog(45, null, 8), LogDraft.picked(deadlift, 45))
+        val imported = Logged(monday, identity.read(BoardLine.read("8 x squat").words) as Reading.Known, Load(40, null), 8..8, listOf(8))
+        val squat = Sheet.make(listOf("8 x squat"), listOf(imported), identity).rows.single()
+        assertEquals(null, LogDraft.asListed(squat)!!.count)
+        assertEquals(RowLog(45, null, 8), LogDraft.picked(squat, 45))
+        assertTrue(LogDraft.asks(squat))
+        // A lift with a usual number starts at it, ticked or picked, and the screen still asks:
+        // it is a guess to change, not something anyone said. One way of doing a lift can
+        // have its own: a sumo squat is one dumbbell.
+        val unsaid = Logged(monday, identity.read(BoardLine.read("8 x deadlift").words) as Reading.Known, Load(40, null), 8..8, listOf(8))
+        val deadlift = Sheet.make(listOf("8 x deadlift"), listOf(unsaid), identity).rows.single()
+        assertEquals(listOf(2, 2), listOf(LogDraft.asListed(deadlift)!!.count, LogDraft.picked(deadlift, 45).count))
+        assertTrue(LogDraft.asks(deadlift))
+        val sumo = Sheet.make(listOf("8 x sumo squat", "8 x single leg deadlift", "8 x pullover"), emptyList(), identity).rows
+        assertEquals(listOf(1, null, 1), sumo.map { LogDraft.picked(it, 30).count })
         // A row with no number takes its count from the last time it was logged.
         val counted = Logged(monday, identity.read(BoardLine.read("8 x deadlift").words) as Reading.Known, Load(40, 2), 8..8, listOf(8))
         val far = Sheet.make(listOf("20 x deadlift"), listOf(counted), identity).rows.single()
         assertTrue(far.suggestion is Suggestion.NoNumber)
         assertEquals(RowLog(30, 2, 20), LogDraft.picked(far, 30))
+        assertEquals(false, LogDraft.asks(far))
     }
 
     // Another day's or class's log never shows on this one's screen.

@@ -366,8 +366,9 @@ reason, so the import can say what it didn't take:
   then by the row's own hint (two dumbbells, one, a Ybell), then by the owner's counts file
   where one is given ([COUNTS-FORMAT.md](COUNTS-FORMAT.md): private, like the history). Last,
   the number the lift is usually done with, where the movement list gives one (a deadlift
-  two, a halo one): a starting guess for anyone's import, and the home screen says how many
-  rows rest on it. Only the plain lift: a sumo or one-legged deadlift, or a triceps extension lying on a bench,
+  two, a halo one, a sumo squat one): a starting guess for anyone's import, and the home
+  screen says how many rows rest on it. The boards are the same in every studio, so the list
+  is seeded from madCode's own experience of each lift (2026-11-24, at their word). Only the plain lift: a sumo or one-legged deadlift, or a triceps extension lying on a bench,
   is as often done the other way. And not where the owner's file has a rule for the lift that
   didn't fit the line. A lift that goes either way (a squat, a lunge) stays unknown.
 - **The reps** are a side. The row doesn't say whether its numbers count a side or both, so the
@@ -426,9 +427,10 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   counts shows its two ends; an odd total keeps the tick). On a row being changed, a count sets
   that set's reps and leaves its weight alone. "Changed": the heaviest
   dumbbell picked from the whole rack in one tap, one or two, and reps on a stepper. Opening
-  "changed" logs nothing until a weight is picked, and the count is never guessed: it comes
-  from the row's words, the sheet's number or the last log, or the row asks "One dumbbell or
-  two?". Tapping "changed" again closes the rack. With "felt easy / hard", "twinge", "had to stop"
+  "changed" logs nothing until a weight is picked, and the count comes
+  from the row's words, the sheet's number or the last log. Failing those the row asks "One
+  dumbbell or two?", with the lift's usual number already chosen where the list has one, and
+  keeps the question on show so it changes in one tap. Tapping "changed" again closes the rack. With "felt easy / hard", "twinge", "had to stop"
   and "easier version" one tap away. A row with no number yet has only "changed". Untouched rows
   stay unlogged, never "skipped". A row ticked as listed shows "Felt easy" beside the tick, one
   tap, since it is what lets a weight go up after one session. Save writes events (`Logging` in the coach, one transaction):

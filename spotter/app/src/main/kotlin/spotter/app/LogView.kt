@@ -179,8 +179,12 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
     // As listed still, when all that was added is how many dumbbells the sheet didn't know, or
     // that it felt easy: the weight and the reps are the sheet's.
     val plain = log?.copy(easy = false)
+    // Where the count is the person's to say, theirs stands over the lift's usual number: a
+    // row ticked again, or told "one" after the tick, is still as listed.
+    val free = LogDraft.asks(row)
+    fun said(listed: RowLog) = if (free) log?.count ?: listed.count else listed.count
     val listed = plain != null && asListed != null &&
-        (plain == asListed || (asListed.count == null && plain.copy(count = null) == asListed))
+        (plain == asListed || (free && plain.copy(count = asListed.count) == asListed))
     // Open while being changed; a row ticked as listed needs nothing more.
     var open by rememberSaveable(row.id) { mutableStateOf(log != null && !listed) }
     Surface(color = Color.White, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
@@ -209,14 +213,14 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
                         // On a row being changed it is that set's reps: the weight picked and
                         // what was said about it stay. Otherwise it was done at the sheet's weight.
                         if (log != null && !listed) onChange(log.copy(reps = reps))
-                        else onChange(asListed!!.copy(reps = reps, count = asListed.count ?: log?.count, easy = listed && log?.easy == true))
+                        else onChange(asListed!!.copy(reps = reps, count = said(asListed), easy = listed && log?.easy == true))
                     }
                 }
                 if (asListed != null && counts == null) {
                     Choice("✓ as listed", listed, "${row.shown}: done as listed") {
                         open = false
                         // Ticked again, it keeps what was said beside it.
-                        onChange(asListed.copy(count = asListed.count ?: log?.count, easy = listed && log?.easy == true))
+                        onChange(asListed.copy(count = said(asListed), easy = listed && log?.easy == true))
                     }
                 }
                 // Opens the rack, and closes it again. Nothing is logged until a weight is picked.
@@ -239,9 +243,11 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
                 }
             }
             if (open) Editor(row, log, onChange)
-            // Asked whenever it isn't known, ticked or changed: the count is never guessed.
-            if (log != null && (open || log.count == null)) {
-                if (log.count == null) Text("One dumbbell or two?", fontSize = 15.sp, color = ink)
+            // Asked whenever it isn't known, ticked or changed. Where the lift has a usual
+            // number it is chosen already, and stays on show to be changed in one tap.
+            val guessed = LogDraft.guessed(row)
+            if (log != null && (open || log.count == null || guessed)) {
+                if (log.count == null || guessed) Text("One dumbbell or two?", fontSize = 15.sp, color = ink)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Choice("One dumbbell", log.count == 1, "${row.shown}: one dumbbell") { onChange(log.copy(count = 1)) }
                     Choice("Two", log.count == 2, "${row.shown}: two dumbbells") { onChange(log.copy(count = 2)) }

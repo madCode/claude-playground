@@ -18,10 +18,14 @@ data class Movement(
     val bodyweight: Boolean = false,
     /**
      * How many dumbbells it is usually done with on these boards when nobody says: 2, or 1 held
-     * in both hands. A starting guess for an imported history, behind the row's own words and
-     * the owner's counts file. Null where it goes either way (a squat, a lunge).
+     * in both hands. The boards are the same in every studio, so one member's experience of a
+     * lift seeds the guess for everyone (madCode, 2026-11-24). It stands behind anything
+     * anyone said, and the Log screen shows it ready to change. Null where it goes either way
+     * (a squat, a lunge).
      */
     val usual: Int? = null,
+    /** The same for one way of doing it, by "axis=value": a sumo squat ("legs=sumo") is one dumbbell. */
+    val usualWith: Map<String, Int> = emptyMap(),
 )
 
 /** What a phrase on a board line means. Every phrase means exactly one thing. */

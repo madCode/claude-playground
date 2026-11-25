@@ -208,13 +208,10 @@ object HistoryImport {
      */
     private fun usual(exercise: Reading.Known, variant: JsonObject?, filed: List<String>, counts: DumbbellCounts): Int? {
         val part = exercise.parts.singleOrNull() ?: return null
-        val usual = part.movement.usual ?: return null
-        val plain = part.variations.all { SharedWeight.neutral(part.movement, it.key, it.value) }
+        val usual = Estimated.usual(part) ?: return null
         val bothSides = variant?.string("arms") in setOf(null, "both") && variant?.string("stance") in setOf(null, "both", "none")
         val owners = (filed + part.movement.name).any(counts::rulesOn)
-        // One dumbbell in both hands can't be done a side at a time.
-        val turns = usual == 1 && part.variations["alternating"] != null
-        return usual.takeIf { plain && bothSides && !owners && !turns }
+        return usual.takeIf { bothSides && !owners }
     }
 
     /**
