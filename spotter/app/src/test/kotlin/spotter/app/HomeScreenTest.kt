@@ -191,13 +191,37 @@ class HomeScreenTest {
         shoot("home-word-answers")
     }
 
+    // An answer undone while another waits for its yes: what is said back is said again.
+    @Test
+    fun theSayBackFollowsTheAnswers() {
+        val lists = spotter.coach.Vocabulary.starting()
+        var answers by mutableStateOf(listOf(spotter.coach.WordAnswer("zorbed")))
+        val words = listOf(spotter.coach.UnknownWord("frobnicated", "8 x zorbed frobnicated squat", java.time.LocalDate.of(2026, 11, 20), 1))
+        compose.setContent {
+            HomeScreen(
+                "v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words, wordAnswers = answers, movements = lists.movements,
+                lineReads = { line, a -> spotter.coach.WordAnswers.sayBack(line, a, answers, lists) }, onUndoWord = { answers = emptyList() },
+            )
+        }
+        compose.onNodeWithContentDescription("frobnicated: on 1 day, as in 8 x zorbed frobnicated squat").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("frobnicated: ignore this word").performScrollTo().performClick()
+        compose.onNodeWithText("\"frobnicated\" will be passed over on every board. This line will read as squat.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Undo the answer for zorbed").performScrollTo().performClick()
+        compose.onNodeWithText("\"frobnicated\" will be passed over on every board. This line stays \"not sure\" until zorbed is known too.").performScrollTo().assertIsDisplayed()
+    }
+
     // Turning the phone mid-answer keeps the word open, what was typed, and the pick.
     @Test
     fun aHalfGivenAnswerSurvivesRecreation() {
         val restore = androidx.compose.ui.test.junit4.StateRestorationTester(compose)
-        val words = listOf(spotter.coach.UnknownWord("head smasher", "12 x head smasher", java.time.LocalDate.of(2026, 11, 20), 1))
+        val all = listOf(spotter.coach.UnknownWord("head smasher", "12 x head smasher", java.time.LocalDate.of(2026, 11, 20), 1))
+        // As the app is after a rotation: the answers are there at once, the words a moment later.
+        var words by mutableStateOf(all)
         restore.setContent {
-            HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words, movements = spotter.coach.Vocabulary.starting().movements)
+            HomeScreen(
+                "v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words,
+                wordAnswers = listOf(spotter.coach.WordAnswer("zorbed")), movements = spotter.coach.Vocabulary.starting().movements,
+            )
         }
         compose.onNodeWithContentDescription("head smasher: on 1 day, as in 12 x head smasher").performScrollTo().performClick()
         compose.onNodeWithContentDescription("head smasher: it's another name for an exercise").performScrollTo().performClick()
@@ -205,7 +229,10 @@ class HomeScreenTest {
         restore.emulateSavedInstanceStateRestore()
         compose.onNodeWithText("tri").performScrollTo().assertIsDisplayed()
         compose.onNodeWithContentDescription("head smasher is another name for tricep extension").performScrollTo().performClick()
+        words = emptyList()
         restore.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+        words = all
         compose.onNodeWithContentDescription("head smasher: yes, read it that way").performScrollTo().assertIsDisplayed()
     }
 

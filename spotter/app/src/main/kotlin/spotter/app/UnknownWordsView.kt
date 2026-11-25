@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import spotter.app.today.Boards
 import spotter.coach.Movement
 import spotter.coach.UnknownWord
+import spotter.coach.Vocabulary
 import spotter.coach.WordAnswer
 import spotter.coach.WordAnswers
 
@@ -80,8 +81,6 @@ fun UnknownWordsView(
     // The answer waiting for a yes: "" passes the word over, else the exercise it names.
     var picked by rememberSaveable { mutableStateOf<String?>(null) }
     fun close() { open = null; searching = false; typed = ""; picked = null }
-    // The list is read again as boards arrive: a word no longer on it can't be half-answered.
-    if (open != null && words.take(MOST_WORDS).none { it.word == open }) close()
     Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (words.isNotEmpty()) {
@@ -117,7 +116,8 @@ fun UnknownWordsView(
                             }
                             choice != null -> {
                                 val answer = WordAnswer(w.word, choice.ifEmpty { null })
-                                val said = remember(w.line, answer) { reads(w.line, answer) }
+                                // Again whenever the answers change: undoing one below can change what this would do.
+                                val said = remember(w.line, answer, answers) { reads(w.line, answer) }
                                 Text(said.text, fontSize = 15.sp, color = ink, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     if (said.keep) {
@@ -138,10 +138,10 @@ fun UnknownWordsView(
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
                                 )
-                                val wanted = typed.trim().lowercase()
+                                val wanted = Vocabulary.normalise(typed)
                                 // By any of its names ("rdl"), shown under its own.
                                 val hits = if (wanted.isEmpty()) emptyList()
-                                else movements.filter { m -> wanted in m.name || m.aliases.any { wanted in it.lowercase() } }.map { it.name }.sortedBy { !it.startsWith(wanted) }.take(MOST_HITS)
+                                else movements.filter { m -> (listOf(m.name) + m.aliases).any { wanted in Vocabulary.normalise(it) } }.map { it.name }.sortedBy { !Vocabulary.normalise(it).startsWith(wanted) }.take(MOST_HITS)
                                 if (wanted.isNotEmpty() && hits.isEmpty()) {
                                     Text("No exercise by that name.", fontSize = 15.sp, color = muted, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                                 }

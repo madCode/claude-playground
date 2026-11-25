@@ -109,8 +109,9 @@ class MainActivity : ComponentActivity() {
         val history = imported
         HistoryStore.scope.launch {
             // Whatever is latest now, not what was latest when this was asked for.
-            runCatching { synchronized(store) { store.save(MainActivity.answers.orEmpty()) } }
-            history.forget()
+            // One save at a time across recreated screens, which each have a store of their own.
+            runCatching { synchronized(MainActivity) { store.save(MainActivity.answers.orEmpty()) } }
+            // The imported history is read again by the new lists when the screen reloads.
             history.touch()
         }
     }
@@ -343,7 +344,9 @@ class MainActivity : ComponentActivity() {
         @Volatile var answers: List<WordAnswer>? = null
             private set
 
-        fun readWith(given: List<WordAnswer>) {
+        // Under the same lock as the lazy start above, which could otherwise put the plain
+        // lists back over an answer.
+        fun readWith(given: List<WordAnswer>) = synchronized(this) {
             answers = given
             // With none, the lists as they are: nothing is read from them until a line is.
             reading = if (given.isEmpty()) null else lists.with(given).let { it to Identity(it) }
