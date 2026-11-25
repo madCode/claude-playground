@@ -1,8 +1,9 @@
 # The dumbbell counts file
 
 How many dumbbells a lift is done with, where neither the board nor the history says: the
-owner's own rulings, in a file kept beside the history (`dumbbell_counts.yaml`). It is private,
-like the history: never in this repository, and every value below is invented. The format came
+owner's own rulings, in a file kept beside the history (`dumbbell_counts.yaml`) and given to
+the replay tool with it. It is private, like the history: never in this repository, and
+every value below is invented. The format came
 from the gym-coach session, 2026-11-24, at madCode's ask.
 
 ## The file
@@ -44,6 +45,6 @@ movements:
   app's guess.
 - **All or nothing.** A file that can't be read in full is refused with a sentence saying why;
   none of it is used.
-- It is read when a history is imported (`HistoryImport`) and by the replay tool
-  ([REPLAY.md](REPLAY.md)). The phone doesn't take one: the answers it would hold are the app's
-  own usual numbers now (DESIGN.md, "The count"). The log made on the phone doesn't need it: the Log screen asks.
+- Only the replay tool takes it ([REPLAY.md](REPLAY.md)), and reads the history with it
+  (`HistoryImport`). The phone doesn't: the answers the file would hold are the app's own
+  usual numbers now (DESIGN.md, "The count"), and the Log screen asks for the rest.

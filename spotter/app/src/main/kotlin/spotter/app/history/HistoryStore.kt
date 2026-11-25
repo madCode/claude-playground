@@ -24,6 +24,8 @@ import java.time.LocalDate
 class HistoryStore(dir: File) {
     private val file = File(dir, "history.jsonl")
     private val tmp = File(dir, "history.jsonl.tmp")
+    // The file as read on a day by one reader: another day, or lists that have changed since
+    // (a word answered), reads it again.
     private var read: Triple<LocalDate, Identity, HistoryImport.Result>? = null
 
     /** Why the last pick wasn't taken; null once one is. Gone with the process, like any toast. */
