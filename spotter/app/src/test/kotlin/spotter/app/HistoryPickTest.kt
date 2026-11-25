@@ -90,6 +90,16 @@ class HistoryPickTest {
         assertEquals(listOf<Int?>(null), store.result(identity, today)!!.logged.map { it.load.count })
     }
 
+    // A word answered since the file was read: the kept history is read again by the new
+    // lists, the same day, and by the old ones again when the answer is undone.
+    @Test
+    fun theKeptHistoryIsReadAgainWhenTheListsChange() {
+        assertEquals(1, take(file).read)
+        val answered = Identity(vocabulary.with(listOf(spotter.coach.WordAnswer("zorbing", "squat"))))
+        assertEquals(3, store.result(answered, today)!!.rows.size)
+        assertEquals(1, store.result(identity, today)!!.rows.size)
+    }
+
     // The point of it: before the import the row is new; after, it has a number from the file.
     @Test
     fun aPickedHistoryPutsNumbersOnTheSheet() {

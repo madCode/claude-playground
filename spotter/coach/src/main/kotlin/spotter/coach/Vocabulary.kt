@@ -56,6 +56,23 @@ class Vocabulary private constructor(val movements: List<Movement>, private val 
     /** The meaning of [phrase], or null when no list has it. */
     fun lookup(phrase: String): Meaning? = phrases[normalise(phrase)]
 
+    /**
+     * These lists with the person's own [answers] laid over them. The lists' own words win: an
+     * answer given before a list learned the word is spent, and so is one naming a movement
+     * no list has any more. The first answer for a word stands.
+     */
+    fun with(answers: List<WordAnswer>): Vocabulary {
+        if (answers.isEmpty()) return this
+        val all = phrases.toMutableMap()
+        for (answer in answers) {
+            val key = normalise(answer.word)
+            if (key.isEmpty() || key in all || !WordAnswers.sortable(answer.word)) continue
+            all[key] = if (answer.movement == null) Meaning.Filler
+            else movements.firstOrNull { it.name == answer.movement }?.let { Meaning.OfMovement(it) } ?: continue
+        }
+        return Vocabulary(movements, all)
+    }
+
     /** The longest phrase any list holds, in words: how far a reader needs to look ahead. */
     val longestPhrase: Int = phrases.keys.maxOfOrNull { it.split(' ').size } ?: 0
 

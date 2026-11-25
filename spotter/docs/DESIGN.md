@@ -234,16 +234,33 @@ what is on the board, and nothing says so.
   Romanian deadlift on two legs, where it hangs; no estimate on any other lift. Only between rows whose words say how the weight is held ("goblet", "two
   dumbbells") or a session logged with two, never to a bare row from a goblet one.
   The replay tool can't yet switch estimates off on their own; `Rules.estimates` is there for it.
-- **New words go to a review list.** The list is built, read only (`ReviewList`): a card
+- **New words go to a review list.** The list (`ReviewList`) is a card
   under Progress, "Words Spotter doesn't know yet", reads the boards kept on the phone (the
   last 7 fetched) and lists each line's unknown words together ("front foot"), the ones seen
   on the most days first, with the latest line they were on. The boards are strangers' text,
   so line breaks and text-reordering marks are taken out, a day counts once for a set of
   words, at most 300 lines of a day's board are read (none longer than 160 characters), and
-  each entry has two lines of the card at most. Sorting them isn't built yet: madCode sorts each new word or name once: which movement,
-  which variation, harder or easier, or filler. The answer is an event in the phone's log, so it
-  never relabels history already logged and is backed up with it. A useful answer can be
-  proposed back to the starting list in a PR.
+  each entry has two lines of the card at most.
+- **A word is sorted by tapping it** (madCode, 2026-11-25). Two answers: "ignore this word"
+  (it is passed over from then on), or "it's another name for…" with an exercise found by
+  typing part of its name. The card says back what the answer will do, and how that line will
+  then read, before the yes. "Neither: leave it" answers nothing: a new exercise, or a new way
+  of doing one, needs the lists themselves. Answers are listed under the words and each can
+  be undone.
+  - An answer is laid over the starting lists whenever a line is read (`Vocabulary.with`), so
+    it changes today's sheet, later boards and an imported history at once, and undoing it
+    changes them back. The lists' own words win: an answer for a word a list later learns is
+    spent.
+  - Not every word takes an answer: a count ("2 x"), or a word the reader settles by its
+    neighbours ("press", "rotation", "reach"), would be read by the answer on every line and
+    change lines that read today. And an answer is only kept when it changes the line it was
+    seen on: words that aren't side by side there, or a name that makes two exercises of the
+    line, are said back as "nothing to keep".
+  - A row already logged keeps the exercise it was logged as, whatever is answered or undone
+    afterwards.
+  - Answers are kept in the app's own storage (`word_answers.json`), not in the log and not
+    in Android backup: on a new phone they are answered again. A useful one can be proposed
+    back to the starting list in a PR.
 - **Where the lists live.** The starting lists are public knowledge, so they are JSON files in
   `coach/src/main/resources/spotter/`, shipped inside the app and changed by PR:
   `movements.json` (each movement, its true synonyms, pattern, muscles, and whether it is

@@ -71,6 +71,19 @@ Android's file picker and your real file are only visible on a phone.
    "Replace the dumbbell counts". Pick the history file there by mistake: it says that isn't
    a dumbbell counts file, and the counts you had are unchanged.
 
+## Sorting a word
+
+The tests prove the taps, what an answer does to a line, and that answers are kept. The
+keyboard, and a real board's word, are only visible on a phone.
+
+1. Under Progress, "Words Spotter doesn't know yet" lists words from recent boards. Tap one.
+2. **It's another name for…**: type part of an exercise's name. The keyboard doesn't cover the
+   names offered; tap one, read what it says back, then **Yes, read it that way**.
+3. The word leaves the list and appears under "Your answers". If today's board has it, that
+   row now has the exercise's number.
+4. **Undo** on the answer: the word is back on the list and the row is "not sure" again.
+5. Turn the phone while the search is open: the word, and what you typed, are still there.
+
 ## Adding an exercise
 
 The tests prove what a typed line becomes and that it is saved. The keyboard, and what

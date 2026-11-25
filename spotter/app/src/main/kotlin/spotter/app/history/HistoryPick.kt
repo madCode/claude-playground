@@ -56,7 +56,7 @@ object HistoryPick {
                 } else {
                     try {
                         if (!wanted()) return
-                        store.save(text, result, today)
+                        store.save(text, result, today, identity)
                         null
                     } catch (e: java.io.IOException) {
                         "Couldn't keep that file on this phone."

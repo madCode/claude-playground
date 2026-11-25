@@ -34,11 +34,11 @@ or the docs rather than guess: the order may change, nothing is built on a guess
 - [ ] Progress, the new-word review screen, sharing a board (step 6). Built: the progress card
   (cycle 29). It names an exercise by its key ("bicep curl [alternating=yes]"), as the sheet
   does beneath a row; plainer names want the reader's help. Its "for 6" is reps a side, also for a row the board
-  writes as "12 total". The review list is built read only (cycle 31): sorting a word, and sharing a board, wait
-  on madCode (Your call). "Whether the advice is working" is on it too, as counts (cycle 30);
+  writes as "12 total". The review list sorts a word in two answers (ignore, or another name for an exercise). "Whether the advice is working" is on it too, as counts (cycle 30);
   taking the sheet's "try" weight counts as "lifted heavier", since the log doesn't keep the
   try weight.
-  Still to build: sorting a word on the review list, sharing a board.
+  Still to build: answers for a new variation or a new exercise, which today wait for the
+  lists; keeping the answers in the backup. Sharing a board is dropped (madCode, 2026-11-24).
 
 ## Next
 
@@ -143,11 +143,6 @@ Still open:
   counts file (COUNTS-FORMAT.md), read by the import and the replay and picked on the
   phone's home screen. Behind it, the movement list's own usual numbers fill what is left, counted on the home
   screen. Watch for one that proves wrong.
-
-- **Sorting a word on the review list.** How should the phone ask? Proposed first step: two
-  answers only, "ignore this word" (filler) and "it's another name for …" with a movement
-  picked from a search box. An answer changes how every later board reads, so it shouldn't be
-  guessed at.
 
 Settled on 2026-11-22: up after two clean sessions or one that felt easy (built, cycle 22); a
 ladder's one number is its heaviest round's (as built; "+ Each round" for the rest, built in

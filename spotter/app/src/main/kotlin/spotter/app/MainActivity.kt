@@ -32,6 +32,9 @@ import spotter.coach.LogDraft
 import spotter.coach.Progress
 import spotter.coach.ReviewList
 import spotter.coach.UnknownWord
+import spotter.coach.WordAnswer
+import spotter.coach.WordAnswers
+import spotter.app.words.WordAnswerStore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import spotter.app.today.Boards
@@ -53,6 +56,8 @@ class MainActivity : ComponentActivity() {
     private val earlier = mutableStateOf<Today.Showing?>(null)
     private val progress = mutableStateOf(Progress())
     private val unknownWords = mutableStateOf(emptyList<UnknownWord>())
+    private val wordAnswers = mutableStateOf(emptyList<WordAnswer>())
+    private val words by lazy { WordAnswerStore(filesDir) }
     private val backup = mutableStateOf(BackupState())
     private val history = mutableStateOf(HistoryState())
     private val imported by lazy { HistoryStore.shared(filesDir) }
@@ -92,6 +97,22 @@ class MainActivity : ComponentActivity() {
             } finally {
                 store.end(ticket)
             }
+        }
+    }
+
+    // An answer changes how every line reads: the sheet, the log's rows and the imported
+    // history are all read again by it.
+    private fun setWords(answers: List<WordAnswer>) {
+        wordAnswers.value = answers
+        readWith(answers)
+        val store = words
+        val history = imported
+        HistoryStore.scope.launch {
+            // Whatever is latest now, not what was latest when this was asked for.
+            // One save at a time across recreated screens, which each have a store of their own.
+            runCatching { synchronized(MainActivity) { store.save(MainActivity.answers.orEmpty()) } }
+            // The imported history is read again by the new lists when the screen reloads.
+            history.touch()
         }
     }
 
@@ -139,6 +160,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Before anything is read: a few lines of the app's own file.
+        wordAnswers.value = answers ?: words.load().also(::readWith)
         UpdateWorker.schedule(this)
         ExportWorker.schedule(this)
         val version = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
@@ -154,6 +177,11 @@ class MainActivity : ComponentActivity() {
                 earlier = earlier.value,
                 progress = progress.value,
                 unknownWords = unknownWords.value,
+                wordAnswers = wordAnswers.value,
+                movements = lists.movements,
+                lineReads = { line, answer -> WordAnswers.sayBack(line, answer, wordAnswers.value, lists) },
+                onAnswerWord = { setWords(WordAnswers.adding(wordAnswers.value, it)) },
+                onUndoWord = { setWords(WordAnswers.removing(wordAnswers.value, it)) },
                 backup = backup.value,
                 onChooseFolder = { pickFolder.launch(null) },
                 history = history.value,
@@ -298,8 +326,31 @@ class MainActivity : ComponentActivity() {
 
         // Faster than any person can read a dialog and tap.
         const val NO_DIALOG_MS = 300L
-        val vocabulary by lazy { Vocabulary.starting() }
-        val identity by lazy { Identity(vocabulary) }
+        val lists by lazy { Vocabulary.starting() }
+
+        // The lists with the person's answers about new words laid over them (WordAnswerStore).
+        // One for the process: a pick or a save that outlives a rotation reads by the same.
+        // The two change together, in one write: a reader of the old lists must never be left
+        // beside the new ones.
+        @Volatile private var reading: Pair<Vocabulary, Identity>? = null
+        private fun reading(): Pair<Vocabulary, Identity> =
+            reading ?: synchronized(this) { reading ?: (lists to Identity(lists)).also { reading = it } }
+        val vocabulary: Vocabulary get() = reading().first
+        val identity: Identity get() = reading().second
+
+        // The answers as last given, ahead of the disk: a screen recreated before a save lands
+        // starts from these, and a save writes whatever is latest when it runs, so two saves
+        // can't leave the older answers on disk.
+        @Volatile var answers: List<WordAnswer>? = null
+            private set
+
+        // Under the same lock as the lazy start above, which could otherwise put the plain
+        // lists back over an answer.
+        fun readWith(given: List<WordAnswer>) = synchronized(this) {
+            answers = given
+            // With none, the lists as they are: nothing is read from them until a line is.
+            reading = if (given.isEmpty()) null else lists.with(given).let { it to Identity(it) }
+        }
 
         // One save at a time, across activities recreated by a rotation.
         val saving = Mutex()

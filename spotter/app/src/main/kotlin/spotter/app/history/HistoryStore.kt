@@ -29,7 +29,9 @@ class HistoryStore(dir: File) {
     // The owner's dumbbell counts (docs/COUNTS-FORMAT.md), kept the same way: the history is
     // read with them, so a count the rows don't give comes from the owner and not a guess.
     private val countsFile = File(dir, "dumbbell_counts.yaml")
-    private var read: Pair<LocalDate, HistoryImport.Result>? = null
+    // The file as read on a day by one reader: another day, or lists that have changed since
+    // (a word answered), reads it again.
+    private var read: Triple<LocalDate, Identity, HistoryImport.Result>? = null
 
     /** Why the last pick wasn't taken; null once one is. Gone with the process, like any toast. */
     @Volatile var refused: String? = null
@@ -90,18 +92,18 @@ class HistoryStore(dir: File) {
 
     /**
      * Replaces the kept copy, whole and on disk before it takes the name: a half-written file
-     * would read as a shorter history. [result] is [text] as read on [today], kept so the file
+     * would read as a shorter history. [result] is [text] as read on [today] by [identity], kept so the file
      * isn't parsed a second time.
      */
     @Synchronized
-    fun save(text: String, result: HistoryImport.Result, today: LocalDate) {
+    fun save(text: String, result: HistoryImport.Result, today: LocalDate, identity: Identity) {
         try {
             FileOutputStream(tmp).use {
                 it.write(text.toByteArray())
                 it.fd.sync()
             }
             if (!tmp.renameTo(file)) throw IOException("couldn't keep the history")
-            read = today to result
+            read = Triple(today, identity, result)
         } finally {
             // Never a stray copy of someone's training log, whatever went wrong.
             tmp.delete()
@@ -151,8 +153,8 @@ class HistoryStore(dir: File) {
         // Left by a process killed mid-save.
         tmp.delete()
         if (!file.isFile) return null
-        read?.takeIf { it.first == today }?.let { return it.second }
-        return HistoryImport.read(file.readText(), identity, today, everyRow = false, counts = counts() ?: DumbbellCounts.NONE).also { read = today to it }
+        read?.takeIf { it.first == today && it.second === identity }?.let { return it.third }
+        return HistoryImport.read(file.readText(), identity, today, everyRow = false, counts = counts() ?: DumbbellCounts.NONE).also { read = Triple(today, identity, it) }
     }
 
     companion object {

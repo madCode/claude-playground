@@ -22,6 +22,19 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Wednesday 25 November 2026
 
+### A word Spotter doesn't know is sorted by tapping it
+- **Why:** the card listed unknown words but could do nothing with them; each one costs a row
+  its number. madCode tried a mock-up and said the flow was right.
+- **Shipped:** tap a word, then "Ignore this word" or "It's another name for…" with a search
+  over the exercise list. The card says what the answer will do before the yes, and lists the
+  answers with an Undo each. An answer is laid over the lists, so every board, and an
+  imported history, is read again by it.
+- **The review caught:** an answer for "press", "rotation" or "reach" was read before the
+  neighbours that settle those words, so ignoring "press" turned "squat to press" into a
+  plain squat on every board; such words, and counts, now take no answer. The say-back gave
+  the wrong reason, and offered a yes, when an answer would change nothing. Two quick answers
+  could be saved out of order, and a rotation before a save landed lost the newer one.
+- **Due by hand:** DEVICE.md, "Sorting a word".
 ### The usual counts are seeded from madCode's answers, and the Log screen starts from them
 - **Why:** madCode: the boards are the same for everyone, so one member's experience of a
   lift is a fair default for all, to be overridden while logging.
