@@ -254,18 +254,14 @@ class HomeScreenTest {
         var imports = 0
         var removals = 0
         var stops = 0
-        var counts = 0
         var history by mutableStateOf(spotter.app.history.HistoryState())
         compose.setContent {
             HomeScreen(
                 "v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, history = history,
                 onImportHistory = { imports++ }, onRemoveHistory = { removals++ }, onStopHistory = { stops++ },
-                onPickCounts = { counts++ },
             )
         }
         compose.onNodeWithText("No history imported. Until you log an exercise, its row says \"new: go light\".").assertIsDisplayed()
-        // The counts go with a history: nothing to add them to yet.
-        compose.onNodeWithText("Add your dumbbell counts").assertDoesNotExist()
         compose.onNodeWithText("Import a history file").performClick()
         assertEquals(1, imports)
         history = spotter.app.history.HistoryState(698, listOf("409 no weight", "91 form broke down"), "Nothing in that file could be read as a history.")
@@ -275,13 +271,9 @@ class HomeScreenTest {
         shoot("home-history")
         compose.onNodeWithText("Replace the history").performClick()
         assertEquals(2, imports)
-        compose.onNodeWithText("Add your dumbbell counts").performClick()
-        assertEquals(1, counts)
-        history = history.copy(refused = null, counts = 14, ruled = 212, countAssumed = 37)
+        history = history.copy(refused = null, countAssumed = 37)
         compose.onNodeWithText("37 rows didn't say how many dumbbells: read as the lift's usual number.").assertIsDisplayed()
-        compose.onNodeWithText("Your dumbbell counts: 14 lifts; 212 rows took the count from them.").assertIsDisplayed()
-        compose.onNodeWithText("Replace the dumbbell counts").assertIsDisplayed()
-        shoot("home-history-counts")
+        shoot("home-history-usual")
         compose.onNodeWithText("Remove the history").performClick()
         compose.onNodeWithText("Remove the imported history? Your own log stays.").assertIsDisplayed()
         assertEquals(0, removals)
@@ -297,7 +289,7 @@ class HomeScreenTest {
         assertEquals(1, stops)
     }
 
-    // At the largest text every history button is whole: each wraps under the one before, it
+    // At the largest text both history buttons are whole: the second wraps under the first, it
     // isn't squeezed to nothing beside it.
     @Test
     fun theHistoryButtonsStayWholeAtLargeText() {
@@ -310,10 +302,8 @@ class HomeScreenTest {
             }
         }
         val replace = compose.onNodeWithText("Replace the history").fetchSemanticsNode().boundsInRoot
-        val counts = compose.onNodeWithText("Add your dumbbell counts").fetchSemanticsNode().boundsInRoot
         val remove = compose.onNodeWithText("Remove the history").fetchSemanticsNode().boundsInRoot
-        assertTrue("$counts under $replace", counts.top >= replace.bottom && counts.width >= replace.width * 0.8f)
-        assertTrue("$remove under $counts", remove.top >= counts.bottom && remove.width >= replace.width * 0.8f)
+        assertTrue("$remove under $replace", remove.top >= replace.bottom && remove.width >= replace.width * 0.8f)
         shoot("home-history-large-text")
     }
 

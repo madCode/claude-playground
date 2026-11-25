@@ -342,12 +342,6 @@ file. It isn't in Android backup; the file it came from is the copy to keep.
 
 - The home screen says how many rows were read and how many were left out, by reason, and
   offers "Replace the history" and "Remove the history" (which asks first; the log stays).
-- With a history imported, "Add your dumbbell counts" picks the owner's counts file
-  ([COUNTS-FORMAT.md](COUNTS-FORMAT.md)) the same way. It is kept beside the history and the
-  history is read with it; the screen says how many lifts it rules on and how many rows took
-  their count from it. A file that can't be read in full is refused with the reason and what
-  is kept stays. Removing the history removes the counts too. Like the history, the kept
-  copy isn't in Android backup.
 - The file is read apart from the screen, so turning the phone doesn't lose the pick. While it
   is read the screen says so and offers Stop, for a file on a drive that never answers.
 - A file that is too big (5 MB), can't be opened, or has nothing that reads as a history is
@@ -363,8 +357,8 @@ reason, so the import can say what it didn't take:
 - **The weight** is one dumbbell's, brought down to a dumbbell on the rack (22.5 is read as 20).
   Heavier or lighter than the rack: left out, something else was held.
 - **The count** is fixed by the name where it can be (a goblet squat, a single-arm press: one),
-  then by the row's own hint (two dumbbells, one, a Ybell), then by the owner's counts file
-  where one is given ([COUNTS-FORMAT.md](COUNTS-FORMAT.md): private, like the history). Last,
+  then by the row's own hint (two dumbbells, one, a Ybell), then, in the replay tool only, by a counts
+  file where one is given ([COUNTS-FORMAT.md](COUNTS-FORMAT.md): private, like the history). Last,
   the number the lift is usually done with, where the movement list gives one (a deadlift
   two, a halo one, a sumo squat one): a starting guess for anyone's import, and the home
   screen says how many rows rest on it. The boards are the same in every studio, so the list

@@ -22,6 +22,13 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Wednesday 25 November 2026
 
+### The counts file comes off the phone
+- **Why:** madCode's per-lift answers became the app's own defaults, so "Add your dumbbell
+  counts" asked for a file that would only repeat them. madCode: remove it.
+- **Shipped:** the button, its storage and its messages are gone from the phone. The replay
+  tool still takes the file (`-Pcounts`), for grading in private. A ruling the defaults can't
+  express goes into the movement list for everyone, as the sumo squat did.
+
 ### A word Spotter doesn't know is sorted by tapping it
 - **Why:** the card listed unknown words but could do nothing with them; each one costs a row
   its number. madCode tried a mock-up and said the flow was right.

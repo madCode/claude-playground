@@ -45,4 +45,5 @@ movements:
 - **All or nothing.** A file that can't be read in full is refused with a sentence saying why;
   none of it is used.
 - It is read when a history is imported (`HistoryImport`) and by the replay tool
-  ([REPLAY.md](REPLAY.md)). On the phone it is picked on the home screen, after the history. The log made on the phone doesn't need it: the Log screen asks.
+  ([REPLAY.md](REPLAY.md)). The phone doesn't take one: the answers it would hold are the app's
+  own usual numbers now (DESIGN.md, "The count"). The log made on the phone doesn't need it: the Log screen asks.
