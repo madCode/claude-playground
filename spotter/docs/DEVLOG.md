@@ -20,6 +20,17 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   backup folder, import your history file, and the hand checks.
 - **Not started:** step 7, the Garmin watch.
 
+## Wednesday 25 November 2026
+
+### The usual counts are seeded from madCode's answers, and the Log screen starts from them
+- **Why:** madCode: the boards are the same for everyone, so one member's experience of a
+  lift is a fair default for all, to be overridden while logging.
+- **Shipped:** madCode's own answers, lift by lift, are the list's usual numbers (their call
+  to publish them: counts only). New: chest press, bicep curl and skier swing two; pullover
+  one; a sumo squat one, while a plain squat still goes either way. On the Log screen a row
+  whose count nobody has said starts at the usual number, and "One dumbbell or two?" stays
+  on show so it changes in one tap.
+
 ## Tuesday 24 November 2026
 
 ### Walking, curtsy and cross-back lunges join the linked lunges

@@ -94,7 +94,7 @@ data class LogDraft(
          */
         fun asListed(row: SheetRow): RowLog? {
             val load = (row.suggestion as? Suggestion.Weight)?.load ?: return null
-            return RowLog(load.lb, load.count, reps(row))
+            return RowLog(load.lb, load.count ?: usual(row), reps(row))
         }
 
         /**
@@ -122,13 +122,25 @@ data class LogDraft(
          * "Changed", once a weight is picked from the rack: that weight at the board's reps.
          * Nothing is logged before the pick, so no made-up set enters history. The count is only
          * what is known: the row's words, the sheet's number, or the last time it was logged;
-         * otherwise unknown until the person says.
+         * otherwise the lift's usual number as a start, or unknown until the person says.
          */
         fun picked(row: SheetRow, lb: Int): RowLog = RowLog(lb, count(row), reps(row))
 
-        private fun count(row: SheetRow): Int? = (row.reading as? Reading.Known)?.let(Sheet::rowCount)
+        private fun count(row: SheetRow): Int? = known(row) ?: usual(row)
+
+        private fun known(row: SheetRow): Int? = (row.reading as? Reading.Known)?.let(Sheet::rowCount)
             ?: (row.suggestion as? Suggestion.Weight)?.load?.count
             ?: row.lastHeld?.count
+
+        // The lift's usual number: a guess to start from, never a fact about this set.
+        private fun usual(row: SheetRow): Int? = (row.reading as? Reading.Known)?.parts?.singleOrNull()?.let(Estimated::usual)
+
+        /**
+         * Whether the count is the person's to say: neither the row's words, the sheet's number
+         * nor the last time it was logged gives one. The screen then asks, with the lift's
+         * usual number already chosen where there is one.
+         */
+        fun asks(row: SheetRow): Boolean = known(row) == null
 
         private fun reps(row: SheetRow): Int? = if (row.line.scheme is Scheme.Ladder) null else row.target?.first
 

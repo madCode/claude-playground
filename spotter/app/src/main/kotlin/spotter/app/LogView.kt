@@ -239,9 +239,11 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
                 }
             }
             if (open) Editor(row, log, onChange)
-            // Asked whenever it isn't known, ticked or changed: the count is never guessed.
-            if (log != null && (open || log.count == null)) {
-                if (log.count == null) Text("One dumbbell or two?", fontSize = 15.sp, color = ink)
+            // Asked whenever it isn't known, ticked or changed. Where the lift has a usual
+            // number it is chosen already, and stays on show to be changed in one tap.
+            val asks = LogDraft.asks(row)
+            if (log != null && (open || log.count == null || asks)) {
+                if (log.count == null || asks) Text("One dumbbell or two?", fontSize = 15.sp, color = ink)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Choice("One dumbbell", log.count == 1, "${row.shown}: one dumbbell") { onChange(log.copy(count = 1)) }
                     Choice("Two", log.count == 2, "${row.shown}: two dumbbells") { onChange(log.copy(count = 2)) }

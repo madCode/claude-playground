@@ -253,12 +253,13 @@ class LogScreenTest {
         compose.onNodeWithText("Log this class").performClick()
         compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
         compose.onNodeWithContentDescription("8 x deadlift: 40 pounds").performClick()
-        // A new row's count isn't guessed: it is asked for, and shows without one until said.
-        compose.onNodeWithText("Logged: 40 · 8 reps").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("One dumbbell or two?").assertIsDisplayed()
-        compose.onNodeWithContentDescription("8 x deadlift: two dumbbells").performClick()
+        // A new row starts at the lift's usual number, and the question stays to change it in
+        // one tap: it is a guess, not something anyone said.
         compose.onNodeWithText("Logged: 2×40 · 8 reps").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("One dumbbell or two?").assertDoesNotExist()
+        compose.onNodeWithText("One dumbbell or two?").assertIsDisplayed()
+        compose.onNodeWithContentDescription("8 x deadlift: one dumbbell").performClick()
+        compose.onNodeWithText("Logged: 1×40 · 8 reps").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("One dumbbell or two?").assertIsDisplayed()
         shown = today(saturday.plusDays(1))
         compose.onNodeWithText("Log this class").performClick()
         compose.onNodeWithText("Save").performScrollTo().performClick()

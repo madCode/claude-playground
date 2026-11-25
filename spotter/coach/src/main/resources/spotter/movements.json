@@ -10,7 +10,10 @@
    "muscles": [
     "legs",
     "glutes"
-   ]
+   ],
+   "usualWith": {
+    "sumo": 1
+   }
   },
   {
    "name": "front squat",
@@ -205,7 +208,8 @@
     "glutes",
     "posterior chain",
     "core"
-   ]
+   ],
+   "usual": 2
   },
   {
    "name": "airplane",
@@ -484,7 +488,8 @@
     "chest",
     "triceps",
     "shoulders"
-   ]
+   ],
+   "usual": 2
   },
   {
    "name": "chest fly",
@@ -686,7 +691,8 @@
     "chest",
     "back",
     "core"
-   ]
+   ],
+   "usual": 1
   },
   {
    "name": "bicep curl",
@@ -700,7 +706,8 @@
    "pattern": "curl",
    "muscles": [
     "biceps"
-   ]
+   ],
+   "usual": 2
   },
   {
    "name": "clutch curl",
