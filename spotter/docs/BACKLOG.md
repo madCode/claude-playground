@@ -139,10 +139,9 @@ says otherwise.
 
 Still open:
 
-- **A history row that doesn't say how many dumbbells** takes its count from madCode's own
-  counts file (COUNTS-FORMAT.md), read by the import and the replay and picked on the
-  phone's home screen. Behind it, the movement list's own usual numbers fill what is left, counted on the home
-  screen. Watch for one that proves wrong.
+- **A history row that doesn't say how many dumbbells** takes the movement list's usual number, seeded
+  from madCode's answers and counted on the home screen. Watch for one that proves wrong.
+  The replay tool can still be given a counts file (COUNTS-FORMAT.md).
 
 Settled on 2026-11-22: up after two clean sessions or one that felt easy (built, cycle 22); a
 ladder's one number is its heaviest round's (as built; "+ Each round" for the rest, built in

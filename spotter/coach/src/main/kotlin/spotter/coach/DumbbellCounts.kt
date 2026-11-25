@@ -2,8 +2,8 @@ package spotter.coach
 
 /**
  * The owner's own rulings on how many dumbbells a lift is done with where nobody says: a file
- * kept beside the history and picked with it, never in this repository (docs/COUNTS-FORMAT.md,
- * schema `dumbbell-counts/1`). It fills a count only where neither the board line nor the
+ * kept beside the history and given to the replay tool with it, never in this repository
+ * (docs/COUNTS-FORMAT.md, schema `dumbbell-counts/1`). It fills a count only where neither the board line nor the
  * history row gives one.
  */
 class DumbbellCounts private constructor(private val rules: Map<String, Rule>) {

@@ -69,7 +69,7 @@ private fun BackupView(backup: BackupState, onChooseFolder: () -> Unit) {
 // What the sheet's numbers are made from besides the log, and what the import didn't take.
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: () -> Unit, onStop: () -> Unit, onCounts: () -> Unit) {
+private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: () -> Unit, onStop: () -> Unit) {
     var removing by rememberSaveable { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         val grey = Color(0xFF5B606B)
@@ -83,11 +83,7 @@ private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: (
                 if (history.countAssumed > 0) {
                     Text("${history.countAssumed} ${if (history.countAssumed == 1) "row" else "rows"} didn't say how many dumbbells: read as the lift's usual number.", fontSize = 14.sp, color = grey)
                 }
-                history.counts?.let {
-                    Text("Your dumbbell counts: $it ${if (it == 1) "lift" else "lifts"}; ${history.ruled} ${if (history.ruled == 1) "row" else "rows"} took the count from them.", fontSize = 14.sp, color = grey)
-                }
             }
-            if (history.countsUnread) Text("This version can't read the dumbbell counts you added, so none are used. Add them again.", fontSize = 14.sp, color = Color(0xFF8A4B00))
             history.refused?.let { Text(it, fontSize = 14.sp, color = Color(0xFF8A4B00)) }
             if (history.reading) Text("Reading the file…", fontSize = 14.sp, color = Color(0xFF16181D))
         }
@@ -119,9 +115,6 @@ private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: (
                     Text(if (history.read == null) "Import a history file" else "Replace the history")
                 }
                 if (history.read != null) {
-                    OutlinedButton(onClick = onCounts, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(if (history.counts == null) "Add your dumbbell counts" else "Replace the dumbbell counts")
-                    }
                     OutlinedButton(onClick = { removing = true }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Remove the history") }
                 }
             }
@@ -149,7 +142,6 @@ fun HomeScreen(
     onImportHistory: () -> Unit = {},
     onRemoveHistory: () -> Unit = {},
     onStopHistory: () -> Unit = {},
-    onPickCounts: () -> Unit = {},
     progress: Progress = Progress(),
     unknownWords: List<UnknownWord> = emptyList(),
     wordAnswers: List<WordAnswer> = emptyList(),
@@ -196,7 +188,7 @@ fun HomeScreen(
                 ProgressView(progress)
                 UnknownWordsView(unknownWords, wordAnswers, movements, lineReads, onAnswerWord, onUndoWord)
                 Spacer(Modifier.heightIn(min = 8.dp))
-                HistoryView(history, onImportHistory, onRemoveHistory, onStopHistory, onPickCounts)
+                HistoryView(history, onImportHistory, onRemoveHistory, onStopHistory)
                 BackupView(backup, onChooseFolder)
                 Text(
                     "Version $version · tap to copy",
