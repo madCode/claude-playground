@@ -127,6 +127,22 @@ internal object Estimated {
         else -> null
     }
 
+    /**
+     * The number of dumbbells [part] is usually done with ([Movement.usual]), for a row nobody
+     * counted. Only the plain lift, or the one way of doing it the list names: a one-legged
+     * deadlift is as often one dumbbell, and a triceps extension lying on a bench is two.
+     */
+    fun usual(part: Part): Int? {
+        val told = part.variations.filterNot { SharedWeight.neutral(part.movement, it.key, it.value) }
+        val usual = when (told.size) {
+            0 -> part.movement.usual
+            1 -> told.entries.single().let { part.movement.usualWith["${it.key}=${it.value}"] }
+            else -> null
+        }
+        // One dumbbell in both hands can't be done a side at a time.
+        return usual?.takeUnless { it == 1 && part.variations["alternating"] != null }
+    }
+
     private val lunges = setOf("lunge", "forward lunge", "reverse lunge", "walking lunge")
 
     // Lunges out of the straight line: the knee and hip are loaded at an angle, so they start

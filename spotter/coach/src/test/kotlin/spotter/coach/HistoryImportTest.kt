@@ -95,7 +95,7 @@ class HistoryImportTest {
     fun theCountsFileFillsOnlyWhatNobodySaid() {
         val rows = arrayOf(
             row("8 x squat", "40", 8, 8, exercise = "squat"),
-            row("8 x bicep curl", "15", 8, 8, exercise = "bicep curl"),
+            row("8 x reverse lunge", "15", 8, 8, exercise = "reverse lunge"),
             row("8 x squat", "40", 8, 8, implement = "single_dumbbell", exercise = "squat", date = "2026-03-04"),
             row("8 x single arm squat", "20", 8, 8, exercise = "squat", date = "2026-03-05"),
             row("8 x sumo squat", "45", 8, 8, exercise = "squat", date = "2026-03-06"),
@@ -104,8 +104,8 @@ class HistoryImportTest {
         val read = HistoryImport.read(rows.joinToString("\n"), identity, today, counts = counts)
         assertEquals(listOf(2, null, 1, 1, 1), read.rows.map { it.logged.load.count })
         assertEquals(listOf(true, false, false, false, true), read.rows.map { it.countRuled })
-        // Without the file every one of those stays as it was.
-        assertEquals(listOf(null, null, 1, 1, null), read(*rows).rows.map { it.logged.load.count })
+        // Without the file each stays as it was, but for the sumo squat, which has a usual number.
+        assertEquals(listOf(null, null, 1, 1, 1), read(*rows).rows.map { it.logged.load.count })
     }
 
     // The file counts dumbbells: a row that names something else held, in its words or its

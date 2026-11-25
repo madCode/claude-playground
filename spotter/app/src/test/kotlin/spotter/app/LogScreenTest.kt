@@ -197,6 +197,29 @@ class LogScreenTest {
         assertEquals(spotter.coach.RowLog(45, 2, 9, easy = true, hurt = true), saved!!.rows.values.single())
     }
 
+    // A sheet number with no count (an imported history that didn't say): the tick starts at
+    // the lift's usual two, the person's "one" stands over it, and the row is still as
+    // listed, with "felt easy" beside it, however often it is ticked again.
+    @Test
+    fun thePersonsCountStandsOverTheUsualOne() {
+        val deadlift = identity.read(spotter.coach.BoardLine.read("8 x deadlift").words) as spotter.coach.Reading.Known
+        val unsaid = listOf(spotter.coach.Logged(monday.minusDays(7), deadlift, spotter.coach.Load(40, null), 8..8, listOf(8)))
+        var saved: LogDraft? = null
+        show(Today.of(board(monday), log.entries(), identity, vocabulary, unsaid) as Today.Showing) { _, d -> saved = d }
+        compose.onNodeWithText("Log this class").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: done as listed").performScrollTo().performClick()
+        compose.onNodeWithText("Logged: 2×40 · 8 reps").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("8 x deadlift: one dumbbell").performScrollTo().performClick()
+        compose.onNodeWithText("Logged: 1×40 · 8 reps").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("8 x deadlift: done as listed").assertIsSelected()
+        compose.onNodeWithContentDescription("8 x deadlift: felt easy").performScrollTo().assertIsDisplayed()
+        shoot("log-usual-count")
+        compose.onNodeWithContentDescription("8 x deadlift: done as listed").performClick()
+        compose.onNodeWithText("Logged: 1×40 · 8 reps").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(1, saved!!.rows.values.single().count)
+    }
+
     // "Felt easy" is one tap beside the tick, and the row is still as listed with it.
     @Test
     fun feltEasyIsOneTapOnATickedRow() {
@@ -253,12 +276,13 @@ class LogScreenTest {
         compose.onNodeWithText("Log this class").performClick()
         compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
         compose.onNodeWithContentDescription("8 x deadlift: 40 pounds").performClick()
-        // A new row's count isn't guessed: it is asked for, and shows without one until said.
-        compose.onNodeWithText("Logged: 40 · 8 reps").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("One dumbbell or two?").assertIsDisplayed()
-        compose.onNodeWithContentDescription("8 x deadlift: two dumbbells").performClick()
+        // A new row starts at the lift's usual number, and the question stays to change it in
+        // one tap: it is a guess, not something anyone said.
         compose.onNodeWithText("Logged: 2×40 · 8 reps").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("One dumbbell or two?").assertDoesNotExist()
+        compose.onNodeWithText("One dumbbell or two?").assertIsDisplayed()
+        compose.onNodeWithContentDescription("8 x deadlift: one dumbbell").performClick()
+        compose.onNodeWithText("Logged: 1×40 · 8 reps").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("One dumbbell or two?").assertIsDisplayed()
         shown = today(saturday.plusDays(1))
         compose.onNodeWithText("Log this class").performClick()
         compose.onNodeWithText("Save").performScrollTo().performClick()
