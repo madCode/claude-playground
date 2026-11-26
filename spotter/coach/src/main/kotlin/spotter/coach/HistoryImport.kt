@@ -17,6 +17,8 @@ data class Imported(
     val countRuled: Boolean = false,
     /** Nobody said, the counts file included: the lift's usual number was taken ([Movement.usual]). */
     val countAssumed: Boolean = false,
+    /** Where in the file the row is, so a class's rows can be shown in the order they were done. */
+    val at: Int = 0,
 )
 
 /**
@@ -50,7 +52,16 @@ object HistoryImport {
         REPS_UNCLEAR,
     }
 
-    data class Result(val rows: List<Imported>, val left: Map<Left, Int>, val all: List<Row> = emptyList()) {
+    data class Result(
+        val rows: List<Imported>,
+        val left: Map<Left, Int>,
+        val all: List<Row> = emptyList(),
+        /**
+         * The rows left out, as the file has them: no part of the coach's history, but part of
+         * the class they were in, for looking back at it.
+         */
+        val others: List<Row> = emptyList(),
+    ) {
         val logged: List<Logged> get() = rows.map { it.logged }
     }
 
@@ -76,6 +87,8 @@ object HistoryImport {
         /** What the coach made of it; null when [left] says why it made nothing. */
         val logged: Logged?,
         val left: Left?,
+        /** Where in the file the row is. */
+        val at: Int = 0,
     )
 
     /** More than any history holds; a file built to exhaust memory stops here. */
@@ -97,24 +110,27 @@ object HistoryImport {
         val lines = text.removePrefix("\uFEFF").lineSequence().filter { it.isNotBlank() }.toList()
         // The file is appended to, so the newest rows are last: those are the ones to keep.
         if (lines.size > MAX_LINES) left[Left.TOO_MANY] = lines.size - MAX_LINES
-        lines.takeLast(MAX_LINES).forEach { line ->
+        val others = mutableListOf<Row>()
+        lines.takeLast(MAX_LINES).forEachIndexed { at, line ->
             val o = line.takeIf { it.length <= MAX_ROW }?.let { runCatching { json.parseToJsonElement(it) as? JsonObject }.getOrNull() }
             val date = o?.let { date(it, today) }
             val row = if (o == null || date == null) Left.UNREADABLE else row(o, date, identity, counts)
             when (row) {
                 is Left -> left.merge(row, 1, Int::plus)
-                is Imported -> rows += row
+                is Imported -> rows += row.copy(at = at)
             }
-            if (everyRow && o != null && date != null) {
-                all += Row(
+            if (o != null && date != null && (everyRow || row is Left)) {
+                val whole = Row(
                     date, o.string("class"), o.string("line") ?: filedAs(o), o.number("weight")?.takeIf { it > 0 }, o.int("reps"),
                     o.flag("skipped"), o.flag("done"), o.flag("hurt"), o.flag("easy"), o.flag("hard"), o.flag("easier"),
-                    (row as? Imported)?.logged, row as? Left,
+                    (row as? Imported)?.logged, row as? Left, at,
                 )
+                if (everyRow) all += whole
+                if (row is Left) others += whole
             }
         }
         // Appended roughly by date, not strictly: the coach reads history in date order.
-        return Result(rows.sortedBy { it.logged.date }, left, all.sortedBy { it.date })
+        return Result(rows.sortedBy { it.logged.date }, left, all.sortedBy { it.date }, others)
     }
 
     private fun date(o: JsonObject, today: LocalDate): LocalDate? =
