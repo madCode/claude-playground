@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -18,6 +19,7 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import spotter.app.today.Today
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,7 +49,7 @@ class HomeScreenTest {
     fun theBackupSaysWhereTheLogIs() {
         var picks = 0
         var backup by mutableStateOf(BackupState())
-        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, backup = backup, onChooseFolder = { picks++ }) }
+        compose.setContent { HomeScreen("v", startTab = Tab.SETTINGS, waitingBuild = null, onInstall = {}, onCopyVersion = {}, backup = backup, onChooseFolder = { picks++ }) }
         compose.onNodeWithText("Your log is only on this phone.").assertIsDisplayed()
         compose.onNodeWithText("Choose a backup folder").performClick()
         assertEquals(1, picks)
@@ -67,7 +69,7 @@ class HomeScreenTest {
     @Test
     fun progressShowsWhatMovedAndWhatIsNext() {
         var progress by mutableStateOf(spotter.coach.Progress())
-        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, progress = progress) }
+        compose.setContent { HomeScreen("v", startTab = Tab.HISTORY, waitingBuild = null, onInstall = {}, onCopyVersion = {}, progress = progress) }
         compose.onNodeWithText("Progress").assertDoesNotExist()
         val load = { lb: Int -> spotter.coach.Load(lb, 2) }
         progress = spotter.coach.Progress(
@@ -102,7 +104,7 @@ class HomeScreenTest {
     @Test
     fun unknownWordsAreListedAndCounted() {
         var words by mutableStateOf(emptyList<spotter.coach.UnknownWord>())
-        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words) }
+        compose.setContent { HomeScreen("v", startTab = Tab.SETTINGS, waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words) }
         compose.onNodeWithText("Words Spotter doesn't know yet").assertDoesNotExist()
         val day = java.time.LocalDate.of(2026, 11, 20)
         words = listOf(spotter.coach.UnknownWord("zorbing", "6 x zorbing", day, 3), spotter.coach.UnknownWord("frobnicated", "10 x frobnicated squat", day, 1)) +
@@ -121,6 +123,31 @@ class HomeScreenTest {
         assertTrue("$long against $normal", long < normal * 2)
     }
 
+    // Three places along the bottom. The app opens on the sheet; each tab shows its own
+    // things, and what was open on one is still open on coming back to it.
+    @Test
+    fun theTabsKeepTheirPlaces() {
+        val day = java.time.LocalDate.of(2026, 11, 20)
+        val words = listOf(spotter.coach.UnknownWord("zorbed", "10 x zorbed shoulder press", day, 2))
+        compose.setContent {
+            HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = Today.Nothing("No class booked today or tomorrow."), unknownWords = words)
+        }
+        compose.onNodeWithText("No class booked today or tomorrow.").assertIsDisplayed()
+        compose.onNodeWithText("Import a history file").assertDoesNotExist()
+        compose.onNodeWithText("Today").assertIsSelected()
+        compose.onNodeWithText("Settings").performClick()
+        compose.onNodeWithText("Settings").assertIsSelected()
+        compose.onNodeWithText("No class booked today or tomorrow.").assertDoesNotExist()
+        compose.onNodeWithText("Import a history file").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("zorbed: on 2 days, as in 10 x zorbed shoulder press").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("zorbed: ignore this word").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("History").performClick()
+        compose.onNodeWithText("Nothing logged yet. What you lift, and where it is heading, shows here.").assertIsDisplayed()
+        compose.onNodeWithText("Settings").performClick()
+        compose.onNodeWithContentDescription("zorbed: ignore this word").performScrollTo().assertIsDisplayed()
+        shoot("home-settings")
+    }
+
     // A word is sorted by tapping it: passed over, or another name for an exercise found by
     // searching; nothing is answered until the yes, and an answer can be undone.
     @Test
@@ -134,8 +161,7 @@ class HomeScreenTest {
         var answers by mutableStateOf(emptyList<spotter.coach.WordAnswer>())
         val undone = mutableListOf<String>()
         compose.setContent {
-            HomeScreen(
-                "v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words, wordAnswers = answers,
+            HomeScreen("v", startTab = Tab.SETTINGS, waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words, wordAnswers = answers,
                 movements = lists.movements,
                 lineReads = { line, a -> spotter.coach.WordAnswers.sayBack(line, a, answers, lists) },
                 onAnswerWord = { answers = answers + it }, onUndoWord = { undone += it },
@@ -198,8 +224,7 @@ class HomeScreenTest {
         var answers by mutableStateOf(listOf(spotter.coach.WordAnswer("zorbed")))
         val words = listOf(spotter.coach.UnknownWord("frobnicated", "8 x zorbed frobnicated squat", java.time.LocalDate.of(2026, 11, 20), 1))
         compose.setContent {
-            HomeScreen(
-                "v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words, wordAnswers = answers, movements = lists.movements,
+            HomeScreen("v", startTab = Tab.SETTINGS, waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words, wordAnswers = answers, movements = lists.movements,
                 lineReads = { line, a -> spotter.coach.WordAnswers.sayBack(line, a, answers, lists) }, onUndoWord = { answers = emptyList() },
             )
         }
@@ -218,8 +243,7 @@ class HomeScreenTest {
         // As the app is after a rotation: the answers are there at once, the words a moment later.
         var words by mutableStateOf(all)
         restore.setContent {
-            HomeScreen(
-                "v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words,
+            HomeScreen("v", startTab = Tab.SETTINGS, waitingBuild = null, onInstall = {}, onCopyVersion = {}, unknownWords = words,
                 wordAnswers = listOf(spotter.coach.WordAnswer("zorbed")), movements = spotter.coach.Vocabulary.starting().movements,
             )
         }
@@ -240,7 +264,7 @@ class HomeScreenTest {
     @Test
     fun answersStayWhenNoWordIsLeft() {
         compose.setContent {
-            HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, wordAnswers = listOf(spotter.coach.WordAnswer("zorbed")))
+            HomeScreen("v", startTab = Tab.SETTINGS, waitingBuild = null, onInstall = {}, onCopyVersion = {}, wordAnswers = listOf(spotter.coach.WordAnswer("zorbed")))
         }
         compose.onNodeWithText("Words Spotter doesn't know yet").assertDoesNotExist()
         compose.onNodeWithText("Your answers").performScrollTo().assertIsDisplayed()
@@ -256,8 +280,7 @@ class HomeScreenTest {
         var stops = 0
         var history by mutableStateOf(spotter.app.history.HistoryState())
         compose.setContent {
-            HomeScreen(
-                "v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, history = history,
+            HomeScreen("v", startTab = Tab.SETTINGS, waitingBuild = null, onInstall = {}, onCopyVersion = {}, history = history,
                 onImportHistory = { imports++ }, onRemoveHistory = { removals++ }, onStopHistory = { stops++ },
             )
         }
@@ -298,7 +321,7 @@ class HomeScreenTest {
             androidx.compose.runtime.CompositionLocalProvider(
                 androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, fontScale = 2f),
             ) {
-                HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, history = spotter.app.history.HistoryState(698))
+                HomeScreen("v", startTab = Tab.SETTINGS, waitingBuild = null, onInstall = {}, onCopyVersion = {}, history = spotter.app.history.HistoryState(698))
             }
         }
         val replace = compose.onNodeWithText("Replace the history").fetchSemanticsNode().boundsInRoot
@@ -310,7 +333,7 @@ class HomeScreenTest {
     @Test
     fun theVersionCopiesInOneTap() {
         var copies = 0
-        compose.setContent { HomeScreen("0.1.0-debug.42+abc1234 (42)", waitingBuild = null, onInstall = {}, onCopyVersion = { copies++ }) }
+        compose.setContent { HomeScreen("0.1.0-debug.42+abc1234 (42)", startTab = Tab.SETTINGS, waitingBuild = null, onInstall = {}, onCopyVersion = { copies++ }) }
         compose.onNodeWithText("Install").assertDoesNotExist()
         compose.onNodeWithText("Version 0.1.0-debug.42+abc1234 (42) · tap to copy").performClick()
         assertEquals(1, copies)

@@ -1,6 +1,20 @@
 package spotter.app
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -126,6 +140,7 @@ private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: (
  * The app's screen: today's sheet in the middle, a newer build waiting when there is one, and the
  * version, copyable in one tap.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     version: String,
@@ -149,56 +164,127 @@ fun HomeScreen(
     lineReads: (String, WordAnswer) -> WordAnswers.SayBack = { _, _ -> WordAnswers.SayBack("", true) },
     onAnswerWord: (WordAnswer) -> Unit = {},
     onUndoWord: (String) -> Unit = {},
+    /** Where the app opens: the sheet. */
+    startTab: Tab = Tab.TODAY,
 ) {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
-            Column(
-                Modifier.safeDrawingPadding().verticalScroll(rememberScrollState()).padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Text(
-                    "Spotter",
-                    fontSize = 28.sp,
-                    color = Color(0xFF16181D),
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.semantics { heading() },
-                )
-                if (waitingBuild != null) {
-                    Surface(color = Color(0xFFE8EEFC), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            var tab by rememberSaveable { mutableStateOf(startTab) }
+            // Turning the phone keeps the tab. Coming back later doesn't: at the studio door the
+            // app must open on the sheet, whether Android kept the screen alive or rebuilt it
+            // from what it saved. So when the screen was last left is saved with it.
+            var leftAt by rememberSaveable { mutableStateOf<Long?>(null) }
+            LifecycleEventEffect(Lifecycle.Event.ON_STOP) { leftAt = now() }
+            LifecycleEventEffect(Lifecycle.Event.ON_START) {
+                if (leftAt?.let { now() - it > TAB_KEPT_MS } == true) tab = startTab
+                leftAt = null
+            }
+            val scope = rememberCoroutineScope()
+            // Each tab keeps what was open on it (a half-logged class, a word being sorted)
+            // while another is shown.
+            val kept = rememberSaveableStateHolder()
+            Column(Modifier.safeDrawingPadding()) {
+                Box(Modifier.weight(1f)) {
+                    kept.SaveableStateProvider(tab.name) {
+                        val scroll = rememberScrollState()
+                        Column(
+                            Modifier.fillMaxSize().verticalScroll(scroll).padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            Text(
-                                "A newer build, $waitingBuild, is ready.",
-                                fontSize = 16.sp,
-                                color = Color(0xFF1E3A8A),
-                                modifier = Modifier.weight(1f),
-                            )
-                            Button(
-                                onClick = onInstall,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
-                                modifier = Modifier.heightIn(min = 48.dp),
-                            ) { Text("Install") }
+                            when (tab) {
+                                Tab.TODAY -> {
+                                    if (waitingBuild != null) {
+                                        Surface(color = Color(0xFFE8EEFC), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+                                            Row(
+                                                Modifier.padding(14.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            ) {
+                                                Text(
+                                                    "A newer build, $waitingBuild, is ready.",
+                                                    fontSize = 16.sp,
+                                                    color = Color(0xFF1E3A8A),
+                                                    modifier = Modifier.weight(1f),
+                                                )
+                                                Button(
+                                                    onClick = onInstall,
+                                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
+                                                    modifier = Modifier.heightIn(min = 48.dp),
+                                                ) { Text("Install") }
+                                            }
+                                        }
+                                    }
+                                    // The sheet's button is under its rows; the log opens at its top.
+                                    TodayView(today, onAllowCalendar, onSaveLog, earlier, onStartLog = { scope.launch { scroll.scrollTo(0) } })
+                                }
+                                Tab.HISTORY -> {
+                                    if (progress == Progress()) {
+                                        Text(
+                                            "Nothing logged yet. What you lift, and where it is heading, shows here.",
+                                            fontSize = 17.sp, color = Color(0xFF5B606B), modifier = Modifier.semantics { heading() },
+                                        )
+                                    }
+                                    ProgressView(progress)
+                                }
+                                Tab.SETTINGS -> {
+                                    UnknownWordsView(unknownWords, wordAnswers, movements, lineReads, onAnswerWord, onUndoWord)
+                                    Section("Imported history")
+                                    HistoryView(history, onImportHistory, onRemoveHistory, onStopHistory)
+                                    Section("Backup")
+                                    BackupView(backup, onChooseFolder)
+                                    Text(
+                                        "Version $version · tap to copy",
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF5B606B),
+                                        modifier = Modifier
+                                            .heightIn(min = 48.dp)
+                                            .clickable(role = Role.Button, onClickLabel = "copy the version", onClick = onCopyVersion)
+                                            .padding(vertical = 12.dp),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
-                TodayView(today, onAllowCalendar, onSaveLog, earlier)
-                ProgressView(progress)
-                UnknownWordsView(unknownWords, wordAnswers, movements, lineReads, onAnswerWord, onUndoWord)
-                Spacer(Modifier.heightIn(min = 8.dp))
-                HistoryView(history, onImportHistory, onRemoveHistory, onStopHistory)
-                BackupView(backup, onChooseFolder)
-                Text(
-                    "Version $version · tap to copy",
-                    fontSize = 14.sp,
-                    color = Color(0xFF5B606B),
-                    modifier = Modifier
-                        .heightIn(min = 48.dp)
-                        .clickable(role = Role.Button, onClickLabel = "copy the version", onClick = onCopyVersion)
-                        .padding(vertical = 12.dp),
-                )
+                // Not over the keyboard: a field being typed in needs the room more.
+                if (!WindowInsets.isImeVisible) Tabs(tab) { tab = it }
+            }
+        }
+    }
+}
+
+// A label over a part of Settings, and a heading to reach it by.
+@Composable
+private fun Section(text: String) {
+    Text(text, fontSize = 14.sp, color = Color(0xFF5B606B), fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp).semantics { heading() })
+}
+
+/** How long a tab other than the first is come back to: past it, the app opens on the sheet. */
+internal const val TAB_KEPT_MS = 10 * 60 * 1000L
+
+/** The time; a test's own clock. */
+internal var now: () -> Long = System::currentTimeMillis
+
+/** The app's three places: the sheet for the door and the car, looking back, and what is set once. */
+enum class Tab(val label: String) { TODAY("Today"), HISTORY("History"), SETTINGS("Settings") }
+
+// Along the bottom, under the thumb. Words, not icons: three places need no pictures.
+@Composable
+private fun Tabs(selected: Tab, onSelect: (Tab) -> Unit) {
+    Surface(color = Color.White, shadowElevation = 6.dp, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.selectableGroup()) {
+            Tab.entries.forEach { t ->
+                val on = t == selected
+                Column(
+                    Modifier.weight(1f).heightIn(min = 56.dp)
+                        .selectable(selected = on, role = Role.Tab, onClick = { onSelect(t) })
+                        .padding(vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                ) {
+                    Text(t.label, fontSize = 15.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, color = if (on) Color(0xFF1D4ED8) else Color(0xFF5B606B))
+                    Box(Modifier.width(28.dp).height(3.dp).background(if (on) Color(0xFF1D4ED8) else Color.Transparent, RoundedCornerShape(2.dp)))
+                }
             }
         }
     }

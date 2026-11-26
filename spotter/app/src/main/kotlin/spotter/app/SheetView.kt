@@ -24,18 +24,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.saveable.Saver
 import kotlinx.serialization.json.Json
 import spotter.app.today.Today
 import spotter.coach.LogDraft
+import spotter.coach.Reading
 import spotter.coach.Sheet
 import spotter.coach.SheetRow
 import spotter.coach.Change
@@ -57,6 +58,8 @@ fun TodayView(
     onSaveLog: (Today.Showing, LogDraft) -> Unit = { _, _ -> },
     /** A class already started that can still be logged, after the sheet has moved on. */
     earlier: Today.Showing? = null,
+    /** The log is about to take the sheet's place: it starts at its top. */
+    onStartLog: () -> Unit = {},
 ) {
     // Which class is being logged, if any, and what has been entered. Both survive rotation and
     // the app being killed, so a half-logged class isn't lost. Tied to the class by name: should
@@ -67,6 +70,7 @@ fun TodayView(
     fun start(s: Today.Showing) {
         draft = LogDraft.from(s.sheet, s.logged)
         loggingClass = name(s)
+        onStartLog()
     }
     // The earlier one first: just after a save both can briefly be the same class, and it is
     // the one that carries the fresh log.
@@ -119,7 +123,8 @@ private fun EarlierClass(earlier: Today.Showing, onLog: () -> Unit) {
 @Composable
 private fun TodayBody(today: Today, onAllowCalendar: () -> Unit, onLog: (Today.Showing) -> Unit) {
     when (today) {
-        Today.Loading -> Text("Reading today's board…", fontSize = 17.sp, color = muted)
+        // Each a heading: with no sheet it is the one landmark on the tab.
+        Today.Loading -> Text("Reading today's board…", fontSize = 17.sp, color = muted, modifier = Modifier.semantics { heading() })
         Today.NeedsCalendar -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
                 "Spotter reads your calendar to know which class is next. It reads only the titles and times of entries from two days ago to tomorrow, and keeps nothing.",
@@ -132,7 +137,7 @@ private fun TodayBody(today: Today, onAllowCalendar: () -> Unit, onLog: (Today.S
                 modifier = Modifier.heightIn(min = 48.dp),
             ) { Text("Allow the calendar") }
         }
-        is Today.Nothing -> Text(today.reason, fontSize = 17.sp, color = ink)
+        is Today.Nothing -> Text(today.reason, fontSize = 17.sp, color = ink, modifier = Modifier.semantics { heading() })
         is Today.Showing -> SheetView(today) { onLog(today) }
     }
 }
@@ -149,17 +154,8 @@ private fun SheetView(today: Today.Showing, onLog: () -> Unit) {
             color = ink,
             modifier = Modifier.semantics { heading() },
         )
-        (today.notes + today.sheet.warnings).forEach { Note(it) }
-        // Also with nothing to log on this board, when there is something logged to see or clear.
-        if (today.sheet.rows.any(LogDraft::loggable) || today.strays.isNotEmpty() || today.logged.isNotEmpty()) {
-            val logged = today.sheet.rows.count { it.id in today.logged } + today.strays.size
-            val label = if (logged == 0) "Log this class" else "Change the log ($logged logged)"
-            Button(
-                onClick = onLog,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) { Text(label) }
-        }
+        // What is true of the whole board. A row's own warning is said in its row.
+        today.notes.forEach { Note(it) }
         var block: String? = null
         today.sheet.rows.forEachIndexed { i, row ->
             if (row.block != block) {
@@ -174,6 +170,17 @@ private fun SheetView(today: Today.Showing, onLog: () -> Unit) {
                 }
             }
             SheetRowView(i, row, today.sheet)
+        }
+        // After the rows: at the door the numbers come first, and logging is for after class.
+        // Also with nothing to log on this board, when there is something logged to see or clear.
+        if (today.sheet.rows.any(LogDraft::loggable) || today.strays.isNotEmpty() || today.logged.isNotEmpty()) {
+            val logged = today.sheet.rows.count { it.id in today.logged } + today.strays.size
+            val label = if (logged == 0) "Log this class" else "Change the log ($logged logged)"
+            Button(
+                onClick = onLog,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
+                modifier = Modifier.padding(top = 8.dp).heightIn(min = 48.dp),
+            ) { Text(label) }
         }
     }
 }
@@ -192,7 +199,6 @@ private fun Note(text: String) {
 private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet) {
     // Survives rotation, so an open "why" stays open.
     var open by rememberSaveable(index, row.shown) { mutableStateOf(false) }
-    val glance = sheet.glance(row)
     val weighted = row.suggestion is Suggestion.Weight
     Surface(
         color = Color.White,
@@ -203,33 +209,52 @@ private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet) {
             .clickable(role = Role.Button, onClickLabel = if (open) "hide why" else "show why") { open = !open }
             .semantics { stateDescription = if (open) "why shown" else "why hidden" },
     ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(row.shown, fontSize = 17.sp, color = ink, modifier = Modifier.weight(1f))
-                // Capped, so a long reason ("no sound conversion") wraps under itself rather than
-                // squeezing the board's words to a few letters a line, at any font size.
-                Text(
-                    glance,
-                    fontSize = if (weighted) 20.sp else 15.sp,
-                    fontWeight = if (weighted) FontWeight.Bold else FontWeight.Normal,
-                    color = if (weighted) ink else muted,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.widthIn(max = 150.dp).semantics { contentDescription = spoken(row, glance) },
-                )
+                // The number leads, in a column the eye can run down. As wide as it needs at any
+                // font size, and no narrower than the usual "2×30", so the exercises line up.
+                // Spoken as one thing, in words, as part of the row: the weight is heard with its
+                // exercise, not at a stop of its own.
+                Column(Modifier.widthIn(min = 84.dp).clearAndSetSemantics { contentDescription = spoken(row, sheet.glance(row)) }) {
+                    Text(
+                        row.headline,
+                        fontSize = if (weighted) 26.sp else 16.sp,
+                        fontWeight = if (weighted) FontWeight.Bold else FontWeight.SemiBold,
+                        color = if (weighted) ink else muted,
+                    )
+                    row.caption?.let {
+                        val up = (row.suggestion as? Suggestion.Weight)?.change == Change.UP
+                        Text(it, fontSize = 13.sp, color = if (up) Color(0xFF17753F) else muted, fontWeight = if (up) FontWeight.SemiBold else FontWeight.Normal)
+                    }
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(row.shown, fontSize = 17.sp, color = ink)
+                    row.aside?.let { Text(it, fontSize = 13.sp, color = muted) }
+                }
+                // Says the row opens; the state itself is spoken above.
+                Text(if (open) "⌄" else "›", fontSize = 20.sp, color = muted, modifier = Modifier.clearAndSetSemantics { })
             }
-            Text(row.understood, fontSize = 13.sp, color = muted)
-            if (open) row.why.forEach { Text("· $it", fontSize = 15.sp, color = ink) }
+            // A row that wasn't read has said so under its headline already.
+            if (row.reading is Reading.Known) row.warnings.forEach { Text(it, fontSize = 14.sp, color = warn) }
+            if (open) {
+                // Not what the row has said already.
+                row.why.filter { it != row.aside }.forEach { Text("· $it", fontSize = 15.sp, color = ink) }
+                // In plain words, so a misreading of the line can be seen.
+                row.readAs?.let { Text("Read as: $it", fontSize = 14.sp, color = muted) }
+            }
         }
     }
 }
 
 // What TalkBack says for the number: words, not "black up-pointing triangle".
 internal fun spoken(row: SheetRow, glance: String): String {
-    val s = row.suggestion as? Suggestion.Weight ?: return glance
+    // "Not sure", "go light", "no weight": the row's own two words, not the glance's "?".
+    val s = row.suggestion as? Suggestion.Weight ?: return listOfNotNull(row.headline, row.caption).joinToString(", ")
+    // An offer, and a count nobody knows, are said by the sentence beside the words.
     val held = when (s.load.count) {
         2 -> "two ${s.load.lb} pound dumbbells"
         1 -> "one ${s.load.lb} pound dumbbell"
-        else -> "${s.load.lb} pounds each, count not known"
+        else -> "${s.load.lb} pounds each"
     }
     val change = when (s.change) {
         Change.UP -> "up from last time"
@@ -238,5 +263,5 @@ internal fun spoken(row: SheetRow, glance: String): String {
         Change.NEW -> "new"
         Change.EST -> "an estimate"
     }
-    return listOfNotNull(held, change, s.test?.let { "try ${it.lb} if set 1 felt easy" }).joinToString(", ")
+    return "$held, $change"
 }

@@ -31,6 +31,62 @@ data class SheetRow(
                 reading.words.takeIf { it.isNotEmpty() }?.let { " (" + it.joinToString(" ") + ")" }.orEmpty()
         }
 
+    /**
+     * What leads the row at a glance: the dumbbells to pick up ("2×30"), or in two words why
+     * there are none to say ("go light", "no weight", "not sure").
+     */
+    val headline: String
+        get() = when (val s = suggestion) {
+            is Suggestion.Weight -> s.load.count?.let { "$it×${s.load.lb}" } ?: "${s.load.lb} lb"
+            is Suggestion.NoNumber -> if (fresh(s)) "go light" else "no number"
+            null -> if (reading is Reading.NotSure) "not sure" else "no weight"
+        }
+
+    // New to the log, whether or not there is more to say about why it has no number.
+    private fun fresh(s: Suggestion.NoNumber) = s.new || s.reason.startsWith("new:")
+
+    /** A word or two under [headline] on where it comes from; null when it needs none. */
+    val caption: String?
+        get() = when (val s = suggestion) {
+            is Suggestion.Weight -> when (s.change) {
+                Change.UP -> "▲ up"
+                Change.DOWN -> "▼ down"
+                Change.SAME -> "same"
+                Change.NEW -> "new"
+                Change.EST -> "estimate"
+            }
+            is Suggestion.NoNumber -> "new".takeIf { fresh(s) }
+            null -> null
+        }
+
+    /**
+     * A sentence that goes with the row, beside the board's words and not under the number,
+     * where it would push the exercises out of line: an offer, a count nobody knows, why there
+     * is no number, why the line wasn't read. Null when there is nothing to add.
+     */
+    val aside: String?
+        get() = when (val s = suggestion) {
+            is Suggestion.Weight -> listOfNotNull(
+                "one dumbbell or two isn't known".takeIf { s.load.count == null },
+                s.test?.let { "try ${it.lb} if set 1 felt easy" },
+            ).joinToString(" · ").ifEmpty { null }
+            // "new: its parts are held differently" is new all the same, with a reason to give.
+            is Suggestion.NoNumber -> s.reason.removePrefix("new: ").takeIf { !s.new }
+            null -> (reading as? Reading.NotSure)?.let { r ->
+                when (r.why) {
+                    // Where it can be put right.
+                    Why.UNKNOWN_WORDS -> "\"${r.words.joinToString(" ")}\" isn't known yet: say what it is under Settings"
+                    Why.TWO_MOVEMENTS -> "reads as two exercises side by side"
+                    Why.A_CHOICE -> "a choice of two"
+                    Why.CONFLICT -> "two words that don't go together"
+                    else -> "no exercise named"
+                }
+            }
+        }
+
+    /** The exercise in plain words, for the row's detail, so a misreading can be seen; null when not read. */
+    val readAs: String? get() = (reading as? Reading.Known)?.let(Estimated::name)
+
     /** Why the number is what it is, for the row's detail. */
     val why: List<String>
         get() = when (val s = suggestion) {
