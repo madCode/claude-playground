@@ -28,6 +28,10 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 - **Shipped:** with no class today or tomorrow, nothing left to log and no build waiting,
   the app opens on History. A tab chosen by hand stands. A class without a board yet is
   not a day off: that stays on Today.
+- **Review caught:** a class already logged still counted as one to log, so the rule waited
+  for the third day off; a build found a moment later, a rotation, or yesterday's reading
+  on coming back could move the screen. The tab is now decided once per opening, from a
+  fresh reading.
 
 ### A dark theme
 - **Why:** the last piece of the design pass: the app was light only.

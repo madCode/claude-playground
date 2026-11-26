@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -176,14 +177,11 @@ class PastScreenTest {
     }
 
     // With no class today or tomorrow the app opens on what was done, once the calendar has
-    // said so; choosing Today by hand stands. A class still to log, or a build waiting, keeps
-    // it on Today, where those are.
+    // said so; picking Today by hand stands.
     @Test
     fun aDayWithNoClassOpensOnHistory() {
-        val none = Today.Nothing("No class booked today or tomorrow.", noClass = true)
         var today by mutableStateOf<Today>(Today.Loading)
-        var waiting by mutableStateOf<Int?>(null)
-        compose.setContent { HomeScreen("v", waitingBuild = waiting, onInstall = {}, onCopyVersion = {}, today = today, past = past) }
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = today, past = past) }
         compose.onNodeWithText("Today").assertIsSelected()
         today = none
         compose.onNodeWithText("History").assertIsSelected()
@@ -195,21 +193,76 @@ class PastScreenTest {
         compose.onNodeWithText("Today").assertIsSelected()
     }
 
+    // A class still to log, or a build waiting, keeps the app on Today, where those are. A
+    // class already logged doesn't: yesterday's stays within reach for two days.
+    private val none = Today.Nothing("No class booked today or tomorrow.", noClass = true)
+    private fun done(): Today.Showing {
+        val board = TodaysBoard.Lines(BookedClass("2G", day(21), day(21).atTime(9, 50), "Orange 60 Min 2G"), listOf("* 8 x deadlift"))
+        return (Today.of(board, own, identity, vocabulary) as Today.Showing).also { assertTrue(it.logged.isNotEmpty()) }
+    }
+
     @Test
-    fun somethingToDoOnTodayKeepsTheAppThere() {
-        val none = Today.Nothing("No class booked today or tomorrow.", noClass = true)
-        val board = TodaysBoard.Lines(BookedClass("2G", day(23), day(23).atTime(9, 50), "Orange 60 Min 2G"), listOf("* 8 x deadlift"))
-        val done = Today.of(board, own, identity, vocabulary) as Today.Showing
-        var earlier by mutableStateOf<Today.Showing?>(done)
-        var waiting by mutableStateOf<Int?>(null)
-        compose.setContent { HomeScreen("v", waitingBuild = waiting, onInstall = {}, onCopyVersion = {}, today = none, earlier = earlier, past = past) }
+    fun aClassStillToLogKeepsTheAppOnToday() {
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = none, earlier = done().copy(logged = emptyMap(), strays = emptyList()), past = past) }
         compose.onNodeWithText("Today").assertIsSelected()
-        earlier = null
-        waiting = 9
+    }
+
+    @Test
+    fun aBuildWaitingKeepsTheAppOnToday() {
+        compose.setContent { HomeScreen("v", waitingBuild = 9, onInstall = {}, onCopyVersion = {}, today = none, past = past) }
         compose.onNodeWithText("Today").assertIsSelected()
-        // Installed or gone: nothing left on Today.
-        waiting = null
+    }
+
+    @Test
+    fun aClassAlreadyLoggedDoesNotKeepTheAppOnToday() {
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = none, earlier = done(), past = past) }
         compose.onNodeWithText("History").assertIsSelected()
+    }
+
+    // Once the app has opened somewhere it stays: a build found a moment later, or the screen
+    // rebuilt while the board is read again, doesn't move it.
+    @Test
+    fun theOpeningTabIsDecidedOnce() {
+        var today by mutableStateOf<Today>(none)
+        var waiting by mutableStateOf<Int?>(null)
+        val restore = StateRestorationTester(compose)
+        restore.setContent { HomeScreen("v", waitingBuild = waiting, onInstall = {}, onCopyVersion = {}, today = today, past = past) }
+        compose.onNodeWithText("History").assertIsSelected()
+        waiting = 9
+        compose.onNodeWithText("History").assertIsSelected()
+        today = Today.Loading
+        restore.emulateSavedInstanceStateRestore()
+        compose.onNodeWithText("History").assertIsSelected()
+    }
+
+    // Back after a long while, yesterday's reading isn't today's: the app waits on Today for
+    // the calendar to be read again, and only then says where it opens.
+    @Test
+    fun aReadingFromBeforeIsNotTakenForToday() {
+        var time = 1_000_000L
+        now = { time }
+        try {
+                var loaded by mutableStateOf(1)
+            val owner = object : androidx.lifecycle.LifecycleOwner {
+                val registry = androidx.lifecycle.LifecycleRegistry(this)
+                override val lifecycle get() = registry
+            }
+            compose.runOnUiThread { owner.registry.currentState = androidx.lifecycle.Lifecycle.State.RESUMED }
+            compose.setContent {
+                androidx.compose.runtime.CompositionLocalProvider(androidx.lifecycle.compose.LocalLifecycleOwner provides owner) {
+                    HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = none, past = past, loaded = loaded)
+                }
+            }
+            compose.onNodeWithText("History").assertIsSelected()
+            compose.runOnUiThread { owner.registry.currentState = androidx.lifecycle.Lifecycle.State.CREATED }
+            time += TAB_KEPT_MS + 1
+            compose.runOnUiThread { owner.registry.currentState = androidx.lifecycle.Lifecycle.State.RESUMED }
+            compose.onNodeWithText("Today").assertIsSelected()
+            loaded = 2
+            compose.onNodeWithText("History").assertIsSelected()
+        } finally {
+            now = System::currentTimeMillis
+        }
     }
 
     // A class that is booked but has no board yet isn't a day off.

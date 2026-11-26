@@ -57,6 +57,7 @@ class MainActivity : ComponentActivity() {
     private val waiting = mutableIntStateOf(0)
     private val today = mutableStateOf<Today>(Today.Loading)
     private val earlier = mutableStateOf<Today.Showing?>(null)
+    private val loaded = mutableIntStateOf(0)
     private val progress = mutableStateOf(Progress())
     private val past = mutableStateOf(emptyList<PastClass>())
     private val unknownWords = mutableStateOf(emptyList<UnknownWord>())
@@ -164,6 +165,7 @@ class MainActivity : ComponentActivity() {
                 onAllowCalendar = ::allowCalendar,
                 onSaveLog = ::saveLog,
                 earlier = earlier.value,
+                loaded = loaded.intValue,
                 progress = progress.value,
                 past = past.value,
                 unknownWords = unknownWords.value,
@@ -267,11 +269,13 @@ class MainActivity : ComponentActivity() {
             // The kept board first, then the fetched one.
             val kept = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), fetch = false, logged) }
             today.value = Today.afterKept(today.value, kept?.let { Today.of(it, entries, identity, vocabulary, beside) }, logged)
+            if (kept != null) loaded.intValue++
             // From the boards already on the phone, then again once today's has been fetched:
             // weak signal mustn't hold the card back, or drop it in mid-read.
             val fromKept = launch { unknownWords.value = withContext(Dispatchers.IO) { ReviewList.of(boards.all(), identity) } }
             val fetched = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), logged = logged) }
             if (fetched != null) today.value = Today.of(fetched, entries, identity, vocabulary, beside)
+            if (fetched != null) loaded.intValue++
             if (fetched != null) {
                 // The earlier reading mustn't land after this one and take today's board away.
                 fromKept.cancel()
