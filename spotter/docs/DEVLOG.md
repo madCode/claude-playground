@@ -22,6 +22,16 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Thursday 26 November 2026
 
+### The Log screen is tidier
+- **Why:** the third piece of the design pass: three button styles, a rack three rows tall,
+  and Clear as loud as the choices.
+- **Shipped:** the rack is narrow keys in two rows, still one tap a weight. "Felt easy" and
+  the rest are the same pill as the choices, tinted with a tick when on. Clear and Remove
+  are plain words.
+- **Review caught:** seven keys across were 41dp wide on a 360dp phone, where a thumb on 40
+  could log 35. The rack now takes as many across as stay 48dp wide, and a test measures
+  every key on a narrow phone.
+
 ### Past classes can be looked back at
 - **Why:** madCode: "I'm noticing I can't review my old class history". The second piece of
   the design pass.

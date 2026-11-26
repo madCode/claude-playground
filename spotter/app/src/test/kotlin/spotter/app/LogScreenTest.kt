@@ -563,3 +563,28 @@ class LogLargeTextTest {
         }
     }
 }
+
+// On a narrower phone the rack takes another row, not narrower keys: a thumb on 40 mustn't log 35.
+@RunWith(AndroidJUnit4::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(qualifiers = "w360dp-h740dp-xhdpi")
+class LogNarrowPhoneTest {
+    @get:Rule val compose = createComposeRule()
+
+    @Test
+    fun everyRackKeyIsWideEnoughToHit() {
+        val identity = Identity(Vocabulary.starting())
+        val day = LocalDate.of(2026, 11, 21)
+        val board = TodaysBoard.Lines(BookedClass("2G", day, day.atTime(9, 50), "Orange 60 Min 2G"), listOf("* 8 x deadlift"))
+        val shown = Today.of(board, emptyList(), identity, Vocabulary.starting()) as Today.Showing
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = shown) }
+        compose.onNodeWithText("Log this class").performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
+        val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        for (lb in spotter.coach.Rack.dumbbells) {
+            val key = compose.onNodeWithContentDescription("8 x deadlift: $lb pounds").performScrollTo().fetchSemanticsNode().boundsInRoot
+            // xhdpi: two pixels to a dp.
+            assertTrue("$lb is ${key.width / 2} dp wide", key.width >= 48f * 2 && key.height >= 48f * 2 && key.right <= root.right)
+        }
+    }
+}

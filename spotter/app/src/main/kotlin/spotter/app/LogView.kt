@@ -1,10 +1,13 @@
 package spotter.app
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -14,7 +17,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -198,10 +201,7 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
                 // Logged when the line still read: it counts until cleared, so it is shown.
                 if (log != null) {
                     Text("Logged: " + summary(log), fontSize = 15.sp, color = ink, fontWeight = FontWeight.SemiBold)
-                    OutlinedButton(
-                        onClick = { onChange(null) },
-                        modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: clear" },
-                    ) { Text("Clear") }
+                    Quiet("Clear", "${row.shown}: clear") { onChange(null) }
                 }
                 return@Column
             }
@@ -230,16 +230,10 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
                     Flag(row, "Felt easy", log!!.easy) { onChange(log.copy(easy = it)) }
                 }
                 if (log != null) {
-                    OutlinedButton(
-                        onClick = { open = false; onChange(null) },
-                        modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: clear" },
-                    ) { Text("Clear") }
+                    Quiet("Clear", "${row.shown}: clear") { open = false; onChange(null) }
                 }
                 if (onRemove != null) {
-                    OutlinedButton(
-                        onClick = onRemove,
-                        modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: remove" },
-                    ) { Text("Remove") }
+                    Quiet("Remove", "${row.shown}: remove", onRemove)
                 }
             }
             if (open) Editor(row, log, onChange)
@@ -290,6 +284,16 @@ private fun Choice(label: String, selected: Boolean, spoken: String, onClick: ()
     ) { Text(label) }
 }
 
+// Undoing is rarer than doing: no outline, so it doesn't compete with the choices beside it.
+@Composable
+private fun Quiet(label: String, spoken: String, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        colors = ButtonDefaults.textButtonColors(contentColor = muted),
+        modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = spoken },
+    ) { Text(label) }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Editor(row: SheetRow, log: RowLog?, onChange: (RowLog) -> Unit) {
@@ -319,10 +323,27 @@ private fun Editor(row: SheetRow, log: RowLog?, onChange: (RowLog) -> Unit) {
         }
         Text("Heaviest dumbbell, lb.$last", fontSize = 15.sp, color = muted)
         // The whole rack, one tap each: thirteen weights are quicker to hit than to step to.
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Rack.dumbbells.forEach { lb ->
-                Choice("$lb", log?.lb == lb, "${row.shown}: $lb pounds") {
-                    onChange(log?.at(lb) ?: LogDraft.picked(row, lb))
+        // Narrow keys, as many across as stay wide enough for a thumb: two rows on most phones.
+        BoxWithConstraints {
+            val across = ((maxWidth + RACK_GAP) / (48.dp + RACK_GAP)).toInt().coerceIn(1, RACK_ACROSS)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Rack.dumbbells.chunked(across).forEach { some ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(RACK_GAP)) {
+                        some.forEach { lb ->
+                            val picked = log?.lb == lb
+                            OutlinedButton(
+                                onClick = { onChange(log?.at(lb) ?: LogDraft.picked(row, lb)) },
+                                colors = if (picked) ButtonDefaults.buttonColors(containerColor = blue) else ButtonDefaults.outlinedButtonColors(),
+                                contentPadding = PaddingValues(0.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f).heightIn(min = 48.dp).semantics {
+                                    contentDescription = "${row.shown}: $lb pounds"
+                                    selected = picked
+                                },
+                            ) { Text("$lb", maxLines = 1, softWrap = false) }
+                        }
+                        repeat(across - some.size) { Spacer(Modifier.weight(1f)) }
+                    }
                 }
             }
         }
@@ -379,16 +400,21 @@ private fun Stepper(label: String, value: String, spoken: String, onDown: (() ->
     }
 }
 
+// The same pill as a choice, tinted when on: something said about the set, not the set itself.
 @Composable
 private fun Flag(row: SheetRow, label: String, on: Boolean, onToggle: (Boolean) -> Unit) {
-    FilterChip(
-        selected = on,
+    OutlinedButton(
         onClick = { onToggle(!on) },
-        label = { Text(label) },
-        modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: ${label.lowercase()}" },
-    )
+        colors = if (on) ButtonDefaults.outlinedButtonColors(containerColor = Color(0xFFDCE6FF), contentColor = Color(0xFF12337F)) else ButtonDefaults.outlinedButtonColors(contentColor = ink),
+        modifier = Modifier.heightIn(min = 48.dp).semantics {
+            contentDescription = "${row.shown}: ${label.lowercase()}"
+            selected = on
+        },
+    ) { Text(if (on) "✓ $label" else label) }
 }
 
+private const val RACK_ACROSS = 7
+private val RACK_GAP = 2.dp
 private const val MAX_REPS = 99
 
 internal fun summary(log: RowLog): String = listOfNotNull(

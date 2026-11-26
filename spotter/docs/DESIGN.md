@@ -440,7 +440,7 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   saved at the sheet's number, so no reps are logged that weren't seen (a range wider than seven
   counts shows its two ends; an odd total keeps the tick). On a row being changed, a count sets
   that set's reps and leaves its weight alone. "Changed": the heaviest
-  dumbbell picked from the whole rack in one tap, one or two, and reps on a stepper. Opening
+  dumbbell picked from the whole rack in one tap (narrow keys, as many across as stay wide enough to hit: two rows on most phones), one or two, and reps on a stepper. Choices and what is said of a set are the same pill, filled or tinted when on; Clear and Remove are plain words, so undoing doesn't compete with doing. Opening
   "changed" logs nothing until a weight is picked, and the count comes
   from the row's words, the sheet's number or the last log. Failing those the row asks "One
   dumbbell or two?", with the lift's usual number already chosen where the list has one, and
