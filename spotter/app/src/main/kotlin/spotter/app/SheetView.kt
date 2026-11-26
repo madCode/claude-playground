@@ -24,18 +24,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.saveable.Saver
 import kotlinx.serialization.json.Json
 import spotter.app.today.Today
 import spotter.coach.LogDraft
+import spotter.coach.Reading
 import spotter.coach.Sheet
 import spotter.coach.SheetRow
 import spotter.coach.Change
@@ -149,17 +150,8 @@ private fun SheetView(today: Today.Showing, onLog: () -> Unit) {
             color = ink,
             modifier = Modifier.semantics { heading() },
         )
-        (today.notes + today.sheet.warnings).forEach { Note(it) }
-        // Also with nothing to log on this board, when there is something logged to see or clear.
-        if (today.sheet.rows.any(LogDraft::loggable) || today.strays.isNotEmpty() || today.logged.isNotEmpty()) {
-            val logged = today.sheet.rows.count { it.id in today.logged } + today.strays.size
-            val label = if (logged == 0) "Log this class" else "Change the log ($logged logged)"
-            Button(
-                onClick = onLog,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) { Text(label) }
-        }
+        // What is true of the whole board. A row's own warning is said in its row.
+        today.notes.forEach { Note(it) }
         var block: String? = null
         today.sheet.rows.forEachIndexed { i, row ->
             if (row.block != block) {
@@ -174,6 +166,17 @@ private fun SheetView(today: Today.Showing, onLog: () -> Unit) {
                 }
             }
             SheetRowView(i, row, today.sheet)
+        }
+        // After the rows: at the door the numbers come first, and logging is for after class.
+        // Also with nothing to log on this board, when there is something logged to see or clear.
+        if (today.sheet.rows.any(LogDraft::loggable) || today.strays.isNotEmpty() || today.logged.isNotEmpty()) {
+            val logged = today.sheet.rows.count { it.id in today.logged } + today.strays.size
+            val label = if (logged == 0) "Log this class" else "Change the log ($logged logged)"
+            Button(
+                onClick = onLog,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
+                modifier = Modifier.padding(top = 8.dp).heightIn(min = 48.dp),
+            ) { Text(label) }
         }
     }
 }
@@ -192,7 +195,6 @@ private fun Note(text: String) {
 private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet) {
     // Survives rotation, so an open "why" stays open.
     var open by rememberSaveable(index, row.shown) { mutableStateOf(false) }
-    val glance = sheet.glance(row)
     val weighted = row.suggestion is Suggestion.Weight
     Surface(
         color = Color.White,
@@ -203,22 +205,38 @@ private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet) {
             .clickable(role = Role.Button, onClickLabel = if (open) "hide why" else "show why") { open = !open }
             .semantics { stateDescription = if (open) "why shown" else "why hidden" },
     ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(row.shown, fontSize = 17.sp, color = ink, modifier = Modifier.weight(1f))
-                // Capped, so a long reason ("no sound conversion") wraps under itself rather than
-                // squeezing the board's words to a few letters a line, at any font size.
-                Text(
-                    glance,
-                    fontSize = if (weighted) 20.sp else 15.sp,
-                    fontWeight = if (weighted) FontWeight.Bold else FontWeight.Normal,
-                    color = if (weighted) ink else muted,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.widthIn(max = 150.dp).semantics { contentDescription = spoken(row, glance) },
-                )
+                // The number leads, in a column the eye can run down. As wide as it needs at any
+                // font size, and no narrower than the usual "2×30", so the exercises line up.
+                Column(Modifier.widthIn(min = 84.dp, max = 150.dp).semantics(mergeDescendants = true) { contentDescription = spoken(row, sheet.glance(row)) }) {
+                    Text(
+                        row.headline,
+                        fontSize = if (weighted) 26.sp else 16.sp,
+                        fontWeight = if (weighted) FontWeight.Bold else FontWeight.SemiBold,
+                        color = if (weighted) ink else muted,
+                    )
+                    // A sentence ("\"swing\" isn't known yet") goes under the exercise instead: here it
+                    // would widen the column and push that row's words out of line.
+                    row.caption?.takeIf { weighted || it == "new" }?.let {
+                        val up = (row.suggestion as? Suggestion.Weight)?.change == Change.UP
+                        Text(it, fontSize = 13.sp, color = if (up) Color(0xFF17753F) else muted, fontWeight = if (up) FontWeight.SemiBold else FontWeight.Normal)
+                    }
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(row.shown, fontSize = 17.sp, color = ink)
+                    row.caption?.takeIf { !weighted && it != "new" }?.let { Text(it, fontSize = 13.sp, color = muted) }
+                }
+                // Says the row opens; the state itself is spoken above.
+                Text(if (open) "⌄" else "›", fontSize = 20.sp, color = muted, modifier = Modifier.clearAndSetSemantics { })
             }
-            Text(row.understood, fontSize = 13.sp, color = muted)
-            if (open) row.why.forEach { Text("· $it", fontSize = 15.sp, color = ink) }
+            // A row that wasn't read has said so under its headline already.
+            if (row.reading is Reading.Known) row.warnings.forEach { Text(it, fontSize = 14.sp, color = warn) }
+            if (open) {
+                row.why.forEach { Text("· $it", fontSize = 15.sp, color = ink) }
+                // In plain words, so a misreading of the line can be seen.
+                row.readAs?.let { Text("Read as: $it", fontSize = 14.sp, color = muted) }
+            }
         }
     }
 }

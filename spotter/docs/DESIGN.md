@@ -8,7 +8,7 @@ DEVLOG.md and the PRs. The few parts that aren't built yet say so.
 One person who takes Orange Theory classes (2G and 3G: a treadmill block and a floor block of
 dumbbell, bench and bodyweight work). The phone can't go into the studio, so Spotter gives
 them, from one glance beforehand, **which weight to grab for each exercise in today's class**,
-with warnings first. In the car afterwards it logs what was actually done, in under a minute.
+each row with its own warning. In the car afterwards it logs what was actually done, in under a minute.
 
 It replaces Carry (`../carry/`) only when it beats Carry on the scorecard (below). Until then
 both are installed side by side.
@@ -24,8 +24,8 @@ both are installed side by side.
   count is unknown say so, and feed only rows whose count they can't contradict.
 - **Every word on a board line is accounted for.** Each is part of the movement, a variation
   the coach knows, or known filler. A word left over makes the row "not sure what this is",
-  with no number borrowed from a plainer exercise. The sheet shows the board's own words, with
-  what Spotter understood beneath, so a misreading is visible at the gym.
+  with no number borrowed from a plainer exercise. The sheet shows the board's own words, and a
+  tap on a row says what Spotter read it as, so a misreading can be seen at the gym.
 - **One coach, in plain Kotlin.** The `coach` module has no Android code and runs in JVM tests.
   There is no second implementation anywhere.
 - **The training data is madCode's.** It lives on the phone, in Android backup and in exports
@@ -400,13 +400,20 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
 
 ## Screens
 
-- **Home**: the name, the update box when a build is waiting, today's sheet, then the imported
-  history and the backup folder (each with what to do about it), and the version at the bottom,
-  copied in one tap.
+- **Three tabs** along the bottom, in words (madCode, 2026-11-26). The app opens on
+  **Today**: the update box when a build is waiting, and the sheet, with nothing else around
+  it at the door. **History**: the Progress card, and past classes once built. **Settings**:
+  words to sort, the imported history, the backup folder (each with what to do about it) and
+  the version, copied in one tap. What is open on a tab, a half-logged class or a word being
+  sorted, is still open on coming back to it.
 - **The sheet** (`SheetView`): the class, its date and start ("2G · Sat 21 Nov · 9:50"); notes
-  when the board is borrowed or from an earlier day; the warnings; then each row in board order
-  under its block, with the board's own words, what Spotter read beneath, and the number on the
-  right. A tap on a row shows why, and stays open through a rotation. With no class booked,
+  when the board is borrowed or from an earlier day; then each row in board order under its
+  block. The number leads the row, large ("2×30"), in a column the eye can run down, with a
+  few words under it on where it comes from ("▲ up", "same again", "estimate"); a row with
+  no number says so there in two words ("go light", "no weight", "not sure") and why beside
+  the board's own words. A row's warning is in the row. A tap on a row shows why, and what
+  Spotter read the line as in plain words, and stays open through a rotation. "Log this
+  class" is under the rows: logging is for after. With no class booked,
   no board yet or no calendar, it says which in a sentence. The board kept on the phone shows
   at once and the fetched one replaces it, so weak signal never blanks the sheet. TalkBack
   hears the number in words ("two 30 pound dumbbells, up from last time"). Warnings

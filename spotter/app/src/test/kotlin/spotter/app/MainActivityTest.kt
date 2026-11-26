@@ -3,6 +3,7 @@ package spotter.app
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.testing.WorkManagerTestInitHelper
@@ -23,7 +24,9 @@ class MainActivityTest {
 
     @Test
     fun opensOnTheHomeScreenWithItsVersion() {
-        compose.onNodeWithText("Spotter").assertIsDisplayed()
+        // It opens on the sheet's tab; the version is under Settings.
+        compose.onNodeWithText("Today").assertIsDisplayed()
+        compose.onNodeWithText("Settings").performClick()
         compose.onNodeWithText("Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · tap to copy").assertIsDisplayed()
     }
 

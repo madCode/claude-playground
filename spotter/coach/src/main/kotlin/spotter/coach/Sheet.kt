@@ -31,6 +31,46 @@ data class SheetRow(
                 reading.words.takeIf { it.isNotEmpty() }?.let { " (" + it.joinToString(" ") + ")" }.orEmpty()
         }
 
+    /**
+     * What leads the row at a glance: the dumbbells to pick up ("2×30"), or in two words why
+     * there are none to say ("go light", "no weight", "not sure").
+     */
+    val headline: String
+        get() = when (val s = suggestion) {
+            is Suggestion.Weight -> s.load.count?.let { "$it×${s.load.lb}" } ?: "${s.load.lb} lb"
+            is Suggestion.NoNumber -> if (s.new) "go light" else "no number"
+            null -> if (reading is Reading.NotSure) "not sure" else "no weight"
+        }
+
+    /** A few words under [headline] on where it comes from; null when it needs none. */
+    val caption: String?
+        get() = when (val s = suggestion) {
+            is Suggestion.Weight -> listOfNotNull(
+                when (s.change) {
+                    Change.UP -> "▲ up"
+                    Change.DOWN -> "▼ down"
+                    Change.SAME -> "same again"
+                    Change.NEW -> "new"
+                    Change.EST -> "estimate"
+                },
+                "each, one or two?".takeIf { s.load.count == null },
+                s.test?.let { "try ${it.lb} if set 1 felt easy" },
+            ).joinToString(" · ")
+            is Suggestion.NoNumber -> if (s.new) "new" else s.reason
+            null -> (reading as? Reading.NotSure)?.let { r ->
+                when (r.why) {
+                    Why.UNKNOWN_WORDS -> "\"${r.words.joinToString(" ")}\" isn't known yet"
+                    Why.TWO_MOVEMENTS -> "reads as two exercises side by side"
+                    Why.A_CHOICE -> "a choice of two"
+                    Why.CONFLICT -> "two words that don't go together"
+                    else -> "no exercise named"
+                }
+            }
+        }
+
+    /** The exercise in plain words, for the row's detail, so a misreading can be seen; null when not read. */
+    val readAs: String? get() = (reading as? Reading.Known)?.let(Estimated::name)
+
     /** Why the number is what it is, for the row's detail. */
     val why: List<String>
         get() = when (val s = suggestion) {

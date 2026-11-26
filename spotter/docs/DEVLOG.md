@@ -20,6 +20,17 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   backup folder, import your history file, and the hand checks.
 - **Not started:** step 7, the Garmin watch.
 
+## Thursday 26 November 2026
+
+### Three tabs, and a sheet that leads with the number
+- **Why:** a design pass, at madCode's ask. Everything sat on one scrolling screen; on the
+  sheet the number was the size of the exercise's name, with the reader's filing key under it.
+- **Shipped:** tabs along the bottom: Today (the sheet and the log), History (the Progress
+  card; past classes come next) and Settings (words to sort, the imported history, the backup
+  folder, the version). On the sheet the number leads each row, large, with a few words under
+  it on where it comes from; a row says its own warning; the plain name is in the row's
+  "why"; "Log this class" is under the rows. The app's name no longer heads the screen.
+
 ## Wednesday 25 November 2026
 
 ### The counts file comes off the phone

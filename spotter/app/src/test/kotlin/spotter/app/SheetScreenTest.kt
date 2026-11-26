@@ -68,13 +68,25 @@ class SheetScreenTest {
         show(Today.from(TodaysBoard.Lines(booked, lines), log, identity))
         compose.onNodeWithText("2G · Sat 21 Nov · 9:50").assertIsDisplayed()
         compose.onNodeWithText("8 x close grip chest press (explosive)").assertIsDisplayed()
-        compose.onNodeWithText("2×30 ▲").assertIsDisplayed()
-        compose.onNodeWithText("2×40 =").assertIsDisplayed()
-        // What Spotter read, beneath the board's words, so a misreading shows at the gym.
-        compose.onNodeWithText("chest press [grip=close, tempo=explosive]").assertIsDisplayed()
-        // Warnings first: the line Spotter couldn't read.
-        compose.onNodeWithText("8 each x swing lunge with rotation: not sure what this is (unknown words)").assertIsDisplayed()
-        compose.onNodeWithText("no weight").performScrollTo().assertIsDisplayed()
+        // The number leads its row, with where it comes from beneath it.
+        compose.onNodeWithText("2×30", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("▲ up", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("2×40", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("same again", useUnmergedTree = true).assertIsDisplayed()
+        val number = compose.onNodeWithText("2×30", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val words = compose.onNodeWithText("8 x close grip chest press (explosive)", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue("$number before $words", number.right <= words.left)
+        // The reader's own key isn't on the glance; a line it couldn't read says why in its row,
+        // once, and not again above the sheet.
+        compose.onNodeWithText("chest press [grip=close, tempo=explosive]").assertDoesNotExist()
+        compose.onNodeWithText("not sure", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("\"swing\" isn't known yet", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("8 each x swing lunge with rotation: not sure what this is (unknown words)").assertDoesNotExist()
+        compose.onNodeWithText("no weight", useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+        // Logging is for after class: under the rows, not above them.
+        val log = compose.onNodeWithText("Log this class").performScrollTo().fetchSemanticsNode().boundsInRoot
+        val last = compose.onNodeWithText("no weight", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue("$log under $last", log.top >= last.bottom)
         shoot("sheet")
     }
 
@@ -84,6 +96,8 @@ class SheetScreenTest {
         compose.onNodeWithText("· clean at 2×25: up a dumbbell").assertDoesNotExist()
         compose.onNodeWithText("8 x close grip chest press (explosive)").performClick()
         compose.onNodeWithText("· clean at 2×25: up a dumbbell").assertIsDisplayed()
+        // In plain words, so a misreading of the line can be seen.
+        compose.onNodeWithText("Read as: close grip explosive chest press").assertIsDisplayed()
         shoot("sheet-why")
     }
 
