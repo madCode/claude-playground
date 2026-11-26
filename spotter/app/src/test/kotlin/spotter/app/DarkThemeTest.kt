@@ -58,7 +58,8 @@ class DarkThemeTest {
         compose.onNodeWithText("History").performClick()
         shoot("dark-history")
         compose.onNodeWithText("Settings").performClick()
-        shoot("dark-settings")
+        // Settings is all quieter grey here: nothing in the main ink to count.
+        shoot("dark-settings", ink = false)
         compose.onNodeWithText("Today").performClick()
         compose.onNodeWithText("Log this class").performClick()
         compose.onNodeWithContentDescription("8 x deadlift: changed").performClick()
@@ -67,13 +68,21 @@ class DarkThemeTest {
         shoot("dark-log")
     }
 
-    // Light text is thin strokes; a white card or page is a block. So: hardly any near-white.
-    private fun shoot(name: String) {
+    // Light text is thin strokes; a white card or page is a block. So: a little near-white, for
+    // the words, and no more than a little.
+    private fun shoot(name: String, ink: Boolean = true) {
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         val dir = File("build/screenshots").apply { mkdirs() }
         File(dir, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         val pixels = IntArray(bitmap.width * bitmap.height).also { bitmap.getPixels(it, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height) }
         val bright = pixels.count { p -> (p shr 16 and 0xFF) > 0xD0 && (p shr 8 and 0xFF) > 0xD0 && (p and 0xFF) > 0xD0 }
-        assertTrue("$name: ${bright * 100 / pixels.size}% of the screen is near white", bright * 20 < pixels.size)
+        val share = bright * 1000 / pixels.size
+        println("$name: $share per mille near white")
+        assertTrue("$name: $share per mille of the screen is near white", share <= BRIGHT.last && (!ink || share >= BRIGHT.first))
+    }
+
+    private companion object {
+        // Per mille of the screen: below, the words are as dark as the page; above, something is a white block.
+        val BRIGHT = 1..30
     }
 }

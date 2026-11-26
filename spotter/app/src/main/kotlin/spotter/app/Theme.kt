@@ -57,7 +57,9 @@ fun SpotterTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () 
     val scheme = if (dark) {
         darkColorScheme(
             primary = Dark.blue, onPrimary = Dark.onBlue, background = Dark.page, onBackground = Dark.ink,
-            surface = Dark.page, onSurface = Dark.ink, onSurfaceVariant = Dark.muted, outline = Color(0xFF5A606B),
+            surface = Dark.page, onSurface = Dark.ink, onSurfaceVariant = Dark.muted,
+            // A button's outline is the variant; Material's own is too faint on a dark card.
+            outline = Color(0xFF6B7280), outlineVariant = Color(0xFF6B7280),
         )
     } else {
         lightColorScheme()
