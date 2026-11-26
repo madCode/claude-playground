@@ -289,7 +289,7 @@ class PastScreenTest {
         compose.onNodeWithContentDescription("deadlift, two 40 pound dumbbells, 8 reps").assertIsDisplayed()
         compose.onNodeWithContentDescription("squat, no weight, skipped").assertIsDisplayed()
         shoot("history-class-imported")
-        compose.onNodeWithContentDescription("tricep push-up, no weight, 8 reps · done").performClick()
+        compose.onNodeWithContentDescription("tricep push-up, no weight, done").performClick()
         compose.onNodeWithText("3G · Tue 10 Nov").assertIsDisplayed()
     }
 

@@ -113,11 +113,11 @@ private fun Held(row: PastRow, title: String, under: String, onClick: (() -> Uni
     val held = when {
         load != null -> load.count?.let { "$it×${load.lb}" } ?: "${load.lb} lb"
         // As the file has it: something off the rack, a half pound.
-        else -> row.apart?.weight?.let { w -> (if (w % 1.0 == 0.0) "${w.toInt()}" else "$w") + " lb" } ?: "–"
+        else -> row.apart?.held ?: "–"
     }
     val heldSpoken = when {
         load != null -> words(load)
-        row.apart?.weight != null -> held.replace(" lb", " pounds")
+        row.apart?.held != null -> held.replace(" lb", " pounds")
         else -> "no weight"
     }
     val spoken = listOf(title, heldSpoken, row.detail, under).filter { it.isNotEmpty() }.joinToString(", ")

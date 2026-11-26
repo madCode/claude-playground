@@ -110,13 +110,38 @@ class PastTest {
         assertEquals(1, read.rows.size)
         assertEquals(4, read.others.size)
         val cls = Past.classes(emptyList(), read.rows, others = read.others, identity = identity).single()
-        assertEquals(listOf("tricep push-up", "deadlift", "squat", "kettlebell swing", "8 x zorbed press"), cls.rows.map { it.name })
-        assertEquals(listOf("8 reps · done", "8 reps", "skipped", "8 reps · twinge · not a dumbbell", "8 reps · not read by Spotter"), cls.rows.map { it.detail })
+        // A row Spotter can't name keeps its own words, without the count.
+        assertEquals(listOf("tricep push-up", "deadlift", "squat", "kettlebell swing", "zorbed press"), cls.rows.map { it.name })
+        assertEquals(listOf("done", "8 reps", "skipped", "twinge · not a dumbbell", "not read by Spotter"), cls.rows.map { it.detail })
         assertEquals(listOf(null, 40, null, null, null), cls.rows.map { it.logged?.load?.lb })
-        assertEquals(listOf(null, null, null, 55.0, 20.0), cls.rows.map { it.apart?.weight })
+        assertEquals(listOf(null, null, null, "55 lb", "20 lb"), cls.rows.map { it.apart?.held })
         assertEquals(listOf(day(10)), Past.lift(known("8 x deadlift").key, listOf(cls)).map { it.date })
         assertTrue(Past.lift(known("8 x squat").key, listOf(cls)).isEmpty())
         // A day logged on the phone hides the file's rows for it, these too.
         assertTrue(Past.classes(emptyList(), read.rows, ownDays = setOf(day(10)), others = read.others, identity = identity).isEmpty())
+    }
+
+    // What the file says of a left-out row is shown only as far as it can be trusted: a skipped
+    // row held nothing, a weight is a plain number of pounds, a name is one short line, and a
+    // day of nothing but skipped rows is no class.
+    @Test
+    fun aLeftOutRowIsShownPlainly() {
+        fun one(json: String) = HistoryImport.read(json, identity, day(26), everyRow = false).let { Past.classes(emptyList(), it.rows, others = it.others, identity = identity) }
+        fun held(weight: String) = one("""{"date":"2026-11-10","class":"2G","line":"8 x zorbed press","weight":$weight,"reps":8}""").single().rows.single().apart?.held
+        assertEquals("22.5 lb", held("22.5"))
+        assertEquals("22.5 lb", held("22.499999999"))
+        assertEquals("60 lb", held("60.0"))
+        assertEquals(null, held("1e12"))
+        assertEquals(null, held("0.0001"))
+        assertTrue(one("""{"date":"2026-11-10","class":"2G","exercise":"squat","skipped":true,"weight":40,"reps":8}""").isEmpty())
+        val mixed = one(
+            """{"date":"2026-11-10","class":" 2G ","exercise":"squat","skipped":true,"weight":40,"reps":8}""" + "\n" +
+                """{"date":"2026-11-10","class":"2G","line":"8 x zorbed\u202E press\nagain ${"x".repeat(900)}","done":true}""" + "\n" +
+                """{"date":"2026-11-10","class":"","line":"8 x tricep push-up","done":true}""",
+        )
+        assertEquals(listOf("2026-11-10 2G", "2026-11-10 class"), mixed.map { it.id })
+        val rows = mixed.first().rows
+        assertEquals(null, rows.first().apart?.held)
+        assertTrue(rows.last().name, rows.last().name.length <= 80 && rows.last().name.none { it.isISOControl() || it == '\u202E' })
     }
 }
