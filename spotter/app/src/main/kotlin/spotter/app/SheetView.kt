@@ -58,6 +58,8 @@ fun TodayView(
     onSaveLog: (Today.Showing, LogDraft) -> Unit = { _, _ -> },
     /** A class already started that can still be logged, after the sheet has moved on. */
     earlier: Today.Showing? = null,
+    /** The log is about to take the sheet's place: it starts at its top. */
+    onStartLog: () -> Unit = {},
 ) {
     // Which class is being logged, if any, and what has been entered. Both survive rotation and
     // the app being killed, so a half-logged class isn't lost. Tied to the class by name: should
@@ -68,6 +70,7 @@ fun TodayView(
     fun start(s: Today.Showing) {
         draft = LogDraft.from(s.sheet, s.logged)
         loggingClass = name(s)
+        onStartLog()
     }
     // The earlier one first: just after a save both can briefly be the same class, and it is
     // the one that carries the fresh log.
@@ -120,7 +123,8 @@ private fun EarlierClass(earlier: Today.Showing, onLog: () -> Unit) {
 @Composable
 private fun TodayBody(today: Today, onAllowCalendar: () -> Unit, onLog: (Today.Showing) -> Unit) {
     when (today) {
-        Today.Loading -> Text("Reading today's board…", fontSize = 17.sp, color = muted)
+        // Each a heading: with no sheet it is the one landmark on the tab.
+        Today.Loading -> Text("Reading today's board…", fontSize = 17.sp, color = muted, modifier = Modifier.semantics { heading() })
         Today.NeedsCalendar -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
                 "Spotter reads your calendar to know which class is next. It reads only the titles and times of entries from two days ago to tomorrow, and keeps nothing.",
@@ -133,7 +137,7 @@ private fun TodayBody(today: Today, onAllowCalendar: () -> Unit, onLog: (Today.S
                 modifier = Modifier.heightIn(min = 48.dp),
             ) { Text("Allow the calendar") }
         }
-        is Today.Nothing -> Text(today.reason, fontSize = 17.sp, color = ink)
+        is Today.Nothing -> Text(today.reason, fontSize = 17.sp, color = ink, modifier = Modifier.semantics { heading() })
         is Today.Showing -> SheetView(today) { onLog(today) }
     }
 }
@@ -209,23 +213,23 @@ private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 // The number leads, in a column the eye can run down. As wide as it needs at any
                 // font size, and no narrower than the usual "2×30", so the exercises line up.
-                Column(Modifier.widthIn(min = 84.dp, max = 150.dp).semantics(mergeDescendants = true) { contentDescription = spoken(row, sheet.glance(row)) }) {
+                // Spoken as one thing, in words, as part of the row: the weight is heard with its
+                // exercise, not at a stop of its own.
+                Column(Modifier.widthIn(min = 84.dp).clearAndSetSemantics { contentDescription = spoken(row, sheet.glance(row)) }) {
                     Text(
                         row.headline,
                         fontSize = if (weighted) 26.sp else 16.sp,
                         fontWeight = if (weighted) FontWeight.Bold else FontWeight.SemiBold,
                         color = if (weighted) ink else muted,
                     )
-                    // A sentence ("\"swing\" isn't known yet") goes under the exercise instead: here it
-                    // would widen the column and push that row's words out of line.
-                    row.caption?.takeIf { weighted || it == "new" }?.let {
+                    row.caption?.let {
                         val up = (row.suggestion as? Suggestion.Weight)?.change == Change.UP
                         Text(it, fontSize = 13.sp, color = if (up) Color(0xFF17753F) else muted, fontWeight = if (up) FontWeight.SemiBold else FontWeight.Normal)
                     }
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(row.shown, fontSize = 17.sp, color = ink)
-                    row.caption?.takeIf { !weighted && it != "new" }?.let { Text(it, fontSize = 13.sp, color = muted) }
+                    row.aside?.let { Text(it, fontSize = 13.sp, color = muted) }
                 }
                 // Says the row opens; the state itself is spoken above.
                 Text(if (open) "⌄" else "›", fontSize = 20.sp, color = muted, modifier = Modifier.clearAndSetSemantics { })
@@ -243,7 +247,8 @@ private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet) {
 
 // What TalkBack says for the number: words, not "black up-pointing triangle".
 internal fun spoken(row: SheetRow, glance: String): String {
-    val s = row.suggestion as? Suggestion.Weight ?: return glance
+    // "Not sure", "go light", "no weight": the row's own two words, not the glance's "?".
+    val s = row.suggestion as? Suggestion.Weight ?: return row.headline
     val held = when (s.load.count) {
         2 -> "two ${s.load.lb} pound dumbbells"
         1 -> "one ${s.load.lb} pound dumbbell"

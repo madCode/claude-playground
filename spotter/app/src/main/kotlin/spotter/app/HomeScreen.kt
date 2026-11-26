@@ -2,6 +2,11 @@ package spotter.app
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -134,6 +139,7 @@ private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: (
  * The app's screen: today's sheet in the middle, a newer build waiting when there is one, and the
  * version, copyable in one tap.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     version: String,
@@ -162,15 +168,17 @@ fun HomeScreen(
 ) {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
-            var tab by rememberSaveable { mutableStateOf(startTab) }
+            var tab by rememberSaveable(stateSaver = tabSaver(startTab)) { mutableStateOf(startTab) }
+            val scope = rememberCoroutineScope()
             // Each tab keeps what was open on it (a half-logged class, a word being sorted)
             // while another is shown.
             val kept = rememberSaveableStateHolder()
             Column(Modifier.safeDrawingPadding()) {
                 Box(Modifier.weight(1f)) {
                     kept.SaveableStateProvider(tab.name) {
+                        val scroll = rememberScrollState()
                         Column(
-                            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+                            Modifier.fillMaxSize().verticalScroll(scroll).padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             when (tab) {
@@ -196,15 +204,23 @@ fun HomeScreen(
                                             }
                                         }
                                     }
-                                    TodayView(today, onAllowCalendar, onSaveLog, earlier)
+                                    // The sheet's button is under its rows; the log opens at its top.
+                                    TodayView(today, onAllowCalendar, onSaveLog, earlier, onStartLog = { scope.launch { scroll.scrollTo(0) } })
                                 }
                                 Tab.HISTORY -> {
-                                    if (progress == Progress()) Text("Nothing logged yet. What you lift, and where it is heading, shows here.", fontSize = 17.sp, color = Color(0xFF5B606B))
+                                    if (progress == Progress()) {
+                                        Text(
+                                            "Nothing logged yet. What you lift, and where it is heading, shows here.",
+                                            fontSize = 17.sp, color = Color(0xFF5B606B), modifier = Modifier.semantics { heading() },
+                                        )
+                                    }
                                     ProgressView(progress)
                                 }
                                 Tab.SETTINGS -> {
                                     UnknownWordsView(unknownWords, wordAnswers, movements, lineReads, onAnswerWord, onUndoWord)
+                                    Section("Imported history")
                                     HistoryView(history, onImportHistory, onRemoveHistory, onStopHistory)
+                                    Section("Backup")
                                     BackupView(backup, onChooseFolder)
                                     Text(
                                         "Version $version · tap to copy",
@@ -220,11 +236,31 @@ fun HomeScreen(
                         }
                     }
                 }
-                Tabs(tab) { tab = it }
+                // Not over the keyboard: a field being typed in needs the room more.
+                if (!WindowInsets.isImeVisible) Tabs(tab) { tab = it }
             }
         }
     }
 }
+
+// A label over a part of Settings, and a heading to reach it by.
+@Composable
+private fun Section(text: String) {
+    Text(text, fontSize = 14.sp, color = Color(0xFF5B606B), fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp).semantics { heading() })
+}
+
+/** How long a tab other than the first is come back to: past it, the app opens on the sheet. */
+internal const val TAB_KEPT_MS = 10 * 60 * 1000L
+
+/** The time, for [tabSaver]; a test's own clock. */
+internal var now: () -> Long = System::currentTimeMillis
+
+// Turning the phone keeps the tab. Coming back later doesn't: Android restores the same state
+// for as long as the app is in recents, and at the studio door the app must open on the sheet.
+private fun tabSaver(start: Tab) = Saver<Tab, List<Any>>(
+    save = { listOf(it.name, now()) },
+    restore = { saved -> if (now() - (saved[1] as Long) <= TAB_KEPT_MS) Tab.valueOf(saved[0] as String) else start },
+)
 
 /** The app's three places: the sheet for the door and the car, looking back, and what is set once. */
 enum class Tab(val label: String) { TODAY("Today"), HISTORY("History"), SETTINGS("Settings") }

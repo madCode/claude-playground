@@ -67,6 +67,16 @@ Android's file picker and your real file are only visible on a phone.
 6. With the phone's font size at its largest, both buttons are whole and can be tapped.
 7. With TalkBack on, a refused file and "Reading the file…" are spoken without touching them.
 
+## The tabs
+
+The tests prove what is on each tab and that each keeps its place. The system bars and the
+keyboard are only real on a phone.
+
+1. Today, History and Settings sit above the system's navigation bar or gesture line, whole.
+2. On the Log screen tap "Exercise, as the board says it": the tabs make way for the keyboard
+   and come back when it closes. The same under Settings while searching for an exercise.
+3. Leave the app on Settings, come back after a quarter of an hour: it opens on Today.
+
 ## Sorting a word
 
 The tests prove the taps, what an answer does to a line, and that answers are kept. The

@@ -148,6 +148,28 @@ class HomeScreenTest {
         shoot("home-settings")
     }
 
+    // Turning the phone keeps the tab; coming back to the app later opens it on the sheet,
+    // though Android hands back the same saved state.
+    @Test
+    fun theAppComesBackOnTheSheet() {
+        // The tester saves and restores in one go: the clock moves on between the two.
+        var time = 1_000_000L
+        var away = 0L
+        now = { time.also { time += away } }
+        try {
+            val restore = androidx.compose.ui.test.junit4.StateRestorationTester(compose)
+            restore.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}) }
+            compose.onNodeWithText("Settings").performClick()
+            restore.emulateSavedInstanceStateRestore()
+            compose.onNodeWithText("Settings").assertIsSelected()
+            away = TAB_KEPT_MS + 1
+            restore.emulateSavedInstanceStateRestore()
+            compose.onNodeWithText("Today").assertIsSelected()
+        } finally {
+            now = System::currentTimeMillis
+        }
+    }
+
     // A word is sorted by tapping it: passed over, or another name for an exercise found by
     // searching; nothing is answered until the yes, and an answer can be undone.
     @Test

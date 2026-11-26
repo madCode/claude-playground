@@ -405,13 +405,17 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   it at the door. **History**: the Progress card, and past classes once built. **Settings**:
   words to sort, the imported history, the backup folder (each with what to do about it) and
   the version, copied in one tap. What is open on a tab, a half-logged class or a word being
-  sorted, is still open on coming back to it.
+  sorted, is still open on coming back to it. Turning the phone keeps the tab; coming back
+  to the app after ten minutes opens it on Today, whatever Android kept. The tabs make way
+  for the keyboard.
 - **The sheet** (`SheetView`): the class, its date and start ("2G · Sat 21 Nov · 9:50"); notes
   when the board is borrowed or from an earlier day; then each row in board order under its
   block. The number leads the row, large ("2×30"), in a column the eye can run down, with a
-  few words under it on where it comes from ("▲ up", "same again", "estimate"); a row with
-  no number says so there in two words ("go light", "no weight", "not sure") and why beside
-  the board's own words. A row's warning is in the row. A tap on a row shows why, and what
+  few words under it on where it comes from ("▲ up", "same", "estimate"); a row with
+  no number says so there in two words ("go light", "no weight", "not sure"). A sentence goes
+  beside the board's own words, where it can't push the numbers out of line: why there is no
+  number, an offer ("try 35 if set 1 felt easy"), a count nobody knows, and for a word
+  Spotter doesn't know, that it is sorted under Settings. A row's warning is in the row. A tap on a row shows why, and what
   Spotter read the line as in plain words, and stays open through a rotation. "Log this
   class" is under the rows: logging is for after. With no class booked,
   no board yet or no calendar, it says which in a sentence. The board kept on the phone shows

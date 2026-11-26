@@ -72,7 +72,7 @@ class SheetScreenTest {
         compose.onNodeWithText("2×30", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText("▲ up", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText("2×40", useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithText("same again", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("same", useUnmergedTree = true).assertIsDisplayed()
         val number = compose.onNodeWithText("2×30", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val words = compose.onNodeWithText("8 x close grip chest press (explosive)", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         assertTrue("$number before $words", number.right <= words.left)
@@ -80,7 +80,10 @@ class SheetScreenTest {
         // once, and not again above the sheet.
         compose.onNodeWithText("chest press [grip=close, tempo=explosive]").assertDoesNotExist()
         compose.onNodeWithText("not sure", useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithText("\"swing\" isn't known yet", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("\"swing\" isn't known yet: say what it is under Settings", useUnmergedTree = true).assertIsDisplayed()
+        // Heard as one row: the exercise with its weight in words, or with why there is none.
+        compose.onNode(androidx.compose.ui.test.hasText("8 x deadlift") and androidx.compose.ui.test.hasContentDescription("two 40 pound dumbbells, same as last time")).assertIsDisplayed()
+        compose.onNode(androidx.compose.ui.test.hasText("8 each x swing lunge with rotation") and androidx.compose.ui.test.hasContentDescription("not sure")).assertIsDisplayed()
         compose.onNodeWithText("8 each x swing lunge with rotation: not sure what this is (unknown words)").assertDoesNotExist()
         compose.onNodeWithText("no weight", useUnmergedTree = true).performScrollTo().assertIsDisplayed()
         // Logging is for after class: under the rows, not above them.
@@ -174,5 +177,37 @@ class SheetLargeTextTest {
         val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
         // At least a third of the screen's width for the board's words.
         assertTrue("words squeezed to ${words.width} of ${root.width}", words.width > root.width / 3)
+    }
+
+    // An offer and a count nobody knows are sentences: they go beside the board's words, so
+    // the numbers stay in one column and the words keep their room at the largest text.
+    @Test
+    fun anOfferDoesNotWidenTheNumberColumn() {
+        val identity = Identity(Vocabulary.starting())
+        val day = LocalDate.of(2026, 11, 21)
+        val booked = BookedClass("2G", day, day.atTime(9, 50), "Orange 60 Min 2G")
+        fun known(line: String) = identity.read(BoardLine.read(line).words) as Reading.Known
+        // Two clean sessions at 20: 25 is a big jump, so the sheet holds and offers it.
+        val log = listOf(
+            Logged(day.minusDays(4), known("8 x chest press"), Load(20, 2), 8..8, listOf(8, 8)),
+            Logged(day.minusDays(2), known("8 x chest press"), Load(20, 2), 8..8, listOf(8, 8)),
+            Logged(day.minusDays(2), known("8 x squat"), Load(40, null), 8..8, listOf(8, 8)),
+            Logged(day.minusDays(2), known("8 x low row"), Load(30, 2), 8..8, listOf(8, 8)),
+        )
+        compose.setContent {
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, fontScale = 2f),
+            ) {
+                HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = Today.from(TodaysBoard.Lines(booked, listOf("* 8 x chest press", "* 8 x squat", "* 8 x low row")), log, identity))
+            }
+        }
+        compose.onNodeWithText("try 25 if set 1 felt easy", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("one dumbbell or two isn't known", useUnmergedTree = true).assertExists()
+        val lefts = listOf("8 x chest press", "8 x squat", "8 x low row").map { compose.onNodeWithText(it, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot }
+        val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        assertEquals("the words start in one line down the sheet", 1, lefts.map { it.left }.distinct().size)
+        // The words begin in the first two fifths of the screen, with the rest of it to run in.
+        assertTrue("words start at ${lefts.first().left} of ${root.width}", lefts.first().left < root.width * 0.4f)
     }
 }

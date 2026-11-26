@@ -220,6 +220,16 @@ class LogScreenTest {
         assertEquals(1, saved!!.rows.values.single().count)
     }
 
+    // "Log this class" is under the sheet's rows; the log it opens starts at its own top, not
+    // as far down as the button was.
+    @Test
+    fun theLogOpensAtItsTop() {
+        val long = TodaysBoard.Lines(BookedClass("2G", monday, monday.atTime(9, 50), "Orange 60 Min 2G"), (1..14).map { "* 8 x deadlift" } + "* 8 x chest press")
+        show(Today.of(long, log.entries(), identity, vocabulary) as Today.Showing) { _, _ -> }
+        compose.onNodeWithText("Log this class").performScrollTo().performClick()
+        compose.onNodeWithText("Log · 2G · Mon 16 Nov · 9:50").assertIsDisplayed()
+    }
+
     // "Felt easy" is one tap beside the tick, and the row is still as listed with it.
     @Test
     fun feltEasyIsOneTapOnATickedRow() {

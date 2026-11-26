@@ -30,6 +30,10 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   folder, the version). On the sheet the number leads each row, large, with a few words under
   it on where it comes from; a row says its own warning; the plain name is in the row's
   "why"; "Log this class" is under the rows. The app's name no longer heads the screen.
+- **The review caught:** the log opened as far down as the button had been; TalkBack heard
+  the number apart from its exercise; an offer under the number pushed the exercises out of
+  line and, at large text on a narrow phone, squeezed them to a few letters; after a night in
+  recents the app could open on Settings; a "not sure" row no longer said where to fix it.
 
 ## Wednesday 25 November 2026
 

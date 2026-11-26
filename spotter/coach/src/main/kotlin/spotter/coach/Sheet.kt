@@ -42,24 +42,36 @@ data class SheetRow(
             null -> if (reading is Reading.NotSure) "not sure" else "no weight"
         }
 
-    /** A few words under [headline] on where it comes from; null when it needs none. */
+    /** A word or two under [headline] on where it comes from; null when it needs none. */
     val caption: String?
         get() = when (val s = suggestion) {
+            is Suggestion.Weight -> when (s.change) {
+                Change.UP -> "▲ up"
+                Change.DOWN -> "▼ down"
+                Change.SAME -> "same"
+                Change.NEW -> "new"
+                Change.EST -> "estimate"
+            }
+            is Suggestion.NoNumber -> "new".takeIf { s.new }
+            null -> null
+        }
+
+    /**
+     * A sentence that goes with the row, beside the board's words and not under the number,
+     * where it would push the exercises out of line: an offer, a count nobody knows, why there
+     * is no number, why the line wasn't read. Null when there is nothing to add.
+     */
+    val aside: String?
+        get() = when (val s = suggestion) {
             is Suggestion.Weight -> listOfNotNull(
-                when (s.change) {
-                    Change.UP -> "▲ up"
-                    Change.DOWN -> "▼ down"
-                    Change.SAME -> "same again"
-                    Change.NEW -> "new"
-                    Change.EST -> "estimate"
-                },
-                "each, one or two?".takeIf { s.load.count == null },
+                "one dumbbell or two isn't known".takeIf { s.load.count == null },
                 s.test?.let { "try ${it.lb} if set 1 felt easy" },
-            ).joinToString(" · ")
-            is Suggestion.NoNumber -> if (s.new) "new" else s.reason
+            ).joinToString(" · ").ifEmpty { null }
+            is Suggestion.NoNumber -> s.reason.takeIf { !s.new }
             null -> (reading as? Reading.NotSure)?.let { r ->
                 when (r.why) {
-                    Why.UNKNOWN_WORDS -> "\"${r.words.joinToString(" ")}\" isn't known yet"
+                    // Where it can be put right.
+                    Why.UNKNOWN_WORDS -> "\"${r.words.joinToString(" ")}\" isn't known yet: say what it is under Settings"
                     Why.TWO_MOVEMENTS -> "reads as two exercises side by side"
                     Why.A_CHOICE -> "a choice of two"
                     Why.CONFLICT -> "two words that don't go together"
