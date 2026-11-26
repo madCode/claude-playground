@@ -82,7 +82,7 @@ object Past {
     ): List<PastClass> {
         val mine = own.groupBy { it.first.date to it.first.className }
             .map { (at, rows) -> PastClass(at.first, at.second, imported = false, rows = rows.map { row(it.second) }) }
-        fun named(name: String?) = name?.trim()?.take(MAX_NAME)?.ifEmpty { null } ?: NO_CLASS
+        fun named(name: String?) = name?.let(::plain)?.ifEmpty { null } ?: NO_CLASS
         val read = imported.filter { it.logged.date !in ownDays }.map { Triple(it.logged.date to named(it.className), it.at, row(it.logged)) }
         val apart = others.filter { it.date !in ownDays }.map { Triple(it.date to named(it.className), it.at, apart(it, identity)) }
         // As the file has them, which is the order they were done in. A class of nothing but
@@ -120,9 +120,8 @@ object Past {
     private fun row(logged: Logged) = PastRow(Estimated.name(logged.exercise), logged)
 
     private fun apart(row: HistoryImport.Row, identity: Identity?): PastRow {
-        // The file is someone's typing, or anyone's: one line of plain text, of a sane length.
-        val words = BoardLine.read(row.line.orEmpty().take(MAX_LINE)).words.filter { !it.isISOControl() && Character.getType(it) != Character.FORMAT.toInt() }.trim()
-        val name = (identity?.read(words) as? Reading.Known)?.let(Estimated::name) ?: words.take(MAX_NAME).ifBlank { "an exercise" }
+        val words = BoardLine.read(row.line.orEmpty().take(MAX_LINE)).words
+        val name = (identity?.read(words) as? Reading.Known)?.let(Estimated::name) ?: plain(words).ifEmpty { "an exercise" }
         val why = when (row.left) {
             HistoryImport.Left.SKIPPED -> SKIPPED
             HistoryImport.Left.NO_WEIGHT -> if (row.done) "done" else ""
@@ -140,6 +139,15 @@ object Past {
             (if (tenths % 10 == 0L) "${tenths / 10}" else "${tenths / 10}.${tenths % 10}") + " lb"
         }
         return PastRow(name, null, PastRow.Apart(held, said, why))
+    }
+
+    // The file is someone's typing, or anyone's: one line of plain text, of a sane length,
+    // with nothing that turns the screen's text around and no half of a character at the cut.
+    private fun plain(text: String): String {
+        val clean = text.map { if (it.isISOControl() || Character.getType(it) == Character.FORMAT.toInt()) ' ' else it }.joinToString("")
+            .trim().replace(Regex(" +"), " ")
+        val cut = clean.take(MAX_NAME)
+        return if (cut.lastOrNull()?.isHighSurrogate() == true) cut.dropLast(1) else cut
     }
 
     private const val SKIPPED = "skipped"

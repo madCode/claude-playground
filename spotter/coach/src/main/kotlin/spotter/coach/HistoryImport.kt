@@ -121,7 +121,7 @@ object HistoryImport {
             }
             if (o != null && date != null && (everyRow || row is Left)) {
                 val whole = Row(
-                    date, o.string("class"), o.string("line") ?: filedAs(o), o.number("weight")?.takeIf { it > 0 }, o.int("reps"),
+                    date, o.string("class"), o.string("line")?.takeIf { it.isNotBlank() } ?: filedAs(o), o.number("weight")?.takeIf { it > 0 }, o.int("reps"),
                     o.flag("skipped"), o.flag("done"), o.flag("hurt"), o.flag("easy"), o.flag("hard"), o.flag("easier"),
                     (row as? Imported)?.logged, row as? Left, at,
                 )

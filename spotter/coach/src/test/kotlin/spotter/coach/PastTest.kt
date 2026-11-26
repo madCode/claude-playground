@@ -140,6 +140,14 @@ class PastTest {
                 """{"date":"2026-11-10","class":"","line":"8 x tricep push-up","done":true}""",
         )
         assertEquals(listOf("2026-11-10 2G", "2026-11-10 class"), mixed.map { it.id })
+        // An emoji at the cut isn't halved; a class name is cleaned as a row's is; an old row
+        // with an empty line goes by the name it was filed under.
+        val odd = one(
+            """{"date":"2026-11-10","class":"2\u202EG\n","line":"8 x ${"y".repeat(79)}\uD83D\uDCAA tail","done":true}""" + "\n" +
+                """{"date":"2026-11-10","class":"2 G","line":"","exercise":"squat","done":true}""",
+        ).single()
+        assertEquals("2 G", odd.className)
+        assertEquals(listOf("y".repeat(79), "squat"), odd.rows.map { it.name })
         val rows = mixed.first().rows
         assertEquals(null, rows.first().apart?.held)
         assertTrue(rows.last().name, rows.last().name.length <= 80 && rows.last().name.none { it.isISOControl() || it == '\u202E' })
