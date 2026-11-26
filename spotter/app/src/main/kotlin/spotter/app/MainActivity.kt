@@ -31,6 +31,8 @@ import spotter.coach.Journal
 import spotter.coach.LogDraft
 import spotter.coach.Progress
 import spotter.coach.ReviewList
+import spotter.coach.Past
+import spotter.coach.PastClass
 import spotter.coach.UnknownWord
 import spotter.coach.WordAnswer
 import spotter.coach.WordAnswers
@@ -55,6 +57,7 @@ class MainActivity : ComponentActivity() {
     private val today = mutableStateOf<Today>(Today.Loading)
     private val earlier = mutableStateOf<Today.Showing?>(null)
     private val progress = mutableStateOf(Progress())
+    private val past = mutableStateOf(emptyList<PastClass>())
     private val unknownWords = mutableStateOf(emptyList<UnknownWord>())
     private val wordAnswers = mutableStateOf(emptyList<WordAnswer>())
     private val words by lazy { WordAnswerStore(filesDir) }
@@ -159,6 +162,7 @@ class MainActivity : ComponentActivity() {
                 onSaveLog = ::saveLog,
                 earlier = earlier.value,
                 progress = progress.value,
+                past = past.value,
                 unknownWords = unknownWords.value,
                 wordAnswers = wordAnswers.value,
                 movements = lists.movements,
@@ -247,6 +251,7 @@ class MainActivity : ComponentActivity() {
             val logged = Today.loggedClasses(entries)
             // From everything logged or imported, as the next sheet would read it. Beside the
             // sheet, not before it: a long history takes a moment the door doesn't have.
+            launch { past.value = withContext(Dispatchers.Default) { Past.classes(Journal.read(entries, vocabulary), read?.rows.orEmpty()) } }
             launch {
                 progress.value = withContext(Dispatchers.Default) {
                     Progress.of((beside + Journal.history(entries, vocabulary)).sortedBy { it.date }, LocalDate.now())

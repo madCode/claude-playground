@@ -402,7 +402,7 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
 
 - **Three tabs** along the bottom, in words (madCode, 2026-11-26). The app opens on
   **Today**: the update box when a build is waiting, and the sheet, with nothing else around
-  it at the door. **History**: the Progress card, and past classes once built. **Settings**:
+  it at the door. **History**: the Progress card, then past classes. **Settings**:
   words to sort, the imported history, the backup folder (each with what to do about it) and
   the version, copied in one tap. What is open on a tab, a half-logged class or a word being
   sorted, is still open on coming back to it. Turning the phone keeps the tab; coming back
@@ -422,6 +422,14 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   at once and the fetched one replaces it, so weak signal never blanks the sheet. TalkBack
   hears the number in words ("two 30 pound dumbbells, up from last time"). Warnings
   are a twinge last time, a line Spotter couldn't read, and a combo part with no number.
+- **Past classes** (`PastView`, under History): every class with a logged weight, newest
+  first, the phone's own log and the imported history together; a day logged on the phone
+  hides the import's version of it. Thirty show, with a button for earlier ones. A class
+  opens its rows: what was held, large, as on the sheet, with the reps and anything said
+  (felt easy, twinge). A row opens that lift over time: each session of it and of its other
+  wordings that take the same dumbbells, which is what its sheet number is worked from. An
+  opened sheet row has "Past sessions" leading to the same place. Read only. Back goes lift,
+  class, list; what is open survives a rotation.
 - **The calendar** is asked for once, on first open. Refused, the sheet explains what is read
   (titles and times of entries from two days ago to tomorrow; the earlier days are for a class
   not yet logged) and offers the ask again, or Android's settings once Android stops asking.

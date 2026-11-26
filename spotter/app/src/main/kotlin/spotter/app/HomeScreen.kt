@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -57,6 +58,8 @@ import spotter.coach.LogDraft
 import spotter.coach.Progress
 import spotter.coach.UnknownWord
 import spotter.coach.Movement
+import spotter.coach.Past
+import spotter.coach.PastClass
 import spotter.coach.WordAnswer
 import spotter.coach.WordAnswers
 
@@ -164,6 +167,8 @@ fun HomeScreen(
     lineReads: (String, WordAnswer) -> WordAnswers.SayBack = { _, _ -> WordAnswers.SayBack("", true) },
     onAnswerWord: (WordAnswer) -> Unit = {},
     onUndoWord: (String) -> Unit = {},
+    /** Every class done, the newest first, for History. */
+    past: List<PastClass> = emptyList(),
     /** Where the app opens: the sheet. */
     startTab: Tab = Tab.TODAY,
 ) {
@@ -180,6 +185,11 @@ fun HomeScreen(
                 leftAt = null
             }
             val scope = rememberCoroutineScope()
+            // What History shows: the list, a class, or a lift. Kept here, above the tabs, so
+            // the sheet can open a lift there.
+            var openClass by rememberSaveable { mutableStateOf<String?>(null) }
+            var openLift by rememberSaveable { mutableStateOf<String?>(null) }
+            var classesShown by rememberSaveable { mutableStateOf(CLASSES_SHOWN) }
             // Each tab keeps what was open on it (a half-logged class, a word being sorted)
             // while another is shown.
             val kept = rememberSaveableStateHolder()
@@ -215,16 +225,26 @@ fun HomeScreen(
                                         }
                                     }
                                     // The sheet's button is under its rows; the log opens at its top.
-                                    TodayView(today, onAllowCalendar, onSaveLog, earlier, onStartLog = { scope.launch { scroll.scrollTo(0) } })
+                                    TodayView(
+                                        today, onAllowCalendar, onSaveLog, earlier,
+                                        onStartLog = { scope.launch { scroll.scrollTo(0) } },
+                                        // Only a lift that has been done has a past to show.
+                                        onPast = { key -> if (Past.lift(key, past).isNotEmpty()) { openLift = key; tab = Tab.HISTORY } },
+                                        hasPast = { key -> past.any { c -> c.rows.any { it.logged.key == key } } },
+                                    )
                                 }
                                 Tab.HISTORY -> {
-                                    if (progress == Progress()) {
+                                    val looking = openClass != null || openLift != null
+                                    // Each of the three starts at its top.
+                                    LaunchedEffect(openClass, openLift) { scroll.scrollTo(0) }
+                                    if (!looking && progress == Progress() && past.isEmpty()) {
                                         Text(
                                             "Nothing logged yet. What you lift, and where it is heading, shows here.",
                                             fontSize = 17.sp, color = Color(0xFF5B606B), modifier = Modifier.semantics { heading() },
                                         )
                                     }
-                                    ProgressView(progress)
+                                    if (!looking) ProgressView(progress)
+                                    PastView(past, openClass, openLift, classesShown, onClass = { openClass = it }, onLift = { openLift = it }, onMore = { classesShown += CLASSES_SHOWN })
                                 }
                                 Tab.SETTINGS -> {
                                     UnknownWordsView(unknownWords, wordAnswers, movements, lineReads, onAnswerWord, onUndoWord)

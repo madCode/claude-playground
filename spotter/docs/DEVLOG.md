@@ -22,6 +22,15 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Thursday 26 November 2026
 
+### Past classes can be looked back at
+- **Why:** madCode: "I'm noticing I can't review my old class history". The second piece of
+  the design pass.
+- **Shipped:** under History, the classes with a logged weight, newest first, the phone's log
+  and the imported history together. A class opens its rows; a row opens that lift over
+  time. An opened sheet row has "Past sessions", so a number can be checked against what it
+  was worked from. Read only.
+- **Not done:** correcting a past row; reaching a lift from the Progress card.
+
 ### Three tabs, and a sheet that leads with the number
 - **Why:** a design pass, at madCode's ask. Everything sat on one scrolling screen; on the
   sheet the number was the size of the exercise's name, with the reader's filing key under it.
