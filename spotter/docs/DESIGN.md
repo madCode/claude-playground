@@ -430,7 +430,10 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   first, the phone's own log and the imported history together; a day logged on the phone
   hides the import's version of it. Thirty show, with a button for earlier ones. A class
   opens its rows: what was held, large, as on the sheet, with the reps and anything said
-  (felt easy, twinge). A row opens that lift over time: each session of it and of its other
+  (felt easy, twinge). An imported class shows every row the file has for it, in the
+  file's order: the ones the coach leaves out (no weight, skipped, something off the rack)
+  with a dash or the file's own weight and why, and no lift to open. Their reps aren't
+  shown (the file may count both sides), and a day of nothing but skipped rows is no class. A row opens that lift over time: each session of it and of its other
   wordings that take the same dumbbells, which is what its sheet number is worked from. An
   opened sheet row has "Past sessions" leading to the same place, also when its number is
   read from another wording. Read only. Back goes lift, class, list, and the list is where it

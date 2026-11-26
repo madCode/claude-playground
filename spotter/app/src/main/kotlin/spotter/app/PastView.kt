@@ -74,7 +74,8 @@ fun PastView(
             Back("History") { onClass(null) }
             Text("${cls.className} · ${cls.date.format(day)}", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = palette.ink, modifier = Modifier.semantics { heading() })
             if (cls.imported) Text("From the imported history.", fontSize = 14.sp, color = palette.muted)
-            cls.rows.forEach { row -> Held(row, title = row.name, under = "", onClick = { onLift(row.logged.key) }) }
+            // A row the coach leaves out (bodyweight, skipped) is of the class, but of no lift's history.
+            cls.rows.forEach { row -> Held(row, title = row.name, under = "", onClick = row.logged?.let { { onLift(it.key) } }) }
         }
         classes.isNotEmpty() -> {
             Text("Past classes", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = palette.ink, modifier = Modifier.padding(top = 4.dp).semantics { heading() })
@@ -108,8 +109,18 @@ private fun Back(to: String, onClick: () -> Unit) {
 // What was held leads, as on the sheet; what was done with it is beneath. Heard as one thing.
 @Composable
 private fun Held(row: PastRow, title: String, under: String, onClick: (() -> Unit)?) {
-    val load = row.logged.load
-    val spoken = listOf(title, words(load), row.detail, under).filter { it.isNotEmpty() }.joinToString(", ")
+    val load = row.logged?.load
+    val held = when {
+        load != null -> load.count?.let { "$it×${load.lb}" } ?: "${load.lb} lb"
+        // As the file has it: something off the rack, a half pound.
+        else -> row.apart?.held ?: "–"
+    }
+    val heldSpoken = when {
+        load != null -> words(load)
+        row.apart?.held != null -> held.replace(" lb", " pounds")
+        else -> "no weight"
+    }
+    val spoken = listOf(title, heldSpoken, row.detail, under).filter { it.isNotEmpty() }.joinToString(", ")
     Surface(
         color = palette.card, shape = RoundedCornerShape(10.dp),
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
@@ -117,7 +128,7 @@ private fun Held(row: PastRow, title: String, under: String, onClick: (() -> Uni
             .clearAndSetSemantics { contentDescription = spoken },
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(load.count?.let { "$it×${load.lb}" } ?: "${load.lb} lb", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = palette.ink, modifier = Modifier.widthIn(min = 84.dp))
+            Text(held, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = if (load != null) palette.ink else palette.muted, modifier = Modifier.widthIn(min = 84.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(title, fontSize = 17.sp, color = palette.ink)
                 listOf(row.detail, under).filter { it.isNotEmpty() }.joinToString(" · ").takeIf { it.isNotEmpty() }?.let { Text(it, fontSize = 14.sp, color = palette.muted) }

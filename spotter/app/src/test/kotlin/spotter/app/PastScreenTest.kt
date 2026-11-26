@@ -272,6 +272,27 @@ class PastScreenTest {
         compose.onNodeWithText("Today").assertIsSelected()
     }
 
+    // An imported class shows the rows with no weight too, and the skipped ones: they were part
+    // of the class. They open no lift.
+    @Test
+    fun anImportedClassShowsItsRowsWithoutWeight() {
+        val file = listOf(
+            """{"date":"2026-11-10","class":"3G","line":"8 x deadlift","weight":40,"reps":8,"prescribed_reps":8,"variant":{"implement":"double_dumbbell"}}""",
+            """{"date":"2026-11-10","class":"3G","line":"8 x tricep push-up","done":true,"reps":8}""",
+            """{"date":"2026-11-10","class":"3G","line":"8 x squat","skipped":true}""",
+        ).joinToString("\n")
+        val read = spotter.coach.HistoryImport.read(file, identity, day(26), everyRow = false)
+        val classes = Past.classes(emptyList(), read.rows, others = read.others, identity = identity)
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, past = classes, startTab = Tab.HISTORY) }
+        compose.onNodeWithText("3 rows · imported").assertIsDisplayed()
+        compose.onNodeWithText("Tue 10 Nov · 3G").performClick()
+        compose.onNodeWithContentDescription("deadlift, two 40 pound dumbbells, 8 reps").assertIsDisplayed()
+        compose.onNodeWithContentDescription("squat, no weight, skipped").assertIsDisplayed()
+        shoot("history-class-imported")
+        compose.onNodeWithContentDescription("tricep push-up, no weight, done").performClick()
+        compose.onNodeWithText("3G · Tue 10 Nov").assertIsDisplayed()
+    }
+
     // A long history is shown a lot at a time.
     @Test
     fun earlierClassesAreAskedFor() {

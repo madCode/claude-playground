@@ -22,6 +22,15 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Thursday 26 November 2026
 
+### An imported class shows all its rows
+- **Why:** madCode: "And the import ignores body weight moves? Is that what we want now that
+  we can see past classes?" It was right for the coach, wrong for looking back.
+- **Shipped:** a past class from the imported history shows every row the file has, in
+  order: bodyweight and timed rows, skipped ones, a weight off the rack. They are of the
+  class but of no lift's history, so nothing the coach reads changes.
+- **Not done:** a class logged on the phone still shows only its weighted rows; the Log
+  screen records nothing for the others.
+
 ### A day with no class opens on History
 - **Why:** madCode: "If there are no classes booked today or tomorrow, shouldn't it open to
   the history tab?" Today had one sentence to say.

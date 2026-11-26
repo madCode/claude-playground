@@ -22,11 +22,24 @@ data class PastClass(
 data class PastRow(
     /** The exercise as a person says it. */
     val name: String,
-    val logged: Logged,
+    /** What the coach reads of it; null for a row that is no part of a lift's history ([apart]). */
+    val logged: Logged?,
+    /** A row the coach leaves out, as the imported file has it: bodyweight, skipped, something else held. */
+    val apart: Apart? = null,
 ) {
+    /** What an imported row outside the coach's history says. */
+    data class Apart(
+        /** One dumbbell-or-other's weight as the file has it, in words for the screen ("55 lb"); null when none was held or said. */
+        val held: String?,
+        val said: List<String>,
+        val why: String,
+    )
+
     /** The reps done, as written: "8 reps", "8, 8, 6 reps", "10 / 8 / 6", "timed", or "" when nobody said. */
     val reps: String
         get() = when {
+            // The file's own count may be of both sides, where the rows beside it are per side: left unsaid.
+            logged == null -> ""
             logged.ladder != null -> logged.ladder.joinToString(" / ")
             logged.reps.isEmpty() -> if (logged.target == null) "timed" else ""
             logged.reps.distinct().size == 1 -> "${logged.reps.first()} reps"
@@ -35,7 +48,7 @@ data class PastRow(
 
     /** What was said about it, in the Log screen's own words. */
     val said: List<String>
-        get() = listOfNotNull(
+        get() = if (logged == null) apart?.said.orEmpty() + listOfNotNull(apart?.why?.takeIf { it.isNotEmpty() }) else listOfNotNull(
             "felt easy".takeIf { logged.easy },
             "felt hard".takeIf { logged.hard },
             "twinge".takeIf { logged.hurt },
@@ -58,11 +71,25 @@ object Past {
      * the log has anything for, a row that can't be read included, since those are the days
      * the sheet leaves the file out for.
      */
-    fun classes(own: List<Pair<JournalEntry, Logged>>, imported: List<Imported>, ownDays: Set<LocalDate> = own.map { it.first.date }.toSet()): List<PastClass> {
+    fun classes(
+        own: List<Pair<JournalEntry, Logged>>,
+        imported: List<Imported>,
+        ownDays: Set<LocalDate> = own.map { it.first.date }.toSet(),
+        /** The file's rows the coach leaves out ([HistoryImport.Result.others]): shown in their class all the same. */
+        others: List<HistoryImport.Row> = emptyList(),
+        /** Names a left-out row as its lift is said, where its line reads; else it keeps its own words. */
+        identity: Identity? = null,
+    ): List<PastClass> {
         val mine = own.groupBy { it.first.date to it.first.className }
             .map { (at, rows) -> PastClass(at.first, at.second, imported = false, rows = rows.map { row(it.second) }) }
-        val theirs = imported.filter { it.logged.date !in ownDays }.groupBy { it.logged.date to (it.className ?: NO_CLASS) }
-            .map { (at, rows) -> PastClass(at.first, at.second, imported = true, rows = rows.map { row(it.logged) }) }
+        fun named(name: String?) = name?.let(::plain)?.ifEmpty { null } ?: NO_CLASS
+        val read = imported.filter { it.logged.date !in ownDays }.map { Triple(it.logged.date to named(it.className), it.at, row(it.logged)) }
+        val apart = others.filter { it.date !in ownDays }.map { Triple(it.date to named(it.className), it.at, apart(it, identity)) }
+        // As the file has them, which is the order they were done in. A class of nothing but
+        // skipped rows wasn't taken.
+        val theirs = (read + apart).groupBy { it.first }
+            .filter { (_, rows) -> rows.any { it.third.apart?.why != SKIPPED } }
+            .map { (at, rows) -> PastClass(at.first, at.second, imported = true, rows = rows.sortedBy { it.second }.map { it.third }) }
         return (mine + theirs).sortedWith(compareByDescending<PastClass> { it.date }.thenBy { it.className })
     }
 
@@ -76,9 +103,9 @@ object Past {
     fun lift(key: String, classes: List<PastClass>, sheet: List<Reading.Known> = emptyList()): List<PastSession> {
         val all = sessions(classes)
         val exercise = exercise(key, all, sheet) ?: return emptyList()
-        val counted = Progression.own(exercise, all.map { it.row.logged }).toSet()
+        val counted = Progression.own(exercise, all.mapNotNull { it.row.logged }).toSet()
         // Also a session nothing can be judged from (no reps said): it was done all the same.
-        return all.filter { it.row.logged in counted || it.row.logged.key == key }.sortedByDescending { it.date }
+        return all.filter { it.row.logged != null && (it.row.logged in counted || it.row.logged.key == key) }.sortedByDescending { it.date }
     }
 
     /** The name [lift]'s sessions go under: the wording that was opened. */
@@ -86,11 +113,47 @@ object Past {
         exercise(key, sessions(classes), sheet)?.let(Estimated::name)
 
     private fun exercise(key: String, all: List<PastSession>, sheet: List<Reading.Known>) =
-        sheet.firstOrNull { it.key == key } ?: all.firstOrNull { it.row.logged.key == key }?.row?.logged?.exercise
+        sheet.firstOrNull { it.key == key } ?: all.firstOrNull { it.row.logged?.key == key }?.row?.logged?.exercise
 
     private fun sessions(classes: List<PastClass>) = classes.flatMap { c -> c.rows.map { PastSession(c.date, it, c.imported) } }
 
     private fun row(logged: Logged) = PastRow(Estimated.name(logged.exercise), logged)
+
+    private fun apart(row: HistoryImport.Row, identity: Identity?): PastRow {
+        val words = BoardLine.read(row.line.orEmpty().take(MAX_LINE)).words
+        val name = (identity?.read(words) as? Reading.Known)?.let(Estimated::name) ?: plain(words).ifEmpty { "an exercise" }
+        val why = when (row.left) {
+            HistoryImport.Left.SKIPPED -> SKIPPED
+            HistoryImport.Left.NO_WEIGHT -> if (row.done) "done" else ""
+            HistoryImport.Left.OFF_RACK -> "not a dumbbell"
+            HistoryImport.Left.EASIER -> "easier version"
+            HistoryImport.Left.BROKE_DOWN -> "form broke down"
+            HistoryImport.Left.NOT_NAMED -> "not read by Spotter"
+            HistoryImport.Left.REPS_UNCLEAR -> "reps unclear"
+            else -> ""
+        }
+        val said = listOfNotNull("felt easy".takeIf { row.easy }, "felt hard".takeIf { row.hard }, "twinge".takeIf { row.hurt })
+        // A skipped row held nothing, whatever the file carries; nor is a weight no gym has one.
+        val held = row.weight?.takeIf { !row.skipped && it >= 1 && it <= MAX_LB }?.let { w ->
+            val tenths = Math.round(w * 10)
+            (if (tenths % 10 == 0L) "${tenths / 10}" else "${tenths / 10}.${tenths % 10}") + " lb"
+        }
+        return PastRow(name, null, PastRow.Apart(held, said, why))
+    }
+
+    // The file is someone's typing, or anyone's: one line of plain text, of a sane length,
+    // with nothing that turns the screen's text around and no half of a character at the cut.
+    private fun plain(text: String): String {
+        val clean = text.map { if (it.isISOControl() || Character.getType(it) == Character.FORMAT.toInt()) ' ' else it }.joinToString("")
+            .trim().replace(Regex(" +"), " ")
+        val cut = clean.take(MAX_NAME)
+        return if (cut.lastOrNull()?.isHighSurrogate() == true) cut.dropLast(1) else cut
+    }
+
+    private const val SKIPPED = "skipped"
+    private const val MAX_LINE = 400
+    private const val MAX_NAME = 80
+    private const val MAX_LB = 500.0
 
     const val NO_CLASS = "class"
 }
