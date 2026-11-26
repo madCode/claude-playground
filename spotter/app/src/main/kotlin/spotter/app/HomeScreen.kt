@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -79,7 +78,7 @@ private fun BackupView(backup: BackupState, onChooseFolder: () -> Unit) {
             backup.at == null -> "Your log will be copied to ${backup.folder}."
             else -> "Log copied to ${backup.folder} · ${backup.at}"
         }
-        Text(status, fontSize = 14.sp, color = if (backup.ok) Color(0xFF5B606B) else Color(0xFF8A4B00))
+        Text(status, fontSize = 14.sp, color = if (backup.ok) palette.muted else palette.warn)
         OutlinedButton(onClick = onChooseFolder, modifier = Modifier.heightIn(min = 48.dp)) {
             Text(if (backup.folder == null) "Choose a backup folder" else "Change folder")
         }
@@ -92,7 +91,7 @@ private fun BackupView(backup: BackupState, onChooseFolder: () -> Unit) {
 private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: () -> Unit, onStop: () -> Unit) {
     var removing by rememberSaveable { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        val grey = Color(0xFF5B606B)
+        val grey = palette.muted
         // Said aloud when it changes: a pick ends on its own time, with nothing tapped.
         Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (history.read == null) {
@@ -104,8 +103,8 @@ private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: (
                     Text("${history.countAssumed} ${if (history.countAssumed == 1) "row" else "rows"} didn't say how many dumbbells: read as the lift's usual number.", fontSize = 14.sp, color = grey)
                 }
             }
-            history.refused?.let { Text(it, fontSize = 14.sp, color = Color(0xFF8A4B00)) }
-            if (history.reading) Text("Reading the file…", fontSize = 14.sp, color = Color(0xFF16181D))
+            history.refused?.let { Text(it, fontSize = 14.sp, color = palette.warn) }
+            if (history.reading) Text("Reading the file…", fontSize = 14.sp, color = palette.ink)
         }
         when {
             // No second pick while a file is read: it would race the first. Stopping is offered,
@@ -115,7 +114,7 @@ private fun HistoryView(history: HistoryState, onImport: () -> Unit, onRemove: (
                 Text(
                     "Remove the imported history? Your own log stays.",
                     fontSize = 14.sp,
-                    color = Color(0xFF16181D),
+                    color = palette.ink,
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
                 // Wrapping, so both buttons stay whole at large text on a narrow phone.
@@ -175,8 +174,8 @@ fun HomeScreen(
     /** Where the app opens: the sheet. */
     startTab: Tab = Tab.TODAY,
 ) {
-    MaterialTheme {
-        Surface(Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
+    SpotterTheme {
+        Surface(Modifier.fillMaxSize(), color = palette.page) {
             var tab by rememberSaveable { mutableStateOf(startTab) }
             // Turning the phone keeps the tab. Coming back later doesn't: at the studio door the
             // app must open on the sheet, whether Android kept the screen alive or rebuilt it
@@ -212,7 +211,7 @@ fun HomeScreen(
                             when (tab) {
                                 Tab.TODAY -> {
                                     if (waitingBuild != null) {
-                                        Surface(color = Color(0xFFE8EEFC), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+                                        Surface(color = palette.note, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                                             Row(
                                                 Modifier.padding(14.dp),
                                                 verticalAlignment = Alignment.CenterVertically,
@@ -221,12 +220,12 @@ fun HomeScreen(
                                                 Text(
                                                     "A newer build, $waitingBuild, is ready.",
                                                     fontSize = 16.sp,
-                                                    color = Color(0xFF1E3A8A),
+                                                    color = palette.onNote,
                                                     modifier = Modifier.weight(1f),
                                                 )
                                                 Button(
                                                     onClick = onInstall,
-                                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
+                                                    colors = ButtonDefaults.buttonColors(containerColor = palette.blue),
                                                     modifier = Modifier.heightIn(min = 48.dp),
                                                 ) { Text("Install") }
                                             }
@@ -263,7 +262,7 @@ fun HomeScreen(
                                     if (!looking && progress == Progress() && past.isEmpty()) {
                                         Text(
                                             "Nothing logged yet. What you lift, and where it is heading, shows here.",
-                                            fontSize = 17.sp, color = Color(0xFF5B606B), modifier = Modifier.semantics { heading() },
+                                            fontSize = 17.sp, color = palette.muted, modifier = Modifier.semantics { heading() },
                                         )
                                     }
                                     if (!looking) ProgressView(progress)
@@ -278,7 +277,7 @@ fun HomeScreen(
                                     Text(
                                         "Version $version · tap to copy",
                                         fontSize = 14.sp,
-                                        color = Color(0xFF5B606B),
+                                        color = palette.muted,
                                         modifier = Modifier
                                             .heightIn(min = 48.dp)
                                             .clickable(role = Role.Button, onClickLabel = "copy the version", onClick = onCopyVersion)
@@ -299,7 +298,7 @@ fun HomeScreen(
 // A label over a part of Settings, and a heading to reach it by.
 @Composable
 private fun Section(text: String) {
-    Text(text, fontSize = 14.sp, color = Color(0xFF5B606B), fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp).semantics { heading() })
+    Text(text, fontSize = 14.sp, color = palette.muted, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp).semantics { heading() })
 }
 
 /** How long a tab other than the first is come back to: past it, the app opens on the sheet. */
@@ -314,7 +313,7 @@ enum class Tab(val label: String) { TODAY("Today"), HISTORY("History"), SETTINGS
 // Along the bottom, under the thumb. Words, not icons: three places need no pictures.
 @Composable
 private fun Tabs(selected: Tab, onSelect: (Tab) -> Unit) {
-    Surface(color = Color.White, shadowElevation = 6.dp, modifier = Modifier.fillMaxWidth()) {
+    Surface(color = palette.card, shadowElevation = 6.dp, modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.selectableGroup()) {
             Tab.entries.forEach { t ->
                 val on = t == selected
@@ -325,8 +324,8 @@ private fun Tabs(selected: Tab, onSelect: (Tab) -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
                 ) {
-                    Text(t.label, fontSize = 15.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, color = if (on) Color(0xFF1D4ED8) else Color(0xFF5B606B))
-                    Box(Modifier.width(28.dp).height(3.dp).background(if (on) Color(0xFF1D4ED8) else Color.Transparent, RoundedCornerShape(2.dp)))
+                    Text(t.label, fontSize = 15.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, color = if (on) palette.blue else palette.muted)
+                    Box(Modifier.width(28.dp).height(3.dp).background(if (on) palette.blue else Color.Transparent, RoundedCornerShape(2.dp)))
                 }
             }
         }

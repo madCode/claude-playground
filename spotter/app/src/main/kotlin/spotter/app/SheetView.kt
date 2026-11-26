@@ -42,10 +42,6 @@ import spotter.coach.SheetRow
 import spotter.coach.Change
 import spotter.coach.Suggestion
 
-private val ink = Color(0xFF16181D)
-private val muted = Color(0xFF5B606B)
-private val warn = Color(0xFF8A4B00)
-private val warnBg = Color(0xFFFFF1DB)
 
 /**
  * The middle of the home screen: today's sheet, or why there isn't one. Rows run in the board's
@@ -106,13 +102,13 @@ private fun EarlierClass(earlier: Today.Showing, onLog: () -> Unit) {
     val logged = earlier.sheet.rows.count { it.id in earlier.logged } + earlier.strays.size
     if (logged == 0) {
         Column(
-            Modifier.fillMaxWidth().background(warnBg, RoundedCornerShape(8.dp)).padding(10.dp),
+            Modifier.fillMaxWidth().background(palette.warnBg, RoundedCornerShape(8.dp)).padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("${earlier.title} isn't logged yet.", fontSize = 15.sp, color = warn)
+            Text("${earlier.title} isn't logged yet.", fontSize = 15.sp, color = palette.warn)
             Button(
                 onClick = onLog,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
+                colors = ButtonDefaults.buttonColors(containerColor = palette.blue),
                 modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Log ${earlier.title}" },
             ) { Text("Log it") }
         }
@@ -127,20 +123,20 @@ private fun EarlierClass(earlier: Today.Showing, onLog: () -> Unit) {
 private fun TodayBody(today: Today, onAllowCalendar: () -> Unit, onPast: (Reading.Known) -> Unit, hasPast: (Reading.Known) -> Boolean, onLog: (Today.Showing) -> Unit) {
     when (today) {
         // Each a heading: with no sheet it is the one landmark on the tab.
-        Today.Loading -> Text("Reading today's board…", fontSize = 17.sp, color = muted, modifier = Modifier.semantics { heading() })
+        Today.Loading -> Text("Reading today's board…", fontSize = 17.sp, color = palette.muted, modifier = Modifier.semantics { heading() })
         Today.NeedsCalendar -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
                 "Spotter reads your calendar to know which class is next. It reads only the titles and times of entries from two days ago to tomorrow, and keeps nothing.",
                 fontSize = 17.sp,
-                color = ink,
+                color = palette.ink,
             )
             Button(
                 onClick = onAllowCalendar,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
+                colors = ButtonDefaults.buttonColors(containerColor = palette.blue),
                 modifier = Modifier.heightIn(min = 48.dp),
             ) { Text("Allow the calendar") }
         }
-        is Today.Nothing -> Text(today.reason, fontSize = 17.sp, color = ink, modifier = Modifier.semantics { heading() })
+        is Today.Nothing -> Text(today.reason, fontSize = 17.sp, color = palette.ink, modifier = Modifier.semantics { heading() })
         is Today.Showing -> SheetView(today, onPast, hasPast) { onLog(today) }
     }
 }
@@ -154,7 +150,7 @@ private fun SheetView(today: Today.Showing, onPast: (Reading.Known) -> Unit, has
             today.title,
             fontSize = 22.sp,
             fontWeight = FontWeight.SemiBold,
-            color = ink,
+            color = palette.ink,
             modifier = Modifier.semantics { heading() },
         )
         // What is true of the whole board. A row's own warning is said in its row.
@@ -167,7 +163,7 @@ private fun SheetView(today: Today.Showing, onPast: (Reading.Known) -> Unit, has
                     Text(
                         it.replaceFirstChar { c -> c.uppercase() },
                         fontSize = 14.sp,
-                        color = muted,
+                        color = palette.muted,
                         modifier = Modifier.padding(top = 8.dp).semantics { heading() },
                     )
                 }
@@ -181,7 +177,7 @@ private fun SheetView(today: Today.Showing, onPast: (Reading.Known) -> Unit, has
             val label = if (logged == 0) "Log this class" else "Change the log ($logged logged)"
             Button(
                 onClick = onLog,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
+                colors = ButtonDefaults.buttonColors(containerColor = palette.blue),
                 modifier = Modifier.padding(top = 8.dp).heightIn(min = 48.dp),
             ) { Text(label) }
         }
@@ -193,8 +189,8 @@ private fun Note(text: String) {
     Text(
         text,
         fontSize = 15.sp,
-        color = warn,
-        modifier = Modifier.fillMaxWidth().background(warnBg, RoundedCornerShape(8.dp)).padding(10.dp),
+        color = palette.warn,
+        modifier = Modifier.fillMaxWidth().background(palette.warnBg, RoundedCornerShape(8.dp)).padding(10.dp),
     )
 }
 
@@ -204,7 +200,7 @@ private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet, onPast: (Readi
     var open by rememberSaveable(index, row.shown) { mutableStateOf(false) }
     val weighted = row.suggestion is Suggestion.Weight
     Surface(
-        color = Color.White,
+        color = palette.card,
         shape = RoundedCornerShape(10.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -223,27 +219,27 @@ private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet, onPast: (Readi
                         row.headline,
                         fontSize = if (weighted) 26.sp else 16.sp,
                         fontWeight = if (weighted) FontWeight.Bold else FontWeight.SemiBold,
-                        color = if (weighted) ink else muted,
+                        color = if (weighted) palette.ink else palette.muted,
                     )
                     row.caption?.let {
                         val up = (row.suggestion as? Suggestion.Weight)?.change == Change.UP
-                        Text(it, fontSize = 13.sp, color = if (up) Color(0xFF17753F) else muted, fontWeight = if (up) FontWeight.SemiBold else FontWeight.Normal)
+                        Text(it, fontSize = 13.sp, color = if (up) palette.up else palette.muted, fontWeight = if (up) FontWeight.SemiBold else FontWeight.Normal)
                     }
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(row.shown, fontSize = 17.sp, color = ink)
-                    row.aside?.let { Text(it, fontSize = 13.sp, color = muted) }
+                    Text(row.shown, fontSize = 17.sp, color = palette.ink)
+                    row.aside?.let { Text(it, fontSize = 13.sp, color = palette.muted) }
                 }
                 // Says the row opens; the state itself is spoken above.
-                Text(if (open) "⌄" else "›", fontSize = 20.sp, color = muted, modifier = Modifier.clearAndSetSemantics { })
+                Text(if (open) "⌄" else "›", fontSize = 20.sp, color = palette.muted, modifier = Modifier.clearAndSetSemantics { })
             }
             // A row that wasn't read has said so under its headline already.
-            if (row.reading is Reading.Known) row.warnings.forEach { Text(it, fontSize = 14.sp, color = warn) }
+            if (row.reading is Reading.Known) row.warnings.forEach { Text(it, fontSize = 14.sp, color = palette.warn) }
             if (open) {
                 // Not what the row has said already.
-                row.why.filter { it != row.aside }.forEach { Text("· $it", fontSize = 15.sp, color = ink) }
+                row.why.filter { it != row.aside }.forEach { Text("· $it", fontSize = 15.sp, color = palette.ink) }
                 // In plain words, so a misreading of the line can be seen.
-                row.readAs?.let { Text("Read as: $it", fontSize = 14.sp, color = muted) }
+                row.readAs?.let { Text("Read as: $it", fontSize = 14.sp, color = palette.muted) }
                 // The sessions the number rests on, where there are any.
                 (row.reading as? Reading.Known)?.takeIf(hasPast)?.let { known ->
                     OutlinedButton(onClick = { onPast(known) }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: past sessions" }) { Text("Past sessions ›") }

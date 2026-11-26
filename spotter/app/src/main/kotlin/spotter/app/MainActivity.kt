@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -151,6 +152,8 @@ class MainActivity : ComponentActivity() {
         UpdateWorker.schedule(this)
         ExportWorker.schedule(this)
         val version = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
+        // The status and navigation bars' icons follow light or dark, as the page under them does.
+        enableEdgeToEdge()
         setContent {
             HomeScreen(
                 version = version,

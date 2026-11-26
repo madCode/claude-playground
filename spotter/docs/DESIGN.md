@@ -408,6 +408,8 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   sorted, is still open on coming back to it. Turning the phone keeps the tab; coming back
   to the app after ten minutes opens it on Today, whatever Android kept. The tabs make way
   for the keyboard.
+- **Light or dark** as the phone is set (`Theme.kt`): one palette, each colour named for
+  what it is for, with a value for each. No screen names a colour of its own.
 - **The sheet** (`SheetView`): the class, its date and start ("2G · Sat 21 Nov · 9:50"); notes
   when the board is borrowed or from an earlier day; then each row in board order under its
   block. The number leads the row, large ("2×30"), in a column the eye can run down, with a
