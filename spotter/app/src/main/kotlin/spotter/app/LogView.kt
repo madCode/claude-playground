@@ -54,9 +54,6 @@ import spotter.coach.RowLog
 import spotter.coach.Scheme
 import spotter.coach.SheetRow
 
-private val ink = Color(0xFF16181D)
-private val muted = Color(0xFF5B606B)
-private val blue = Color(0xFF1D4ED8)
 
 /**
  * Logging a class: the sheet's rows in board order, each "✓ as listed" or "changed" (the heaviest
@@ -69,10 +66,10 @@ fun LogView(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit,
             "Log · ${today.title}",
             fontSize = 22.sp,
             fontWeight = FontWeight.SemiBold,
-            color = ink,
+            color = palette.ink,
             modifier = Modifier.semantics { heading() },
         )
-        Text("Leave a row alone if it wasn't done.", fontSize = 15.sp, color = muted)
+        Text("Leave a row alone if it wasn't done.", fontSize = 15.sp, color = palette.muted)
         var block: String? = null
         today.sheet.rows.forEach { row ->
             if (row.block != block) {
@@ -81,7 +78,7 @@ fun LogView(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit,
                     Text(
                         it.replaceFirstChar { c -> c.uppercase() },
                         fontSize = 14.sp,
-                        color = muted,
+                        color = palette.muted,
                         modifier = Modifier.padding(top = 8.dp).semantics { heading() },
                     )
                 }
@@ -100,10 +97,10 @@ fun LogView(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit,
             Text(
                 "Logged, but not on this board",
                 fontSize = 14.sp,
-                color = muted,
+                color = palette.muted,
                 modifier = Modifier.padding(top = 8.dp).semantics { heading() },
             )
-            Text("The board changed after you logged these. They still count unless you clear them.", fontSize = 15.sp, color = muted)
+            Text("The board changed after you logged these. They still count unless you clear them.", fontSize = 15.sp, color = palette.muted)
             today.strays.forEachIndexed { i, stray ->
                 val cleared = stray.id in draft.cleared
                 // Said apart from a board row with the same words, and from a twin beside it.
@@ -115,7 +112,7 @@ fun LogView(today: Today.Showing, draft: LogDraft, onChange: (LogDraft) -> Unit,
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 8.dp)) {
             Button(
                 onClick = onSave,
-                colors = ButtonDefaults.buttonColors(containerColor = blue),
+                colors = ButtonDefaults.buttonColors(containerColor = palette.blue),
                 modifier = Modifier.heightIn(min = 48.dp),
             ) { Text("Save") }
             OutlinedButton(onClick = onCancel, modifier = Modifier.heightIn(min = 48.dp)) { Text("Cancel") }
@@ -133,7 +130,7 @@ private fun AddExercise(today: Today.Showing, draft: LogDraft, onChange: (LogDra
     var refused by rememberSaveable { mutableStateOf<String?>(null) }
     val keyboard = LocalSoftwareKeyboardController.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-        Text("Did one the board missed?", fontSize = 15.sp, color = muted)
+        Text("Did one the board missed?", fontSize = 15.sp, color = palette.muted)
         fun add() {
             if (typed.isBlank()) return
             val next = draft.adding(typed.trim(), today.sheet, System.currentTimeMillis())
@@ -167,7 +164,7 @@ private fun AddExercise(today: Today.Showing, draft: LogDraft, onChange: (LogDra
             modifier = Modifier.fillMaxWidth(),
         )
         refused?.let {
-            Text(it, fontSize = 15.sp, color = ink, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            Text(it, fontSize = 15.sp, color = palette.ink, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
         OutlinedButton(onClick = ::add, enabled = typed.isNotBlank(), modifier = Modifier.heightIn(min = 48.dp)) { Text("Add an exercise") }
     }
@@ -190,17 +187,17 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
         (plain == asListed || (free && plain.copy(count = asListed.count) == asListed))
     // Open while being changed; a row ticked as listed needs nothing more.
     var open by rememberSaveable(row.id) { mutableStateOf(log != null && !listed) }
-    Surface(color = Color.White, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+    Surface(color = palette.card, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(row.shown, fontSize = 17.sp, color = ink, modifier = Modifier.weight(1f))
-                Text(glance, fontSize = 15.sp, color = muted, textAlign = TextAlign.End, modifier = Modifier.widthIn(max = 150.dp))
+                Text(row.shown, fontSize = 17.sp, color = palette.ink, modifier = Modifier.weight(1f))
+                Text(glance, fontSize = 15.sp, color = palette.muted, textAlign = TextAlign.End, modifier = Modifier.widthIn(max = 150.dp))
             }
             if (!LogDraft.loggable(row)) {
-                Text(if (row.reading is Reading.NotSure) "Not read, so not logged here" else "No weight to log", fontSize = 14.sp, color = muted)
+                Text(if (row.reading is Reading.NotSure) "Not read, so not logged here" else "No weight to log", fontSize = 14.sp, color = palette.muted)
                 // Logged when the line still read: it counts until cleared, so it is shown.
                 if (log != null) {
-                    Text("Logged: " + summary(log), fontSize = 15.sp, color = ink, fontWeight = FontWeight.SemiBold)
+                    Text("Logged: " + summary(log), fontSize = 15.sp, color = palette.ink, fontWeight = FontWeight.SemiBold)
                     Quiet("Clear", "${row.shown}: clear") { onChange(null) }
                 }
                 return@Column
@@ -241,7 +238,7 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
             // number it is chosen already, and stays on show to be changed in one tap.
             val guessed = LogDraft.guessed(row)
             if (log != null && (open || log.count == null || guessed)) {
-                if (log.count == null || guessed) Text("One dumbbell or two?", fontSize = 15.sp, color = ink)
+                if (log.count == null || guessed) Text("One dumbbell or two?", fontSize = 15.sp, color = palette.ink)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Choice("One dumbbell", log.count == 1, "${row.shown}: one dumbbell") { onChange(log.copy(count = 1)) }
                     Choice("Two", log.count == 2, "${row.shown}: two dumbbells") { onChange(log.copy(count = 2)) }
@@ -249,20 +246,20 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
             }
             if (open && log != null) Details(row, log, onChange)
             // Last, so the first pick doesn't move the rack under the thumb.
-            log?.let { Text("Logged: " + summary(it), fontSize = 15.sp, color = ink, fontWeight = FontWeight.SemiBold) }
+            log?.let { Text("Logged: " + summary(it), fontSize = 15.sp, color = palette.ink, fontWeight = FontWeight.SemiBold) }
         }
     }
 }
 
 @Composable
 private fun StrayView(stray: JournalEntry, cleared: Boolean, spoken: String, onToggle: () -> Unit) {
-    Surface(color = Color.White, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+    Surface(color = palette.card, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stray.line, fontSize = 17.sp, color = ink)
+            Text(stray.line, fontSize = 17.sp, color = palette.ink)
             Text(
                 if (cleared) "Removed when you save." else "Logged: " + summary(RowLog.of(stray)),
                 fontSize = 15.sp,
-                color = ink,
+                color = palette.ink,
                 fontWeight = FontWeight.SemiBold,
             )
             Choice("Clear", cleared, spoken, onToggle)
@@ -276,7 +273,7 @@ private fun Choice(label: String, selected: Boolean, spoken: String, onClick: ()
     // hears "selected" as a state.
     OutlinedButton(
         onClick = onClick,
-        colors = if (selected) ButtonDefaults.buttonColors(containerColor = blue) else ButtonDefaults.outlinedButtonColors(),
+        colors = if (selected) ButtonDefaults.buttonColors(containerColor = palette.blue) else ButtonDefaults.outlinedButtonColors(),
         modifier = Modifier.heightIn(min = 48.dp).semantics {
             contentDescription = spoken
             this.selected = selected
@@ -289,7 +286,7 @@ private fun Choice(label: String, selected: Boolean, spoken: String, onClick: ()
 private fun Quiet(label: String, spoken: String, onClick: () -> Unit) {
     TextButton(
         onClick = onClick,
-        colors = ButtonDefaults.textButtonColors(contentColor = muted),
+        colors = ButtonDefaults.textButtonColors(contentColor = palette.muted),
         modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = spoken },
     ) { Text(label) }
 }
@@ -301,7 +298,7 @@ private fun Editor(row: SheetRow, log: RowLog?, onChange: (RowLog) -> Unit) {
         val last = row.lastHeld?.let { " Last time: ${it.count?.let { c -> "$c×" }.orEmpty()}${it.lb}." }.orEmpty()
         val rounds = log?.rounds
         if (rounds != null) {
-            Text("Each round's dumbbell, lb.$last", fontSize = 15.sp, color = muted)
+            Text("Each round's dumbbell, lb.$last", fontSize = 15.sp, color = palette.muted)
             // The board's own numbers beside each round; a carried log may have other rounds
             // than this row, and then they go unnumbered.
             val ladder = (row.line.scheme as? Scheme.Ladder)?.takeIf { it.rounds.size == rounds.size }
@@ -321,7 +318,7 @@ private fun Editor(row: SheetRow, log: RowLog?, onChange: (RowLog) -> Unit) {
             ) { Text("One weight") }
             return@Column
         }
-        Text("Heaviest dumbbell, lb.$last", fontSize = 15.sp, color = muted)
+        Text("Heaviest dumbbell, lb.$last", fontSize = 15.sp, color = palette.muted)
         // The whole rack, one tap each: thirteen weights are quicker to hit than to step to.
         // Narrow keys, as many across as stay wide enough for a thumb: two rows on most phones.
         BoxWithConstraints {
@@ -333,7 +330,7 @@ private fun Editor(row: SheetRow, log: RowLog?, onChange: (RowLog) -> Unit) {
                             val picked = log?.lb == lb
                             OutlinedButton(
                                 onClick = { onChange(log?.at(lb) ?: LogDraft.picked(row, lb)) },
-                                colors = if (picked) ButtonDefaults.buttonColors(containerColor = blue) else ButtonDefaults.outlinedButtonColors(),
+                                colors = if (picked) ButtonDefaults.buttonColors(containerColor = palette.blue) else ButtonDefaults.outlinedButtonColors(),
                                 contentPadding = PaddingValues(0.dp),
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.weight(1f).heightIn(min = 48.dp).semantics {
@@ -384,14 +381,14 @@ private fun Details(row: SheetRow, log: RowLog, onChange: (RowLog) -> Unit) {
 @Composable
 private fun Stepper(label: String, value: String, spoken: String, onDown: (() -> Unit)?, onUp: (() -> Unit)?) {
     // The label above, so the buttons and the number have the row's width at any text size.
-    Text(label, fontSize = 15.sp, color = muted)
+    Text(label, fontSize = 15.sp, color = palette.muted)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(
             onClick = { onDown?.invoke() },
             enabled = onDown != null,
             modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "less, $spoken" },
         ) { Text("−", fontSize = 20.sp) }
-        Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = ink, modifier = Modifier.widthIn(min = 72.dp), textAlign = TextAlign.Center)
+        Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = palette.ink, modifier = Modifier.widthIn(min = 72.dp), textAlign = TextAlign.Center)
         OutlinedButton(
             onClick = { onUp?.invoke() },
             enabled = onUp != null,
@@ -405,7 +402,7 @@ private fun Stepper(label: String, value: String, spoken: String, onDown: (() ->
 private fun Flag(row: SheetRow, label: String, on: Boolean, onToggle: (Boolean) -> Unit) {
     OutlinedButton(
         onClick = { onToggle(!on) },
-        colors = if (on) ButtonDefaults.outlinedButtonColors(containerColor = Color(0xFFDCE6FF), contentColor = Color(0xFF12337F)) else ButtonDefaults.outlinedButtonColors(contentColor = ink),
+        colors = if (on) ButtonDefaults.outlinedButtonColors(containerColor = palette.tint, contentColor = palette.onTint) else ButtonDefaults.outlinedButtonColors(contentColor = palette.ink),
         modifier = Modifier.heightIn(min = 48.dp).semantics {
             contentDescription = "${row.shown}: ${label.lowercase()}"
             selected = on

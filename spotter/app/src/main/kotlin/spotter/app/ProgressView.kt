@@ -21,8 +21,6 @@ import spotter.coach.Progress
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val ink = Color(0xFF16181D)
-private val muted = Color(0xFF5B606B)
 private val day = DateTimeFormatter.ofPattern("d MMM", Locale.UK)
 
 /**
@@ -33,11 +31,11 @@ private val day = DateTimeFormatter.ofPattern("d MMM", Locale.UK)
 fun ProgressView(progress: Progress) {
     val advice = progress.advice
     if (progress.wentUp.isEmpty() && progress.next.isEmpty() && advice.numbered == 0) return
-    Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+    Surface(color = palette.card, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Progress", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = ink, modifier = Modifier.semantics { heading() })
+            Text("Progress", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = palette.ink, modifier = Modifier.semantics { heading() })
             if (progress.wentUp.isNotEmpty()) {
-                Text("Went up in the last ${Progress.WEEKS} weeks", fontSize = 14.sp, color = muted, modifier = Modifier.semantics { heading() })
+                Text("Went up in the last ${Progress.WEEKS} weeks", fontSize = 14.sp, color = palette.muted, modifier = Modifier.semantics { heading() })
                 progress.wentUp.forEach {
                     Line(
                         it.exercise,
@@ -47,7 +45,7 @@ fun ProgressView(progress: Progress) {
                 }
             }
             if (progress.next.isNotEmpty()) {
-                Text("Next", fontSize = 14.sp, color = muted, modifier = Modifier.padding(top = if (progress.wentUp.isEmpty()) 0.dp else 4.dp).semantics { heading() })
+                Text("Next", fontSize = 14.sp, color = palette.muted, modifier = Modifier.padding(top = if (progress.wentUp.isEmpty()) 0.dp else 4.dp).semantics { heading() })
                 progress.next.forEach {
                     if (it.ready) {
                         Line(it.exercise, "${it.load.label}${reps(it.reps)} next time ▲", "${it.exercise}: up to ${words(it.load)}${reps(it.reps)} next time")
@@ -64,15 +62,15 @@ fun ProgressView(progress: Progress) {
                 Text(
                     "The sheet's numbers, last ${Progress.WEEKS} weeks",
                     fontSize = 14.sp,
-                    color = muted,
+                    color = palette.muted,
                     modifier = Modifier.padding(top = if (progress.wentUp.isEmpty() && progress.next.isEmpty()) 0.dp else 4.dp).semantics { heading() },
                 )
                 // Counts in plain words: what happened to the numbers, not a grade of them.
-                Text("${advice.asSuggested} of ${advice.numbered} done as suggested", fontSize = 16.sp, color = ink)
+                Text("${advice.asSuggested} of ${advice.numbered} done as suggested", fontSize = 16.sp, color = palette.ink)
                 listOfNotNull(
                     "${advice.heavier} lifted heavier".takeIf { advice.heavier > 0 },
                     "${advice.lighterOrShort} lighter or short".takeIf { advice.lighterOrShort > 0 },
-                ).takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" · "), fontSize = 15.sp, color = muted) }
+                ).takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" · "), fontSize = 15.sp, color = palette.muted) }
             }
         }
     }
@@ -91,7 +89,7 @@ private fun words(load: Load) = when (load.count) {
 private fun Line(exercise: String, detail: String, spoken: String) {
     // One thing to hear per exercise, not its name and then a row of symbols.
     Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = spoken }) {
-        Text(exercise, fontSize = 16.sp, color = ink)
-        Text(detail, fontSize = 15.sp, color = muted)
+        Text(exercise, fontSize = 16.sp, color = palette.ink)
+        Text(detail, fontSize = 15.sp, color = palette.muted)
     }
 }

@@ -33,8 +33,6 @@ import spotter.coach.Reading
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val ink = Color(0xFF16181D)
-private val muted = Color(0xFF5B606B)
 private val day = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)
 private val shortDay = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH)
 
@@ -65,8 +63,8 @@ fun PastView(
             BackHandler { onLift(null) }
             Back(if (cls != null) "${cls.className} · ${cls.date.format(day)}" else "History") { onLift(null) }
             val name = Past.name(openLift, classes, sheet) ?: lift.first().row.name
-            Text(name, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = ink, modifier = Modifier.semantics { heading() })
-            Text("Each time it was done, its other wordings that take the same dumbbells included.", fontSize = 14.sp, color = muted)
+            Text(name, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = palette.ink, modifier = Modifier.semantics { heading() })
+            Text("Each time it was done, its other wordings that take the same dumbbells included.", fontSize = 14.sp, color = palette.muted)
             lift.forEach { s ->
                 Held(s.row, title = s.date.format(shortDay), under = listOfNotNull(s.row.name.takeIf { it != name }, "imported".takeIf { s.imported }).joinToString(" · "), onClick = null)
             }
@@ -74,24 +72,24 @@ fun PastView(
         cls != null -> {
             BackHandler { onClass(null) }
             Back("History") { onClass(null) }
-            Text("${cls.className} · ${cls.date.format(day)}", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = ink, modifier = Modifier.semantics { heading() })
-            if (cls.imported) Text("From the imported history.", fontSize = 14.sp, color = muted)
+            Text("${cls.className} · ${cls.date.format(day)}", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = palette.ink, modifier = Modifier.semantics { heading() })
+            if (cls.imported) Text("From the imported history.", fontSize = 14.sp, color = palette.muted)
             cls.rows.forEach { row -> Held(row, title = row.name, under = "", onClick = { onLift(row.logged.key) }) }
         }
         classes.isNotEmpty() -> {
-            Text("Past classes", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = ink, modifier = Modifier.padding(top = 4.dp).semantics { heading() })
+            Text("Past classes", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = palette.ink, modifier = Modifier.padding(top = 4.dp).semantics { heading() })
             classes.take(shown).forEach { c ->
                 val rows = if (c.rows.size == 1) "1 row" else "${c.rows.size} rows"
                 Surface(
-                    color = Color.White, shape = RoundedCornerShape(10.dp),
+                    color = palette.card, shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button, onClickLabel = "open this class") { onClass(c.id) },
                 ) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("${c.date.format(day)} · ${c.className}", fontSize = 17.sp, color = ink, fontWeight = FontWeight.SemiBold)
-                            Text(rows + if (c.imported) " · imported" else " logged", fontSize = 14.sp, color = muted)
+                            Text("${c.date.format(day)} · ${c.className}", fontSize = 17.sp, color = palette.ink, fontWeight = FontWeight.SemiBold)
+                            Text(rows + if (c.imported) " · imported" else " logged", fontSize = 14.sp, color = palette.muted)
                         }
-                        Text("›", fontSize = 20.sp, color = muted, modifier = Modifier.clearAndSetSemantics { })
+                        Text("›", fontSize = 20.sp, color = palette.muted, modifier = Modifier.clearAndSetSemantics { })
                     }
                 }
             }
@@ -113,18 +111,18 @@ private fun Held(row: PastRow, title: String, under: String, onClick: (() -> Uni
     val load = row.logged.load
     val spoken = listOf(title, words(load), row.detail, under).filter { it.isNotEmpty() }.joinToString(", ")
     Surface(
-        color = Color.White, shape = RoundedCornerShape(10.dp),
+        color = palette.card, shape = RoundedCornerShape(10.dp),
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = "see this lift over time", onClick = onClick) else Modifier)
             .clearAndSetSemantics { contentDescription = spoken },
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(load.count?.let { "$it×${load.lb}" } ?: "${load.lb} lb", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = ink, modifier = Modifier.widthIn(min = 84.dp))
+            Text(load.count?.let { "$it×${load.lb}" } ?: "${load.lb} lb", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = palette.ink, modifier = Modifier.widthIn(min = 84.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(title, fontSize = 17.sp, color = ink)
-                listOf(row.detail, under).filter { it.isNotEmpty() }.joinToString(" · ").takeIf { it.isNotEmpty() }?.let { Text(it, fontSize = 14.sp, color = muted) }
+                Text(title, fontSize = 17.sp, color = palette.ink)
+                listOf(row.detail, under).filter { it.isNotEmpty() }.joinToString(" · ").takeIf { it.isNotEmpty() }?.let { Text(it, fontSize = 14.sp, color = palette.muted) }
             }
-            if (onClick != null) Text("›", fontSize = 20.sp, color = muted)
+            if (onClick != null) Text("›", fontSize = 20.sp, color = palette.muted)
         }
     }
 }

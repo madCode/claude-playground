@@ -22,6 +22,13 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Thursday 26 November 2026
 
+### A dark theme
+- **Why:** the last piece of the design pass: the app was light only.
+- **Shipped:** the app follows the phone's light or dark setting. Colours live in one palette
+  (`Theme.kt`); the window is the page's colour before the first frame; the system bars'
+  icons follow.
+- **Tested:** every tab and the Log screen drawn in dark, with hardly any near-white allowed.
+
 ### The Log screen is tidier
 - **Why:** the third piece of the design pass: three button styles, a rack three rows tall,
   and Clear as loud as the choices.

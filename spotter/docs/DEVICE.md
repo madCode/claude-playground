@@ -88,6 +88,15 @@ and the system's back gesture.
 3. The system's back gesture goes lift, class, list, and only then leaves the app.
 4. On Today, tap a row with a number, then "Past sessions": the same lift, under History.
 
+## Dark theme
+
+The tests prove no screen is left white. The system bars and the moment before the first
+frame are only real on a phone.
+
+1. Set the phone to dark and open Spotter: no white flash, and the clock and battery at the
+   top are readable over the page.
+2. Each tab, and the Log screen: nothing glares, nothing is too faint to read in the car.
+
 ## Sorting a word
 
 The tests prove the taps, what an answer does to a line, and that answers are kept. The

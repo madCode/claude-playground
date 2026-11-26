@@ -42,8 +42,6 @@ import spotter.coach.Vocabulary
 import spotter.coach.WordAnswer
 import spotter.coach.WordAnswers
 
-private val ink = Color(0xFF16181D)
-private val muted = Color(0xFF5B606B)
 
 /** How many words the card lists; the rest are counted. */
 internal const val MOST_WORDS = 8
@@ -81,11 +79,11 @@ fun UnknownWordsView(
     // The answer waiting for a yes: "" passes the word over, else the exercise it names.
     var picked by rememberSaveable { mutableStateOf<String?>(null) }
     fun close() { open = null; searching = false; typed = ""; picked = null }
-    Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+    Surface(color = palette.card, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (words.isNotEmpty()) {
-                Text("Words Spotter doesn't know yet", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = ink, modifier = Modifier.semantics { heading() })
-                Text("From the last ${Boards.KEEP} boards on this phone. A row with these says \"not sure\" and gets no number. Tap one to say what it is.", fontSize = 15.sp, color = muted)
+                Text("Words Spotter doesn't know yet", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = palette.ink, modifier = Modifier.semantics { heading() })
+                Text("From the last ${Boards.KEEP} boards on this phone. A row with these says \"not sure\" and gets no number. Tap one to say what it is.", fontSize = 15.sp, color = palette.muted)
             }
             words.take(MOST_WORDS).forEach { w -> key(w.word) {
                 val days = if (w.days == 1) "1 day" else "${w.days} days"
@@ -99,8 +97,8 @@ fun UnknownWordsView(
                             stateDescription = if (open == w.word) "open" else "closed"
                         },
                 ) {
-                    Text("${w.word} · $days", fontSize = 16.sp, color = ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(w.line, fontSize = 15.sp, color = muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text("${w.word} · $days", fontSize = 16.sp, color = palette.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(w.line, fontSize = 15.sp, color = palette.muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
                 if (open == w.word) {
                     val spoken = w.word.take(SPOKEN)
@@ -110,7 +108,7 @@ fun UnknownWordsView(
                             !WordAnswers.sortable(w.word) -> {
                                 Text(
                                     "This one can't be sorted here: it is a count, or a word that means different things on different lines.",
-                                    fontSize = 15.sp, color = ink, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                                    fontSize = 15.sp, color = palette.ink, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                                 )
                                 OutlinedButton(onClick = { close() }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "$spoken: close" }) { Text("Close") }
                             }
@@ -118,12 +116,12 @@ fun UnknownWordsView(
                                 val answer = WordAnswer(w.word, choice.ifEmpty { null })
                                 // Again whenever the answers change: undoing one below can change what this would do.
                                 val said = remember(w.line, answer, answers) { reads(w.line, answer) }
-                                Text(said.text, fontSize = 15.sp, color = ink, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                                Text(said.text, fontSize = 15.sp, color = palette.ink, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     if (said.keep) {
                                         Button(
                                             onClick = { onAnswer(answer); close() },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D4ED8)),
+                                            colors = ButtonDefaults.buttonColors(containerColor = palette.blue),
                                             modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "$spoken: yes, read it that way" },
                                         ) { Text("Yes, read it that way") }
                                     }
@@ -143,7 +141,7 @@ fun UnknownWordsView(
                                 val hits = if (wanted.isEmpty()) emptyList()
                                 else movements.filter { m -> (listOf(m.name) + m.aliases).any { wanted in Vocabulary.normalise(it) } }.map { it.name }.sortedBy { !Vocabulary.normalise(it).startsWith(wanted) }.take(MOST_HITS)
                                 if (wanted.isNotEmpty() && hits.isEmpty()) {
-                                    Text("No exercise by that name.", fontSize = 15.sp, color = muted, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                                    Text("No exercise by that name.", fontSize = 15.sp, color = palette.muted, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                                 }
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     hits.forEach { name ->
@@ -161,14 +159,14 @@ fun UnknownWordsView(
                     }
                 }
             } }
-            if (words.size > MOST_WORDS) Text("and ${words.size - MOST_WORDS} more", fontSize = 15.sp, color = muted)
+            if (words.size > MOST_WORDS) Text("and ${words.size - MOST_WORDS} more", fontSize = 15.sp, color = palette.muted)
             if (answers.isNotEmpty()) {
-                Text("Your answers", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = ink, modifier = Modifier.semantics { heading() })
+                Text("Your answers", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = palette.ink, modifier = Modifier.semantics { heading() })
                 // The newest first: the one most likely to be undone.
                 answers.asReversed().forEach { a ->
                     // The button under the text, not beside it: at large text the answer is whole.
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("${a.word}: " + (a.movement?.let { "another name for $it" } ?: "ignored"), fontSize = 15.sp, color = ink)
+                        Text("${a.word}: " + (a.movement?.let { "another name for $it" } ?: "ignored"), fontSize = 15.sp, color = palette.ink)
                         OutlinedButton(onClick = { onUndo(a.word) }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Undo the answer for ${a.word.take(SPOKEN)}" }) { Text("Undo") }
                     }
                 }
