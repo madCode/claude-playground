@@ -23,7 +23,7 @@ sealed interface Today {
     data object NeedsCalendar : Today
 
     /** Nothing to show, and why, in a sentence. */
-    data class Nothing(val reason: String) : Today
+    data class Nothing(val reason: String, /** No class today or tomorrow: nothing is coming to get ready for. */ val noClass: Boolean = false) : Today
 
     /**
      * The sheet for the next class. [title] names the class and when ("2G · Sat 22 Nov · 9:50");
@@ -113,7 +113,7 @@ sealed interface Today {
          * own events are picked from [entries] and set against the sheet's rows.
          */
         fun from(chosen: TodaysBoard, log: List<Logged>, identity: Identity, entries: List<JournalEntry> = emptyList()): Today = when (chosen) {
-            is TodaysBoard.Nothing -> Nothing(chosen.reason.replaceFirstChar { it.uppercase() } + ".")
+            is TodaysBoard.Nothing -> Nothing(chosen.reason.replaceFirstChar { it.uppercase() } + ".", chosen.noClass)
             is TodaysBoard.Lines -> {
                 val booked = chosen.booked
                 val title = listOfNotNull(booked.tag, booked.date.format(day), booked.start?.format(time)).joinToString(" · ")

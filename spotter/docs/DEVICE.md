@@ -76,6 +76,8 @@ keyboard are only real on a phone.
 2. On the Log screen tap "Exercise, as the board says it": the tabs make way for the keyboard
    and come back when it closes. The same under Settings while searching for an exercise.
 3. Leave the app on Settings, come back after a quarter of an hour: it opens on Today.
+4. On a day with no class booked today or tomorrow, open the app: it lands on History within
+   a moment. Tap Today: it says no class is booked, and stays there.
 
 ## Past classes
 
