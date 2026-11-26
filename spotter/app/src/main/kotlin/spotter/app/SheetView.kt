@@ -60,6 +60,9 @@ fun TodayView(
     earlier: Today.Showing? = null,
     /** The log is about to take the sheet's place: it starts at its top. */
     onStartLog: () -> Unit = {},
+    /** Opens the past sessions a row's number is read from; [hasPast] says whether there are any. */
+    onPast: (Reading.Known) -> Unit = {},
+    hasPast: (Reading.Known) -> Boolean = { false },
 ) {
     // Which class is being logged, if any, and what has been entered. Both survive rotation and
     // the app being killed, so a half-logged class isn't lost. Tied to the class by name: should
@@ -93,7 +96,7 @@ fun TodayView(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Only a class with something to log is worth the top of the screen.
         earlier?.takeIf { it.sheet.rows.any(LogDraft::loggable) || it.strays.isNotEmpty() || it.logged.isNotEmpty() }?.let { EarlierClass(it) { start(it) } }
-        TodayBody(today, onAllowCalendar) { start(it) }
+        TodayBody(today, onAllowCalendar, onPast, hasPast) { start(it) }
     }
 }
 
@@ -121,7 +124,7 @@ private fun EarlierClass(earlier: Today.Showing, onLog: () -> Unit) {
 }
 
 @Composable
-private fun TodayBody(today: Today, onAllowCalendar: () -> Unit, onLog: (Today.Showing) -> Unit) {
+private fun TodayBody(today: Today, onAllowCalendar: () -> Unit, onPast: (Reading.Known) -> Unit, hasPast: (Reading.Known) -> Boolean, onLog: (Today.Showing) -> Unit) {
     when (today) {
         // Each a heading: with no sheet it is the one landmark on the tab.
         Today.Loading -> Text("Reading today's board…", fontSize = 17.sp, color = muted, modifier = Modifier.semantics { heading() })
@@ -138,14 +141,14 @@ private fun TodayBody(today: Today, onAllowCalendar: () -> Unit, onLog: (Today.S
             ) { Text("Allow the calendar") }
         }
         is Today.Nothing -> Text(today.reason, fontSize = 17.sp, color = ink, modifier = Modifier.semantics { heading() })
-        is Today.Showing -> SheetView(today) { onLog(today) }
+        is Today.Showing -> SheetView(today, onPast, hasPast) { onLog(today) }
     }
 }
 
 private val draftSaver = Saver<LogDraft, String>(save = { Json.encodeToString(it) }, restore = { Json.decodeFromString(it) })
 
 @Composable
-private fun SheetView(today: Today.Showing, onLog: () -> Unit) {
+private fun SheetView(today: Today.Showing, onPast: (Reading.Known) -> Unit, hasPast: (Reading.Known) -> Boolean, onLog: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
             today.title,
@@ -169,7 +172,7 @@ private fun SheetView(today: Today.Showing, onLog: () -> Unit) {
                     )
                 }
             }
-            SheetRowView(i, row, today.sheet)
+            SheetRowView(i, row, today.sheet, onPast, hasPast)
         }
         // After the rows: at the door the numbers come first, and logging is for after class.
         // Also with nothing to log on this board, when there is something logged to see or clear.
@@ -196,7 +199,7 @@ private fun Note(text: String) {
 }
 
 @Composable
-private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet) {
+private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet, onPast: (Reading.Known) -> Unit, hasPast: (Reading.Known) -> Boolean) {
     // Survives rotation, so an open "why" stays open.
     var open by rememberSaveable(index, row.shown) { mutableStateOf(false) }
     val weighted = row.suggestion is Suggestion.Weight
@@ -241,6 +244,10 @@ private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet) {
                 row.why.filter { it != row.aside }.forEach { Text("· $it", fontSize = 15.sp, color = ink) }
                 // In plain words, so a misreading of the line can be seen.
                 row.readAs?.let { Text("Read as: $it", fontSize = 14.sp, color = muted) }
+                // The sessions the number rests on, where there are any.
+                (row.reading as? Reading.Known)?.takeIf(hasPast)?.let { known ->
+                    OutlinedButton(onClick = { onPast(known) }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: past sessions" }) { Text("Past sessions ›") }
+                }
             }
         }
     }

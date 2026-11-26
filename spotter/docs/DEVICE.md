@@ -77,6 +77,17 @@ keyboard are only real on a phone.
    and come back when it closes. The same under Settings while searching for an exercise.
 3. Leave the app on Settings, come back after a quarter of an hour: it opens on Today.
 
+## Past classes
+
+The tests prove the list, a class, a lift and the way back. Only a phone has a real history
+and the system's back gesture.
+
+1. History, under the Progress card: your classes, newest first, yours and the imported ones.
+2. Tap a class, then one of its rows: the lift's sessions, newest first. Do the weights match
+   what you remember?
+3. The system's back gesture goes lift, class, list, and only then leaves the app.
+4. On Today, tap a row with a number, then "Past sessions": the same lift, under History.
+
 ## Sorting a word
 
 The tests prove the taps, what an answer does to a line, and that answers are kept. The
