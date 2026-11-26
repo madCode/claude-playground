@@ -71,4 +71,28 @@ class PastTest {
         assertEquals(listOf(day(10)), Past.lift(known("8 x squat").key, classes).map { it.date })
         assertTrue(Past.lift("no such lift", classes).isEmpty())
     }
+
+    // A row on the sheet whose number comes from another wording opens that wording's
+    // sessions, under the name it was done by; a lift never done opens nothing.
+    @Test
+    fun aSheetRowFindsTheSessionsItsNumberIsReadFrom() {
+        val classes = Past.classes(emptyList(), listOf(file(10, "2G", "8 x deadlift", 40)))
+        val key = Past.keyFor(known("8 total x alt dumbbell deadlift"), classes)
+        assertEquals(known("8 x deadlift").key, key)
+        assertEquals("deadlift", Past.name(key!!, classes))
+        assertEquals(null, Past.keyFor(known("8 x squat"), classes))
+        // Done in its own words too: those are what open, named as opened.
+        val both = Past.classes(own, imported)
+        val alt = known("8 total x alt dumbbell deadlift")
+        assertEquals(alt.key, Past.keyFor(alt, both))
+        assertEquals(Estimated.name(alt), Past.name(alt.key, both))
+    }
+
+    // A day the log has only an unreadable row for is still the log's day: the sheet leaves
+    // the file out for it, so looking back does too.
+    @Test
+    fun aDayTheLogHasIsNotShownFromTheFile() {
+        val classes = Past.classes(own, imported, ownDays = setOf(day(16), day(21), day(12)))
+        assertEquals(listOf("2026-11-21 2G", "2026-11-21 3G", "2026-11-16 2G", "2026-11-10 2G"), classes.map { it.id })
+    }
 }

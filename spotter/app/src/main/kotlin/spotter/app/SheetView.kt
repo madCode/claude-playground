@@ -60,9 +60,9 @@ fun TodayView(
     earlier: Today.Showing? = null,
     /** The log is about to take the sheet's place: it starts at its top. */
     onStartLog: () -> Unit = {},
-    /** Opens a lift's own history, by its key; [hasPast] says whether it has one to open. */
-    onPast: (String) -> Unit = {},
-    hasPast: (String) -> Boolean = { false },
+    /** Opens the past sessions a row's number is read from; [hasPast] says whether there are any. */
+    onPast: (Reading.Known) -> Unit = {},
+    hasPast: (Reading.Known) -> Boolean = { false },
 ) {
     // Which class is being logged, if any, and what has been entered. Both survive rotation and
     // the app being killed, so a half-logged class isn't lost. Tied to the class by name: should
@@ -124,7 +124,7 @@ private fun EarlierClass(earlier: Today.Showing, onLog: () -> Unit) {
 }
 
 @Composable
-private fun TodayBody(today: Today, onAllowCalendar: () -> Unit, onPast: (String) -> Unit, hasPast: (String) -> Boolean, onLog: (Today.Showing) -> Unit) {
+private fun TodayBody(today: Today, onAllowCalendar: () -> Unit, onPast: (Reading.Known) -> Unit, hasPast: (Reading.Known) -> Boolean, onLog: (Today.Showing) -> Unit) {
     when (today) {
         // Each a heading: with no sheet it is the one landmark on the tab.
         Today.Loading -> Text("Reading today's board…", fontSize = 17.sp, color = muted, modifier = Modifier.semantics { heading() })
@@ -148,7 +148,7 @@ private fun TodayBody(today: Today, onAllowCalendar: () -> Unit, onPast: (String
 private val draftSaver = Saver<LogDraft, String>(save = { Json.encodeToString(it) }, restore = { Json.decodeFromString(it) })
 
 @Composable
-private fun SheetView(today: Today.Showing, onPast: (String) -> Unit, hasPast: (String) -> Boolean, onLog: () -> Unit) {
+private fun SheetView(today: Today.Showing, onPast: (Reading.Known) -> Unit, hasPast: (Reading.Known) -> Boolean, onLog: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
             today.title,
@@ -199,7 +199,7 @@ private fun Note(text: String) {
 }
 
 @Composable
-private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet, onPast: (String) -> Unit, hasPast: (String) -> Boolean) {
+private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet, onPast: (Reading.Known) -> Unit, hasPast: (Reading.Known) -> Boolean) {
     // Survives rotation, so an open "why" stays open.
     var open by rememberSaveable(index, row.shown) { mutableStateOf(false) }
     val weighted = row.suggestion is Suggestion.Weight
@@ -245,8 +245,8 @@ private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet, onPast: (Strin
                 // In plain words, so a misreading of the line can be seen.
                 row.readAs?.let { Text("Read as: $it", fontSize = 14.sp, color = muted) }
                 // The sessions the number rests on, where there are any.
-                (row.reading as? Reading.Known)?.key?.takeIf(hasPast)?.let { key ->
-                    OutlinedButton(onClick = { onPast(key) }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: past sessions" }) { Text("Past sessions ›") }
+                (row.reading as? Reading.Known)?.takeIf(hasPast)?.let { known ->
+                    OutlinedButton(onClick = { onPast(known) }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: past sessions" }) { Text("Past sessions ›") }
                 }
             }
         }

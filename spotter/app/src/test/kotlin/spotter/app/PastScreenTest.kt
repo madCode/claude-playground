@@ -120,6 +120,52 @@ class PastScreenTest {
         compose.onNodeWithText("Past classes").assertIsDisplayed()
     }
 
+    // A number read from another wording leads to that wording's sessions; and a class left
+    // open under History earlier isn't where "back" goes from them.
+    @Test
+    fun aRowReadFromAnotherWordingOpensThoseSessions() {
+        val board = TodaysBoard.Lines(BookedClass("2G", day(23), day(23).atTime(9, 50), "Orange 60 Min 2G"), listOf("* 8 total x alt dumbbell deadlift"))
+        val today = Today.of(board, own, identity, vocabulary)
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = today, past = past) }
+        compose.onNodeWithText("History").performClick()
+        compose.onNodeWithText("Sat 21 Nov · 2G").performClick()
+        compose.onNodeWithText("Today").performClick()
+        compose.onNodeWithText("8 total x alt dumbbell deadlift", useUnmergedTree = true).performClick()
+        compose.onNodeWithContentDescription("8 total x alt dumbbell deadlift: past sessions").performScrollTo().performClick()
+        compose.onNodeWithText("deadlift").assertIsDisplayed()
+        compose.onNodeWithContentDescription("16 Nov 2026, two 40 pound dumbbells, 8 reps").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back to History").performClick()
+        compose.onNodeWithText("Past classes").assertIsDisplayed()
+    }
+
+    // The history a lift was opened from is removed: the tab says so, not nothing.
+    @Test
+    fun anOpenLiftThatIsGoneLeavesTheTabReadable() {
+        var classes by mutableStateOf(past)
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, past = classes, startTab = Tab.HISTORY) }
+        compose.onNodeWithText("Tue 10 Nov · 3G").performClick()
+        compose.onNodeWithContentDescription("deadlift, two 40 pound dumbbells, 8 reps").performClick()
+        classes = emptyList()
+        compose.onNodeWithText("Nothing logged yet. What you lift, and where it is heading, shows here.").assertIsDisplayed()
+    }
+
+    // Far down a long list, another tab and back, or into a class and back: still there.
+    @Test
+    fun theListKeepsItsPlace() {
+        val many = (1..CLASSES_SHOWN).map { n ->
+            Imported(Logged(LocalDate.of(2026, 1, 1).plusDays(n.toLong()), known("8 x deadlift"), Load(40, 2), 8..8, listOf(8)), "2G", "8 x deadlift")
+        }
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, past = Past.classes(emptyList(), many), startTab = Tab.HISTORY) }
+        compose.onNodeWithText("Fri 2 Jan · 2G").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Settings").performClick()
+        compose.onNodeWithText("History").performClick()
+        compose.onNodeWithText("Fri 2 Jan · 2G").assertIsDisplayed()
+        compose.onNodeWithText("Fri 2 Jan · 2G").performClick()
+        compose.onNodeWithText("2G · Fri 2 Jan").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back to History").performClick()
+        compose.onNodeWithText("Fri 2 Jan · 2G").assertIsDisplayed()
+    }
+
     // A long history is shown a lot at a time.
     @Test
     fun earlierClassesAreAskedFor() {

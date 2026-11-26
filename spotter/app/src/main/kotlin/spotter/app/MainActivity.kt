@@ -251,7 +251,7 @@ class MainActivity : ComponentActivity() {
             val logged = Today.loggedClasses(entries)
             // From everything logged or imported, as the next sheet would read it. Beside the
             // sheet, not before it: a long history takes a moment the door doesn't have.
-            launch { past.value = withContext(Dispatchers.Default) { Past.classes(Journal.read(entries, vocabulary), read?.rows.orEmpty()) } }
+            launch { past.value = withContext(Dispatchers.Default) { Past.classes(Journal.read(entries, vocabulary), read?.rows.orEmpty(), Journal.live(entries).map { it.date }.toSet()) } }
             launch {
                 progress.value = withContext(Dispatchers.Default) {
                     Progress.of((beside + Journal.history(entries, vocabulary)).sortedBy { it.date }, LocalDate.now())

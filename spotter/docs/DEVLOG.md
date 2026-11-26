@@ -29,7 +29,12 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   and the imported history together. A class opens its rows; a row opens that lift over
   time. An opened sheet row has "Past sessions", so a number can be checked against what it
   was worked from. Read only.
-- **Not done:** correcting a past row; reaching a lift from the Progress card.
+- **Review caught:** a sheet row whose number came from another wording had no way to its
+  sessions; a lift whose history was removed left the tab empty; "Past sessions" landed
+  inside a class left open earlier; the list lost its place on every tab switch; a lift was
+  headed by its newest wording, not the one opened.
+- **Not done:** correcting a past row; reaching a lift from the Progress card. With the
+  calendar refused nothing is loaded, so History is empty then too.
 
 ### Three tabs, and a sheet that leads with the number
 - **Why:** a design pass, at madCode's ask. Everything sat on one scrolling screen; on the

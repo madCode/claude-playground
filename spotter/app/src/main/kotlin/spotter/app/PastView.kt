@@ -61,10 +61,11 @@ fun PastView(
         lift != null -> {
             BackHandler { onLift(null) }
             Back(if (cls != null) "${cls.className} · ${cls.date.format(day)}" else "History") { onLift(null) }
-            Text(lift.first().row.name, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = ink, modifier = Modifier.semantics { heading() })
+            val name = Past.name(openLift, classes) ?: lift.first().row.name
+            Text(name, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = ink, modifier = Modifier.semantics { heading() })
             Text("Each time it was done, its other wordings that take the same dumbbells included.", fontSize = 14.sp, color = muted)
             lift.forEach { s ->
-                Held(s.row, title = s.date.format(shortDay), under = listOfNotNull(s.row.name.takeIf { it != lift.first().row.name }, "imported".takeIf { s.imported }).joinToString(" · "), onClick = null)
+                Held(s.row, title = s.date.format(shortDay), under = listOfNotNull(s.row.name.takeIf { it != name }, "imported".takeIf { s.imported }).joinToString(" · "), onClick = null)
             }
         }
         cls != null -> {
@@ -128,5 +129,5 @@ private fun Held(row: PastRow, title: String, under: String, onClick: (() -> Uni
 private fun words(load: Load) = when (load.count) {
     2 -> "two ${load.lb} pound dumbbells"
     1 -> "one ${load.lb} pound dumbbell"
-    else -> "${load.lb} pounds each"
+    else -> "${load.lb} pounds, one or two not said"
 }

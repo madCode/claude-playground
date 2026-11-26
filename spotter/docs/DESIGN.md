@@ -428,8 +428,9 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   opens its rows: what was held, large, as on the sheet, with the reps and anything said
   (felt easy, twinge). A row opens that lift over time: each session of it and of its other
   wordings that take the same dumbbells, which is what its sheet number is worked from. An
-  opened sheet row has "Past sessions" leading to the same place. Read only. Back goes lift,
-  class, list; what is open survives a rotation.
+  opened sheet row has "Past sessions" leading to the same place, also when its number is
+  read from another wording. Read only. Back goes lift, class, list, and the list is where it
+  was left; what is open survives a rotation, and is closed after ten minutes away.
 - **The calendar** is asked for once, on first open. Refused, the sheet explains what is read
   (titles and times of entries from two days ago to tomorrow; the earlier days are for a class
   not yet logged) and offers the ask again, or Android's settings once Android stops asking.

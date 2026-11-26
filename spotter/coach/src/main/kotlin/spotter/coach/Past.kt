@@ -54,14 +54,14 @@ object Past {
     /**
      * Every class with something logged, the newest first. [own] is the phone's log as read
      * ([Journal.read]); [imported] the history file's rows. A day logged here is shown as logged
-     * here: the file's rows for it would be the same class a second time ([own] wins, as it
-     * does for the sheet).
+     * here: the file's rows for it would be the same class a second time. [ownDays] are the days
+     * the log has anything for, a row that can't be read included, since those are the days
+     * the sheet leaves the file out for.
      */
-    fun classes(own: List<Pair<JournalEntry, Logged>>, imported: List<Imported>): List<PastClass> {
+    fun classes(own: List<Pair<JournalEntry, Logged>>, imported: List<Imported>, ownDays: Set<LocalDate> = own.map { it.first.date }.toSet()): List<PastClass> {
         val mine = own.groupBy { it.first.date to it.first.className }
             .map { (at, rows) -> PastClass(at.first, at.second, imported = false, rows = rows.map { row(it.second) }) }
-        val days = mine.map { it.date }.toSet()
-        val theirs = imported.filter { it.logged.date !in days }.groupBy { it.logged.date to (it.className ?: NO_CLASS) }
+        val theirs = imported.filter { it.logged.date !in ownDays }.groupBy { it.logged.date to (it.className ?: NO_CLASS) }
             .map { (at, rows) -> PastClass(at.first, at.second, imported = true, rows = rows.map { row(it.logged) }) }
         return (mine + theirs).sortedWith(compareByDescending<PastClass> { it.date }.thenBy { it.className })
     }
@@ -72,11 +72,30 @@ object Past {
      * ([Progression.own]). Empty when no class has it.
      */
     fun lift(key: String, classes: List<PastClass>): List<PastSession> {
-        val all = classes.flatMap { c -> c.rows.map { PastSession(c.date, it, c.imported) } }
+        val all = sessions(classes)
         val exercise = all.firstOrNull { it.row.logged.key == key }?.row?.logged?.exercise ?: return emptyList()
+        return of(exercise, all)
+    }
+
+    /**
+     * The key to open [lift] with for a row on the sheet: the row's own when it has been done
+     * in those words, else its newest other wording's, which is what its number is read
+     * from. Null when there is nothing to show.
+     */
+    fun keyFor(exercise: Reading.Known, classes: List<PastClass>): String? {
+        val all = sessions(classes)
+        return (all.firstOrNull { it.row.logged.key == exercise.key } ?: of(exercise, all).firstOrNull())?.row?.logged?.key
+    }
+
+    /** The name [lift]'s sessions go under: the wording that was opened. */
+    fun name(key: String, classes: List<PastClass>): String? = sessions(classes).firstOrNull { it.row.logged.key == key }?.row?.name
+
+    private fun sessions(classes: List<PastClass>) = classes.flatMap { c -> c.rows.map { PastSession(c.date, it, c.imported) } }
+
+    private fun of(exercise: Reading.Known, all: List<PastSession>): List<PastSession> {
         val counted = Progression.own(exercise, all.map { it.row.logged }).toSet()
         // Also a session nothing can be judged from (no reps said): it was done all the same.
-        return all.filter { it.row.logged in counted || it.row.logged.key == key }.sortedByDescending { it.date }
+        return all.filter { it.row.logged in counted || it.row.logged.key == exercise.key }.sortedByDescending { it.date }
     }
 
     private fun row(logged: Logged) = PastRow(Estimated.name(logged.exercise), logged)
