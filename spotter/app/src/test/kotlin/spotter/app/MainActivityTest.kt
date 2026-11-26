@@ -1,6 +1,7 @@
 package spotter.app
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -28,6 +29,31 @@ class MainActivityTest {
         compose.onNodeWithText("Today").assertIsDisplayed()
         compose.onNodeWithText("Settings").performClick()
         compose.onNodeWithText("Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · tap to copy").assertIsDisplayed()
+    }
+
+    // Turning the phone, or a glance at another app, keeps the tab. Coming back later opens
+    // the app on the sheet: at the studio door there is no time to find the way back.
+    @Test
+    fun theAppComesBackOnTheSheet() {
+        var time = 1_000_000L
+        now = { time }
+        try {
+            compose.onNodeWithText("Settings").performClick()
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+            time += 60_000
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+            compose.onNodeWithText("Settings").assertIsSelected()
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+            time += TAB_KEPT_MS + 1
+            compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+            compose.onNodeWithText("Today").assertIsSelected()
+            // Rebuilt from what Android saved, a moment after leaving: the tab is kept.
+            compose.onNodeWithText("Settings").performClick()
+            compose.activityRule.scenario.recreate()
+            compose.onNodeWithText("Settings").assertIsSelected()
+        } finally {
+            now = System::currentTimeMillis
+        }
     }
 
     // The check started on opening finds a build a moment later, while Spotter is on screen.

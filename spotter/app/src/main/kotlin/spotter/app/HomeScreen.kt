@@ -5,7 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.Saver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -168,7 +169,16 @@ fun HomeScreen(
 ) {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFFF7F7F5)) {
-            var tab by rememberSaveable(stateSaver = tabSaver(startTab)) { mutableStateOf(startTab) }
+            var tab by rememberSaveable { mutableStateOf(startTab) }
+            // Turning the phone keeps the tab. Coming back later doesn't: at the studio door the
+            // app must open on the sheet, whether Android kept the screen alive or rebuilt it
+            // from what it saved. So when the screen was last left is saved with it.
+            var leftAt by rememberSaveable { mutableStateOf<Long?>(null) }
+            LifecycleEventEffect(Lifecycle.Event.ON_STOP) { leftAt = now() }
+            LifecycleEventEffect(Lifecycle.Event.ON_START) {
+                if (leftAt?.let { now() - it > TAB_KEPT_MS } == true) tab = startTab
+                leftAt = null
+            }
             val scope = rememberCoroutineScope()
             // Each tab keeps what was open on it (a half-logged class, a word being sorted)
             // while another is shown.
@@ -252,15 +262,8 @@ private fun Section(text: String) {
 /** How long a tab other than the first is come back to: past it, the app opens on the sheet. */
 internal const val TAB_KEPT_MS = 10 * 60 * 1000L
 
-/** The time, for [tabSaver]; a test's own clock. */
+/** The time; a test's own clock. */
 internal var now: () -> Long = System::currentTimeMillis
-
-// Turning the phone keeps the tab. Coming back later doesn't: Android restores the same state
-// for as long as the app is in recents, and at the studio door the app must open on the sheet.
-private fun tabSaver(start: Tab) = Saver<Tab, List<Any>>(
-    save = { listOf(it.name, now()) },
-    restore = { saved -> if (now() - (saved[1] as Long) <= TAB_KEPT_MS) Tab.valueOf(saved[0] as String) else start },
-)
 
 /** The app's three places: the sheet for the door and the car, looking back, and what is set once. */
 enum class Tab(val label: String) { TODAY("Today"), HISTORY("History"), SETTINGS("Settings") }

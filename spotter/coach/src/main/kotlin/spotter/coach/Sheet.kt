@@ -38,9 +38,12 @@ data class SheetRow(
     val headline: String
         get() = when (val s = suggestion) {
             is Suggestion.Weight -> s.load.count?.let { "$it×${s.load.lb}" } ?: "${s.load.lb} lb"
-            is Suggestion.NoNumber -> if (s.new) "go light" else "no number"
+            is Suggestion.NoNumber -> if (fresh(s)) "go light" else "no number"
             null -> if (reading is Reading.NotSure) "not sure" else "no weight"
         }
+
+    // New to the log, whether or not there is more to say about why it has no number.
+    private fun fresh(s: Suggestion.NoNumber) = s.new || s.reason.startsWith("new:")
 
     /** A word or two under [headline] on where it comes from; null when it needs none. */
     val caption: String?
@@ -52,7 +55,7 @@ data class SheetRow(
                 Change.NEW -> "new"
                 Change.EST -> "estimate"
             }
-            is Suggestion.NoNumber -> "new".takeIf { s.new }
+            is Suggestion.NoNumber -> "new".takeIf { fresh(s) }
             null -> null
         }
 
@@ -67,7 +70,8 @@ data class SheetRow(
                 "one dumbbell or two isn't known".takeIf { s.load.count == null },
                 s.test?.let { "try ${it.lb} if set 1 felt easy" },
             ).joinToString(" · ").ifEmpty { null }
-            is Suggestion.NoNumber -> s.reason.takeIf { !s.new }
+            // "new: its parts are held differently" is new all the same, with a reason to give.
+            is Suggestion.NoNumber -> s.reason.removePrefix("new: ").takeIf { !s.new }
             null -> (reading as? Reading.NotSure)?.let { r ->
                 when (r.why) {
                     // Where it can be put right.

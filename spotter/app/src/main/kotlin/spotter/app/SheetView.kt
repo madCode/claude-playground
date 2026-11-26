@@ -237,7 +237,8 @@ private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet) {
             // A row that wasn't read has said so under its headline already.
             if (row.reading is Reading.Known) row.warnings.forEach { Text(it, fontSize = 14.sp, color = warn) }
             if (open) {
-                row.why.forEach { Text("· $it", fontSize = 15.sp, color = ink) }
+                // Not what the row has said already.
+                row.why.filter { it != row.aside }.forEach { Text("· $it", fontSize = 15.sp, color = ink) }
                 // In plain words, so a misreading of the line can be seen.
                 row.readAs?.let { Text("Read as: $it", fontSize = 14.sp, color = muted) }
             }
@@ -248,11 +249,12 @@ private fun SheetRowView(index: Int, row: SheetRow, sheet: Sheet) {
 // What TalkBack says for the number: words, not "black up-pointing triangle".
 internal fun spoken(row: SheetRow, glance: String): String {
     // "Not sure", "go light", "no weight": the row's own two words, not the glance's "?".
-    val s = row.suggestion as? Suggestion.Weight ?: return row.headline
+    val s = row.suggestion as? Suggestion.Weight ?: return listOfNotNull(row.headline, row.caption).joinToString(", ")
+    // An offer, and a count nobody knows, are said by the sentence beside the words.
     val held = when (s.load.count) {
         2 -> "two ${s.load.lb} pound dumbbells"
         1 -> "one ${s.load.lb} pound dumbbell"
-        else -> "${s.load.lb} pounds each, count not known"
+        else -> "${s.load.lb} pounds each"
     }
     val change = when (s.change) {
         Change.UP -> "up from last time"
@@ -261,5 +263,5 @@ internal fun spoken(row: SheetRow, glance: String): String {
         Change.NEW -> "new"
         Change.EST -> "an estimate"
     }
-    return listOfNotNull(held, change, s.test?.let { "try ${it.lb} if set 1 felt easy" }).joinToString(", ")
+    return "$held, $change"
 }

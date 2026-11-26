@@ -203,6 +203,9 @@ class SheetLargeTextTest {
             }
         }
         compose.onNodeWithText("try 25 if set 1 felt easy", useUnmergedTree = true).assertExists()
+        // Heard once: the sentence says the offer, the number's words don't say it again.
+        compose.onNode(androidx.compose.ui.test.hasText("8 x chest press") and androidx.compose.ui.test.hasContentDescription("two 20 pound dumbbells, same as last time")).assertExists()
+        compose.onNode(androidx.compose.ui.test.hasText("8 x squat") and androidx.compose.ui.test.hasContentDescription("40 pounds each, same as last time")).assertExists()
         compose.onNodeWithText("one dumbbell or two isn't known", useUnmergedTree = true).assertExists()
         val lefts = listOf("8 x chest press", "8 x squat", "8 x low row").map { compose.onNodeWithText(it, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot }
         val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
