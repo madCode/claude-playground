@@ -177,9 +177,13 @@ fun HomeScreen(
     SpotterTheme {
         Surface(Modifier.fillMaxSize(), color = palette.page) {
             var tab by rememberSaveable { mutableStateOf(startTab) }
-            // Turning the phone keeps the tab. Coming back later doesn't: at the studio door the
-            // app must open on the sheet, whether Android kept the screen alive or rebuilt it
-            // from what it saved. So when the screen was last left is saved with it.
+            // With no class today or tomorrow, nothing left to log and no build waiting, Today has
+            // one sentence to say: the app opens on what was done instead. Only until a tab is
+            // chosen by hand, which stands.
+            val quiet = (today as? Today.Nothing)?.noClass == true && earlier == null && waitingBuild == null && past.isNotEmpty()
+            val home = if (quiet && startTab == Tab.TODAY) Tab.HISTORY else startTab
+            var chosen by rememberSaveable { mutableStateOf(false) }
+            LaunchedEffect(home) { if (!chosen) tab = home }
             // What History shows: the list, a class, or a lift. Kept here, above the tabs, so
             // the sheet can open a lift there.
             var openClass by rememberSaveable { mutableStateOf<String?>(null) }
@@ -190,10 +194,13 @@ fun HomeScreen(
             // what History last showed, so only a step between the three moves the page.
             var listAt by rememberSaveable { mutableStateOf(0) }
             var shownPast by remember { mutableStateOf(openClass to openLift) }
+            // Turning the phone keeps the tab. Coming back later doesn't: at the studio door the
+            // app must open on the sheet, whether Android kept the screen alive or rebuilt it
+            // from what it saved. So when the screen was last left is saved with it.
             var leftAt by rememberSaveable { mutableStateOf<Long?>(null) }
             LifecycleEventEffect(Lifecycle.Event.ON_STOP) { leftAt = now() }
             LifecycleEventEffect(Lifecycle.Event.ON_START) {
-                if (leftAt?.let { now() - it > TAB_KEPT_MS } == true) { tab = startTab; openClass = null; openLift = null }
+                if (leftAt?.let { now() - it > TAB_KEPT_MS } == true) { tab = home; chosen = false; openClass = null; openLift = null }
                 leftAt = null
             }
             val scope = rememberCoroutineScope()
@@ -236,7 +243,7 @@ fun HomeScreen(
                                         today, onAllowCalendar, onSaveLog, earlier,
                                         onStartLog = { scope.launch { scroll.scrollTo(0) } },
                                         // Only a lift that has been done has a past to show.
-                                        onPast = { known -> openClass = null; openLift = known.key; tab = Tab.HISTORY },
+                                        onPast = { known -> openClass = null; openLift = known.key; tab = Tab.HISTORY; chosen = true },
                                         hasPast = { known -> Past.lift(known.key, past, listOf(known)).isNotEmpty() },
                                     )
                                 }
@@ -289,7 +296,7 @@ fun HomeScreen(
                     }
                 }
                 // Not over the keyboard: a field being typed in needs the room more.
-                if (!WindowInsets.isImeVisible) Tabs(tab) { tab = it }
+                if (!WindowInsets.isImeVisible) Tabs(tab) { tab = it; chosen = true }
             }
         }
     }

@@ -407,7 +407,9 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   the version, copied in one tap. What is open on a tab, a half-logged class or a word being
   sorted, is still open on coming back to it. Turning the phone keeps the tab; coming back
   to the app after ten minutes opens it on Today, whatever Android kept. The tabs make way
-  for the keyboard.
+  for the keyboard. With no class booked today or tomorrow, no class left to log and no build
+  waiting, Today has one sentence to say, so the app opens on History instead (madCode,
+  2026-11-26); a tab chosen by hand stands until the app has been away ten minutes.
 - **Light or dark** as the phone is set (`Theme.kt`): one palette, each colour named for
   what it is for, with a value for each. No screen names a colour of its own.
 - **The sheet** (`SheetView`): the class, its date and start ("2G · Sat 21 Nov · 9:50"); notes

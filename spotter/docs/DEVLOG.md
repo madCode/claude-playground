@@ -22,6 +22,13 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
 
 ## Thursday 26 November 2026
 
+### A day with no class opens on History
+- **Why:** madCode: "If there are no classes booked today or tomorrow, shouldn't it open to
+  the history tab?" Today had one sentence to say.
+- **Shipped:** with no class today or tomorrow, nothing left to log and no build waiting,
+  the app opens on History. A tab chosen by hand stands. A class without a board yet is
+  not a day off: that stays on Today.
+
 ### A dark theme
 - **Why:** the last piece of the design pass: the app was light only.
 - **Shipped:** the app follows the phone's light or dark setting. Colours live in one palette

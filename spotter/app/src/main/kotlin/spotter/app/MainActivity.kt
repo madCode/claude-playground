@@ -261,14 +261,15 @@ class MainActivity : ComponentActivity() {
                         .copy(advice = Progress.advice(entries, vocabulary, LocalDate.now()))
                 }
             }
+            // Before today's: with no class coming, a class still to log keeps the app on Today.
+            earlier.value = withContext(Dispatchers.IO) { loader.earlier(LocalDateTime.now(), logged) }
+                ?.let { Today.of(it, entries, identity, vocabulary, beside) as? Today.Showing }
             // The kept board first, then the fetched one.
             val kept = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), fetch = false, logged) }
             today.value = Today.afterKept(today.value, kept?.let { Today.of(it, entries, identity, vocabulary, beside) }, logged)
             // From the boards already on the phone, then again once today's has been fetched:
             // weak signal mustn't hold the card back, or drop it in mid-read.
             val fromKept = launch { unknownWords.value = withContext(Dispatchers.IO) { ReviewList.of(boards.all(), identity) } }
-            earlier.value = withContext(Dispatchers.IO) { loader.earlier(LocalDateTime.now(), logged) }
-                ?.let { Today.of(it, entries, identity, vocabulary, beside) as? Today.Showing }
             val fetched = withContext(Dispatchers.IO) { loader.load(LocalDateTime.now(), logged = logged) }
             if (fetched != null) today.value = Today.of(fetched, entries, identity, vocabulary, beside)
             if (fetched != null) {

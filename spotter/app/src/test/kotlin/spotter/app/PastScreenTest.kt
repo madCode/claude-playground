@@ -175,6 +175,50 @@ class PastScreenTest {
         compose.onNodeWithText("Fri 2 Jan · 2G").assertIsDisplayed()
     }
 
+    // With no class today or tomorrow the app opens on what was done, once the calendar has
+    // said so; choosing Today by hand stands. A class still to log, or a build waiting, keeps
+    // it on Today, where those are.
+    @Test
+    fun aDayWithNoClassOpensOnHistory() {
+        val none = Today.Nothing("No class booked today or tomorrow.", noClass = true)
+        var today by mutableStateOf<Today>(Today.Loading)
+        var waiting by mutableStateOf<Int?>(null)
+        compose.setContent { HomeScreen("v", waitingBuild = waiting, onInstall = {}, onCopyVersion = {}, today = today, past = past) }
+        compose.onNodeWithText("Today").assertIsSelected()
+        today = none
+        compose.onNodeWithText("History").assertIsSelected()
+        compose.onNodeWithText("Past classes").assertIsDisplayed()
+        compose.onNodeWithText("Today").performClick()
+        compose.onNodeWithText("No class booked today or tomorrow.").assertIsDisplayed()
+        today = Today.Loading
+        today = none
+        compose.onNodeWithText("Today").assertIsSelected()
+    }
+
+    @Test
+    fun somethingToDoOnTodayKeepsTheAppThere() {
+        val none = Today.Nothing("No class booked today or tomorrow.", noClass = true)
+        val board = TodaysBoard.Lines(BookedClass("2G", day(23), day(23).atTime(9, 50), "Orange 60 Min 2G"), listOf("* 8 x deadlift"))
+        val done = Today.of(board, own, identity, vocabulary) as Today.Showing
+        var earlier by mutableStateOf<Today.Showing?>(done)
+        var waiting by mutableStateOf<Int?>(null)
+        compose.setContent { HomeScreen("v", waitingBuild = waiting, onInstall = {}, onCopyVersion = {}, today = none, earlier = earlier, past = past) }
+        compose.onNodeWithText("Today").assertIsSelected()
+        earlier = null
+        waiting = 9
+        compose.onNodeWithText("Today").assertIsSelected()
+        // Installed or gone: nothing left on Today.
+        waiting = null
+        compose.onNodeWithText("History").assertIsSelected()
+    }
+
+    // A class that is booked but has no board yet isn't a day off.
+    @Test
+    fun aClassWithoutABoardStaysOnToday() {
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = Today.Nothing("No board posted for 2026-11-23 yet."), past = past) }
+        compose.onNodeWithText("Today").assertIsSelected()
+    }
+
     // A long history is shown a lot at a time.
     @Test
     fun earlierClassesAreAskedFor() {

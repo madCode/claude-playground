@@ -138,7 +138,7 @@ sealed interface TodaysBoard {
     ) : TodaysBoard
 
     /** Nothing to show, and why: no class booked, or no board posted yet. */
-    data class Nothing(val reason: String) : TodaysBoard
+    data class Nothing(val reason: String, /** No class is coming, rather than a class without a board. */ val noClass: Boolean = false) : TodaysBoard
 
     companion object {
         /**
@@ -147,7 +147,7 @@ sealed interface TodaysBoard {
          * reached and has no file for the day yet.
          */
         fun choose(booked: BookedClass?, fetched: DayBoard?, lastGood: DayBoard?, notPosted: Boolean = false): TodaysBoard {
-            booked ?: return Nothing("no class booked today or tomorrow")
+            booked ?: return Nothing("no class booked today or tomorrow", noClass = true)
             if (booked.tag == null) return Nothing("the next class, \"${booked.title}\", names no format (2G or 3G)")
             val day = fetched?.takeIf { it.date == booked.date }
             if (day != null) return fromDay(booked, day, stale = false) ?: Nothing("no board posted for ${booked.date} yet")
