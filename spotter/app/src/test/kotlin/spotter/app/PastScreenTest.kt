@@ -132,8 +132,9 @@ class PastScreenTest {
         compose.onNodeWithText("Today").performClick()
         compose.onNodeWithText("8 total x alt dumbbell deadlift", useUnmergedTree = true).performClick()
         compose.onNodeWithContentDescription("8 total x alt dumbbell deadlift: past sessions").performScrollTo().performClick()
-        compose.onNodeWithText("deadlift").assertIsDisplayed()
-        compose.onNodeWithContentDescription("16 Nov 2026, two 40 pound dumbbells, 8 reps").assertIsDisplayed()
+        // Headed by the row's own wording; the sessions are the other wording's, and say so.
+        compose.onNodeWithText("alternating dumbbell deadlift").assertIsDisplayed()
+        compose.onNodeWithContentDescription("16 Nov 2026, two 40 pound dumbbells, 8 reps, deadlift").assertIsDisplayed()
         compose.onNodeWithContentDescription("Back to History").performClick()
         compose.onNodeWithText("Past classes").assertIsDisplayed()
     }
@@ -155,13 +156,21 @@ class PastScreenTest {
         val many = (1..CLASSES_SHOWN).map { n ->
             Imported(Logged(LocalDate.of(2026, 1, 1).plusDays(n.toLong()), known("8 x deadlift"), Load(40, 2), 8..8, listOf(8)), "2G", "8 x deadlift")
         }
-        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, past = Past.classes(emptyList(), many), startTab = Tab.HISTORY) }
+        val board = TodaysBoard.Lines(BookedClass("2G", day(23), day(23).atTime(9, 50), "Orange 60 Min 2G"), listOf("* 8 x deadlift"))
+        val today = Today.of(board, emptyList(), identity, vocabulary, imported = many.map { it.logged })
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = today, past = Past.classes(emptyList(), many), startTab = Tab.HISTORY) }
         compose.onNodeWithText("Fri 2 Jan · 2G").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Settings").performClick()
         compose.onNodeWithText("History").performClick()
         compose.onNodeWithText("Fri 2 Jan · 2G").assertIsDisplayed()
         compose.onNodeWithText("Fri 2 Jan · 2G").performClick()
         compose.onNodeWithText("2G · Fri 2 Jan").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back to History").performClick()
+        compose.onNodeWithText("Fri 2 Jan · 2G").assertIsDisplayed()
+        // And after the sheet opened a lift here.
+        compose.onNodeWithText("Today").performClick()
+        compose.onNodeWithText("8 x deadlift", useUnmergedTree = true).performClick()
+        compose.onNodeWithContentDescription("8 x deadlift: past sessions").performScrollTo().performClick()
         compose.onNodeWithContentDescription("Back to History").performClick()
         compose.onNodeWithText("Fri 2 Jan · 2G").assertIsDisplayed()
     }

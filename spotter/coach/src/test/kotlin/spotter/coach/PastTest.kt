@@ -72,20 +72,18 @@ class PastTest {
         assertTrue(Past.lift("no such lift", classes).isEmpty())
     }
 
-    // A row on the sheet whose number comes from another wording opens that wording's
-    // sessions, under the name it was done by; a lift never done opens nothing.
+    // A row on the sheet never done in its own words opens the sessions its number is read
+    // from, judged from its side, under its own name; a lift never done opens nothing.
     @Test
     fun aSheetRowFindsTheSessionsItsNumberIsReadFrom() {
-        val classes = Past.classes(emptyList(), listOf(file(10, "2G", "8 x deadlift", 40)))
-        val key = Past.keyFor(known("8 total x alt dumbbell deadlift"), classes)
-        assertEquals(known("8 x deadlift").key, key)
-        assertEquals("deadlift", Past.name(key!!, classes))
-        assertEquals(null, Past.keyFor(known("8 x squat"), classes))
-        // Done in its own words too: those are what open, named as opened.
-        val both = Past.classes(own, imported)
-        val alt = known("8 total x alt dumbbell deadlift")
-        assertEquals(alt.key, Past.keyFor(alt, both))
-        assertEquals(Estimated.name(alt), Past.name(alt.key, both))
+        fun one(day: Int, line: String, count: Int) = Imported(Logged(day(day), known(line), Load(40, count), 8..8, listOf(8)), "2G", line)
+        val classes = Past.classes(emptyList(), listOf(one(10, "8 x dumbbell deadlift", 1), one(12, "8 total x alt dumbbell deadlift", 1), one(16, "8 total x alt dumbbell deadlift", 2)))
+        val row = known("8 x deadlift")
+        val all = classes.flatMap { c -> c.rows.map { it.logged } }
+        assertEquals(Progression.own(row, all).map { it.date }.reversed(), Past.lift(row.key, classes, listOf(row)).map { it.date })
+        assertEquals(listOf(day(16), day(10)), Past.lift(row.key, classes, listOf(row)).map { it.date })
+        assertEquals("deadlift", Past.name(row.key, classes, listOf(row)))
+        assertTrue(Past.lift(known("8 x squat").key, classes, listOf(known("8 x squat"))).isEmpty())
     }
 
     // A day the log has only an unreadable row for is still the log's day: the sheet leaves

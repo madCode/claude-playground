@@ -29,6 +29,7 @@ import spotter.coach.Load
 import spotter.coach.Past
 import spotter.coach.PastClass
 import spotter.coach.PastRow
+import spotter.coach.Reading
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -54,14 +55,16 @@ fun PastView(
     onClass: (String?) -> Unit,
     onLift: (String?) -> Unit,
     onMore: () -> Unit,
+    /** Today's rows, so one never done in its own words still opens what its number is read from. */
+    sheet: List<Reading.Known> = emptyList(),
 ) {
-    val lift = openLift?.let { key -> Past.lift(key, classes).takeIf { it.isNotEmpty() } }
+    val lift = openLift?.let { key -> Past.lift(key, classes, sheet).takeIf { it.isNotEmpty() } }
     val cls = classes.firstOrNull { it.id == openClass }
     when {
         lift != null -> {
             BackHandler { onLift(null) }
             Back(if (cls != null) "${cls.className} · ${cls.date.format(day)}" else "History") { onLift(null) }
-            val name = Past.name(openLift, classes) ?: lift.first().row.name
+            val name = Past.name(openLift, classes, sheet) ?: lift.first().row.name
             Text(name, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = ink, modifier = Modifier.semantics { heading() })
             Text("Each time it was done, its other wordings that take the same dumbbells included.", fontSize = 14.sp, color = muted)
             lift.forEach { s ->

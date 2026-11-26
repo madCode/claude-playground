@@ -69,34 +69,26 @@ object Past {
     /**
      * Each time the lift with [key] was done, the newest first: the sessions the sheet reads its
      * number from, its other wordings that take the same dumbbells included
-     * ([Progression.own]). Empty when no class has it.
+     * ([Progression.own]). [sheet] is today's rows: one of those may never have been done in
+     * its own words, and which other wordings count is judged from its side. Empty when
+     * nothing was done.
      */
-    fun lift(key: String, classes: List<PastClass>): List<PastSession> {
+    fun lift(key: String, classes: List<PastClass>, sheet: List<Reading.Known> = emptyList()): List<PastSession> {
         val all = sessions(classes)
-        val exercise = all.firstOrNull { it.row.logged.key == key }?.row?.logged?.exercise ?: return emptyList()
-        return of(exercise, all)
-    }
-
-    /**
-     * The key to open [lift] with for a row on the sheet: the row's own when it has been done
-     * in those words, else its newest other wording's, which is what its number is read
-     * from. Null when there is nothing to show.
-     */
-    fun keyFor(exercise: Reading.Known, classes: List<PastClass>): String? {
-        val all = sessions(classes)
-        return (all.firstOrNull { it.row.logged.key == exercise.key } ?: of(exercise, all).firstOrNull())?.row?.logged?.key
+        val exercise = exercise(key, all, sheet) ?: return emptyList()
+        val counted = Progression.own(exercise, all.map { it.row.logged }).toSet()
+        // Also a session nothing can be judged from (no reps said): it was done all the same.
+        return all.filter { it.row.logged in counted || it.row.logged.key == key }.sortedByDescending { it.date }
     }
 
     /** The name [lift]'s sessions go under: the wording that was opened. */
-    fun name(key: String, classes: List<PastClass>): String? = sessions(classes).firstOrNull { it.row.logged.key == key }?.row?.name
+    fun name(key: String, classes: List<PastClass>, sheet: List<Reading.Known> = emptyList()): String? =
+        exercise(key, sessions(classes), sheet)?.let(Estimated::name)
+
+    private fun exercise(key: String, all: List<PastSession>, sheet: List<Reading.Known>) =
+        sheet.firstOrNull { it.key == key } ?: all.firstOrNull { it.row.logged.key == key }?.row?.logged?.exercise
 
     private fun sessions(classes: List<PastClass>) = classes.flatMap { c -> c.rows.map { PastSession(c.date, it, c.imported) } }
-
-    private fun of(exercise: Reading.Known, all: List<PastSession>): List<PastSession> {
-        val counted = Progression.own(exercise, all.map { it.row.logged }).toSet()
-        // Also a session nothing can be judged from (no reps said): it was done all the same.
-        return all.filter { it.row.logged in counted || it.row.logged.key == exercise.key }.sortedByDescending { it.date }
-    }
 
     private fun row(logged: Logged) = PastRow(Estimated.name(logged.exercise), logged)
 

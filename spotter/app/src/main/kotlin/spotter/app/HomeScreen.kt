@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -61,6 +62,7 @@ import spotter.coach.UnknownWord
 import spotter.coach.Movement
 import spotter.coach.Past
 import spotter.coach.PastClass
+import spotter.coach.Reading
 import spotter.coach.WordAnswer
 import spotter.coach.WordAnswers
 
@@ -184,6 +186,7 @@ fun HomeScreen(
             var openClass by rememberSaveable { mutableStateOf<String?>(null) }
             var openLift by rememberSaveable { mutableStateOf<String?>(null) }
             var classesShown by rememberSaveable { mutableStateOf(CLASSES_SHOWN) }
+            val onSheet = (today as? Today.Showing)?.sheet?.rows.orEmpty().mapNotNull { it.reading as? Reading.Known }
             // Where the list of classes was scrolled to when one was opened, to come back to; and
             // what History last showed, so only a step between the three moves the page.
             var listAt by rememberSaveable { mutableStateOf(0) }
@@ -234,19 +237,27 @@ fun HomeScreen(
                                         today, onAllowCalendar, onSaveLog, earlier,
                                         onStartLog = { scope.launch { scroll.scrollTo(0) } },
                                         // Only a lift that has been done has a past to show.
-                                        onPast = { known -> Past.keyFor(known, past)?.let { openClass = null; openLift = it; tab = Tab.HISTORY } },
-                                        hasPast = { known -> Past.keyFor(known, past) != null },
+                                        onPast = { known -> openClass = null; openLift = known.key; tab = Tab.HISTORY },
+                                        hasPast = { known -> Past.lift(known.key, past, listOf(known)).isNotEmpty() },
                                     )
                                 }
                                 Tab.HISTORY -> {
                                     // Only what is still there counts as open: a class or lift that went
                                     // with a removed history mustn't leave the tab empty.
-                                    val looking = past.any { it.id == openClass } || openLift?.let { Past.lift(it, past).isNotEmpty() } == true
+                                    val looking = past.any { it.id == openClass } || openLift?.let { Past.lift(it, past, onSheet).isNotEmpty() } == true
                                     // A class or a lift starts at its top; the list comes back where it was.
                                     LaunchedEffect(openClass, openLift) {
                                         if (shownPast != (openClass to openLift)) {
+                                            val to = if (openClass == null && openLift == null) listAt else 0
                                             shownPast = openClass to openLift
-                                            scroll.scrollTo(if (openClass == null && openLift == null) listAt else 0)
+                                            scroll.scrollTo(to)
+                                        }
+                                    }
+                                    // Noted while the list shows, not on leaving it: by then the page
+                                    // is a shorter one, or this tab isn't on screen to ask.
+                                    LaunchedEffect(Unit) {
+                                        snapshotFlow { scroll.value }.collect {
+                                            if (openClass == null && openLift == null && shownPast == (null to null)) listAt = it
                                         }
                                     }
                                     if (!looking && progress == Progress() && past.isEmpty()) {
@@ -256,7 +267,7 @@ fun HomeScreen(
                                         )
                                     }
                                     if (!looking) ProgressView(progress)
-                                    PastView(past, openClass, openLift, classesShown, onClass = { if (it != null && openClass == null) listAt = scroll.value; openClass = it }, onLift = { openLift = it }, onMore = { classesShown += CLASSES_SHOWN })
+                                    PastView(past, openClass, openLift, classesShown, onClass = { openClass = it }, onLift = { openLift = it }, onMore = { classesShown += CLASSES_SHOWN }, sheet = onSheet)
                                 }
                                 Tab.SETTINGS -> {
                                     UnknownWordsView(unknownWords, wordAnswers, movements, lineReads, onAnswerWord, onUndoWord)
