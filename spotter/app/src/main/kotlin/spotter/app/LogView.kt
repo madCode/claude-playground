@@ -1,6 +1,7 @@
 package spotter.app
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -322,23 +323,28 @@ private fun Editor(row: SheetRow, log: RowLog?, onChange: (RowLog) -> Unit) {
         }
         Text("Heaviest dumbbell, lb.$last", fontSize = 15.sp, color = muted)
         // The whole rack, one tap each: thirteen weights are quicker to hit than to step to.
-        // Narrow keys in two even rows, so the rest of the row stays on screen under them.
-        Rack.dumbbells.chunked(RACK_ACROSS).forEach { some ->
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                some.forEach { lb ->
-                    val picked = log?.lb == lb
-                    OutlinedButton(
-                        onClick = { onChange(log?.at(lb) ?: LogDraft.picked(row, lb)) },
-                        colors = if (picked) ButtonDefaults.buttonColors(containerColor = blue) else ButtonDefaults.outlinedButtonColors(),
-                        contentPadding = PaddingValues(0.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f).heightIn(min = 48.dp).semantics {
-                            contentDescription = "${row.shown}: $lb pounds"
-                            selected = picked
-                        },
-                    ) { Text("$lb", maxLines = 1, softWrap = false) }
+        // Narrow keys, as many across as stay wide enough for a thumb: two rows on most phones.
+        BoxWithConstraints {
+            val across = ((maxWidth + RACK_GAP) / (48.dp + RACK_GAP)).toInt().coerceIn(1, RACK_ACROSS)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Rack.dumbbells.chunked(across).forEach { some ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(RACK_GAP)) {
+                        some.forEach { lb ->
+                            val picked = log?.lb == lb
+                            OutlinedButton(
+                                onClick = { onChange(log?.at(lb) ?: LogDraft.picked(row, lb)) },
+                                colors = if (picked) ButtonDefaults.buttonColors(containerColor = blue) else ButtonDefaults.outlinedButtonColors(),
+                                contentPadding = PaddingValues(0.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f).heightIn(min = 48.dp).semantics {
+                                    contentDescription = "${row.shown}: $lb pounds"
+                                    selected = picked
+                                },
+                            ) { Text("$lb", maxLines = 1, softWrap = false) }
+                        }
+                        repeat(across - some.size) { Spacer(Modifier.weight(1f)) }
+                    }
                 }
-                repeat(RACK_ACROSS - some.size) { Spacer(Modifier.weight(1f)) }
             }
         }
         // Only once a weight is picked: round one starts from it, and the rest copy it.
@@ -408,6 +414,7 @@ private fun Flag(row: SheetRow, label: String, on: Boolean, onToggle: (Boolean) 
 }
 
 private const val RACK_ACROSS = 7
+private val RACK_GAP = 2.dp
 private const val MAX_REPS = 99
 
 internal fun summary(log: RowLog): String = listOfNotNull(
