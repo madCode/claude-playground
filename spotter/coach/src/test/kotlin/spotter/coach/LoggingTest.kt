@@ -140,6 +140,8 @@ class LoggingTest {
         assertEquals(Suggestion.NoNumber.NEW, row(next, "8 x chest press").suggestion)
         // Nor is it graded: the sheet was never going to offer that row a number.
         assertEquals(setOf(Export.LOG_FILE), Export.files(written).keys)
+        // A row that was shown a number when logged stays graded, whatever the lists say now.
+        assertEquals(2, Export.files(listOf(written.single().copy(shownLb = 10, shownCount = 1))).size)
     }
 
     // The version of a bodyweight move that names a dumbbell is the same move with the weight
