@@ -83,10 +83,16 @@ object Past {
         identity: Identity? = null,
         /** Rows ticked on the phone as done with nothing held ([Journal.bare]). */
         bare: List<Pair<JournalEntry, Reading.Known>> = emptyList(),
+        /**
+         * The log's live entries by id, in the order their rows were first logged
+         * ([Journal.live]): a row corrected later has a new id but keeps its place.
+         */
+        order: List<Long> = emptyList(),
     ): List<PastClass> {
+        val place = order.withIndex().associate { (i, id) -> id to i }
         // In the order first logged, the weighted rows and the others together.
         val mine = (own.map { it.first to row(it.second) } + bare.map { it.first to ticked(it.first, it.second) })
-            .sortedBy { it.first.id }.groupBy { it.first.date to it.first.className }
+            .sortedBy { place[it.first.id]?.toLong() ?: it.first.id }.groupBy { it.first.date to it.first.className }
             .map { (at, rows) -> PastClass(at.first, at.second, imported = false, rows = rows.map { it.second }) }
         fun named(name: String?) = name?.let(::plain)?.ifEmpty { null } ?: NO_CLASS
         val read = imported.filter { it.logged.date !in ownDays }.map { Triple(it.logged.date to named(it.className), it.at, row(it.logged)) }

@@ -137,7 +137,7 @@ object Journal {
     fun bare(entries: List<JournalEntry>, vocabulary: Vocabulary): List<Pair<JournalEntry, Reading.Known>> =
         live(entries).filter { it.lb == RowLog.NOTHING }.mapNotNull { e -> exercise(e, vocabulary)?.let { e to it } }
 
-    private fun exercise(e: JournalEntry, vocabulary: Vocabulary): Reading.Known? {
+    internal fun exercise(e: JournalEntry, vocabulary: Vocabulary): Reading.Known? {
         if (e.parts.isEmpty()) return null
         // The movement as the lists know it now, for what isn't in the key (one-leggedness); a
         // movement since renamed keeps its logged name, so the key is unchanged either way.

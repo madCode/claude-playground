@@ -448,7 +448,8 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   held, kept in the log as a weight of 0, which is no part of what the coach reads or the
   scorecard grades; "changed" opens the rack for a weight that was added, logged like any
   other. The sheet still gives that row no number afterwards, and says what was held last in
-  its why. A line with a range ("8 - 10 x") has
+  its why. A weight held for it does count for the wording that names a dumbbell
+  ("dumbbell crunch" after a crunch done holding one), and isn't in the graded files. A line with a range ("8 - 10 x") has
   no tick: it shows a button for each count, in the board's own numbers, and the one tapped is
   saved at the sheet's number, so no reps are logged that weren't seen (a range wider than seven
   counts shows its two ends; an odd total keeps the tick). On a row being changed, a count sets

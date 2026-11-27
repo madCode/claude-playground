@@ -138,6 +138,21 @@ class LoggingTest {
         assertEquals(listOf("Done without a weight.", "Last time you held 1×10."), again.why)
         assertEquals(RowLog(RowLog.NOTHING, null, 8), LogDraft.asListed(again))
         assertEquals(Suggestion.NoNumber.NEW, row(next, "8 x chest press").suggestion)
+        // Nor is it graded: the sheet was never going to offer that row a number.
+        assertEquals(setOf(Export.LOG_FILE), Export.files(written).keys)
+    }
+
+    // The version of a bodyweight move that names a dumbbell is the same move with the weight
+    // said, so a weight added to the bare one is a session of it: "dumbbell crunch" has a
+    // number once a crunch was done holding one (madCode: translate between the very similar).
+    @Test
+    fun aWeightAddedToABodyweightRowCountsForItsWeightedTwin() {
+        fun known(line: String) = identity.read(BoardLine.read(line).words) as Reading.Known
+        val weighted = known("12 x dumbbell crunch")
+        val bare = known("12 x crunch")
+        assertEquals(listOf(true, false), listOf(weighted, bare).map(Sheet::wantsWeight))
+        val added = Logged(monday, bare, Load(10, 2), 12..12, listOf(12))
+        assertEquals(Load(10, 2), (Progression.suggest(weighted, 12..12, listOf(added)) as Suggestion.Weight).load)
     }
 
     // A range offers each of its counts in place of the tick, and the count tapped is what the

@@ -211,6 +211,7 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
                         // On a row being changed it is that set's reps: the weight picked and
                         // what was said about it stay. Otherwise it was done at the sheet's weight.
                         if (log != null && !listed) onChange(log.copy(reps = reps))
+                        else if (bare) onChange(asListed!!.copy(reps = reps, hard = listed && log?.hard == true))
                         else onChange(asListed!!.copy(reps = reps, count = said(asListed), easy = listed && log?.easy == true))
                     }
                 }

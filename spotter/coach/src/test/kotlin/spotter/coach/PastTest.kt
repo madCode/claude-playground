@@ -168,5 +168,10 @@ class PastTest {
         assertEquals(listOf(45, null, 25), cls.rows.map { it.logged?.load?.lb })
         assertEquals(null, cls.rows[1].apart?.held)
         assertTrue(Past.lift(known("8 x tricep push-up").key, listOf(cls)).isEmpty())
+        // A row corrected later ("felt easy" on the deadlift) keeps its place in the class.
+        val corrected = all + all.first().copy(id = 99, kind = JournalEntry.Kind.CORRECTED, target = all.first().id, easy = true)
+        val after = Past.classes(Journal.read(corrected, vocabulary), emptyList(), bare = Journal.bare(corrected, vocabulary), order = Journal.live(corrected).map { it.id }).single()
+        assertEquals(listOf("deadlift", "tricep push-up", "chest press"), after.rows.map { it.name })
+        assertEquals("8 reps · felt easy", after.rows.first().detail)
     }
 }
