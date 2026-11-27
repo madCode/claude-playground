@@ -430,7 +430,8 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   first, the phone's own log and the imported history together; a day logged on the phone
   hides the import's version of it. Thirty show, with a button for earlier ones. A class
   opens its rows: what was held, large, as on the sheet, with the reps and anything said
-  (felt easy, twinge). An imported class shows every row the file has for it, in the
+  (felt easy, twinge). A class logged on the phone shows its rows ticked with nothing held too, with a
+  dash. An imported class shows every row the file has for it, in the
   file's order: the ones the coach leaves out (no weight, skipped, something off the rack)
   with a dash or the file's own weight and why, and no lift to open. Their reps aren't
   shown (the file may count both sides), and a day of nothing but skipped rows is no class. A row opens that lift over time: each session of it and of its other
@@ -441,8 +442,14 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
 - **The calendar** is asked for once, on first open. Refused, the sheet explains what is read
   (titles and times of entries from two days ago to tomorrow; the earlier days are for a class
   not yet logged) and offers the ask again, or Android's settings once Android stops asking.
-- **Log** ("Log this class" on the sheet). The same rows. Each weighted row is "✓ as listed"
-  (the sheet's number and the board's reps) or "changed". A line with a range ("8 - 10 x") has
+- **Log** ("Log this class" on the sheet). The same rows. Each row Spotter read is "✓ as listed"
+  (the sheet's number and the board's reps) or "changed". A row the sheet gives no weight (a
+  push-up, a plank) has the same two (madCode, 2026-11-27): ticked, it is done with nothing
+  held, kept in the log as a weight of 0, which is no part of what the coach reads or the
+  scorecard grades; "changed" opens the rack for a weight that was added, logged like any
+  other. The sheet still gives that row no number afterwards, and says what was held last in
+  its why. A weight held for it does count for the wording that names a dumbbell
+  ("dumbbell crunch" after a crunch done holding one), and isn't in the graded files. A line with a range ("8 - 10 x") has
   no tick: it shows a button for each count, in the board's own numbers, and the one tapped is
   saved at the sheet's number, so no reps are logged that weren't seen (a range wider than seven
   counts shows its two ends; an odd total keeps the tick). On a row being changed, a count sets
@@ -472,7 +479,7 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
   climbs is one tap a round. "One weight" goes back to the rack, at the heaviest.
 - An exercise the board missed: typed under the rows as the board would say it ("8 x chest
   press") and read by the same reader, it becomes a row under "Added by you" and is logged
-  like any other. A line Spotter can't name in full, one with no weight, one with no reps
+  like any other. A line Spotter can't name in full, one with no reps
   or time, or one asking more than 99 reps isn't added, and says why. A log from a row since
   gone is never carried onto an added row: that one is a set of its own. An added row not yet
   saved has "Remove".

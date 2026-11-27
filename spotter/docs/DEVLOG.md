@@ -20,6 +20,27 @@ What each cycle shipped, what its review caught, and what got in the way. Newest
   backup folder, import your history file, and the hand checks.
 - **Not started:** step 7, the Garmin watch.
 
+## Friday 27 November 2026
+
+### Rows with no weight can be ticked
+- **Why:** madCode: "I would like timed and bodyweight items on the board and tickable.
+  Bodyweight items maybe can be treated like weighted items with 0lb? So if I choose to use a
+  weight I can log it?" And: "Why not keep "as listed" and "change" as the buttons?"
+- **Shipped:** every row Spotter read has "✓ as listed" and "Changed". A push-up ticked is
+  done with nothing held (a weight of 0 in the log); "Changed" opens the rack if a weight was
+  added. History shows these rows in their class. The sheet never suggests a weight for
+  such a row ("Agreed on not suggesting a weight for bodyweight moves"); it says what was
+  held last in the row's why. A bodyweight exercise the board missed can be added now.
+- **Review caught:** a weighted push-up went into the graded session file as a row with no
+  number, a blank the coach was never going to fill: left out now. History reordered a
+  class when a row was corrected. "Felt hard" was lost on a range row when another count
+  was tapped.
+- **Kept, on purpose:** a weight added to a plain crunch counts as a session of "dumbbell
+  crunch", its other wording. The review read that as a leak; on the invented history it is
+  what gives a "dumbbell double crunch" row its number, the one that was lifted.
+- **Also:** the rack is seven keys across at 411dp again (it had slipped to six and an
+  orphan), and rows are even on narrower phones.
+
 ## Thursday 26 November 2026
 
 ### An imported class shows all its rows

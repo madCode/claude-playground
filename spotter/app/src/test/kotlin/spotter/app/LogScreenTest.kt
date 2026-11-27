@@ -2,6 +2,9 @@ package spotter.app
 
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
@@ -95,20 +98,26 @@ class LogScreenTest {
         compose.onNodeWithContentDescription("less, 8 x deadlift: 8 reps").performClick()
         compose.onNodeWithText("Twinge").performClick()
         compose.onNodeWithText("Logged: 2×45 · 7 reps · twinge").performScrollTo().assertIsDisplayed()
-        // A bodyweight row has nothing to log, and says so.
-        compose.onNodeWithText("No weight to log").performScrollTo().assertIsDisplayed()
+        // A bodyweight row is ticked like any other: done, with nothing held.
+        compose.onNodeWithContentDescription("8 x tricep push-up: done as listed").performScrollTo().performClick()
+        compose.onNodeWithText("Logged: done · 8 reps").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("One dumbbell or two?").assertDoesNotExist()
+        shoot("log-no-weight")
+        compose.onNodeWithText("Logged: 2×45 · 7 reps · twinge").performScrollTo()
         shoot("log")
         compose.onNodeWithText("Save").performScrollTo().performClick()
 
         val (shown, draft) = saved!!
         save(shown, draft)
         val stored = Logging.logged(shown.sheet, log.entries(), saturday, "2G").byRow
-        assertEquals(listOf(30, 45), stored.values.map { it.lb })
-        assertTrue(stored.values.last().hurt)
+        assertEquals(listOf(30, 45, 0), stored.values.map { it.lb })
+        assertTrue(stored.values.toList()[1].hurt)
         // Saturday's own sheet keeps Saturday's numbers; the next class reads what was done.
         val again = today(saturday)
         assertEquals("2×30 ▲", again.sheet.glance(again.sheet.rows[0]))
-        assertEquals(2, again.logged.size)
+        assertEquals(3, again.logged.size)
+        // The push-up is on Saturday's page of History, and moves no number.
+        assertEquals("no weight", again.sheet.glance(again.sheet.rows[2]))
         // Ticked as listed once at the new weight: it holds until a second clean session.
         val next = today(saturday.plusDays(3))
         assertEquals("2×30 =", next.sheet.glance(next.sheet.rows[0]))
@@ -385,13 +394,10 @@ class LogScreenTest {
         restoration.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = shown, onSaveLog = { t, d -> saved = t to d }) }
         compose.onNodeWithText("Log this class").performClick()
         val field = "Exercise, as the board says it"
-        // What Spotter can't name, what has no weight, and what has no count aren't added, and say why.
+        // What Spotter can't name and what has no count aren't added, and say why.
         compose.onNodeWithText(field).performScrollTo().performTextInput("8 x zorbing")
         compose.onNodeWithText("Add an exercise").performScrollTo().performClick()
         compose.onNodeWithText("Spotter isn't sure what that is", substring = true).assertIsDisplayed()
-        compose.onNodeWithText(field).performTextReplacement("8 x tricep push-up")
-        compose.onNodeWithText("Add an exercise").performClick()
-        compose.onNodeWithText("That one is done without a weight, so there is nothing to log.").assertIsDisplayed()
         compose.onNodeWithText(field).performTextReplacement("hammer curl")
         compose.onNodeWithText("Add an exercise").performClick()
         compose.onNodeWithText("That doesn't read as an exercise", substring = true).assertIsDisplayed()
@@ -514,16 +520,41 @@ class LogScreenTest {
         assertEquals(next, Today.afterKept(shown, next, logged))
     }
 
-    // A class with nothing to log isn't put at the top of the screen.
+    // A class with nothing Spotter could read isn't put at the top of the screen; one of
+    // push-ups is, since those are ticked now.
     @Test
     fun anEarlierClassWithNothingToLogIsNotOffered() {
-        val bodyweight = Today.of(
-            TodaysBoard.Lines(BookedClass("2G", saturday, saturday.atTime(9, 50), "Orange 60 Min 2G"), listOf("* 8 x tricep push-up")),
+        fun earlier(line: String) = Today.of(
+            TodaysBoard.Lines(BookedClass("2G", saturday, saturday.atTime(9, 50), "Orange 60 Min 2G"), listOf(line)),
             emptyList(), identity, vocabulary,
         ) as Today.Showing
-        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = today(saturday.plusDays(1)), earlier = bodyweight) }
+        var which by mutableStateOf(earlier("* 8 x zorbing"))
+        compose.setContent { HomeScreen("v", waitingBuild = null, onInstall = {}, onCopyVersion = {}, today = today(saturday.plusDays(1)), earlier = which) }
         compose.onNodeWithText("Log this class").assertIsDisplayed()
         compose.onNodeWithText("isn't logged yet", substring = true).assertDoesNotExist()
+        which = earlier("* 8 x tricep push-up")
+        compose.onNodeWithText("isn't logged yet", substring = true).assertIsDisplayed()
+    }
+
+    // A weight added to a push-up: "Changed" opens the same rack, and the row is then an
+    // ordinary weighted one, asked one dumbbell or two. Ticked again, it is back to nothing held.
+    @Test
+    fun aWeightCanBeAddedToABodyweightRow() {
+        var saved: LogDraft? = null
+        show(today(saturday)) { _, d -> saved = d }
+        compose.onNodeWithText("Log this class").performClick()
+        val row = "8 x tricep push-up"
+        compose.onNodeWithContentDescription("$row: changed").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("$row: 10 pounds").performScrollTo().performClick()
+        compose.onNodeWithText("One dumbbell or two?").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("$row: one dumbbell").performScrollTo().performClick()
+        compose.onNodeWithText("Logged: 1×10 · 8 reps").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("$row: done as listed").performScrollTo().performClick()
+        compose.onNodeWithText("Logged: done · 8 reps").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("$row: felt hard").performScrollTo().performClick()
+        compose.onNodeWithText("Logged: done · 8 reps · felt hard").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(spotter.coach.RowLog(0, null, 8, hard = true), saved!!.rows.values.single())
     }
 
     private fun shoot(name: String) {

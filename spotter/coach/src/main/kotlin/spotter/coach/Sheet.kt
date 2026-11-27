@@ -94,7 +94,9 @@ data class SheetRow(
             is Suggestion.NoNumber -> listOf(
                 if (s.new) "Nothing logged for this exercise yet, and no sound link to one that has: start light." else s.reason,
             )
-            null -> listOf(if (reading is Reading.NotSure) "Not sure what this is, so no number." else "Done without a weight.")
+            null -> if (reading is Reading.NotSure) listOf("Not sure what this is, so no number.") else {
+                listOfNotNull("Done without a weight.", lastHeld?.let { "Last time you held ${it.label}." })
+            }
         }
 }
 
@@ -219,7 +221,9 @@ data class Sheet(val rows: List<SheetRow>, val borrowedFrom: String? = null) {
                 val why = (reading as Reading.NotSure).why
                 return SheetRow(id, block, line, reading, target, null, listOf("not sure what this is (${why.name.lowercase().replace('_', ' ')})"))
             }
-            if (!wantsWeight(reading)) return SheetRow(id, block, line, reading, target, null, emptyList())
+            // No number, ever (madCode, 2026-11-27): a weight once added to a push-up is said in
+            // the row's why, not suggested.
+            if (!wantsWeight(reading)) return SheetRow(id, block, line, reading, target, null, emptyList(), log.lastOrNull { it.key == reading.key }?.load)
             val warnings = mutableListOf<String>()
             val suggestion = withRowCount(combo(reading, target, log, warnings, rules), reading)
             (suggestion as? Suggestion.Weight)?.caution?.let { warnings += it }

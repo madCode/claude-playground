@@ -140,7 +140,6 @@ private fun AddExercise(today: Today.Showing, draft: LogDraft, onChange: (LogDra
                 // set and say nothing to a counted row.
                 row == null || row.line.scheme == null -> "That doesn't read as an exercise. Start with the reps, as the board does: 8 x chest press."
                 row.reading is Reading.NotSure -> "Spotter isn't sure what that is (${row.understood.removePrefix("not sure: ")}), so it can't be logged yet."
-                row.suggestion == null -> "That one is done without a weight, so there is nothing to log."
                 // A slip of the thumb ("800 x"): logged, it would leave the next sheet with no number.
                 (listOfNotNull(row.target?.first, row.target?.last) + (row.line.scheme as? Scheme.Ladder)?.perSide().orEmpty()).any { it !in 1..MAX_REPS } -> "That many reps doesn't look right. Check the number and add it again."
                 else -> null
@@ -178,7 +177,9 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
     val asListed = LogDraft.asListed(row)?.let { listed -> log?.reps?.takeIf { counts?.contains(it) == true }?.let { listed.copy(reps = it) } ?: listed }
     // As listed still, when all that was added is how many dumbbells the sheet didn't know, or
     // that it felt easy: the weight and the reps are the sheet's.
-    val plain = log?.copy(easy = false)
+    // On a row with no weight the word beside the tick is "felt hard": there is nothing to raise.
+    val bare = LogDraft.bare(row)
+    val plain = log?.copy(easy = false, hard = if (bare) false else log.hard)
     // Where the count is the person's to say, theirs stands over the lift's usual number: a
     // row ticked again, or told "one" after the tick, is still as listed.
     val free = LogDraft.asks(row)
@@ -210,6 +211,7 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
                         // On a row being changed it is that set's reps: the weight picked and
                         // what was said about it stay. Otherwise it was done at the sheet's weight.
                         if (log != null && !listed) onChange(log.copy(reps = reps))
+                        else if (bare) onChange(asListed!!.copy(reps = reps, hard = listed && log?.hard == true))
                         else onChange(asListed!!.copy(reps = reps, count = said(asListed), easy = listed && log?.easy == true))
                     }
                 }
@@ -217,14 +219,15 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
                     Choice("✓ as listed", listed, "${row.shown}: done as listed") {
                         open = false
                         // Ticked again, it keeps what was said beside it.
-                        onChange(asListed.copy(count = said(asListed), easy = listed && log?.easy == true))
+                        onChange(if (bare) asListed.copy(hard = listed && log?.hard == true) else asListed.copy(count = said(asListed), easy = listed && log?.easy == true))
                     }
                 }
                 // Opens the rack, and closes it again. Nothing is logged until a weight is picked.
                 Choice("Changed", open && !listed, "${row.shown}: changed") { open = !open }
                 // One tap beside the tick: it is what lets a weight go up after one session.
                 if (listed && !open) {
-                    Flag(row, "Felt easy", log!!.easy) { onChange(log.copy(easy = it)) }
+                    if (bare) Flag(row, "Felt hard", log!!.hard) { onChange(log.copy(hard = it)) }
+                    else Flag(row, "Felt easy", log!!.easy) { onChange(log.copy(easy = it)) }
                 }
                 if (log != null) {
                     Quiet("Clear", "${row.shown}: clear") { open = false; onChange(null) }
@@ -237,7 +240,8 @@ private fun LogRowView(row: SheetRow, glance: String, log: RowLog?, onRemove: ((
             // Asked whenever it isn't known, ticked or changed. Where the lift has a usual
             // number it is chosen already, and stays on show to be changed in one tap.
             val guessed = LogDraft.guessed(row)
-            if (log != null && (open || log.count == null || guessed)) {
+            // Only of something held: a push-up ticked as listed has no dumbbells to count.
+            if (log != null && log.held && (open || log.count == null || guessed)) {
                 if (log.count == null || guessed) Text("One dumbbell or two?", fontSize = 15.sp, color = palette.ink)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Choice("One dumbbell", log.count == 1, "${row.shown}: one dumbbell") { onChange(log.copy(count = 1)) }
@@ -322,7 +326,10 @@ private fun Editor(row: SheetRow, log: RowLog?, onChange: (RowLog) -> Unit) {
         // The whole rack, one tap each: thirteen weights are quicker to hit than to step to.
         // Narrow keys, as many across as stay wide enough for a thumb: two rows on most phones.
         BoxWithConstraints {
-            val across = ((maxWidth + RACK_GAP) / (48.dp + RACK_GAP)).toInt().coerceIn(1, RACK_ACROSS)
+            val fit = ((maxWidth + RACK_GAP) / (48.dp + RACK_GAP)).toInt().coerceIn(1, RACK_ACROSS)
+            // Even rows, not full ones and an orphan: thirteen as 5, 5, 3 where 6 would fit.
+            val rows = (Rack.dumbbells.size + fit - 1) / fit
+            val across = (Rack.dumbbells.size + rows - 1) / rows
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Rack.dumbbells.chunked(across).forEach { some ->
                     Row(horizontalArrangement = Arrangement.spacedBy(RACK_GAP)) {
@@ -346,7 +353,7 @@ private fun Editor(row: SheetRow, log: RowLog?, onChange: (RowLog) -> Unit) {
         }
         // Only once a weight is picked: round one starts from it, and the rest copy it.
         val ladder = row.line.scheme as? Scheme.Ladder
-        if (ladder != null && log != null) {
+        if (ladder != null && log != null && log.held) {
             OutlinedButton(
                 onClick = { onChange(log.eachRound(ladder.rounds.size)) },
                 modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "${row.shown}: a weight for each round" },
@@ -411,11 +418,12 @@ private fun Flag(row: SheetRow, label: String, on: Boolean, onToggle: (Boolean) 
 }
 
 private const val RACK_ACROSS = 7
-private val RACK_GAP = 2.dp
+// A hair: at 411dp wide, seven keys of 48dp fit with one dp between and not with two.
+private val RACK_GAP = 1.dp
 private const val MAX_REPS = 99
 
 internal fun summary(log: RowLog): String = listOfNotNull(
-    "${log.count?.let { "$it×" } ?: ""}${log.rounds?.joinToString(" / ") ?: log.lb}",
+    if (log.held) "${log.count?.let { "$it×" } ?: ""}${log.rounds?.joinToString(" / ") ?: log.lb}" else "done",
     log.reps?.let { "$it reps" },
     "felt easy".takeIf { log.easy },
     "felt hard".takeIf { log.hard },

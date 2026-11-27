@@ -5,7 +5,8 @@ import java.time.LocalDate
 
 /**
  * What one row says was done: the heaviest dumbbell held, how many, and reps a side (null for a
- * timed row, and for a ladder, whose rounds stay as listed). The rest is one tap each.
+ * timed row, and for a ladder, whose rounds stay as listed). The rest is one tap each. A row done
+ * with nothing held (a push-up, a plank) has [lb] 0 ([NOTHING]): done, and no weight to speak of.
  *
  * [rounds] is a ladder's dumbbell for each round, once the person has said them ("+ Each round");
  * [lb] is then the heaviest of them, so the row still has its one number.
@@ -41,7 +42,13 @@ data class RowLog(
         return copy(rounds = now, lb = now.max())
     }
 
+    /** Something was held: a weight to say how many of, and to file under the lift. */
+    val held: Boolean get() = lb > NOTHING
+
     companion object {
+        /** [lb] for a row done with nothing held. */
+        const val NOTHING = 0
+
         /** A logged entry in the screen's terms. */
         fun of(e: JournalEntry) = RowLog(
             e.rounds?.max() ?: e.lb, e.count, e.reps.singleOrNull()?.takeIf { e.ladder == null },
@@ -82,8 +89,11 @@ data class LogDraft(
     }
 
     companion object {
-        /** Whether a row can be logged here: a weighted row Spotter read. */
-        fun loggable(row: SheetRow): Boolean = row.reading is Reading.Known && row.suggestion != null
+        /** Whether a row can be logged here: one Spotter read, with a weight or without. */
+        fun loggable(row: SheetRow): Boolean = row.reading is Reading.Known
+
+        /** A row the sheet gives no weight: bodyweight, or a hold with nothing held. Ticked, it is done with nothing held. */
+        fun bare(row: SheetRow): Boolean = row.reading is Reading.Known && row.suggestion == null
 
         /**
          * "✓ as listed": the sheet's number and the board's reps. Null when the sheet has no number
@@ -93,6 +103,7 @@ data class LogDraft(
          * it asks which count was done ([counts]), so no reps are logged that nobody saw.
          */
         fun asListed(row: SheetRow): RowLog? {
+            if (bare(row)) return RowLog(RowLog.NOTHING, null, reps(row))
             val load = (row.suggestion as? Suggestion.Weight)?.load ?: return null
             return RowLog(load.lb, load.count ?: usual(row), reps(row))
         }
@@ -268,6 +279,14 @@ object Logging {
 
     private fun entry(row: SheetRow, log: RowLog, date: LocalDate, className: String, at: Long): JournalEntry {
         val ladder = (row.line.scheme as? Scheme.Ladder)?.perSide()
+        if (!log.held) {
+            // Nothing held is no load at all: the entry is written as any other, then says so.
+            return Journal.logged(
+                at, date, className, row.id, row.shown, row.reading as Reading.Known, Load(Rack.dumbbells.first(), null),
+                target = row.target, ladder = ladder, reps = ladder ?: listOfNotNull(log.reps),
+                hurt = log.hurt, stopped = log.stopped, easy = log.easy, hard = log.hard, easier = log.easier,
+            ).copy(lb = RowLog.NOTHING)
+        }
         return Journal.logged(
             at, date, className, row.id, row.shown, row.reading as Reading.Known, Load(roundOne(log, ladder), log.count),
             target = row.target, ladder = ladder, reps = ladder ?: listOfNotNull(log.reps),

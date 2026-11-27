@@ -40,7 +40,15 @@ object Export {
         return sessions.toMap() + (LOG_FILE to header + written.joinToString("") { line(it) + "\n" })
     }
 
-    private fun sound(e: JournalEntry) = e.parts.isNotEmpty() && runCatching { Load(e.lb, e.count) }.isSuccess
+    // Nor a weight added to a row the sheet gives none (a push-up): the sheet never offers a
+    // number there, so it would be graded as a blank the coach was never going to fill.
+    // Only where it showed none when the row was logged: a lift the lists have since marked
+    // bodyweight was offered a number then, and stays graded as it was.
+    private fun sound(e: JournalEntry) = e.parts.isNotEmpty() && runCatching { Load(e.lb, e.count) }.isSuccess &&
+        (e.shownLb != null || Journal.exercise(e, lists)?.let(Sheet::wantsWeight) == true)
+
+    // The app's own lists: whether a movement is done without a weight isn't in the entry.
+    private val lists by lazy { Vocabulary.starting() }
 
     private fun plain(className: String) = className.replace(Regex("""[^A-Za-z0-9._-]+"""), "_").trim('_', '.').take(40).ifEmpty { "class" }
 
