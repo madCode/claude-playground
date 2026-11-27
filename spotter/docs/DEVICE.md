@@ -90,6 +90,17 @@ and the system's back gesture.
 3. The system's back gesture goes lift, class, list, and only then leaves the app.
 4. On Today, tap a row with a number, then "Past sessions": the same lift, under History.
 
+## Rows with no weight
+
+The tests prove the taps, what is stored and what History shows. Whether it is quick enough
+in the car is yours to say.
+
+1. After a class with a push-up or a plank on the board, open "Log this class": that row has
+   "✓ as listed" and "Changed" like the others. Tick it: "Logged: done".
+2. If you held a weight for it, "Changed", pick the weight, say one or two.
+3. Save, then History: the class lists that row, with a dash or the weight you held.
+4. The next sheet with that exercise still says "no weight".
+
 ## Dark theme
 
 The tests prove no screen is left white. The system bars and the moment before the first

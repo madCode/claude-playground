@@ -152,4 +152,21 @@ class PastTest {
         assertEquals(null, rows.first().apart?.held)
         assertTrue(rows.last().name, rows.last().name.length <= 80 && rows.last().name.none { it.isISOControl() || it == '\u202E' })
     }
+
+    // A class logged on the phone shows the rows ticked with nothing held among the weighted
+    // ones, in the order they were logged: a dash, the reps, what was said. They open no lift.
+    @Test
+    fun aRowTickedWithNothingHeldIsPartOfItsClass() {
+        val all = listOf(
+            entry(21, "2G", "8 x deadlift", 45, listOf(8)),
+            entry(21, "2G", "8 x tricep push-up", 10, listOf(8), count = null).copy(lb = 0, hard = true),
+            entry(21, "2G", "8 x chest press", 25, listOf(8)),
+        )
+        val cls = Past.classes(Journal.read(all, vocabulary), emptyList(), bare = Journal.bare(all, vocabulary)).single()
+        assertEquals(listOf("deadlift", "tricep push-up", "chest press"), cls.rows.map { it.name })
+        assertEquals(listOf("8 reps", "8 reps · felt hard · done", "8 reps"), cls.rows.map { it.detail })
+        assertEquals(listOf(45, null, 25), cls.rows.map { it.logged?.load?.lb })
+        assertEquals(null, cls.rows[1].apart?.held)
+        assertTrue(Past.lift(known("8 x tricep push-up").key, listOf(cls)).isEmpty())
+    }
 }

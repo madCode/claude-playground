@@ -130,7 +130,14 @@ object Journal {
         return rows.values.toList()
     }
 
-    private fun toLogged(e: JournalEntry, vocabulary: Vocabulary): Logged? {
+    /**
+     * The live rows done with nothing held ([RowLog.NOTHING]), each with its exercise: no part
+     * of the history the coach reads, but part of the class, for looking back at it.
+     */
+    fun bare(entries: List<JournalEntry>, vocabulary: Vocabulary): List<Pair<JournalEntry, Reading.Known>> =
+        live(entries).filter { it.lb == RowLog.NOTHING }.mapNotNull { e -> exercise(e, vocabulary)?.let { e to it } }
+
+    private fun exercise(e: JournalEntry, vocabulary: Vocabulary): Reading.Known? {
         if (e.parts.isEmpty()) return null
         // The movement as the lists know it now, for what isn't in the key (one-leggedness); a
         // movement since renamed keeps its logged name, so the key is unchanged either way.
@@ -139,7 +146,11 @@ object Journal {
         }
         // The parts are the identity. Should the key's format ever change, keys rebuilt from them
         // change with the sheet's, so history still matches rather than vanishing.
-        val exercise = Reading.Known(parts, emptySet())
+        return Reading.Known(parts, emptySet())
+    }
+
+    private fun toLogged(e: JournalEntry, vocabulary: Vocabulary): Logged? {
+        val exercise = exercise(e, vocabulary) ?: return null
         val read = read(e)
         // A damaged row loses itself: a weight or count no load can have, an empty ladder.
         val load = runCatching { Load(read.lb, e.count) }.getOrNull() ?: return null

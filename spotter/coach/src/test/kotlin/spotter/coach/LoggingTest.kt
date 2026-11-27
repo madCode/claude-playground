@@ -89,15 +89,55 @@ class LoggingTest {
         assertTrue(Journal.history(written, vocabulary).isEmpty())
     }
 
-    // A row with nothing to log (bodyweight, not read) writes nothing, whatever the draft says.
+    // A row Spotter didn't read writes nothing, whatever the draft says.
     @Test
-    fun onlyWeightedRowsSpotterReadAreLogged() {
+    fun onlyRowsSpotterReadAreLogged() {
         val sheet = sheet(monday)
         val pushUp = row(sheet, "8 x push-up")
         val unknown = row(sheet, "8 x zorbing")
-        assertEquals(listOf(false, false), listOf(pushUp, unknown).map(LogDraft::loggable))
-        val draft = LogDraft().with(pushUp.id, RowLog(10, 2, 8)).with(unknown.id, RowLog(10, 2, 8))
-        assertTrue(save(monday, draft).isEmpty())
+        assertEquals(listOf(true, false), listOf(pushUp, unknown).map(LogDraft::loggable))
+        assertEquals(listOf(true, false), listOf(pushUp, unknown).map(LogDraft::bare))
+        assertTrue(save(monday, LogDraft().with(unknown.id, RowLog(10, 2, 8))).isEmpty())
+    }
+
+    // A push-up ticked as listed is done with nothing held: kept in the log and the backup's
+    // full copy, but no part of what the coach reads or the scorecard grades. Saved again,
+    // nothing more is written; cleared, it is removed.
+    @Test
+    fun aRowWithNoWeightIsTickedAsDone() {
+        val pushUp = row(sheet(monday), "8 x push-up")
+        val ticked = LogDraft.asListed(pushUp)!!
+        assertEquals(RowLog(RowLog.NOTHING, null, 8), ticked)
+        val entry = save(monday, LogDraft().with(pushUp.id, ticked.copy(hard = true))).single()
+        assertEquals(listOf(0, null, listOf(8), true), listOf(entry.lb, entry.count, entry.reps, entry.hard))
+        assertTrue(Journal.history(written, vocabulary).isEmpty())
+        assertEquals("push-up", Journal.bare(written, vocabulary).single().second.let(Estimated::name))
+        val files = Export.files(written)
+        assertEquals(setOf(Export.LOG_FILE), files.keys)
+        assertTrue(files.getValue(Export.LOG_FILE).contains("\"lb\":0"))
+        val log = Logging.logged(sheet(monday), written, monday, "2G")
+        val draft = LogDraft.from(sheet(monday), log.byRow)
+        assertEquals(ticked.copy(hard = true), draft.rows[pushUp.id])
+        assertTrue(Logging.events(draft, sheet(monday), log, monday, "2G", 5L).isEmpty())
+        assertEquals(JournalEntry.Kind.REMOVED, Logging.events(draft.with(pushUp.id, null), sheet(monday), log, monday, "2G", 5L).single().kind)
+    }
+
+    // A weight added to a push-up is logged like any other, and the next sheet still gives
+    // the push-up no number (madCode, 2026-11-27): what was held is said in the row's why.
+    // It lends nothing to a weighted lift either.
+    @Test
+    fun aWeightAddedToABodyweightRowIsNeverSuggested() {
+        val pushUp = row(sheet(monday), "8 x push-up")
+        assertEquals(listOf("Done without a weight."), pushUp.why)
+        val entry = save(monday, LogDraft().with(pushUp.id, LogDraft.picked(pushUp, 10).copy(count = 1))).single()
+        assertEquals(listOf(10, 1), listOf(entry.lb, entry.count))
+        val next = sheet(monday.plusDays(2))
+        val again = row(next, "8 x push-up")
+        assertEquals(null, again.suggestion)
+        assertEquals("no weight", next.glance(again))
+        assertEquals(listOf("Done without a weight.", "Last time you held 1×10."), again.why)
+        assertEquals(RowLog(RowLog.NOTHING, null, 8), LogDraft.asListed(again))
+        assertEquals(Suggestion.NoNumber.NEW, row(next, "8 x chest press").suggestion)
     }
 
     // A range offers each of its counts in place of the tick, and the count tapped is what the
@@ -362,7 +402,8 @@ class LoggingTest {
     fun aLoggedRowThatNoLongerReadsCanStillBeCleared() {
         val press = row(sheet(monday), "8 x chest press")
         save(monday, LogDraft().with(press.id, RowLog(25, 2, 8)))
-        val unread = sheet(monday).let { s -> s.copy(rows = s.rows.map { if (it.id == press.id) it.copy(suggestion = null) else it }) }
+        val unsure = row(sheet(monday), "8 x zorbing").reading
+        val unread = sheet(monday).let { s -> s.copy(rows = s.rows.map { if (it.id == press.id) it.copy(reading = unsure, suggestion = null) else it }) }
         val log = Logging.logged(unread, written, monday, "2G")
         val draft = LogDraft.from(unread, log.byRow)
         assertEquals(RowLog(25, 2, 8), draft.rows[press.id])

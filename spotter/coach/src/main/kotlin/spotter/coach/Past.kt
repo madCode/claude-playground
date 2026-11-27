@@ -33,13 +33,15 @@ data class PastRow(
         val held: String?,
         val said: List<String>,
         val why: String,
+        /** The reps, where they are known a side as the other rows' are: a row ticked on the phone. */
+        val reps: String = "",
     )
 
     /** The reps done, as written: "8 reps", "8, 8, 6 reps", "10 / 8 / 6", "timed", or "" when nobody said. */
     val reps: String
         get() = when {
             // The file's own count may be of both sides, where the rows beside it are per side: left unsaid.
-            logged == null -> ""
+            logged == null -> apart?.reps.orEmpty()
             logged.ladder != null -> logged.ladder.joinToString(" / ")
             logged.reps.isEmpty() -> if (logged.target == null) "timed" else ""
             logged.reps.distinct().size == 1 -> "${logged.reps.first()} reps"
@@ -79,9 +81,13 @@ object Past {
         others: List<HistoryImport.Row> = emptyList(),
         /** Names a left-out row as its lift is said, where its line reads; else it keeps its own words. */
         identity: Identity? = null,
+        /** Rows ticked on the phone as done with nothing held ([Journal.bare]). */
+        bare: List<Pair<JournalEntry, Reading.Known>> = emptyList(),
     ): List<PastClass> {
-        val mine = own.groupBy { it.first.date to it.first.className }
-            .map { (at, rows) -> PastClass(at.first, at.second, imported = false, rows = rows.map { row(it.second) }) }
+        // In the order first logged, the weighted rows and the others together.
+        val mine = (own.map { it.first to row(it.second) } + bare.map { it.first to ticked(it.first, it.second) })
+            .sortedBy { it.first.id }.groupBy { it.first.date to it.first.className }
+            .map { (at, rows) -> PastClass(at.first, at.second, imported = false, rows = rows.map { it.second }) }
         fun named(name: String?) = name?.let(::plain)?.ifEmpty { null } ?: NO_CLASS
         val read = imported.filter { it.logged.date !in ownDays }.map { Triple(it.logged.date to named(it.className), it.at, row(it.logged)) }
         val apart = others.filter { it.date !in ownDays }.map { Triple(it.date to named(it.className), it.at, apart(it, identity)) }
@@ -118,6 +124,20 @@ object Past {
     private fun sessions(classes: List<PastClass>) = classes.flatMap { c -> c.rows.map { PastSession(c.date, it, c.imported) } }
 
     private fun row(logged: Logged) = PastRow(Estimated.name(logged.exercise), logged)
+
+    private fun ticked(e: JournalEntry, exercise: Reading.Known): PastRow {
+        val reps = when {
+            e.ladder != null -> e.ladder.joinToString(" / ")
+            e.reps.isEmpty() -> ""
+            e.reps.distinct().size == 1 -> "${e.reps.first()} reps"
+            else -> e.reps.joinToString(", ") + " reps"
+        }
+        val said = listOfNotNull(
+            "felt easy".takeIf { e.easy }, "felt hard".takeIf { e.hard }, "twinge".takeIf { e.hurt },
+            "had to stop".takeIf { e.stopped }, "easier version".takeIf { e.easier },
+        )
+        return PastRow(Estimated.name(exercise), null, PastRow.Apart(null, said, "done", reps))
+    }
 
     private fun apart(row: HistoryImport.Row, identity: Identity?): PastRow {
         val words = BoardLine.read(row.line.orEmpty().take(MAX_LINE)).words
