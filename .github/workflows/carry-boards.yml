@@ -5,7 +5,11 @@ name: Carry boards
 # keeps each class's intel comment cut to its workout lines, and replaces the
 # `carry-boards` branch, which is never merged, with one commit holding the
 # current days only: a comment deleted on Reddit leaves no copy here. Nothing
-# is pushed unless a board changed. The Reddit key is the repository's
+# is pushed unless a board changed. GitHub starts a scheduled workflow hours
+# late or not at all (three or four runs a day here against the 48 asked for,
+# 2026-11-28), so each run also starts the next one itself, twenty minutes on;
+# the schedule is what restarts that chain if it ever breaks. To stop it,
+# disable the workflow. The Reddit key is the repository's
 # Actions secrets. GitHub does give secrets to a pull request from a branch
 # of this repository, so the `if` on the fetch job is what keeps a pull
 # request to the tests; keep it.
@@ -82,3 +86,27 @@ jobs:
               -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
               commit -q --allow-empty -m "Boards, $(date -u +%FT%H:%MZ)"
           git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" carry-boards
+
+  # The next run, started from this one. One at a time: a scheduled run that
+  # arrives while a chain is alive waits here behind it, and a second one
+  # waiting replaces the first, so the boards are fetched about every twenty
+  # minutes however many runs GitHub starts.
+  again:
+    needs: fetch
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: write
+    concurrency:
+      group: carry-boards-again
+      cancel-in-progress: false
+    steps:
+      - name: Wait, then start the next run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          sleep 1200
+          gh workflow run carry-boards.yml --repo "$REPO" --ref main

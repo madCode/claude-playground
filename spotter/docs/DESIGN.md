@@ -382,7 +382,7 @@ session file for the scorecard. It runs on a laptop with no phone, for grading i
 ## Where the inputs come from
 
 - **The board:** `boards/YYYY-MM-DD.json` (schema `carry-board/1`) on this repository's
-  `carry-boards` branch, which a scheduled job refreshes every half hour, fetched from
+  `carry-boards` branch, which a job refreshes about every twenty minutes, fetched from
   `raw.githubusercontent.com` with no key (`app/today/Boards`). A file is kept only when it reads
   as that day's board; the phone keeps a week of them. The last good board is used when the
   day's can't be fetched, so a Reddit, GitHub or Wi-Fi outage shows an earlier day's sheet
