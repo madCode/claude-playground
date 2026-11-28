@@ -99,7 +99,7 @@ Dumbbells come in uneven steps: 3, 5, 8, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50 
 
 - **The day's board:** a scheduled job (`.github/workflows/carry-boards.yml`,
   `carry/tools/boards/`) publishes `boards/YYYY-MM-DD.json` to the
-  `carry-boards` branch every half hour: each class's intel comment cut to its
+  `carry-boards` branch about every twenty minutes (each run starts the next; GitHub's own schedule proved hours late): each class's intel comment cut to its
   workout lines. Schema `carry-board/1`. Fetch it; never put a Reddit key in
   the app.
 - **The exercise list:** `carry/brain-fixtures/exercises.json`, about 170
